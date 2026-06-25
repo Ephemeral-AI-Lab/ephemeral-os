@@ -62,15 +62,12 @@ fn completed_session_with_transcript(transcript: &str) -> (TestServices, Namespa
     // watcher thread to resolve the promise after the Completed script fires.
     let output = env
         .command
-        .exec_command(
-            ExecCommandInput {
-                workspace_session_id: Some(handler.workspace_session_id.clone()),
-                cmd: "printf rows".to_owned(),
-                timeout_ms: None,
-                yield_time_ms: Some(500),
-            },
-            None,
-        )
+        .exec_command(ExecCommandInput {
+            workspace_session_id: Some(handler.workspace_session_id.clone()),
+            cmd: "printf rows".to_owned(),
+            timeout_ms: None,
+            yield_time_ms: Some(500),
+        })
         .expect("command exec succeeds");
 
     // Completed commands with small output return command_session_id=None;
@@ -98,15 +95,12 @@ fn build_session(driver: &Arc<FakeLaunchDriver>) -> (TestServices, NamespaceExec
 
     let output = env
         .command
-        .exec_command(
-            ExecCommandInput {
-                workspace_session_id: Some(handler.workspace_session_id.clone()),
-                cmd: "printf rows".to_owned(),
-                timeout_ms: None,
-                yield_time_ms: Some(0),
-            },
-            None,
-        )
+        .exec_command(ExecCommandInput {
+            workspace_session_id: Some(handler.workspace_session_id.clone()),
+            cmd: "printf rows".to_owned(),
+            timeout_ms: None,
+            yield_time_ms: Some(0),
+        })
         .expect("command exec succeeds");
 
     // When a Completed script fires before the yield check the command_session_id
@@ -306,15 +300,12 @@ fn command_transcript_rows_report_running_status_for_active_command() {
         .expect("session create succeeds");
     let output = env
         .command
-        .exec_command(
-            ExecCommandInput {
-                workspace_session_id: Some(handler.workspace_session_id),
-                cmd: "printf rows".to_owned(),
-                timeout_ms: None,
-                yield_time_ms: Some(0),
-            },
-            None,
-        )
+        .exec_command(ExecCommandInput {
+            workspace_session_id: Some(handler.workspace_session_id),
+            cmd: "printf rows".to_owned(),
+            timeout_ms: None,
+            yield_time_ms: Some(0),
+        })
         .expect("command starts");
     let command_session_id = output
         .command_session_id

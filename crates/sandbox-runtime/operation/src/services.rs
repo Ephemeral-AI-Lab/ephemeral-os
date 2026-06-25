@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
-use crate::namespace_execution::NamespaceExecutionId;
-use crate::observability::{AsyncTraceSink, RuntimeObservabilitySnapshot};
+use crate::observability::RuntimeObservabilitySnapshot;
 use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
 use crate::workspace_session::WorkspaceSessionService;
 
@@ -30,15 +29,6 @@ impl SandboxRuntimeOperations {
 
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
-        Self::from_config_with_async_trace_sink(config, None)
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn from_config_with_async_trace_sink(
-        config: SandboxRuntimeConfig,
-        async_trace_sink: Option<AsyncTraceSink>,
-    ) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
             WorkspaceModeManager::new(
@@ -52,7 +42,10 @@ impl SandboxRuntimeOperations {
             ),
             layer_stack_root.clone(),
         ));
-        let workspace_session = Arc::new(WorkspaceSessionService::new(workspace_runtime));
+        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_root(
+            workspace_runtime,
+            config.cgroup_root.clone(),
+        ));
         let layerstack = Arc::new(
             LayerStackService::new(layer_stack_root)
                 .expect("layerstack service initialization failed"),
@@ -62,44 +55,19 @@ impl SandboxRuntimeOperations {
             crate::command::CommandConfig {
                 scratch_root: config.command.scratch_root,
             },
-            async_trace_sink,
         ));
         Self::new(command, workspace_session, layerstack)
     }
 
     #[must_use]
     pub fn observability_snapshot(&self) -> RuntimeObservabilitySnapshot {
-        let (workspaces, mut partial_errors) = self.workspace_session.snapshot_workspaces();
+        let (workspaces, partial_errors) = self.workspace_session.snapshot_workspaces();
         let active_namespace_executions = self.command.active_namespace_executions();
-        let ledger = self.command.namespace_execution_store();
-        let completed_namespace_executions = match ledger.drain_completed_namespace_executions(256)
-        {
-            Ok(completed) => completed,
-            Err(error) => {
-                partial_errors.push(error);
-                Vec::new()
-            }
-        };
-        match ledger.drain_partial_errors() {
-            Ok(errors) => partial_errors.extend(errors),
-            Err(error) => partial_errors.push(error),
-        }
-
         RuntimeObservabilitySnapshot {
             workspaces,
             active_namespace_executions,
-            completed_namespace_executions,
             partial_errors,
         }
-    }
-
-    pub fn ack_completed_namespace_executions(
-        &self,
-        namespace_execution_ids: &[NamespaceExecutionId],
-    ) -> Result<(), String> {
-        self.command
-            .namespace_execution_store()
-            .ack_completed_namespace_executions(namespace_execution_ids)
     }
 }
 
@@ -107,6 +75,7 @@ impl SandboxRuntimeOperations {
 pub struct SandboxRuntimeConfig {
     pub workspace: WorkspaceRuntimeConfig,
     pub command: CommandRuntimeConfig,
+    pub cgroup_root: Option<std::path::PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

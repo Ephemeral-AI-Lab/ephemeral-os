@@ -7,7 +7,6 @@ use crate::command::{
     CommandOutput, CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
@@ -192,25 +191,12 @@ pub(crate) fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
 }
 
-fn dispatch_exec_command(
-    operations: &SandboxRuntimeOperations,
-    request: &Request,
-    trace: Option<&OperationTrace>,
-) -> Response {
+fn dispatch_exec_command(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
     let input = match parse_exec_command_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    let origin_request_id = Some(request.request_id.clone());
-    command_output_response(measure_optional(
-        trace,
-        "CommandOperationService::exec_command",
-        || {
-            operations
-                .command
-                .exec_command_with_origin_request_id(input, trace, origin_request_id)
-        },
-    ))
+    command_output_response(operations.command.exec_command(input))
 }
 
 fn parse_exec_command_input(request: &Request) -> Result<ExecCommandInput, Response> {
@@ -228,17 +214,12 @@ fn parse_exec_command_input(request: &Request) -> Result<ExecCommandInput, Respo
 fn dispatch_write_command_stdin(
     operations: &SandboxRuntimeOperations,
     request: &Request,
-    trace: Option<&OperationTrace>,
 ) -> Response {
     let input = match parse_write_command_stdin_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_output_response(measure_optional(
-        trace,
-        "CommandOperationService::write_command_stdin",
-        || operations.command.write_command_stdin(input),
-    ))
+    command_output_response(operations.command.write_command_stdin(input))
 }
 
 fn parse_write_command_stdin_input(request: &Request) -> Result<WriteCommandStdinInput, Response> {
@@ -252,17 +233,12 @@ fn parse_write_command_stdin_input(request: &Request) -> Result<WriteCommandStdi
 fn dispatch_read_command_lines(
     operations: &SandboxRuntimeOperations,
     request: &Request,
-    trace: Option<&OperationTrace>,
 ) -> Response {
     let input = match parse_read_command_lines_input(request) {
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_output_response(Ok(measure_optional(
-        trace,
-        "CommandOperationService::read_command_lines",
-        || operations.command.read_command_lines(input),
-    )))
+    command_output_response(Ok(operations.command.read_command_lines(input)))
 }
 
 fn parse_read_command_lines_input(request: &Request) -> Result<ReadCommandLinesInput, Response> {

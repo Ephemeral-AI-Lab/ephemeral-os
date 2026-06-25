@@ -19,7 +19,8 @@ impl WorkspaceSessionService {
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         let handle = self.workspace().create_workspace(request)?;
         let workspace_session_id = handle.id.clone();
-        let session = WorkspaceSession::from_handle(handle.clone());
+        let cgroup_path = self.prepare_workspace_cgroup(&workspace_session_id);
+        let session = WorkspaceSession::from_handle(handle.clone(), cgroup_path.clone());
         let handler = session.handler();
 
         let insert_result = self.lock_sessions().and_then(|mut sessions| {
@@ -44,6 +45,9 @@ impl WorkspaceSessionService {
                     insert_error: Box::new(insert_error),
                     rollback_error,
                 });
+            }
+            if let Some(cgroup_path) = &cgroup_path {
+                let _ = std::fs::remove_dir(cgroup_path);
             }
             return Err(insert_error);
         }

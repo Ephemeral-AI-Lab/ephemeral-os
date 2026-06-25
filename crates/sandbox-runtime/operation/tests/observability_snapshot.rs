@@ -45,7 +45,6 @@ fn observability_snapshot_copies_active_workspace_fields(
     assert_eq!(workspace.base_root_hash.as_deref(), Some("root"));
     assert_eq!(workspace.layer_count, Some(1));
     assert!(snapshot.active_namespace_executions.is_empty());
-    assert!(snapshot.completed_namespace_executions.is_empty());
     Ok(())
 }
 
@@ -61,15 +60,12 @@ fn observability_snapshot_reports_active_command_namespace_execution(
         PathBuf::from("/workspace/session"),
         WorkspaceProfile::HostCompatible,
     );
-    let command_yield = services.command.exec_command(
-        ExecCommandInput {
-            workspace_session_id: Some(workspace_session_id.clone()),
-            cmd: "printf ok".to_owned(),
-            timeout_ms: None,
-            yield_time_ms: Some(0),
-        },
-        None,
-    )?;
+    let command_yield = services.command.exec_command(ExecCommandInput {
+        workspace_session_id: Some(workspace_session_id.clone()),
+        cmd: "printf ok".to_owned(),
+        timeout_ms: None,
+        yield_time_ms: Some(0),
+    })?;
     let command_session_id = command_yield
         .command_session_id
         .expect("running command has a command id");
@@ -88,7 +84,6 @@ fn observability_snapshot_reports_active_command_namespace_execution(
         workspace_session_id
     );
     assert_eq!(namespace_execution.operation_name, "exec_command");
-    assert!(snapshot.completed_namespace_executions.is_empty());
     Ok(())
 }
 

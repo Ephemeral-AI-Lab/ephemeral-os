@@ -10,10 +10,7 @@ use sandbox_runtime::command::{
     CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use sandbox_runtime::{
-    AsyncTraceSink, LayerStackService, NamespaceExecutionId, NamespaceExecutionLedger,
-    NamespaceExecutionTerminalStatus, SandboxRuntimeOperations,
-};
+use sandbox_runtime::{LayerStackService, NamespaceExecutionId, SandboxRuntimeOperations};
 use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild,
 };
@@ -22,11 +19,10 @@ use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
 use serde_json::json;
 
 use support::{
-    build_services, build_services_with_launch_driver,
-    build_services_with_launch_driver_and_async_trace_sink, create_request, success_exit,
+    build_services, build_services_with_launch_driver, create_request, success_exit,
     workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
-    FakeLaunchDriver, FakeLauncher, FakeRunnerScript, FakeWorkspaceService, ScriptedCommandExit,
-    ScriptedCommandYield, TestServices,
+    FakeLaunchDriver, FakeLauncher, FakeRunnerScript, FakeWorkspaceService, ScriptedCommandYield,
+    TestServices,
 };
 
 fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
@@ -84,14 +80,6 @@ fn create_session(
         .workspace_session_id
 }
 
-fn command_exit(status: &str, exit_code: i64, stdout: &str) -> ScriptedCommandExit {
-    ScriptedCommandExit {
-        status: status.to_owned(),
-        exit_code,
-        stdout: stdout.to_owned(),
-    }
-}
-
 #[test]
 fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
     let fake = Arc::new(FakeWorkspaceService::new());
@@ -107,7 +95,7 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect("session command exec succeeds");
 
     let command_session_id = output
@@ -134,7 +122,7 @@ fn exec_command_rejects_empty_command_before_workspace_resolution() {
 
     let error = env
         .command
-        .exec_command(input, None)
+        .exec_command(input)
         .expect_err("empty command rejects exec");
 
     assert!(matches!(
@@ -162,7 +150,7 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input_await_completion(), None)
+        .exec_command(one_shot_exec_input_await_completion())
         .expect("one-shot command completes");
 
     assert_eq!(output.status, CommandStatus::Ok);
@@ -174,43 +162,6 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
         fake.destroy_calls(),
         vec![WorkspaceSessionId("one-shot-session".to_owned())]
     );
-}
-
-#[test]
-fn exec_command_without_request_trace_does_not_emit_async_finalizer_trace() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle(
-        "one-shot-session",
-        "lease-1",
-        PathBuf::from("/workspace/one-shot"),
-        WorkspaceProfile::HostCompatible,
-    )));
-    let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
-        "one-shot done\n",
-    )));
-    let (tx, rx) = mpsc::channel::<()>();
-    let sink: AsyncTraceSink = Arc::new(move |_, _| {
-        tx.send(()).expect("async trace test receiver stays open");
-    });
-    let env = build_services_with_launch_driver_and_async_trace_sink(
-        Arc::clone(&fake),
-        launch_driver,
-        Some(sink),
-    );
-
-    let output = env
-        .command
-        .exec_command(one_shot_exec_input_await_completion(), None)
-        .expect("one-shot command completes");
-
-    assert_eq!(output.status, CommandStatus::Ok);
-    assert_eq!(output.output, "one-shot done");
-    assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("one-shot-session".to_owned())]
-    );
-    assert!(rx.recv_timeout(Duration::from_millis(100)).is_err());
 }
 
 #[test]
@@ -229,7 +180,7 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input_await_completion(), None)
+        .exec_command(one_shot_exec_input_await_completion())
         .expect("one-shot command completes");
 
     let command_session_id = output
@@ -265,7 +216,7 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
 
     let command_session_id = env
         .command
-        .exec_command(one_shot_exec_input(), None)
+        .exec_command(one_shot_exec_input())
         .expect("one-shot command starts")
         .command_session_id
         .expect("running command session id is returned");
@@ -323,7 +274,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
 
     let error = env
         .command
-        .exec_command(one_shot_exec_input(), None)
+        .exec_command(one_shot_exec_input())
         .expect_err("one-shot spawn failure rejects exec");
 
     assert!(matches!(error, CommandServiceError::CommandIo { .. }));
@@ -347,7 +298,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_launch_materia
 
     let error = env
         .command
-        .exec_command(one_shot_exec_input(), None)
+        .exec_command(one_shot_exec_input())
         .expect_err("missing launch material rejects one-shot exec");
 
     assert!(matches!(
@@ -381,7 +332,7 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("spawn failure rejects session exec");
 
     assert!(matches!(error, CommandServiceError::CommandIo { .. }));
@@ -397,165 +348,12 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
 }
 
 #[test]
-fn exec_command_spawn_failure_completes_namespace_execution_error() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
-        error: "spawn failed at /tmp/secret/transcript.log".to_owned(),
-    });
-    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
-    let workspace_session_id = create_session(
-        &fake,
-        &env,
-        "workspace-session",
-        PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
-    );
-
-    let _error = env
-        .command
-        .exec_command(exec_input(workspace_session_id.clone()), None)
-        .expect_err("spawn failure rejects session exec");
-
-    let completed = env
-        .command
-        .namespace_execution_store()
-        .drain_completed_namespace_executions(10)
-        .expect("namespace completed records drain");
-    assert_eq!(completed.len(), 1);
-    assert_eq!(completed[0].workspace_session_id, workspace_session_id);
-    assert_eq!(
-        completed[0].terminal_status,
-        Some(NamespaceExecutionTerminalStatus::Error)
-    );
-    assert_eq!(
-        completed[0].error_kind.as_deref(),
-        Some("command_start_failed")
-    );
-    assert_eq!(
-        completed[0].error_message.as_deref(),
-        Some("command start failed before namespace execution started")
-    );
-    let record_debug = format!("{:?}", completed[0]);
-    // The error_message/error_kind fields must not leak sensitive spawn details.
-    assert!(!record_debug.contains("/tmp/secret"));
-    assert!(!record_debug.contains("transcript.log"));
-}
-
-#[test]
-fn namespace_execution_terminal_status_maps_command_result_without_output_text() {
-    for (status, exit_code, expected) in [
-        ("ok", 0, NamespaceExecutionTerminalStatus::Ok),
-        ("error", 2, NamespaceExecutionTerminalStatus::Error),
-        ("timed_out", 124, NamespaceExecutionTerminalStatus::TimedOut),
-        (
-            "cancelled",
-            130,
-            NamespaceExecutionTerminalStatus::Cancelled,
-        ),
-    ] {
-        let fake = Arc::new(FakeWorkspaceService::new());
-        let launch_driver = Arc::new(FakeLaunchDriver::new());
-        launch_driver.push_outcome(ScriptedCommandYield::Completed(command_exit(
-            status,
-            exit_code,
-            "SECRET_OUTPUT\n",
-        )));
-        let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
-        let workspace_session_id = create_session(
-            &fake,
-            &env,
-            &format!("workspace-session-{status}"),
-            PathBuf::from(format!("/workspace/session-{status}")),
-            WorkspaceProfile::HostCompatible,
-        );
-
-        let _output = env
-            .command
-            .exec_command(
-                exec_input_await_completion(workspace_session_id.clone()),
-                None,
-            )
-            .expect("terminal command completes");
-
-        let completed = env
-            .command
-            .namespace_execution_store()
-            .drain_completed_namespace_executions(10)
-            .expect("namespace completed records drain");
-        assert_eq!(completed.len(), 1);
-        let record = &completed[0];
-        assert_eq!(record.workspace_session_id, workspace_session_id);
-        assert_eq!(record.operation_name, "exec_command");
-        assert_eq!(record.origin_request_id, None);
-        assert_eq!(record.terminal_status, Some(expected));
-        assert_eq!(record.exit_code, Some(exit_code));
-        assert!(
-            !format!("{record:?}").contains("SECRET_OUTPUT"),
-            "namespace execution record must not carry command output"
-        );
-    }
-}
-
-#[test]
-fn namespace_execution_request_id_comes_from_runtime_request_not_runner_request(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
-    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
-    let workspace_session_id = create_session(
-        &fake,
-        &env,
-        "workspace-session",
-        PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
-    );
-    let operations = SandboxRuntimeOperations::new(
-        Arc::clone(&env.command),
-        Arc::clone(&env.workspace),
-        layerstack_service()?,
-    );
-    let request = Request::new(
-        "exec_command",
-        "req-external",
-        CliOperationScope::system(),
-        json!({
-            "workspace_session_id": workspace_session_id.0,
-            "cmd": "printf ok",
-            "yield_time_ms": 250,
-        }),
-    );
-
-    let response =
-        sandbox_runtime::dispatch_operation(&operations, &request, None).into_json_value();
-    assert_eq!(response["status"], "ok");
-    let completed = env
-        .command
-        .namespace_execution_store()
-        .drain_completed_namespace_executions(10)
-        .expect("namespace completed records drain");
-    assert_eq!(completed.len(), 1);
-    assert_eq!(
-        completed[0].origin_request_id.as_deref(),
-        Some("req-external")
-    );
-    assert_ne!(
-        completed[0].origin_request_id.as_deref(),
-        Some("namespace_execution_1")
-    );
-    Ok(())
-}
-
-#[test]
 fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fake = Arc::new(FakeWorkspaceService::new());
     let (spawn_entered_tx, spawn_entered_rx) = mpsc::channel();
     let (release_spawn_tx, release_spawn_rx) = mpsc::channel();
     let blocking_launcher = BlockingNsLauncher::new(spawn_entered_tx, release_spawn_rx);
-    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
     let workspace = Arc::new(sandbox_runtime::WorkspaceSessionService::new(
         support::fake_workspace_runtime(Arc::clone(&fake)),
     ));
@@ -582,8 +380,6 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
             Arc::clone(&workspace),
             config,
             engine,
-            Arc::clone(&namespace_execution),
-            None,
         ),
     );
     let env = TestServices {
@@ -598,9 +394,8 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         WorkspaceProfile::HostCompatible,
     );
     let exec_workspace_session_id = workspace_session_id.clone();
-    let exec_handle = std::thread::spawn(move || {
-        command.exec_command(exec_input(exec_workspace_session_id), None)
-    });
+    let exec_handle =
+        std::thread::spawn(move || command.exec_command(exec_input(exec_workspace_session_id)));
 
     spawn_entered_rx.recv_timeout(Duration::from_secs(1))?;
     let operations = SandboxRuntimeOperations::new(
@@ -615,7 +410,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         json!({ "workspace_session_id": workspace_session_id.0 }),
     );
     let destroy_handle = std::thread::spawn(move || {
-        sandbox_runtime::dispatch_operation(&operations, &destroy_request, None).into_json_value()
+        sandbox_runtime::dispatch_operation(&operations, &destroy_request).into_json_value()
     });
 
     std::thread::sleep(Duration::from_millis(100));
@@ -665,7 +460,7 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
 
     let output = env
         .command
-        .exec_command(input, None)
+        .exec_command(input)
         .expect("session command exec succeeds");
 
     assert_eq!(
@@ -744,7 +539,7 @@ fn exec_command_missing_launch_material_rejects_without_spawn() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("missing launch material rejects exec");
 
     assert!(matches!(
@@ -776,7 +571,7 @@ fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("unavailable workspace launch rejects exec");
 
     assert!(matches!(
@@ -808,7 +603,7 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
 
     let error = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect_err("artifact directory failure rejects exec");
 
     assert!(matches!(
@@ -848,6 +643,7 @@ impl NsRunnerLauncher for BlockingNsLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
+        cgroup_procs_path: Option<PathBuf>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         if let Some(sender) = self
             .spawn_entered
@@ -862,7 +658,8 @@ impl NsRunnerLauncher for BlockingNsLauncher {
             .expect("test operation succeeds")
             .recv()
             .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
-        self.inner.spawn_pty(request, transcript_path, cancelled)
+        self.inner
+            .spawn_pty(request, transcript_path, cancelled, cgroup_procs_path)
     }
 
     fn spawn_piped(
@@ -893,7 +690,7 @@ fn exec_command_initial_running_yield_returns_pending_output() {
 
     let output = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect("exec returns initial running yield");
 
     assert_eq!(output.status, CommandStatus::Running);
@@ -920,7 +717,7 @@ fn exec_command_initial_completed_session_does_not_finalize_workspace() {
 
     let output = env
         .command
-        .exec_command(exec_input_await_completion(workspace_session_id), None)
+        .exec_command(exec_input_await_completion(workspace_session_id))
         .expect("session command completes during initial yield");
 
     assert!(output.command_session_id.is_none());
@@ -949,7 +746,7 @@ fn write_command_stdin_waits_for_output_after_write() {
     );
     let command_session_id = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect("session command exec succeeds")
         .command_session_id
         .expect("running command session id is returned");
@@ -1017,7 +814,7 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
     );
     let command_session_id = env
         .command
-        .exec_command(exec_input(workspace_session_id), None)
+        .exec_command(exec_input(workspace_session_id))
         .expect("session command exec succeeds")
         .command_session_id
         .expect("running command session id is returned");

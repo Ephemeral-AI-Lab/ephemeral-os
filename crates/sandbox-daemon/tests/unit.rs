@@ -1,5 +1,11 @@
 #![forbid(unsafe_code)]
 
+#[allow(
+    dead_code,
+    reason = "test harness path-includes private CLI modules and exercises selected helpers"
+)]
+#[path = "../src/cgroup_setup.rs"]
+pub(crate) mod cgroup_setup;
 #[path = "../src/observability/mod.rs"]
 pub(crate) mod observability;
 #[allow(
@@ -47,6 +53,17 @@ mod observability_tests {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/observability.rs"
+    ));
+}
+
+mod cgroup_tests {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/unit/cgroup.rs"));
+}
+
+mod cgroup_setup_tests {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/cgroup_setup.rs"
     ));
 }
 

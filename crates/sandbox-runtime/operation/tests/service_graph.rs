@@ -77,7 +77,6 @@ fn service_graph_runtime_operations_exposes_command_lane(
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
         CommandConfig::default(),
-        None,
     ));
     let operations = SandboxRuntimeOperations::new(
         Arc::clone(&command),
@@ -272,7 +271,6 @@ fn squash_dispatch_projects_stable_no_op_json(
         Arc::new(CommandOperationService::new(
             Arc::clone(&workspace),
             CommandConfig::default(),
-            None,
         )),
         workspace,
         layerstack_service()?,
@@ -286,7 +284,6 @@ fn squash_dispatch_projects_stable_no_op_json(
             CliOperationScope::system(),
             json!({}),
         ),
-        None,
     )
     .into_json_value();
 

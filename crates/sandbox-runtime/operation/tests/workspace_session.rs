@@ -246,7 +246,6 @@ fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal
     let response = sandbox_runtime::dispatch_operation(
         &operations,
         &runtime_request("create_workspace_session", json!({})),
-        None,
     )
     .into_json_value();
 
@@ -280,7 +279,6 @@ fn workspace_session_create_operation_accepts_isolated_profile(
     let response = sandbox_runtime::dispatch_operation(
         &operations,
         &runtime_request("create_workspace_session", json!({ "profile": "isolated" })),
-        None,
     )
     .into_json_value();
 
@@ -314,7 +312,6 @@ fn workspace_session_create_operation_rejects_invalid_profiles(
         let response = sandbox_runtime::dispatch_operation(
             &operations,
             &runtime_request("create_workspace_session", args),
-            None,
         )
         .into_json_value();
 
@@ -340,7 +337,6 @@ fn workspace_session_destroy_operation_rejects_invalid_args_without_raw_destroy(
         let response = sandbox_runtime::dispatch_operation(
             &operations,
             &runtime_request("destroy_workspace_session", args),
-            None,
         )
         .into_json_value();
 
@@ -362,7 +358,6 @@ fn workspace_session_destroy_operation_unknown_session_does_not_call_raw_destroy
             "destroy_workspace_session",
             json!({ "workspace_session_id": "missing" }),
         ),
-        None,
     )
     .into_json_value();
 
@@ -403,7 +398,6 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
                 "yield_time_ms": 0,
             }),
         ),
-        None,
     )
     .into_json_value();
     assert_eq!(exec_response["command_session_id"], "namespace_execution_1");
@@ -414,7 +408,6 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
             "destroy_workspace_session",
             json!({ "workspace_session_id": workspace_session_id.0 }),
         ),
-        None,
     )
     .into_json_value();
 
@@ -444,7 +437,6 @@ fn workspace_session_destroy_operation_success_projects_minimal_json(
             "destroy_workspace_session",
             json!({ "workspace_session_id": "workspace-1", "grace_s": 2.5 }),
         ),
-        None,
     )
     .into_json_value();
 
@@ -482,7 +474,6 @@ fn workspace_session_destroy_operation_failure_retains_session(
             "destroy_workspace_session",
             json!({ "workspace_session_id": "workspace-1" }),
         ),
-        None,
     )
     .into_json_value();
 
@@ -556,7 +547,6 @@ fn operations_with_fake(
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
         sandbox_runtime::command::CommandConfig::default(),
-        None,
     ));
     Ok(SandboxRuntimeOperations::new(
         command,

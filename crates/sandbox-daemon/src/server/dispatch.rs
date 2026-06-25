@@ -3,7 +3,6 @@ use std::sync::Arc;
 use super::SandboxDaemonServer;
 use crate::server::error::SandboxDaemonError;
 use sandbox_protocol::{decode_request_value, error_kind, Request, DAEMON_AUTH_FIELD};
-use sandbox_runtime::OperationTrace;
 use serde_json::{Map, Value};
 
 pub(crate) const PRIVATE_OBSERVABILITY_SNAPSHOT_OP: &str = "get_observability_snapshot";
@@ -47,43 +46,9 @@ impl SandboxDaemonServer {
         if request.op == PRIVATE_OBSERVABILITY_SNAPSHOT_OP {
             return self.dispatch_private_observability_snapshot(request).await;
         }
-        let trace_sandbox_id = self
-            .config
-            .sandbox_id
-            .as_ref()
-            .filter(|sandbox_id| !sandbox_id.is_empty())
-            .cloned();
-        let observability = self.observability.clone();
-        let trace =
-            observability
-                .as_ref()
-                .zip(trace_sandbox_id.as_ref())
-                .map(|(observability, _)| {
-                    OperationTrace::new_with_enabled_span_keys(
-                        observability.enabled_deep_span_keys(),
-                    )
-                });
-        let trace_request_id = request.request_id.clone();
-        let trace_operation = request.op.clone();
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
-            let response =
-                sandbox_runtime::dispatch_operation(&operations, &request, trace.as_ref());
-            let value = response.into_json_value();
-            if let (Some(observability), Some(sandbox_id), Some(completed_trace)) = (
-                observability,
-                trace_sandbox_id,
-                trace.as_ref().map(OperationTrace::complete),
-            ) {
-                let _ = observability.insert_completed_operation_trace(
-                    sandbox_id,
-                    trace_request_id,
-                    trace_operation,
-                    &value,
-                    completed_trace,
-                );
-            }
-            value
+            sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
         });
         match task.await {
             Ok(response) => {

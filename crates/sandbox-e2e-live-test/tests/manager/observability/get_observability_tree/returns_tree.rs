@@ -9,17 +9,10 @@ fn observability_tree_lists_sandbox_and_clamps_over_limit() {
 
     let (sb, _create) = h.provision_sandbox("observability-get_observability_tree-case1", None);
 
-    // Scoped to our sandbox, with bounded recent traces at the documented max.
+    // Scoped to our sandbox, with a bounded resource history window.
     let rec = h.cli().manager(
         "get_observability_tree",
-        &[
-            "--sandbox-id",
-            &sb.id,
-            "--include-recent-traces",
-            "1",
-            "--trace-limit",
-            "100",
-        ],
+        &["--sandbox-id", &sb.id, "--resource-window-ms", "60000"],
     );
     sb.record(&rec);
     let resp = rec.response();
@@ -34,21 +27,14 @@ fn observability_tree_lists_sandbox_and_clamps_over_limit() {
         "unexpected availability {availability:?} in {resp}"
     );
     // Every observability node carries these keys (defaulted when empty).
-    for key in ["resources", "workspaces", "recent_traces", "errors"] {
+    for key in ["resources", "workspaces", "errors"] {
         let _ = assert::field(resp, &format!("/sandboxes/0/{key}"));
     }
 
-    // An over-limit trace_limit is clamped (MAX_TRACE_LIMIT), never rejected.
+    // An over-limit resource window is clamped (MAX_RESOURCE_WINDOW_MS), never rejected.
     let over_limit = h.cli().manager(
         "get_observability_tree",
-        &[
-            "--sandbox-id",
-            &sb.id,
-            "--include-recent-traces",
-            "1",
-            "--trace-limit",
-            "9999",
-        ],
+        &["--sandbox-id", &sb.id, "--resource-window-ms", "999999999"],
     );
     sb.record(&over_limit);
     assert::ok(over_limit.response()); // clamped, still ok

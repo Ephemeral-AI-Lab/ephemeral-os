@@ -2,7 +2,6 @@ use serde_json::{json, Value};
 
 use crate::cli_definition::{CliOperationFamilySpec, CliOperationSpec, CliSpec};
 use crate::layerstack::{LayerStackRevision, LayerStackServiceError, SquashLayerStackResult};
-use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::OperationEntry;
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
@@ -35,14 +34,8 @@ pub(crate) fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
 }
 
-fn dispatch_squash(
-    operations: &SandboxRuntimeOperations,
-    _request: &Request,
-    trace: Option<&OperationTrace>,
-) -> Response {
-    squash_response(measure_optional(trace, "LayerStackService::squash", || {
-        operations.layerstack.squash(trace)
-    }))
+fn dispatch_squash(operations: &SandboxRuntimeOperations, _request: &Request) -> Response {
+    squash_response(operations.layerstack.squash())
 }
 
 fn squash_response(result: Result<SquashLayerStackResult, LayerStackServiceError>) -> Response {

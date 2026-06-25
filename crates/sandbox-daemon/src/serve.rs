@@ -32,6 +32,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     set_runner_config_env(&config.config_yaml_path);
     set_runner_sandbox_id_env(config.sandbox_id.as_deref());
     let workspace_root = config.workspace_root.clone();
+    let cgroup_root = crate::cgroup_setup::discover_and_prepare_root();
     let server_config = sandbox_daemon::ServerConfig {
         socket_path: config.socket_path,
         pid_path: config.pid_path,
@@ -39,6 +40,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         tcp_port: config.tcp_port,
         auth_token: config.auth_token,
         sandbox_id: config.sandbox_id,
+        cgroup_root: cgroup_root.clone(),
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(
@@ -50,7 +52,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let serve_result = runtime.block_on(async move {
         let server = sandbox_daemon::SandboxDaemonServer::new_with_runtime_config(
             server_config,
-            build_runtime_config(&runtime_config, workspace_root),
+            build_runtime_config(&runtime_config, workspace_root, cgroup_root),
         );
         server.serve().await
     });
@@ -66,8 +68,10 @@ struct DaemonRuntimeConfig {
 fn build_runtime_config(
     config: &DaemonRuntimeConfig,
     workspace_root: PathBuf,
+    cgroup_root: Option<PathBuf>,
 ) -> sandbox_runtime::SandboxRuntimeConfig {
     sandbox_runtime::SandboxRuntimeConfig {
+        cgroup_root,
         workspace: sandbox_runtime::WorkspaceRuntimeConfig {
             workspace_root,
             layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),

@@ -22,6 +22,10 @@ pub struct ServerConfig {
     pub auth_token: Option<String>,
     /// Dynamic sandbox identity supplied by the process manager or serve CLI.
     pub sandbox_id: Option<String>,
+    /// The daemon's delegated cgroup v2 root `R`, discovered at startup. `None`
+    /// when cgroup v2 is unavailable; the sandbox-wide resource sample is read
+    /// here and degrades to unavailable when absent.
+    pub cgroup_root: Option<PathBuf>,
 }
 
 /// The running sandbox daemon: request dispatch state and shutdown token.
@@ -39,13 +43,7 @@ impl SandboxDaemonServer {
         runtime_config: SandboxRuntimeConfig,
     ) -> Self {
         let observability = DaemonObservability::from_config(&config).map(Arc::new);
-        let async_trace_sink = observability
-            .as_ref()
-            .map(|observability| DaemonObservability::async_trace_sink(Arc::clone(observability)));
-        let operations = Arc::new(SandboxRuntimeOperations::from_config_with_async_trace_sink(
-            runtime_config,
-            async_trace_sink,
-        ));
+        let operations = Arc::new(SandboxRuntimeOperations::from_config(runtime_config));
         Self {
             config,
             operations,

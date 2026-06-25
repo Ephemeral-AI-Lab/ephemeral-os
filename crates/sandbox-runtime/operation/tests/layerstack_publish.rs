@@ -144,9 +144,7 @@ fn existing_session_command_completion_does_not_publish(
         .create_workspace_session(create_request())?
         .workspace_session_id;
 
-    let output = env
-        .command
-        .exec_command(exec_input(workspace_session_id), None)?;
+    let output = env.command.exec_command(exec_input(workspace_session_id))?;
 
     assert_eq!(output.status, CommandStatus::Ok);
     assert!(fake.capture_calls().is_empty());
@@ -305,7 +303,7 @@ fn layerstack_service_squash_reports_no_op_for_unsquashable_stack(
     let base = fixture.build_base()?;
     let service = fixture.service()?;
 
-    let result = service.squash(None)?;
+    let result = service.squash()?;
 
     assert!(!result.squashed);
     assert_eq!(result.revision, None);

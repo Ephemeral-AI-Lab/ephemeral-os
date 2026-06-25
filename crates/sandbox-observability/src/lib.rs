@@ -4,14 +4,12 @@ mod store;
 
 pub use paths::{ObservabilityPathError, ObservabilityPaths};
 pub use records::{
-    NamespaceExecutionSnapshotRecord, NamespaceExecutionTraceRecord, RecordValidationError,
-    ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord, TraceRecord, WorkspaceSnapshotRecord,
-    MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH, MAX_OPERATION_LENGTH,
-    MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
+    NamespaceExecutionSnapshotRecord, RecordValidationError, ResourceSampleRecord,
+    SandboxSnapshotRecord, WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH,
+    MAX_KIND_LENGTH, MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
 };
 pub use store::{
-    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityNamespaceExecutionTraceRow,
-    ObservabilityRequestTraceRow, ObservabilityResourceSampleRow, ObservabilitySandboxSnapshotRow,
-    ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore,
-    ObservabilityWorkspaceSnapshotRow, StoreError,
+    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityResourceSampleRow,
+    ObservabilitySandboxSnapshotRow, ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows,
+    ObservabilityStore, ObservabilityWorkspaceSnapshotRow, StoreError,
 };

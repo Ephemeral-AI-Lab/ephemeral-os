@@ -14,7 +14,6 @@ use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest
 
 use sandbox_runtime::command::{CommandOperationService, CommandServiceError};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
-use sandbox_runtime::{AsyncTraceSink, NamespaceExecutionLedger};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
@@ -257,37 +256,8 @@ pub(crate) fn build_services_with_launch_driver(
     fake: Arc<FakeWorkspaceService>,
     launch_driver: Arc<FakeLaunchDriver>,
 ) -> TestServices {
-    build_services_with_launch_driver_and_async_trace_sink(fake, launch_driver, None)
-}
-
-pub(crate) fn build_services_with_launch_driver_and_async_trace_sink(
-    fake: Arc<FakeWorkspaceService>,
-    launch_driver: Arc<FakeLaunchDriver>,
-    async_trace_sink: Option<AsyncTraceSink>,
-) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
-    let command = Arc::new(build_command_service(
-        &workspace,
-        &launch_driver,
-        namespace_execution,
-        async_trace_sink,
-    ));
-    TestServices { workspace, command }
-}
-
-pub(crate) fn build_services_with_launch_driver_namespace_store(
-    fake: Arc<FakeWorkspaceService>,
-    launch_driver: Arc<FakeLaunchDriver>,
-    namespace_execution: Arc<NamespaceExecutionLedger>,
-) -> TestServices {
-    let workspace = Arc::new(WorkspaceSessionService::new(fake_workspace_runtime(fake)));
-    let command = Arc::new(build_command_service(
-        &workspace,
-        &launch_driver,
-        namespace_execution,
-        None,
-    ));
+    let command = Arc::new(build_command_service(&workspace, &launch_driver));
     TestServices { workspace, command }
 }
 
@@ -295,8 +265,6 @@ pub(crate) fn build_services_with_launch_driver_namespace_store(
 pub(crate) fn build_command_service(
     workspace: &Arc<WorkspaceSessionService>,
     launch_driver: &FakeLaunchDriver,
-    namespace_execution: Arc<NamespaceExecutionLedger>,
-    async_trace_sink: Option<AsyncTraceSink>,
 ) -> CommandOperationService {
     let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
         Box::new(launch_driver.launcher()),
@@ -304,13 +272,7 @@ pub(crate) fn build_command_service(
         MAX_ACTIVE_COMMANDS,
         SETUP_TIMEOUT_S,
     ));
-    CommandOperationService::with_engine(
-        Arc::clone(workspace),
-        test_command_config(),
-        engine,
-        namespace_execution,
-        async_trace_sink,
-    )
+    CommandOperationService::with_engine(Arc::clone(workspace), test_command_config(), engine)
 }
 
 pub(crate) fn create_request() -> CreateWorkspaceRequest {

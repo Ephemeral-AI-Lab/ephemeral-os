@@ -1,24 +1,17 @@
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 use crate::observability::DaemonObservability;
 use crate::server::{SandboxDaemonServer, ServerConfig};
 use rusqlite::{Connection, OptionalExtension};
 use sandbox_observability::{
-    NamespaceExecutionSnapshotRecord, NamespaceExecutionTraceRecord, ObservabilityPaths,
-    ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord,
-    WorkspaceSnapshotRecord,
+    NamespaceExecutionSnapshotRecord, ObservabilityPaths, ResourceSampleRecord,
+    SandboxSnapshotRecord, StoreError, WorkspaceSnapshotRecord,
 };
 use sandbox_runtime::{
-    span_keys, CommandFinalizationTraceMetadata, CompletedOperationSpan, CompletedOperationTrace,
-    NamespaceExecutionId, NamespaceExecutionRecord, NamespaceExecutionTerminalStatus,
-    SandboxRuntimeOperations, WorkspaceSessionId,
-};
-use sandbox_runtime::{
-    RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
-    WorkspaceProfile,
+    NamespaceExecutionId, RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot,
+    RuntimeWorkspaceSnapshot, WorkspaceProfile, WorkspaceSessionId,
 };
 use serde_json::{json, Value};
 
@@ -42,9 +35,7 @@ impl DaemonObservabilityTestExt for DaemonObservability {
         snapshot: RuntimeObservabilitySnapshot,
     ) -> Result<(), StoreError> {
         self.write_snapshot(config, snapshot, test_unix_ms(), false)
-            .map(|_| ())
     }
-
 }
 
 struct TestObservabilityStore {
@@ -54,87 +45,6 @@ struct TestObservabilityStore {
 impl TestObservabilityStore {
     fn connection(&self) -> rusqlite::Result<Connection> {
         Connection::open(&self.database_path)
-    }
-
-    fn trace_for_test(&self, trace_id: &str) -> TestResult<Option<TraceRecord>> {
-        let connection = self.connection()?;
-        Ok(connection
-            .query_row(
-                "SELECT
-                    trace_id,
-                    kind,
-                    status,
-                    sandbox_id,
-                    operation,
-                    request_id,
-                    origin_request_id,
-                    workspace_id,
-                    namespace_execution_id,
-                    started_at_unix_ms,
-                    finished_at_unix_ms,
-                    duration_ms,
-                    error_kind,
-                    error_message
-                 FROM traces
-                 WHERE trace_id = ?1",
-                [trace_id],
-                |row| {
-                    Ok(TraceRecord {
-                        trace_id: row.get(0)?,
-                        kind: row.get(1)?,
-                        status: row.get(2)?,
-                        sandbox_id: row.get(3)?,
-                        operation: row.get(4)?,
-                        request_id: row.get(5)?,
-                        origin_request_id: row.get(6)?,
-                        workspace_id: row.get(7)?,
-                        namespace_execution_id: row.get(8)?,
-                        started_at_unix_ms: row.get(9)?,
-                        finished_at_unix_ms: row.get(10)?,
-                        duration_ms: row.get(11)?,
-                        error_kind: row.get(12)?,
-                        error_message: row.get(13)?,
-                    })
-                },
-            )
-            .optional()?)
-    }
-
-    fn spans_for_test(&self, trace_id: &str) -> TestResult<Vec<SpanRecord>> {
-        let connection = self.connection()?;
-        let mut statement = connection.prepare(
-            "SELECT
-                span_id,
-                trace_id,
-                parent_span_id,
-                method_name,
-                call_index,
-                status,
-                started_at_unix_ms,
-                finished_at_unix_ms,
-                duration_ms,
-                error_kind,
-                error_message
-             FROM spans
-             WHERE trace_id = ?1
-             ORDER BY call_index",
-        )?;
-        let rows = statement.query_map([trace_id], |row| {
-            Ok(SpanRecord {
-                span_id: row.get(0)?,
-                trace_id: row.get(1)?,
-                parent_span_id: row.get(2)?,
-                method_name: row.get(3)?,
-                call_index: row.get(4)?,
-                status: row.get(5)?,
-                started_at_unix_ms: row.get(6)?,
-                finished_at_unix_ms: row.get(7)?,
-                duration_ms: row.get(8)?,
-                error_kind: row.get(9)?,
-                error_message: row.get(10)?,
-            })
-        })?;
-        Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
     }
 
     fn sandbox_snapshot_for_test(
@@ -250,50 +160,6 @@ impl TestObservabilityStore {
         Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
     }
 
-    fn namespace_execution_traces_for_test(
-        &self,
-        sandbox_id: &str,
-    ) -> TestResult<Vec<NamespaceExecutionTraceRecord>> {
-        let connection = self.connection()?;
-        let mut statement = connection.prepare(
-            "SELECT
-                trace_id,
-                sandbox_id,
-                namespace_execution_id,
-                workspace_session_id,
-                operation,
-                request_id,
-                status,
-                exit_code,
-                started_at_unix_ms,
-                finished_at_unix_ms,
-                duration_ms,
-                error_kind,
-                error_message
-            FROM namespace_execution_traces
-            WHERE sandbox_id = ?1
-            ORDER BY namespace_execution_id",
-        )?;
-        let rows = statement.query_map([sandbox_id], |row| {
-            Ok(NamespaceExecutionTraceRecord {
-                trace_id: row.get(0)?,
-                sandbox_id: row.get(1)?,
-                namespace_execution_id: row.get(2)?,
-                workspace_session_id: row.get(3)?,
-                operation: row.get(4)?,
-                request_id: row.get(5)?,
-                status: row.get(6)?,
-                exit_code: row.get(7)?,
-                started_at_unix_ms: row.get(8)?,
-                finished_at_unix_ms: row.get(9)?,
-                duration_ms: row.get(10)?,
-                error_kind: row.get(11)?,
-                error_message: row.get(12)?,
-            })
-        })?;
-        Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-    }
-
     fn resource_samples_for_test(&self, sandbox_id: &str) -> TestResult<Vec<ResourceSampleRecord>> {
         let connection = self.connection()?;
         let mut statement = connection.prepare(
@@ -401,60 +267,85 @@ fn observability_collection_writes_namespace_only_live_snapshot() -> TestResult 
     assert!(!global.cgroup_available);
     assert_eq!(
         global.cgroup_error.as_deref(),
-        Some("cgroup path unavailable")
+        Some("cgroup root unavailable")
     );
     let workspace = samples
         .iter()
         .find(|sample| sample.workspace_id.as_deref() == Some("workspace-1"))
         .expect("workspace sample written");
     assert!(!workspace.cgroup_available);
+    assert_eq!(
+        workspace.cgroup_error.as_deref(),
+        Some("workspace cgroup unavailable")
+    );
     assert!(workspace.disk_read_error_count.unwrap_or_default() > 0);
     assert!(workspace.disk_first_error_path.is_some());
     Ok(())
 }
 
 #[test]
-fn observability_collection_writes_namespace_execution_tables() -> TestResult {
-    let root = test_root("namespace-projection");
-    let config = server_config(&root, Some("sandbox-1"));
+fn observability_collection_populates_cgroup_counters_from_fixture_paths() -> TestResult {
+    let root = test_root("cgroup-counters");
+    let sandbox_cgroup = root.join("cgroup-root");
+    write_cgroup_fixture(&sandbox_cgroup, 4_096, 8_192, "max")?;
+    let workspace_cgroup = sandbox_cgroup.join("workspace-workspace-1");
+    write_cgroup_fixture(&workspace_cgroup, 2_048, 4_096, "16384")?;
+
+    let mut config = server_config(&root, Some("sandbox-1"));
+    config.cgroup_root = Some(sandbox_cgroup.clone());
     let observability =
         DaemonObservability::from_config(&config).expect("sandbox id enables observability");
     let snapshot = RuntimeObservabilitySnapshot {
-        workspaces: Vec::new(),
-        active_namespace_executions: vec![RuntimeNamespaceExecutionSnapshot {
-            namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
-            workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
-            operation_name: "exec_command".to_owned(),
+        workspaces: vec![RuntimeWorkspaceSnapshot {
+            cgroup_path: Some(workspace_cgroup.clone()),
+            ..workspace_snapshot("workspace-1", None)
         }],
-        completed_namespace_executions: vec![completed_namespace_execution(
-            "namespace_execution_2",
-            "workspace-1",
-            "exec_command",
-            NamespaceExecutionTerminalStatus::Ok,
-            Some("req-parent"),
-            Some(0),
-        )],
+        active_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),
     };
 
     observability.collect_runtime_snapshot_for_test(&config, snapshot)?;
 
     let store = store_for_config(&config)?;
-    let snapshots = store.namespace_execution_snapshots_for_test("sandbox-1")?;
-    assert_eq!(snapshots.len(), 1);
-    assert_eq!(snapshots[0].namespace_execution_id, "namespace_execution_1");
-    assert_eq!(snapshots[0].workspace_session_id, "workspace-1");
-    assert_eq!(snapshots[0].operation, "exec_command");
-    assert_eq!(snapshots[0].lifecycle_state, "running");
+    let samples = store.resource_samples_for_test("sandbox-1")?;
+    let global = samples
+        .iter()
+        .find(|sample| sample.workspace_id.is_none())
+        .expect("sandbox-global sample written");
+    assert!(global.cgroup_available);
+    assert_eq!(global.cgroup_error, None);
+    assert_eq!(global.cpu_usage_usec, Some(4_096));
+    assert_eq!(global.memory_current_bytes, Some(8_192));
+    assert_eq!(global.memory_max_bytes, None);
+    assert_eq!(global.memory_max_unlimited, Some(true));
 
-    let traces = store.namespace_execution_traces_for_test("sandbox-1")?;
-    assert_eq!(traces.len(), 1);
-    assert_eq!(traces[0].trace_id, "namespace_execution:namespace_execution_2");
-    assert_eq!(traces[0].namespace_execution_id, "namespace_execution_2");
-    assert_eq!(traces[0].workspace_session_id, "workspace-1");
-    assert_eq!(traces[0].request_id.as_deref(), Some("req-parent"));
-    assert_eq!(traces[0].status, "ok");
-    assert_eq!(traces[0].exit_code, Some(0));
+    let workspace = samples
+        .iter()
+        .find(|sample| sample.workspace_id.as_deref() == Some("workspace-1"))
+        .expect("workspace sample written");
+    assert!(workspace.cgroup_available);
+    assert_eq!(workspace.cpu_usage_usec, Some(2_048));
+    assert_eq!(workspace.memory_current_bytes, Some(4_096));
+    assert_eq!(workspace.memory_max_bytes, Some(16_384));
+    assert_eq!(workspace.memory_max_unlimited, Some(false));
+
+    assert!(global.cpu_usage_usec >= workspace.cpu_usage_usec);
+    Ok(())
+}
+
+fn write_cgroup_fixture(
+    dir: &Path,
+    cpu_usage_usec: u64,
+    memory_current_bytes: u64,
+    memory_max: &str,
+) -> TestResult {
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(dir.join("cpu.stat"), format!("usage_usec {cpu_usage_usec}\n"))?;
+    std::fs::write(
+        dir.join("memory.current"),
+        format!("{memory_current_bytes}\n"),
+    )?;
+    std::fs::write(dir.join("memory.max"), format!("{memory_max}\n"))?;
     Ok(())
 }
 
@@ -471,7 +362,6 @@ fn namespace_execution_snapshots_do_not_persist_command_payload_data() -> TestRe
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
         }],
-        completed_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),
     };
 
@@ -507,50 +397,6 @@ fn namespace_execution_snapshots_do_not_persist_command_payload_data() -> TestRe
 }
 
 #[test]
-fn daemon_collect_acks_only_successful_namespace_trace_projection() -> TestResult {
-    let root = test_root("namespace-ack-success-only");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    let good = seed_completed_namespace_execution(
-        server.operations.as_ref(),
-        "namespace_execution_good",
-        "exec_command",
-    );
-    let bad = seed_completed_namespace_execution(
-        server.operations.as_ref(),
-        "namespace_execution_bad",
-        "",
-    );
-
-    server
-        .observability
-        .as_ref()
-        .expect("sandbox id enables observability")
-        .collect(&server.config, server.operations.as_ref())?;
-
-    let pending = server
-        .operations
-        .command
-        .namespace_execution_store()
-        .drain_completed_namespace_executions(10)
-        .expect("pending namespace records drain");
-    assert_eq!(pending.len(), 1);
-    assert_eq!(pending[0].namespace_execution_id, bad);
-
-    let store = store_for_config(&server.config)?;
-    let traces = store.namespace_execution_traces_for_test("sandbox-1")?;
-    assert_eq!(traces.len(), 1);
-    assert_eq!(traces[0].namespace_execution_id, good.0);
-    let sandbox = store
-        .sandbox_snapshot_for_test("sandbox-1")?
-        .expect("sandbox snapshot written");
-    assert!(sandbox
-        .error_message
-        .as_deref()
-        .is_some_and(|message| message.contains("namespace_execution_bad")));
-    Ok(())
-}
-
-#[test]
 fn observability_collection_bounds_rows_and_keeps_valid_rows() -> TestResult {
     let root = test_root("bounds-rows");
     let config = server_config(&root, Some("sandbox-1"));
@@ -572,7 +418,6 @@ fn observability_collection_bounds_rows_and_keeps_valid_rows() -> TestResult {
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".repeat(20),
         }],
-        completed_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),
     };
 
@@ -619,7 +464,6 @@ fn disk_samples_are_cached_until_tests_force_refresh_and_can_truncate() -> TestR
         RuntimeObservabilitySnapshot {
             workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir.clone()))],
             active_namespace_executions: Vec::new(),
-            completed_namespace_executions: Vec::new(),
             partial_errors: Vec::new(),
         },
     )?;
@@ -629,7 +473,6 @@ fn disk_samples_are_cached_until_tests_force_refresh_and_can_truncate() -> TestR
         RuntimeObservabilitySnapshot {
             workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir.clone()))],
             active_namespace_executions: Vec::new(),
-            completed_namespace_executions: Vec::new(),
             partial_errors: Vec::new(),
         },
     )?;
@@ -646,7 +489,6 @@ fn disk_samples_are_cached_until_tests_force_refresh_and_can_truncate() -> TestR
         RuntimeObservabilitySnapshot {
             workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir.clone()))],
             active_namespace_executions: Vec::new(),
-            completed_namespace_executions: Vec::new(),
             partial_errors: Vec::new(),
         },
     )?;
@@ -666,7 +508,6 @@ fn disk_samples_are_cached_until_tests_force_refresh_and_can_truncate() -> TestR
                 Some(large_upperdir.clone()),
             )],
             active_namespace_executions: Vec::new(),
-            completed_namespace_executions: Vec::new(),
             partial_errors: Vec::new(),
         },
     )?;
@@ -696,24 +537,6 @@ async fn private_observability_snapshot_dispatch_returns_summary_tree() -> TestR
         .partial_errors
         .push("partial workspace projection failed".to_owned());
     observability.collect_runtime_snapshot_for_test(&server.config, snapshot)?;
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-summary".to_owned(),
-        "exec_command".to_owned(),
-        &json!({
-            "status": "completed",
-            "output": "SECRET_OUTPUT",
-            "transcript": "SECRET_TRANSCRIPT",
-        }),
-        completed_trace(&[
-            (None, "dispatch_operation", 0),
-            (Some(0), "SECRET_SPAN_METHOD", 1),
-        ]),
-    )?;
-    observability.insert_completed_async_operation_trace(
-        completed_trace(&[(None, "complete_terminal_command_with_services", 0)]),
-        command_finalization_metadata("req-origin", "workspace-1", "SECRET_COMMAND_SESSION"),
-    )?;
 
     let response = server
         .dispatch_bytes(
@@ -721,8 +544,6 @@ async fn private_observability_snapshot_dispatch_returns_summary_tree() -> TestR
                 crate::server::dispatch::PRIVATE_OBSERVABILITY_SNAPSHOT_OP,
                 "req-private-snapshot",
                 json!({
-                    "include_recent_traces": true,
-                    "trace_limit": 20,
                     "resource_window_ms": 60_000,
                 }),
             )?,
@@ -748,479 +569,6 @@ async fn private_observability_snapshot_dispatch_returns_summary_tree() -> TestR
             .expect("sandbox resource history loaded")
             .len(),
         1
-    );
-    assert!(response["recent_traces"]
-        .as_array()
-        .expect("recent traces")
-        .iter()
-        .any(|trace| trace["trace_id"] == "request:req-summary"));
-    let response_text = response.to_string();
-    for forbidden in [
-        "SECRET_OUTPUT",
-        "SECRET_TRANSCRIPT",
-        "SECRET_SPAN_METHOD",
-        "SECRET_COMMAND_SESSION",
-        "span_id",
-        "method_name",
-        "command_session_id",
-    ] {
-        assert!(
-            !response_text.contains(forbidden),
-            "private snapshot response unexpectedly contained {forbidden}: {response_text}"
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn completed_operation_trace_maps_and_persists_success() -> TestResult {
-    let root = test_root("trace-success");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-success".to_owned(),
-        "exec_command".to_owned(),
-        &json!({
-            "status": "completed",
-            "output": "SECRET_OUTPUT",
-            "transcript": "SECRET_TRANSCRIPT",
-        }),
-        completed_trace(&[
-            (None, "dispatch_operation", 0),
-            (Some(0), "exec_command::dispatch", 1),
-            (Some(1), "CommandOperationService::exec_command", 2),
-        ]),
-    )?;
-
-    let store = store_for_config(&config)?;
-    let trace = trace_for(&store, "request:req-success")?;
-    assert_eq!(trace.kind, "request");
-    assert_eq!(trace.status, "ok");
-    assert_eq!(trace.sandbox_id, "sandbox-1");
-    assert_eq!(trace.operation, "exec_command");
-    assert_eq!(trace.request_id.as_deref(), Some("req-success"));
-    assert!(trace.error_kind.is_none());
-
-    let spans = store.spans_for_test("request:req-success")?;
-    assert_eq!(spans.len(), 3);
-    assert_eq!(spans[0].span_id, "request:req-success:span:0");
-    assert_eq!(spans[1].parent_span_id.as_deref(), Some("request:req-success:span:0"));
-    assert_eq!(spans[2].parent_span_id.as_deref(), Some("request:req-success:span:1"));
-    assert_no_trace_text(&trace, &spans, "SECRET_OUTPUT");
-    assert_no_trace_text(&trace, &spans, "SECRET_TRANSCRIPT");
-    Ok(())
-}
-
-#[test]
-fn completed_async_command_finalization_trace_maps_and_persists_success() -> TestResult {
-    let root = test_root("async-trace-success");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_async_operation_trace(
-        completed_trace(&[
-            (None, "complete_terminal_command_with_services", 0),
-            (Some(0), "apply_workspace_completion_policy", 1),
-            (Some(0), "complete_command_record", 2),
-        ]),
-        command_finalization_metadata("req-origin", "workspace-1", "cmd_1"),
-    )?;
-
-    let store = store_for_config(&config)?;
-    let trace_id = "async:command_finalization:namespace_execution_id:cmd_1";
-    let trace = trace_for(&store, trace_id)?;
-    assert_eq!(trace.kind, "async");
-    assert_eq!(trace.status, "ok");
-    assert_eq!(trace.sandbox_id, "sandbox-1");
-    assert_eq!(trace.operation, "command_finalization");
-    assert!(trace.request_id.is_none());
-    assert_eq!(trace.origin_request_id.as_deref(), Some("req-origin"));
-    assert_eq!(trace.workspace_id.as_deref(), Some("workspace-1"));
-    assert_eq!(trace.namespace_execution_id.as_deref(), Some("cmd_1"));
-
-    let spans = store.spans_for_test(trace_id)?;
-    assert_eq!(
-        span_names(&spans),
-        vec![
-            "complete_terminal_command_with_services",
-            "apply_workspace_completion_policy",
-            "complete_command_record",
-        ]
-    );
-    assert_eq!(
-        spans[1].parent_span_id.as_deref(),
-        Some("async:command_finalization:namespace_execution_id:cmd_1:span:0")
-    );
-    assert_eq!(
-        spans[2].parent_span_id.as_deref(),
-        Some("async:command_finalization:namespace_execution_id:cmd_1:span:0")
-    );
-    Ok(())
-}
-
-#[test]
-fn completed_async_command_finalization_trace_maps_error_text() -> TestResult {
-    let root = test_root("async-trace-error");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_async_operation_trace(
-        completed_trace(&[(None, "complete_terminal_command_with_services", 0)]),
-        CommandFinalizationTraceMetadata {
-            origin_request_id: "req-origin".to_owned(),
-            workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
-            namespace_execution_id: NamespaceExecutionId("cmd_1".to_owned()),
-            finalizer_error: Some("raw finalizer error".to_owned()),
-        },
-    )?;
-
-    let store = store_for_config(&config)?;
-    let trace = trace_for(&store, "async:command_finalization:namespace_execution_id:cmd_1")?;
-    assert_eq!(trace.status, "error");
-    assert!(trace.error_kind.is_none());
-    assert_eq!(trace.error_message.as_deref(), Some("raw finalizer error"));
-    Ok(())
-}
-
-#[test]
-fn async_command_finalization_trace_does_not_update_deep_span_keys() -> TestResult {
-    let root = test_root("async-trace-no-deep-keys");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_async_operation_trace(
-        completed_trace_with_durations(&[
-            (None, "complete_terminal_command_with_services", 0, 20.0),
-            (Some(0), "CommandOperationService::exec_command", 1, 101.0),
-        ]),
-        command_finalization_metadata("req-origin", "workspace-1", "cmd_1"),
-    )?;
-
-    assert!(observability.enabled_deep_span_keys().is_empty());
-    Ok(())
-}
-
-#[test]
-fn async_trace_sink_store_failure_is_swallowed_at_callback_boundary() -> TestResult {
-    let root = test_root("async-trace-store-failure");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability = Arc::new(
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability"),
-    );
-    let _write_blocker = block_sqlite_writes_for_test(&config)?;
-    let sink = DaemonObservability::async_trace_sink(Arc::clone(&observability));
-
-    sink(
-        completed_trace(&[(None, "complete_terminal_command_with_services", 0)]),
-        command_finalization_metadata("req-origin", "workspace-1", "cmd_1"),
-    );
-
-    assert!(observability.enabled_deep_span_keys().is_empty());
-    Ok(())
-}
-
-#[test]
-fn completed_operation_trace_marks_phase3_service_span_on_error() -> TestResult {
-    let root = test_root("trace-error");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-error".to_owned(),
-        "exec_command".to_owned(),
-        &json!({
-            "error": {
-                "kind": "operation_failed",
-                "message": "command failed",
-                "details": { "output": "SECRET_OUTPUT" }
-            }
-        }),
-        completed_trace(&[
-            (None, "dispatch_operation", 0),
-            (Some(0), "exec_command::dispatch", 1),
-            (Some(1), "CommandOperationService::exec_command", 2),
-            (Some(2), "command.exec.workspace.resolve", 3),
-            (Some(2), "command.exec.process.start", 4),
-        ]),
-    )?;
-
-    let store = store_for_config(&config)?;
-    let trace = trace_for(&store, "request:req-error")?;
-    assert_eq!(trace.status, "error");
-    assert_eq!(trace.error_kind.as_deref(), Some("operation_failed"));
-    assert_eq!(trace.error_message.as_deref(), Some("command failed"));
-    let spans = store.spans_for_test("request:req-error")?;
-    let service_span = span_record(&spans, "CommandOperationService::exec_command");
-    assert_eq!(service_span.status, "error");
-    assert_eq!(service_span.error_kind.as_deref(), Some("operation_failed"));
-    assert_eq!(service_span.error_message.as_deref(), Some("command failed"));
-    for child_name in [
-        "command.exec.workspace.resolve",
-        "command.exec.process.start",
-    ] {
-        let child_span = span_record(&spans, child_name);
-        assert_eq!(child_span.status, "ok");
-        assert!(child_span.error_kind.is_none());
-    }
-    assert_no_trace_text(&trace, &spans, "SECRET_OUTPUT");
-    Ok(())
-}
-
-#[test]
-fn fast_parent_spans_do_not_enable_deep_span_keys() -> TestResult {
-    let root = test_root("trace-fast-parents");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-fast-command".to_owned(),
-        "exec_command".to_owned(),
-        &json!({ "status": "ok" }),
-        completed_trace_with_durations(&[
-            (None, "dispatch_operation", 0, 99.0),
-            (Some(0), "exec_command::dispatch", 1, 99.0),
-            (Some(1), "CommandOperationService::exec_command", 2, 99.0),
-        ]),
-    )?;
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-fast-squash".to_owned(),
-        "squash".to_owned(),
-        &json!({ "squashed": false }),
-        completed_trace_with_durations(&[
-            (None, "dispatch_operation", 0, 99.0),
-            (Some(0), "squash::dispatch", 1, 99.0),
-            (Some(1), "LayerStackService::squash", 2, 99.0),
-        ]),
-    )?;
-
-    assert!(observability.enabled_deep_span_keys().is_empty());
-    Ok(())
-}
-
-#[test]
-fn slow_command_parent_enables_command_deep_span_keys() -> TestResult {
-    let root = test_root("trace-enable-command-keys");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    assert!(observability.enabled_deep_span_keys().is_empty());
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-slow-command".to_owned(),
-        "exec_command".to_owned(),
-        &json!({ "status": "ok" }),
-        completed_trace_with_durations(&[
-            (None, "dispatch_operation", 0, 20.0),
-            (Some(0), "exec_command::dispatch", 1, 20.0),
-            (Some(1), "CommandOperationService::exec_command", 2, 101.0),
-        ]),
-    )?;
-
-    assert_eq!(
-        span_key_names(observability.enabled_deep_span_keys()),
-        vec![
-            span_keys::COMMAND_EXEC_PROCESS_START.as_str(),
-            span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION.as_str(),
-            span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE.as_str(),
-            span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION.as_str(),
-        ]
-    );
-    Ok(())
-}
-
-#[test]
-fn slow_layerstack_parent_enables_layerstack_deep_span_keys() -> TestResult {
-    let root = test_root("trace-enable-layerstack-keys");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-slow-squash".to_owned(),
-        "squash".to_owned(),
-        &json!({ "squashed": false }),
-        completed_trace_with_durations(&[
-            (None, "dispatch_operation", 0, 20.0),
-            (Some(0), "squash::dispatch", 1, 20.0),
-            (Some(1), "LayerStackService::squash", 2, 101.0),
-        ]),
-    )?;
-
-    assert_eq!(
-        span_key_names(observability.enabled_deep_span_keys()),
-        vec![
-            span_keys::LAYERSTACK_SQUASH_COMPACT_STACK.as_str(),
-            span_keys::LAYERSTACK_SQUASH_OPEN_STACK.as_str(),
-        ]
-    );
-    Ok(())
-}
-
-#[test]
-fn completed_operation_trace_persists_long_distinct_request_ids() -> TestResult {
-    let root = test_root("trace-long-request-id");
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-    let shared_prefix = "request-id-with-shared-prefix-".repeat(20);
-
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        format!("{shared_prefix}a"),
-        "exec_command".to_owned(),
-        &json!({ "status": "ok" }),
-        completed_trace(&[(None, "dispatch_operation", 0)]),
-    )?;
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        format!("{shared_prefix}b"),
-        "exec_command".to_owned(),
-        &json!({ "status": "ok" }),
-        completed_trace(&[(None, "dispatch_operation", 0)]),
-    )?;
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn unknown_operation_trace_persistence() -> TestResult {
-    let root = test_root("trace-unknown-op");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-
-    let response = server
-        .dispatch_bytes(request_bytes("missing_op", "req-unknown", json!({}))?, false)
-        .await;
-
-    assert_eq!(response["error"]["kind"], "unknown_op");
-    let store = store_for_config(&server.config)?;
-    let trace = trace_for(&store, "request:req-unknown")?;
-    assert_eq!(trace.status, "error");
-    assert_eq!(trace.operation, "missing_op");
-    assert_eq!(trace.error_kind.as_deref(), Some("unknown_op"));
-    let spans = store.spans_for_test("request:req-unknown")?;
-    assert_eq!(span_names(&spans), vec!["dispatch_operation"]);
-    assert_eq!(spans[0].status, "error");
-    Ok(())
-}
-
-#[tokio::test]
-async fn operation_argument_parse_error_trace_persistence() -> TestResult {
-    let root = test_root("trace-parse-error");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-
-    let response = server
-        .dispatch_bytes(request_bytes("exec_command", "req-parse", json!({}))?, false)
-        .await;
-
-    assert_eq!(response["error"]["kind"], "invalid_request");
-    let store = store_for_config(&server.config)?;
-    let spans = store.spans_for_test("request:req-parse")?;
-    assert_eq!(span_names(&spans), vec!["dispatch_operation", "exec_command::dispatch"]);
-    assert_eq!(spans[1].status, "error");
-    assert_eq!(spans[1].error_kind.as_deref(), Some("invalid_request"));
-    Ok(())
-}
-
-#[tokio::test]
-async fn operation_service_error_trace_persistence() -> TestResult {
-    let root = test_root("trace-service-error");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes("exec_command", "req-service", json!({ "cmd": "   " }))?,
-            false,
-        )
-        .await;
-
-    assert_eq!(response["error"]["kind"], "operation_failed");
-    let store = store_for_config(&server.config)?;
-    let spans = store.spans_for_test("request:req-service")?;
-    assert_eq!(
-        span_names(&spans),
-        vec![
-            "dispatch_operation",
-            "exec_command::dispatch",
-            "CommandOperationService::exec_command",
-        ]
-    );
-    assert_eq!(spans[2].status, "error");
-    assert_eq!(spans[2].error_kind.as_deref(), Some("operation_failed"));
-    Ok(())
-}
-
-#[tokio::test]
-async fn learned_deep_span_keys_apply_to_next_dispatched_request() -> TestResult {
-    let root = test_root("trace-learned-keys-bridge");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    let observability = server
-        .observability
-        .as_ref()
-        .expect("sandbox id enables observability");
-
-    let initial_response = server
-        .dispatch_bytes(request_bytes("squash", "req-unlearned-squash", json!({}))?, false)
-        .await;
-
-    assert_eq!(initial_response["squashed"], false);
-    let store = store_for_config(&server.config)?;
-    assert_eq!(
-        span_names(&store.spans_for_test("request:req-unlearned-squash")?),
-        vec![
-            "dispatch_operation",
-            "squash::dispatch",
-            "LayerStackService::squash",
-        ]
-    );
-
-    observability.insert_completed_operation_trace(
-        "sandbox-1".to_owned(),
-        "req-prime-squash".to_owned(),
-        "squash".to_owned(),
-        &json!({ "squashed": false }),
-        completed_trace_with_durations(&[
-            (None, "dispatch_operation", 0, 20.0),
-            (Some(0), "squash::dispatch", 1, 20.0),
-            (Some(1), "LayerStackService::squash", 2, 101.0),
-        ]),
-    )?;
-
-    let response = server
-        .dispatch_bytes(request_bytes("squash", "req-learned-squash", json!({}))?, false)
-        .await;
-
-    assert_eq!(response["squashed"], false);
-    let spans = store.spans_for_test("request:req-learned-squash")?;
-    assert_eq!(
-        span_names(&spans),
-        vec![
-            "dispatch_operation",
-            "squash::dispatch",
-            "LayerStackService::squash",
-            "layerstack.squash.open_stack",
-            "layerstack.squash.compact_stack",
-        ]
-    );
-    assert_eq!(
-        spans[3].parent_span_id.as_deref(),
-        Some("request:req-learned-squash:span:2")
-    );
-    assert_eq!(
-        spans[4].parent_span_id.as_deref(),
-        Some("request:req-learned-squash:span:2")
     );
     Ok(())
 }
@@ -1293,114 +641,6 @@ async fn observability_write_errors_do_not_change_operation_responses() -> TestR
     Ok(())
 }
 
-fn completed_trace(spans: &[(Option<i64>, &'static str, i64)]) -> CompletedOperationTrace {
-    completed_trace_with_durations(
-        &spans
-            .iter()
-            .map(|(parent_call_index, method_name, call_index)| {
-                (*parent_call_index, *method_name, *call_index, 10.0)
-            })
-            .collect::<Vec<_>>(),
-    )
-}
-
-fn completed_trace_with_durations(
-    spans: &[(Option<i64>, &'static str, i64, f64)],
-) -> CompletedOperationTrace {
-    CompletedOperationTrace {
-        started_at_unix_ms: 1_000,
-        finished_at_unix_ms: 1_050,
-        duration_ms: 50.0,
-        spans: spans
-            .iter()
-            .map(
-                |(parent_call_index, method_name, call_index, duration_ms)| {
-                    CompletedOperationSpan {
-                parent_call_index: *parent_call_index,
-                method_name,
-                call_index: *call_index,
-                status: "ok",
-                started_at_unix_ms: 1_000 + *call_index,
-                finished_at_unix_ms: 1_010 + *call_index,
-                        duration_ms: *duration_ms,
-                    }
-                },
-            )
-            .collect(),
-    }
-}
-
-fn command_finalization_metadata(
-    origin_request_id: &str,
-    workspace_session_id: &str,
-    namespace_execution_id: &str,
-) -> CommandFinalizationTraceMetadata {
-    CommandFinalizationTraceMetadata {
-        origin_request_id: origin_request_id.to_owned(),
-        workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
-        namespace_execution_id: NamespaceExecutionId(namespace_execution_id.to_owned()),
-        finalizer_error: None,
-    }
-}
-
-fn completed_namespace_execution(
-    namespace_execution_id: &str,
-    workspace_session_id: &str,
-    operation_name: &str,
-    terminal_status: NamespaceExecutionTerminalStatus,
-    request_id: Option<&str>,
-    exit_code: Option<i64>,
-) -> NamespaceExecutionRecord {
-    NamespaceExecutionRecord {
-        namespace_execution_id: NamespaceExecutionId(namespace_execution_id.to_owned()),
-        workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
-        operation_name: operation_name.to_owned(),
-        origin_request_id: request_id.map(str::to_owned),
-        started_at_unix_ms: 1_000,
-        finished_at_unix_ms: Some(1_025),
-        duration_ms: Some(25.0),
-        terminal_status: Some(terminal_status),
-        exit_code,
-        error_kind: None,
-        error_message: None,
-    }
-}
-
-fn seed_completed_namespace_execution(
-    operations: &SandboxRuntimeOperations,
-    namespace_execution_id: &str,
-    operation_name: &str,
-) -> NamespaceExecutionId {
-    let record = completed_namespace_execution(
-        namespace_execution_id,
-        "workspace-1",
-        operation_name,
-        NamespaceExecutionTerminalStatus::Ok,
-        Some("req-parent"),
-        Some(0),
-    );
-    let id = record.namespace_execution_id.clone();
-    operations
-        .command
-        .namespace_execution_store()
-        .record_completed(record)
-        .expect("record completed namespace execution succeeds");
-    id
-}
-
-fn span_key_names(keys: Vec<sandbox_runtime::SpanKey>) -> Vec<&'static str> {
-    let mut names = keys.into_iter().map(|key| key.as_str()).collect::<Vec<_>>();
-    names.sort_unstable();
-    names
-}
-
-fn span_record<'a>(spans: &'a [SpanRecord], method_name: &str) -> &'a SpanRecord {
-    spans
-        .iter()
-        .find(|span| span.method_name == method_name)
-        .expect("span recorded")
-}
-
 fn daemon_server(root: &Path, sandbox_id: Option<&str>) -> TestResult<SandboxDaemonServer> {
     let config = server_config(root, sandbox_id);
     Ok(SandboxDaemonServer::new_with_runtime_config(
@@ -1421,48 +661,6 @@ fn request_bytes(op: &str, request_id: &str, args: Value) -> TestResult<Vec<u8>>
     }))?)
 }
 
-fn trace_for(store: &TestObservabilityStore, trace_id: &str) -> TestResult<TraceRecord> {
-    store
-        .trace_for_test(trace_id)?
-        .ok_or_else(|| format!("missing trace {trace_id}").into())
-}
-
-fn span_names(spans: &[SpanRecord]) -> Vec<&str> {
-    spans
-        .iter()
-        .map(|span| span.method_name.as_str())
-        .collect()
-}
-
-fn assert_no_trace_text(trace: &TraceRecord, spans: &[SpanRecord], forbidden: &str) {
-    let mut values = vec![
-        trace.trace_id.as_str(),
-        trace.kind.as_str(),
-        trace.status.as_str(),
-        trace.sandbox_id.as_str(),
-        trace.operation.as_str(),
-    ];
-    values.extend(trace.request_id.as_deref());
-    values.extend(trace.origin_request_id.as_deref());
-    values.extend(trace.workspace_id.as_deref());
-    values.extend(trace.namespace_execution_id.as_deref());
-    values.extend(trace.error_kind.as_deref());
-    values.extend(trace.error_message.as_deref());
-    for span in spans {
-        values.push(span.span_id.as_str());
-        values.push(span.trace_id.as_str());
-        values.extend(span.parent_span_id.as_deref());
-        values.push(span.method_name.as_str());
-        values.push(span.status.as_str());
-        values.extend(span.error_kind.as_deref());
-        values.extend(span.error_message.as_deref());
-    }
-    assert!(
-        values.iter().all(|value| !value.contains(forbidden)),
-        "trace rows unexpectedly contained {forbidden}"
-    );
-}
-
 fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
     RuntimeObservabilitySnapshot {
         workspaces: vec![workspace_snapshot("workspace-1", Some(missing_upperdir))],
@@ -1471,7 +669,6 @@ fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
         }],
-        completed_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),
     }
 }
@@ -1487,6 +684,7 @@ fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeW
         base_manifest_version: Some(1),
         base_root_hash: Some("root".to_owned()),
         layer_count: Some(1),
+        cgroup_path: None,
     }
 }
 
@@ -1526,6 +724,7 @@ fn server_config(root: &Path, sandbox_id: Option<&str>) -> ServerConfig {
         tcp_port: None,
         auth_token: None,
         sandbox_id: sandbox_id.map(str::to_owned),
+        cgroup_root: None,
     }
 }
 
@@ -1535,6 +734,7 @@ fn runtime_config(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeConf
     std::fs::create_dir_all(&workspace_root)?;
     sandbox_runtime_layerstack::build_workspace_base(&layer_stack_root, &workspace_root, false)?;
     Ok(sandbox_runtime::SandboxRuntimeConfig {
+        cgroup_root: None,
         workspace: sandbox_runtime::WorkspaceRuntimeConfig {
             workspace_root,
             layer_stack_root,

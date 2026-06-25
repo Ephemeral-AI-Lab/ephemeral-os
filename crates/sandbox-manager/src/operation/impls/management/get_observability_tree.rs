@@ -35,26 +35,6 @@ const GET_OBSERVABILITY_TREE_ARGS: &[ArgSpec] = &[
         }),
     ),
     ArgSpec::optional(
-        "include_recent_traces",
-        ArgKind::Integer,
-        "Set to 1 to include bounded recent trace summaries.",
-        Some("0"),
-        Some(ArgCliSpec {
-            flag: Some("--include-recent-traces"),
-            positional: None,
-        }),
-    ),
-    ArgSpec::optional(
-        "trace_limit",
-        ArgKind::Integer,
-        "Maximum recent trace summaries per daemon before daemon caps.",
-        Some("20"),
-        Some(ArgCliSpec {
-            flag: Some("--trace-limit"),
-            positional: None,
-        }),
-    ),
-    ArgSpec::optional(
         "resource_window_ms",
         ArgKind::Integer,
         "Optional bounded resource history window in milliseconds.",
@@ -68,11 +48,10 @@ const GET_OBSERVABILITY_TREE_ARGS: &[ArgSpec] = &[
 
 const GET_OBSERVABILITY_TREE_CLI: CliSpec = CliSpec {
     path: &["manager", "get_observability_tree"],
-    usage: "sandbox-cli manager get_observability_tree [--sandbox-id ID] [--include-recent-traces 1] [--trace-limit N] [--resource-window-ms MS]",
+    usage: "sandbox-cli manager get_observability_tree [--sandbox-id ID] [--resource-window-ms MS]",
     examples: &[
         "sandbox-cli manager get_observability_tree",
         "sandbox-cli manager get_observability_tree --sandbox-id sbox-1",
-        "sandbox-cli manager get_observability_tree --include-recent-traces 1 --trace-limit 20",
         "sandbox-cli manager get_observability_tree --resource-window-ms 60000",
     ],
 };
@@ -80,8 +59,6 @@ const GET_OBSERVABILITY_TREE_CLI: CliSpec = CliSpec {
 #[derive(Clone, Debug)]
 struct TreeOptions {
     sandbox_id: Option<SandboxId>,
-    include_recent_traces: Option<bool>,
-    trace_limit: Option<usize>,
     resource_window_ms: Option<u64>,
 }
 
@@ -114,10 +91,6 @@ fn tree_options(request: &Request) -> Result<TreeOptions, Response> {
         .map_err(ManagerError::into_response)?;
     Ok(TreeOptions {
         sandbox_id,
-        include_recent_traces: request
-            .optional_u64("include_recent_traces")?
-            .map(|value| value != 0),
-        trace_limit: request.optional_usize("trace_limit")?,
         resource_window_ms: request.optional_u64("resource_window_ms")?,
     })
 }
@@ -211,15 +184,6 @@ fn private_snapshot_request(
     request_id: &str,
 ) -> Request {
     let mut args = Map::new();
-    if let Some(include_recent_traces) = options.include_recent_traces {
-        args.insert(
-            "include_recent_traces".to_owned(),
-            json!(include_recent_traces),
-        );
-    }
-    if let Some(trace_limit) = options.trace_limit {
-        args.insert("trace_limit".to_owned(), json!(trace_limit));
-    }
     if let Some(resource_window_ms) = options.resource_window_ms {
         args.insert("resource_window_ms".to_owned(), json!(resource_window_ms));
     }
@@ -265,9 +229,6 @@ fn node_from_daemon_response(
     object
         .entry("workspaces".to_owned())
         .or_insert_with(|| json!([]));
-    object
-        .entry("recent_traces".to_owned())
-        .or_insert_with(|| json!([]));
     Value::Object(object)
 }
 
@@ -295,7 +256,6 @@ fn unavailable_node(
         "daemon": daemon_value(endpoint),
         "resources": empty_resources_value(),
         "workspaces": [],
-        "recent_traces": [],
     })
 }
 

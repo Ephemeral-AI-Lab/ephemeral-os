@@ -1,21 +1,18 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use sandbox_observability::{
-    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityNamespaceExecutionTraceRow,
-    ObservabilityPaths, ObservabilityRequestTraceRow, ObservabilityResourceSampleRow,
+    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityPaths, ObservabilityResourceSampleRow,
     ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore,
-    ObservabilityWorkspaceSnapshotRow, ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord,
-    StoreError, TraceRecord, WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH,
-    MAX_KIND_LENGTH, MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
+    ObservabilityWorkspaceSnapshotRow, ResourceSampleRecord, SandboxSnapshotRecord, StoreError,
+    WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH,
+    MAX_PATH_LENGTH,
 };
 use sandbox_runtime::{
-    span_keys, AsyncTraceSink, CommandFinalizationTraceMetadata, CompletedOperationSpan,
-    CompletedOperationTrace, NamespaceExecutionId, NamespaceExecutionRecord,
-    RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, SandboxRuntimeOperations, SpanKey,
+    RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, SandboxRuntimeOperations,
 };
 
 use crate::server::ServerConfig;
@@ -26,31 +23,7 @@ use super::namespace_execution;
 use serde_json::{json, Value};
 
 const DISK_SAMPLE_MIN_INTERVAL: Duration = Duration::from_secs(10);
-const DEFAULT_TRACE_LIMIT: usize = 20;
-const MAX_TRACE_LIMIT: usize = 100;
 const MAX_RESOURCE_WINDOW_MS: u64 = 600_000;
-const MAX_METHOD_LENGTH: usize = 256;
-const REQUEST_TRACE_PREFIX: &str = "request:";
-const COMMAND_FINALIZATION_OPERATION: &str = "command_finalization";
-const ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX: &str =
-    "async:command_finalization:namespace_execution_id:";
-const SPAN_ID_SEPARATOR: &str = ":span:";
-const MAX_CALL_INDEX_TEXT_LENGTH: usize = 20;
-const MAX_TRACE_ID_LENGTH: usize =
-    MAX_ID_LENGTH - SPAN_ID_SEPARATOR.len() - MAX_CALL_INDEX_TEXT_LENGTH;
-const DEEP_SPAN_PARENT_THRESHOLD_MS: f64 = 100.0;
-const COMMAND_EXEC_PARENT_SPAN: &str = "CommandOperationService::exec_command";
-const LAYERSTACK_SQUASH_PARENT_SPAN: &str = "LayerStackService::squash";
-const COMMAND_EXEC_DEEP_SPAN_KEYS: [SpanKey; 4] = [
-    span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE,
-    span_keys::COMMAND_EXEC_WORKSPACE_RESOLVE_EXISTING_SESSION,
-    span_keys::COMMAND_EXEC_WORKSPACE_CREATE_ONE_SHOT_SESSION,
-    span_keys::COMMAND_EXEC_PROCESS_START,
-];
-const LAYERSTACK_SQUASH_DEEP_SPAN_KEYS: [SpanKey; 2] = [
-    span_keys::LAYERSTACK_SQUASH_OPEN_STACK,
-    span_keys::LAYERSTACK_SQUASH_COMPACT_STACK,
-];
 
 pub struct DaemonObservability {
     sandbox_id: String,
@@ -58,7 +31,6 @@ pub struct DaemonObservability {
     pub(crate) store: ObservabilityStore,
     next_sample_id: AtomicU64,
     disk_samples: Mutex<HashMap<DiskCacheKey, CachedDiskSample>>,
-    enabled_deep_span_keys: Mutex<HashSet<SpanKey>>,
 }
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
@@ -88,7 +60,6 @@ impl DaemonObservability {
             store,
             next_sample_id: AtomicU64::new(1),
             disk_samples: Mutex::new(HashMap::new()),
-            enabled_deep_span_keys: Mutex::new(HashSet::new()),
         })
     }
 
@@ -97,14 +68,12 @@ impl DaemonObservability {
         config: &ServerConfig,
         operations: &SandboxRuntimeOperations,
     ) -> Result<(), StoreError> {
-        let acked_namespace_execution_ids = self.write_snapshot(
+        self.write_snapshot(
             config,
             operations.observability_snapshot(),
             unix_ms(),
             false,
-        )?;
-        let _ = operations.ack_completed_namespace_executions(&acked_namespace_execution_ids);
-        Ok(())
+        )
     }
 
     pub(crate) fn observability_snapshot_response(
@@ -130,127 +99,16 @@ impl DaemonObservability {
         }
     }
 
-    pub(crate) fn insert_completed_operation_trace(
-        &self,
-        sandbox_id: String,
-        request_id: String,
-        operation: String,
-        response: &serde_json::Value,
-        trace: CompletedOperationTrace,
-    ) -> Result<(), StoreError> {
-        self.update_enabled_deep_span_keys(&trace);
-        let trace_id = trace_id_for_request(&request_id);
-        let (status, error_kind, error_message) = trace_response_status(response);
-        let is_error = status == "error";
-        let error_call_index = is_error
-            .then(|| response_error_call_index(&trace.spans))
-            .flatten();
-        let trace_record = TraceRecord {
-            trace_id: trace_id.clone(),
-            kind: "request".to_owned(),
-            status,
-            sandbox_id: bound_id(sandbox_id),
-            operation: bound_operation(operation),
-            request_id: Some(bound_id(request_id)),
-            origin_request_id: None,
-            workspace_id: None,
-            namespace_execution_id: None,
-            started_at_unix_ms: trace.started_at_unix_ms,
-            finished_at_unix_ms: Some(trace.finished_at_unix_ms),
-            duration_ms: Some(trace.duration_ms),
-            error_kind: error_kind.clone(),
-            error_message: error_message.clone(),
-        };
-        let spans = span_records_for_trace(
-            &trace_id,
-            trace.spans,
-            error_call_index,
-            error_kind.as_ref(),
-            error_message.as_ref(),
-        );
-
-        self.store.insert_trace(&trace_record, &spans)
-    }
-
-    pub(crate) fn insert_completed_async_operation_trace(
-        &self,
-        trace: CompletedOperationTrace,
-        metadata: CommandFinalizationTraceMetadata,
-    ) -> Result<(), StoreError> {
-        let trace_id = trace_id_for_command_finalization(&metadata.namespace_execution_id.0);
-        let error_message = metadata.finalizer_error.map(bound_error);
-        let status = if error_message.is_some() {
-            "error"
-        } else {
-            "ok"
-        };
-        let trace_record = TraceRecord {
-            trace_id: trace_id.clone(),
-            kind: "async".to_owned(),
-            status: status.to_owned(),
-            sandbox_id: self.sandbox_id.clone(),
-            operation: COMMAND_FINALIZATION_OPERATION.to_owned(),
-            request_id: None,
-            origin_request_id: Some(bound_id(metadata.origin_request_id)),
-            workspace_id: Some(bound_id(metadata.workspace_session_id.0)),
-            namespace_execution_id: Some(bound_id(metadata.namespace_execution_id.0)),
-            started_at_unix_ms: trace.started_at_unix_ms,
-            finished_at_unix_ms: Some(trace.finished_at_unix_ms),
-            duration_ms: Some(trace.duration_ms),
-            error_kind: None,
-            error_message,
-        };
-        let spans = span_records_for_trace(&trace_id, trace.spans, None, None, None);
-
-        self.store.insert_trace(&trace_record, &spans)
-    }
-
-    fn insert_completed_namespace_execution_trace(
-        &self,
-        execution: &NamespaceExecutionRecord,
-    ) -> Result<(), StoreError> {
-        let trace_record = namespace_execution::trace_record(&self.sandbox_id, execution);
-        self.store.insert_namespace_execution_trace(&trace_record)
-    }
-
-    pub(crate) fn async_trace_sink(observability: Arc<Self>) -> AsyncTraceSink {
-        Arc::new(move |trace, metadata| {
-            let _ = observability.insert_completed_async_operation_trace(trace, metadata);
-        })
-    }
-
-    pub(crate) fn enabled_deep_span_keys(&self) -> Vec<SpanKey> {
-        lock_enabled_deep_span_keys(&self.enabled_deep_span_keys)
-            .iter()
-            .copied()
-            .collect()
-    }
-
-    fn update_enabled_deep_span_keys(&self, trace: &CompletedOperationTrace) {
-        let mut keys = lock_enabled_deep_span_keys(&self.enabled_deep_span_keys);
-        for span in &trace.spans {
-            if span.duration_ms < DEEP_SPAN_PARENT_THRESHOLD_MS {
-                continue;
-            }
-            match span.method_name {
-                COMMAND_EXEC_PARENT_SPAN => enable_command_exec_deep_spans(&mut keys),
-                LAYERSTACK_SQUASH_PARENT_SPAN => enable_layerstack_squash_deep_spans(&mut keys),
-                _ => {}
-            }
-        }
-    }
-
     pub(crate) fn write_snapshot(
         &self,
         config: &ServerConfig,
         snapshot: RuntimeObservabilitySnapshot,
         sampled_at_unix_ms: i64,
         force_fresh_disk: bool,
-    ) -> Result<Vec<NamespaceExecutionId>, StoreError> {
+    ) -> Result<(), StoreError> {
         let RuntimeObservabilitySnapshot {
             workspaces,
             active_namespace_executions,
-            completed_namespace_executions,
             mut partial_errors,
         } = snapshot;
 
@@ -258,7 +116,7 @@ impl DaemonObservability {
         let mut resource_samples = vec![self.resource_record(
             None,
             sampled_at_unix_ms,
-            CgroupSample::unavailable("cgroup path unavailable"),
+            sandbox_cgroup_sample(config),
             DiskSample::empty(),
         )];
         for workspace in &workspaces {
@@ -277,6 +135,7 @@ impl DaemonObservability {
             resource_samples.push(self.workspace_resource_record(
                 &workspace_id,
                 workspace.upperdir.as_deref(),
+                workspace.cgroup_path.as_deref(),
                 sampled_at_unix_ms,
                 force_fresh_disk,
             ));
@@ -307,19 +166,6 @@ impl DaemonObservability {
             ));
         }
 
-        let mut acked_namespace_execution_ids = Vec::new();
-        for completed in &completed_namespace_executions {
-            match self.insert_completed_namespace_execution_trace(completed) {
-                Ok(()) => {
-                    acked_namespace_execution_ids.push(completed.namespace_execution_id.clone())
-                }
-                Err(error) => partial_errors.push(bound_error(format!(
-                    "namespace execution projection failed for {}: {error}",
-                    completed.namespace_execution_id.0
-                ))),
-            }
-        }
-
         self.store.upsert_sandbox_snapshot(&self.sandbox_record(
             config,
             sampled_at_unix_ms,
@@ -344,7 +190,7 @@ impl DaemonObservability {
         )?;
 
         self.store.insert_resource_samples(&resource_samples)?;
-        Ok(acked_namespace_execution_ids)
+        Ok(())
     }
 
     fn sandbox_record(
@@ -401,18 +247,18 @@ impl DaemonObservability {
         &self,
         workspace_id: &str,
         upperdir: Option<&Path>,
+        cgroup_path: Option<&Path>,
         sampled_at_unix_ms: i64,
         force_fresh_disk: bool,
     ) -> ResourceSampleRecord {
         let disk = upperdir
             .map(|upperdir| self.disk_sample(workspace_id, upperdir, force_fresh_disk))
             .unwrap_or_else(DiskSample::empty);
-        self.resource_record(
-            Some(workspace_id),
-            sampled_at_unix_ms,
-            CgroupSample::unavailable("cgroup path unavailable"),
-            disk,
-        )
+        let cgroup = match cgroup_path {
+            Some(cgroup_path) => CgroupSample::read(cgroup_path),
+            None => CgroupSample::unavailable("workspace cgroup unavailable"),
+        };
+        self.resource_record(Some(workspace_id), sampled_at_unix_ms, cgroup, disk)
     }
 
     fn resource_record(
@@ -483,41 +329,21 @@ fn unix_ms() -> i64 {
     i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
 }
 
+fn sandbox_cgroup_sample(config: &ServerConfig) -> CgroupSample {
+    match &config.cgroup_root {
+        Some(cgroup_root) => CgroupSample::read(cgroup_root),
+        None => CgroupSample::unavailable("cgroup root unavailable"),
+    }
+}
+
 fn snapshot_read_options(
     request: &sandbox_protocol::Request,
 ) -> Result<ObservabilitySnapshotReadOptions, sandbox_protocol::Response> {
     Ok(ObservabilitySnapshotReadOptions {
-        include_recent_traces: optional_bool_arg(request, "include_recent_traces")?
-            .unwrap_or(false),
-        trace_limit: request
-            .optional_usize("trace_limit")?
-            .unwrap_or(DEFAULT_TRACE_LIMIT)
-            .min(MAX_TRACE_LIMIT),
         resource_window_ms: request
             .optional_u64("resource_window_ms")?
             .map(|window_ms| window_ms.min(MAX_RESOURCE_WINDOW_MS)),
     })
-}
-
-fn optional_bool_arg(
-    request: &sandbox_protocol::Request,
-    field: &str,
-) -> Result<Option<bool>, sandbox_protocol::Response> {
-    let object = request
-        .args
-        .as_object()
-        .ok_or_else(|| request.invalid_argument("args must be an object"))?;
-    let Some(value) = object.get(field) else {
-        return Ok(None);
-    };
-    match value {
-        Value::Bool(value) => Ok(Some(*value)),
-        Value::Number(value) => value
-            .as_u64()
-            .map(|value| Some(value != 0))
-            .ok_or_else(|| request.invalid_argument(format!("{field} must be a boolean"))),
-        _ => Err(request.invalid_argument(format!("{field} must be a boolean"))),
-    }
 }
 
 fn snapshot_value(rows: ObservabilitySnapshotRows) -> Result<Value, sandbox_protocol::Response> {
@@ -550,7 +376,6 @@ fn snapshot_value(rows: ObservabilitySnapshotRows) -> Result<Value, sandbox_prot
             .iter()
             .map(|workspace| workspace_value(workspace, &rows))
             .collect::<Vec<_>>(),
-        "recent_traces": recent_trace_values(&rows),
     }))
 }
 
@@ -647,68 +472,6 @@ fn resource_sample_value(sample: &ObservabilityResourceSampleRow) -> Value {
     })
 }
 
-fn recent_trace_values(rows: &ObservabilitySnapshotRows) -> Vec<Value> {
-    rows.recent_request_traces
-        .iter()
-        .map(request_trace_value)
-        .chain(
-            rows.recent_namespace_traces
-                .iter()
-                .map(namespace_trace_value),
-        )
-        .collect()
-}
-
-fn request_trace_value(trace: &ObservabilityRequestTraceRow) -> Value {
-    json!({
-        "trace_id": public_trace_id(trace),
-        "kind": trace.kind.as_str(),
-        "operation": trace.operation.as_str(),
-        "status": trace.status.as_str(),
-        "workspace_id": trace.workspace_id.as_deref(),
-        "namespace_execution_id": Value::Null,
-        "request_id": trace.request_id.as_deref(),
-        "started_at_unix_ms": trace.started_at_unix_ms,
-        "finished_at_unix_ms": trace.finished_at_unix_ms,
-        "duration_ms": trace.duration_ms,
-        "error_kind": trace.error_kind.as_deref(),
-        "error_message": trace.error_message.as_deref(),
-    })
-}
-
-fn public_trace_id(trace: &ObservabilityRequestTraceRow) -> String {
-    trace
-        .trace_id
-        .strip_prefix(ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX)
-        .map_or_else(
-            || trace.trace_id.clone(),
-            |namespace_execution_id| {
-                format!(
-                    "async:command_finalization:{:016x}",
-                    stable_hash(namespace_execution_id.as_bytes())
-                )
-            },
-        )
-}
-
-fn namespace_trace_value(trace: &ObservabilityNamespaceExecutionTraceRow) -> Value {
-    json!({
-        "trace_id": trace.trace_id.as_str(),
-        "kind": "namespace_execution",
-        "operation": trace.operation.as_str(),
-        "status": trace.status.as_str(),
-        "workspace_id": trace.workspace_session_id.as_str(),
-        "namespace_execution_id": trace.namespace_execution_id.as_str(),
-        "request_id": trace.request_id.as_deref(),
-        "started_at_unix_ms": trace.started_at_unix_ms,
-        "finished_at_unix_ms": trace.finished_at_unix_ms,
-        "duration_ms": trace.duration_ms,
-        "exit_code": trace.exit_code,
-        "error_kind": trace.error_kind.as_deref(),
-        "error_message": trace.error_message.as_deref(),
-    })
-}
-
 fn error_list(error: Option<&str>) -> Vec<&str> {
     error.into_iter().collect()
 }
@@ -755,18 +518,6 @@ fn bound_kind(value: String) -> String {
     bound_string(value, MAX_KIND_LENGTH)
 }
 
-fn bound_operation(value: String) -> String {
-    bound_string(value, MAX_OPERATION_LENGTH)
-}
-
-fn bound_state(value: String) -> String {
-    bound_string(value, MAX_SNAPSHOT_STATE_LENGTH)
-}
-
-fn bound_method(value: String) -> String {
-    bound_string(value, MAX_METHOD_LENGTH)
-}
-
 fn bound_error(value: String) -> String {
     bound_string(value, MAX_ERROR_MESSAGE_LENGTH)
 }
@@ -807,109 +558,6 @@ fn stable_hash(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
         (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
     })
-}
-
-fn trace_id_for_request(request_id: &str) -> String {
-    let max_request_id_len = MAX_TRACE_ID_LENGTH - REQUEST_TRACE_PREFIX.len();
-    format!(
-        "{REQUEST_TRACE_PREFIX}{}",
-        bound_string_with_hash(request_id.to_owned(), max_request_id_len)
-    )
-}
-
-fn trace_id_for_command_finalization(namespace_execution_id: &str) -> String {
-    let max_namespace_execution_id_len =
-        MAX_TRACE_ID_LENGTH - ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX.len();
-    format!(
-        "{ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX}{}",
-        bound_string_with_hash(
-            namespace_execution_id.to_owned(),
-            max_namespace_execution_id_len
-        )
-    )
-}
-
-fn trace_span_id(trace_id: &str, call_index: i64) -> String {
-    format!("{trace_id}{SPAN_ID_SEPARATOR}{call_index}")
-}
-
-fn span_records_for_trace(
-    trace_id: &str,
-    spans: Vec<CompletedOperationSpan>,
-    error_call_index: Option<i64>,
-    error_kind: Option<&String>,
-    error_message: Option<&String>,
-) -> Vec<SpanRecord> {
-    spans
-        .into_iter()
-        .map(|span| {
-            let is_error_span = error_call_index == Some(span.call_index);
-            SpanRecord {
-                span_id: trace_span_id(trace_id, span.call_index),
-                trace_id: trace_id.to_owned(),
-                parent_span_id: span
-                    .parent_call_index
-                    .map(|call_index| trace_span_id(trace_id, call_index)),
-                method_name: bound_method(span.method_name.to_owned()),
-                call_index: span.call_index,
-                status: if is_error_span {
-                    "error".to_owned()
-                } else {
-                    bound_state(span.status.to_owned())
-                },
-                started_at_unix_ms: span.started_at_unix_ms,
-                finished_at_unix_ms: Some(span.finished_at_unix_ms),
-                duration_ms: Some(span.duration_ms),
-                error_kind: is_error_span.then(|| error_kind.cloned()).flatten(),
-                error_message: is_error_span.then(|| error_message.cloned()).flatten(),
-            }
-        })
-        .collect()
-}
-
-fn trace_response_status(response: &serde_json::Value) -> (String, Option<String>, Option<String>) {
-    let Some(error) = response.get("error") else {
-        return ("ok".to_owned(), None, None);
-    };
-    let error_kind = error
-        .get("kind")
-        .and_then(serde_json::Value::as_str)
-        .map(str::to_owned)
-        .map(bound_operation);
-    let error_message = error
-        .get("message")
-        .and_then(serde_json::Value::as_str)
-        .map(str::to_owned)
-        .map(bound_error);
-    ("error".to_owned(), error_kind, error_message)
-}
-
-fn response_error_call_index(spans: &[CompletedOperationSpan]) -> Option<i64> {
-    spans
-        .iter()
-        .filter(|span| !is_deep_span_method(span.method_name))
-        .map(|span| span.call_index)
-        .max()
-}
-
-fn is_deep_span_method(method_name: &str) -> bool {
-    COMMAND_EXEC_DEEP_SPAN_KEYS
-        .iter()
-        .chain(LAYERSTACK_SQUASH_DEEP_SPAN_KEYS.iter())
-        .any(|key| key.as_str() == method_name)
-}
-
-fn enable_command_exec_deep_spans(keys: &mut HashSet<SpanKey>) {
-    keys.extend(COMMAND_EXEC_DEEP_SPAN_KEYS);
-}
-
-fn enable_layerstack_squash_deep_spans(keys: &mut HashSet<SpanKey>) {
-    keys.extend(LAYERSTACK_SQUASH_DEEP_SPAN_KEYS);
-}
-
-fn lock_enabled_deep_span_keys(keys: &Mutex<HashSet<SpanKey>>) -> MutexGuard<'_, HashSet<SpanKey>> {
-    keys.lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn lock_disk_samples(

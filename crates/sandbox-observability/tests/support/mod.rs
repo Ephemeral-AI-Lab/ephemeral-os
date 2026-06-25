@@ -53,12 +53,9 @@ pub fn current_unix_ms() -> TestResult<i64> {
 pub fn allowed_tables() -> BTreeSet<String> {
     [
         "namespace_execution_snapshots",
-        "namespace_execution_traces",
         "resource_samples",
         "schema_migrations",
         "sandbox_snapshots",
-        "spans",
-        "traces",
         "workspace_snapshots",
     ]
     .into_iter()
@@ -69,13 +66,8 @@ pub fn allowed_tables() -> BTreeSet<String> {
 pub fn allowed_indexes() -> BTreeSet<String> {
     [
         "idx_namespace_execution_snapshots_workspace_session",
-        "idx_namespace_execution_traces_namespace_execution",
-        "idx_namespace_execution_traces_workspace_session_started",
         "idx_resource_samples_sandbox_time",
         "idx_resource_samples_workspace_time",
-        "idx_spans_trace_call_index",
-        "idx_traces_request",
-        "idx_traces_sandbox_started",
         "idx_workspace_snapshots_sandbox",
     ]
     .into_iter()

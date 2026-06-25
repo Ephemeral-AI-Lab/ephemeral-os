@@ -39,6 +39,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "phase_4_7_trace_namespace_execution_id_rename",
         sql: V6_SCHEMA_SQL,
     },
+    Migration {
+        version: 7,
+        name: "phase_5_drop_trace_tables",
+        sql: V7_SCHEMA_SQL,
+    },
 ];
 
 const SCHEMA_MIGRATIONS_SQL: &str = r#"
@@ -234,6 +239,17 @@ DROP TABLE IF EXISTS execution_snapshots;
 
 const V6_SCHEMA_SQL: &str = r#"
 ALTER TABLE traces RENAME COLUMN command_session_id TO namespace_execution_id;
+"#;
+
+const V7_SCHEMA_SQL: &str = r#"
+DROP INDEX IF EXISTS idx_spans_trace_call_index;
+DROP INDEX IF EXISTS idx_traces_request;
+DROP INDEX IF EXISTS idx_traces_sandbox_started;
+DROP INDEX IF EXISTS idx_namespace_execution_traces_namespace_execution;
+DROP INDEX IF EXISTS idx_namespace_execution_traces_workspace_session_started;
+DROP TABLE IF EXISTS spans;
+DROP TABLE IF EXISTS traces;
+DROP TABLE IF EXISTS namespace_execution_traces;
 "#;
 
 pub(super) fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {

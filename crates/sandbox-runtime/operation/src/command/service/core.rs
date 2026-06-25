@@ -5,8 +5,7 @@ use sandbox_runtime_namespace_execution::{
 };
 
 use crate::command::{CommandConfig, CommandExecValue};
-use crate::namespace_execution::{NamespaceExecutionLedger, RuntimeNamespaceExecutionSnapshot};
-use crate::observability::AsyncTraceSink;
+use crate::namespace_execution::RuntimeNamespaceExecutionSnapshot;
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
     WorkspaceSessionId,
@@ -23,8 +22,6 @@ pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: CommandConfig,
     engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
-    namespace_execution: Arc<NamespaceExecutionLedger>,
-    async_trace_sink: Option<AsyncTraceSink>,
     workspace_lifecycle_admission: Mutex<()>,
 }
 
@@ -32,23 +29,13 @@ pub(crate) type WorkspaceLifecycleAdmission<'a> = MutexGuard<'a, ()>;
 
 impl CommandOperationService {
     #[must_use]
-    pub fn new(
-        workspace: Arc<WorkspaceSessionService>,
-        config: CommandConfig,
-        async_trace_sink: Option<AsyncTraceSink>,
-    ) -> Self {
+    pub fn new(workspace: Arc<WorkspaceSessionService>, config: CommandConfig) -> Self {
         let engine = Arc::new(NamespaceExecutionEngine::new(
             Arc::new(NoopObserver),
             MAX_ACTIVE_COMMANDS,
             COMMAND_ENGINE_SETUP_TIMEOUT_S,
         ));
-        Self::with_engine(
-            workspace,
-            config,
-            engine,
-            Arc::new(NamespaceExecutionLedger::new()),
-            async_trace_sink,
-        )
+        Self::with_engine(workspace, config, engine)
     }
 
     /// Build a command service over a caller-supplied engine. The test harness
@@ -59,22 +46,13 @@ impl CommandOperationService {
         workspace: Arc<WorkspaceSessionService>,
         config: CommandConfig,
         engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
-        namespace_execution: Arc<NamespaceExecutionLedger>,
-        async_trace_sink: Option<AsyncTraceSink>,
     ) -> Self {
         Self {
             workspace,
             config,
             engine,
-            namespace_execution,
-            async_trace_sink,
             workspace_lifecycle_admission: Mutex::new(()),
         }
-    }
-
-    #[must_use]
-    pub fn namespace_execution_store(&self) -> &Arc<NamespaceExecutionLedger> {
-        &self.namespace_execution
     }
 
     #[must_use]
@@ -101,11 +79,6 @@ impl CommandOperationService {
     #[must_use]
     pub(crate) fn engine(&self) -> &Arc<NamespaceExecutionEngine<CommandExecValue>> {
         &self.engine
-    }
-
-    #[must_use]
-    pub(crate) fn async_trace_sink(&self) -> Option<AsyncTraceSink> {
-        self.async_trace_sink.clone()
     }
 
     pub(crate) fn begin_workspace_lifecycle_admission(&self) -> WorkspaceLifecycleAdmission<'_> {

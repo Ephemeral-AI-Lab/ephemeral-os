@@ -48,7 +48,7 @@ fn shell_execution_resolves_finalized_output_and_records_terminal() {
     let id = id("ok");
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None)
         .expect("shell admitted");
     assert_eq!(exec.id().0, id.0);
 
@@ -68,7 +68,13 @@ fn shell_finalize_error_resolves_terminal_error() {
     let engine = test_engine(&fake, observer.clone(), 4);
 
     let exec = engine
-        .run_shell_interactive(ErrShellOp, sample_target(), id("finalize_err"), |_| {})
+        .run_shell_interactive(
+            ErrShellOp,
+            sample_target(),
+            id("finalize_err"),
+            |_| {},
+            None,
+        )
         .expect("admitted");
     fake.complete_latest(run_result(0, "ok"));
 
@@ -86,7 +92,7 @@ fn shell_finalize_panic_resolves_terminal_error_and_completes_registry() {
     let id = id("finalize_panic");
 
     let exec = engine
-        .run_shell_interactive(PanicShellOp, sample_target(), id.clone(), |_| {})
+        .run_shell_interactive(PanicShellOp, sample_target(), id.clone(), |_| {}, None)
         .expect("admitted");
     fake.complete_latest(run_result(0, "ok"));
 
@@ -109,7 +115,7 @@ fn wait_completion_error_resolves_terminal_error_and_completes_registry() {
     let id = id("wait_error");
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None)
         .expect("admitted");
     fake.fail_latest_wait("result fd read failed");
 
@@ -131,7 +137,7 @@ fn cancel_unblocks_the_blocked_watcher() {
     let engine = test_engine(&fake, observer.clone(), 4);
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id("cancel"), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), id("cancel"), |_| {}, None)
         .expect("admitted");
 
     // The watcher is blocked in wait_completion; cancel trips the fake completion
@@ -150,10 +156,10 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
 
     let first_id = id("1");
     let first = engine
-        .run_shell_interactive(OkShellOp, sample_target(), first_id.clone(), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), first_id.clone(), |_| {}, None)
         .expect("first admitted");
     let refused = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id("2"), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), id("2"), |_| {}, None)
         .err()
         .expect("second refused while full");
     assert!(matches!(
@@ -167,7 +173,7 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
     assert!(engine.is_completed(&first_id));
 
     let third = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id("3"), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), id("3"), |_| {}, None)
         .expect("readmitted after completion");
     fake.complete_latest(run_result(0, "ok"));
     assert_eq!(third.wait().expect("third resolved"), 0);
@@ -263,7 +269,7 @@ fn shell_request_carries_args_timeout_and_target_fields() {
     let id = id("shell_request");
 
     let exec = engine
-        .run_shell_interactive(TimedShellOp, target.clone(), id.clone(), |_| {})
+        .run_shell_interactive(TimedShellOp, target.clone(), id.clone(), |_| {}, None)
         .expect("admitted");
 
     let requests = fake.recorded_requests();
@@ -393,7 +399,7 @@ fn namespace_execution_id_is_the_runner_request_id() {
     let id = id("42");
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {})
+        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None)
         .expect("admitted");
     assert_eq!(exec.id().0, id.0);
     assert_eq!(fake.recorded_request_ids(), vec![id.0.clone()]);

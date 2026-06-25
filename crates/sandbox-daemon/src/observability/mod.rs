@@ -1,4 +1,4 @@
-mod cgroup;
+pub(crate) mod cgroup;
 mod disk;
 mod namespace_execution;
 mod service;

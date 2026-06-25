@@ -2,10 +2,7 @@ use thiserror::Error;
 
 pub const MAX_ID_LENGTH: usize = 256;
 pub const MAX_KIND_LENGTH: usize = 64;
-const MAX_STATUS_LENGTH: usize = 64;
 pub const MAX_OPERATION_LENGTH: usize = 128;
-const MAX_METHOD_LENGTH: usize = 256;
-const MAX_ERROR_KIND_LENGTH: usize = 128;
 pub const MAX_ERROR_MESSAGE_LENGTH: usize = 4096;
 pub const MAX_SNAPSHOT_STATE_LENGTH: usize = 64;
 pub const MAX_PATH_LENGTH: usize = 4096;
@@ -16,117 +13,12 @@ pub enum RecordValidationError {
     Empty { field: &'static str },
     #[error("{field} exceeds {max_len} bytes")]
     TooLong { field: &'static str, max_len: usize },
-    #[error("span trace_id {span_trace_id} does not match trace_id {trace_id}")]
-    SpanTraceMismatch {
-        trace_id: String,
-        span_trace_id: String,
-    },
     #[error("{field} sandbox_id {actual} does not match {expected}")]
     SandboxMismatch {
         field: &'static str,
         expected: String,
         actual: String,
     },
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TraceRecord {
-    pub trace_id: String,
-    pub kind: String,
-    pub status: String,
-    pub sandbox_id: String,
-    pub operation: String,
-    pub request_id: Option<String>,
-    pub origin_request_id: Option<String>,
-    pub workspace_id: Option<String>,
-    pub namespace_execution_id: Option<String>,
-    pub started_at_unix_ms: i64,
-    pub finished_at_unix_ms: Option<i64>,
-    pub duration_ms: Option<f64>,
-    pub error_kind: Option<String>,
-    pub error_message: Option<String>,
-}
-
-impl TraceRecord {
-    pub(crate) fn validate(&self) -> Result<(), RecordValidationError> {
-        validate_required("trace_id", &self.trace_id, MAX_ID_LENGTH)?;
-        validate_required("kind", &self.kind, MAX_KIND_LENGTH)?;
-        validate_required("status", &self.status, MAX_STATUS_LENGTH)?;
-        validate_required("sandbox_id", &self.sandbox_id, MAX_ID_LENGTH)?;
-        validate_required("operation", &self.operation, MAX_OPERATION_LENGTH)?;
-        validate_optional("request_id", self.request_id.as_deref(), MAX_ID_LENGTH)?;
-        validate_optional(
-            "origin_request_id",
-            self.origin_request_id.as_deref(),
-            MAX_ID_LENGTH,
-        )?;
-        validate_optional("workspace_id", self.workspace_id.as_deref(), MAX_ID_LENGTH)?;
-        validate_optional(
-            "namespace_execution_id",
-            self.namespace_execution_id.as_deref(),
-            MAX_ID_LENGTH,
-        )?;
-        validate_optional(
-            "error_kind",
-            self.error_kind.as_deref(),
-            MAX_ERROR_KIND_LENGTH,
-        )?;
-        validate_optional(
-            "error_message",
-            self.error_message.as_deref(),
-            MAX_ERROR_MESSAGE_LENGTH,
-        )?;
-
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct SpanRecord {
-    pub span_id: String,
-    pub trace_id: String,
-    pub parent_span_id: Option<String>,
-    pub method_name: String,
-    pub call_index: i64,
-    pub status: String,
-    pub started_at_unix_ms: i64,
-    pub finished_at_unix_ms: Option<i64>,
-    pub duration_ms: Option<f64>,
-    pub error_kind: Option<String>,
-    pub error_message: Option<String>,
-}
-
-impl SpanRecord {
-    pub(crate) fn validate_for_trace(&self, trace_id: &str) -> Result<(), RecordValidationError> {
-        validate_required("span_id", &self.span_id, MAX_ID_LENGTH)?;
-        validate_required("trace_id", &self.trace_id, MAX_ID_LENGTH)?;
-        validate_optional(
-            "parent_span_id",
-            self.parent_span_id.as_deref(),
-            MAX_ID_LENGTH,
-        )?;
-        validate_required("method_name", &self.method_name, MAX_METHOD_LENGTH)?;
-        validate_required("status", &self.status, MAX_STATUS_LENGTH)?;
-        validate_optional(
-            "error_kind",
-            self.error_kind.as_deref(),
-            MAX_ERROR_KIND_LENGTH,
-        )?;
-        validate_optional(
-            "error_message",
-            self.error_message.as_deref(),
-            MAX_ERROR_MESSAGE_LENGTH,
-        )?;
-
-        if self.trace_id != trace_id {
-            return Err(RecordValidationError::SpanTraceMismatch {
-                trace_id: trace_id.to_owned(),
-                span_trace_id: self.trace_id.clone(),
-            });
-        }
-
-        Ok(())
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -247,54 +139,6 @@ impl NamespaceExecutionSnapshotRecord {
             "lifecycle_state",
             &self.lifecycle_state,
             MAX_SNAPSHOT_STATE_LENGTH,
-        )?;
-        validate_optional(
-            "error_message",
-            self.error_message.as_deref(),
-            MAX_ERROR_MESSAGE_LENGTH,
-        )?;
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct NamespaceExecutionTraceRecord {
-    pub trace_id: String,
-    pub sandbox_id: String,
-    pub namespace_execution_id: String,
-    pub workspace_session_id: String,
-    pub operation: String,
-    pub request_id: Option<String>,
-    pub status: String,
-    pub exit_code: Option<i64>,
-    pub started_at_unix_ms: i64,
-    pub finished_at_unix_ms: i64,
-    pub duration_ms: f64,
-    pub error_kind: Option<String>,
-    pub error_message: Option<String>,
-}
-
-impl NamespaceExecutionTraceRecord {
-    pub(crate) fn validate(&self) -> Result<(), RecordValidationError> {
-        validate_required("trace_id", &self.trace_id, MAX_ID_LENGTH)?;
-        validate_required("sandbox_id", &self.sandbox_id, MAX_ID_LENGTH)?;
-        validate_required(
-            "namespace_execution_id",
-            &self.namespace_execution_id,
-            MAX_ID_LENGTH,
-        )?;
-        validate_required(
-            "workspace_session_id",
-            &self.workspace_session_id,
-            MAX_ID_LENGTH,
-        )?;
-        validate_required("operation", &self.operation, MAX_OPERATION_LENGTH)?;
-        validate_optional("request_id", self.request_id.as_deref(), MAX_ID_LENGTH)?;
-        validate_required("status", &self.status, MAX_STATUS_LENGTH)?;
-        validate_optional(
-            "error_kind",
-            self.error_kind.as_deref(),
-            MAX_ERROR_KIND_LENGTH,
         )?;
         validate_optional(
             "error_message",

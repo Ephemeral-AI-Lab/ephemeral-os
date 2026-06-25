@@ -13,14 +13,14 @@ use thiserror::Error;
 
 use crate::paths::ObservabilityPaths;
 use crate::records::{
-    NamespaceExecutionSnapshotRecord, NamespaceExecutionTraceRecord, RecordValidationError,
-    ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord, TraceRecord, WorkspaceSnapshotRecord,
+    NamespaceExecutionSnapshotRecord, RecordValidationError, ResourceSampleRecord,
+    SandboxSnapshotRecord, WorkspaceSnapshotRecord,
 };
 
 pub use rows::{
-    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityNamespaceExecutionTraceRow,
-    ObservabilityRequestTraceRow, ObservabilityResourceSampleRow, ObservabilitySandboxSnapshotRow,
-    ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityWorkspaceSnapshotRow,
+    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityResourceSampleRow,
+    ObservabilitySandboxSnapshotRow, ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows,
+    ObservabilityWorkspaceSnapshotRow,
 };
 
 #[derive(Debug, Error)]
@@ -65,88 +65,6 @@ impl ObservabilityStore {
         Ok(Self {
             connection: Mutex::new(connection),
         })
-    }
-
-    pub fn insert_trace(
-        &self,
-        trace: &TraceRecord,
-        spans: &[SpanRecord],
-    ) -> Result<(), StoreError> {
-        trace.validate()?;
-        for span in spans {
-            span.validate_for_trace(&trace.trace_id)?;
-        }
-
-        let mut connection = self.connection()?;
-        let transaction = connection.transaction()?;
-        transaction.execute(
-            "INSERT INTO traces (
-                trace_id,
-                kind,
-                status,
-                sandbox_id,
-                operation,
-                request_id,
-                origin_request_id,
-                workspace_id,
-                namespace_execution_id,
-                started_at_unix_ms,
-                finished_at_unix_ms,
-                duration_ms,
-                error_kind,
-                error_message
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
-            params![
-                &trace.trace_id,
-                &trace.kind,
-                &trace.status,
-                &trace.sandbox_id,
-                &trace.operation,
-                &trace.request_id,
-                &trace.origin_request_id,
-                &trace.workspace_id,
-                &trace.namespace_execution_id,
-                trace.started_at_unix_ms,
-                trace.finished_at_unix_ms,
-                trace.duration_ms,
-                &trace.error_kind,
-                &trace.error_message,
-            ],
-        )?;
-
-        for span in spans {
-            transaction.execute(
-                "INSERT INTO spans (
-                    span_id,
-                    trace_id,
-                    parent_span_id,
-                    method_name,
-                    call_index,
-                    status,
-                    started_at_unix_ms,
-                    finished_at_unix_ms,
-                    duration_ms,
-                    error_kind,
-                    error_message
-                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-                params![
-                    &span.span_id,
-                    &span.trace_id,
-                    &span.parent_span_id,
-                    &span.method_name,
-                    span.call_index,
-                    &span.status,
-                    span.started_at_unix_ms,
-                    span.finished_at_unix_ms,
-                    span.duration_ms,
-                    &span.error_kind,
-                    &span.error_message,
-                ],
-            )?;
-        }
-
-        transaction.commit()?;
-        Ok(())
     }
 
     pub fn upsert_sandbox_snapshot(
@@ -366,61 +284,6 @@ impl ObservabilityStore {
         Ok(())
     }
 
-    pub fn insert_namespace_execution_trace(
-        &self,
-        trace: &NamespaceExecutionTraceRecord,
-    ) -> Result<(), StoreError> {
-        trace.validate()?;
-
-        let connection = self.connection()?;
-        connection.execute(
-            "INSERT INTO namespace_execution_traces (
-                trace_id,
-                sandbox_id,
-                namespace_execution_id,
-                workspace_session_id,
-                operation,
-                request_id,
-                status,
-                exit_code,
-                started_at_unix_ms,
-                finished_at_unix_ms,
-                duration_ms,
-                error_kind,
-                error_message
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
-            ON CONFLICT(trace_id) DO UPDATE SET
-                sandbox_id = excluded.sandbox_id,
-                namespace_execution_id = excluded.namespace_execution_id,
-                workspace_session_id = excluded.workspace_session_id,
-                operation = excluded.operation,
-                request_id = excluded.request_id,
-                status = excluded.status,
-                exit_code = excluded.exit_code,
-                started_at_unix_ms = excluded.started_at_unix_ms,
-                finished_at_unix_ms = excluded.finished_at_unix_ms,
-                duration_ms = excluded.duration_ms,
-                error_kind = excluded.error_kind,
-                error_message = excluded.error_message",
-            params![
-                &trace.trace_id,
-                &trace.sandbox_id,
-                &trace.namespace_execution_id,
-                &trace.workspace_session_id,
-                &trace.operation,
-                &trace.request_id,
-                &trace.status,
-                trace.exit_code,
-                trace.started_at_unix_ms,
-                trace.finished_at_unix_ms,
-                trace.duration_ms,
-                &trace.error_kind,
-                &trace.error_message,
-            ],
-        )?;
-        Ok(())
-    }
-
     pub fn insert_resource_samples(
         &self,
         samples: &[ResourceSampleRecord],
@@ -497,23 +360,12 @@ impl ObservabilityStore {
             Some(window_ms) => read::read_resource_history(&connection, sandbox_id, window_ms)?,
             None => Vec::new(),
         };
-        let (recent_request_traces, recent_namespace_traces) = if options.include_recent_traces {
-            (
-                read::read_recent_request_traces(&connection, sandbox_id, options.trace_limit)?,
-                read::read_recent_namespace_traces(&connection, sandbox_id, options.trace_limit)?,
-            )
-        } else {
-            (Vec::new(), Vec::new())
-        };
-
         Ok(ObservabilitySnapshotRows {
             sandbox,
             workspaces,
             active_namespace_executions,
             latest_resources,
             resource_history,
-            recent_request_traces,
-            recent_namespace_traces,
         })
     }
 

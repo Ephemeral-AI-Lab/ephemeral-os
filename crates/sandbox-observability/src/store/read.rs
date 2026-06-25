@@ -1,9 +1,8 @@
 use rusqlite::{params, Connection, OptionalExtension};
 
 use super::rows::{
-    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityNamespaceExecutionTraceRow,
-    ObservabilityRequestTraceRow, ObservabilityResourceSampleRow, ObservabilitySandboxSnapshotRow,
-    ObservabilityWorkspaceSnapshotRow,
+    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityResourceSampleRow,
+    ObservabilitySandboxSnapshotRow, ObservabilityWorkspaceSnapshotRow,
 };
 use super::{unix_time_ms, StoreError};
 
@@ -116,66 +115,6 @@ pub(super) fn read_resource_history(
         .map_err(StoreError::from)
 }
 
-pub(super) fn read_recent_request_traces(
-    connection: &Connection,
-    sandbox_id: &str,
-    limit: usize,
-) -> Result<Vec<ObservabilityRequestTraceRow>, StoreError> {
-    let mut statement = connection.prepare(
-        "SELECT
-            trace_id,
-            kind,
-            status,
-            operation,
-            request_id,
-            workspace_id,
-            started_at_unix_ms,
-            finished_at_unix_ms,
-            duration_ms,
-            error_kind,
-            error_message
-         FROM traces
-         WHERE sandbox_id = ?1
-         ORDER BY started_at_unix_ms DESC, trace_id
-         LIMIT ?2",
-    )?;
-    let rows = statement.query_map(params![sandbox_id, limit_i64(limit)], trace_from_row)?;
-    rows.collect::<Result<Vec<_>, _>>()
-        .map_err(StoreError::from)
-}
-
-pub(super) fn read_recent_namespace_traces(
-    connection: &Connection,
-    sandbox_id: &str,
-    limit: usize,
-) -> Result<Vec<ObservabilityNamespaceExecutionTraceRow>, StoreError> {
-    let mut statement = connection.prepare(
-        "SELECT
-            trace_id,
-            namespace_execution_id,
-            workspace_session_id,
-            operation,
-            request_id,
-            status,
-            exit_code,
-            started_at_unix_ms,
-            finished_at_unix_ms,
-            duration_ms,
-            error_kind,
-            error_message
-         FROM namespace_execution_traces
-         WHERE sandbox_id = ?1
-         ORDER BY started_at_unix_ms DESC, trace_id
-         LIMIT ?2",
-    )?;
-    let rows = statement.query_map(
-        params![sandbox_id, limit_i64(limit)],
-        namespace_execution_trace_from_row,
-    )?;
-    rows.collect::<Result<Vec<_>, _>>()
-        .map_err(StoreError::from)
-}
-
 fn read_latest_resource_sample(
     connection: &Connection,
     sandbox_id: &str,
@@ -271,41 +210,6 @@ fn namespace_execution_snapshot_from_row(
     })
 }
 
-fn trace_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ObservabilityRequestTraceRow> {
-    Ok(ObservabilityRequestTraceRow {
-        trace_id: row.get(0)?,
-        kind: row.get(1)?,
-        status: row.get(2)?,
-        operation: row.get(3)?,
-        request_id: row.get(4)?,
-        workspace_id: row.get(5)?,
-        started_at_unix_ms: row.get(6)?,
-        finished_at_unix_ms: row.get(7)?,
-        duration_ms: row.get(8)?,
-        error_kind: row.get(9)?,
-        error_message: row.get(10)?,
-    })
-}
-
-fn namespace_execution_trace_from_row(
-    row: &rusqlite::Row<'_>,
-) -> rusqlite::Result<ObservabilityNamespaceExecutionTraceRow> {
-    Ok(ObservabilityNamespaceExecutionTraceRow {
-        trace_id: row.get(0)?,
-        namespace_execution_id: row.get(1)?,
-        workspace_session_id: row.get(2)?,
-        operation: row.get(3)?,
-        request_id: row.get(4)?,
-        status: row.get(5)?,
-        exit_code: row.get(6)?,
-        started_at_unix_ms: row.get(7)?,
-        finished_at_unix_ms: row.get(8)?,
-        duration_ms: row.get(9)?,
-        error_kind: row.get(10)?,
-        error_message: row.get(11)?,
-    })
-}
-
 fn resource_sample_summary_from_row(
     row: &rusqlite::Row<'_>,
 ) -> rusqlite::Result<ObservabilityResourceSampleRow> {
@@ -326,8 +230,4 @@ fn resource_sample_summary_from_row(
         disk_read_error_count: row.get(13)?,
         disk_first_error_path: row.get(14)?,
     })
-}
-
-fn limit_i64(limit: usize) -> i64 {
-    i64::try_from(limit).unwrap_or(i64::MAX)
 }

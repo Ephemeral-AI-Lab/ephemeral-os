@@ -3,7 +3,6 @@ use serde_json::{json, Value};
 use crate::cli_definition::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
-use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::OperationEntry;
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
@@ -102,27 +101,21 @@ pub(crate) fn operation_entries() -> &'static [OperationEntry] {
 fn dispatch_create_workspace_session(
     operations: &SandboxRuntimeOperations,
     request: &Request,
-    trace: Option<&OperationTrace>,
 ) -> Response {
     let profile = match parse_workspace_profile(request) {
         Ok(profile) => profile,
         Err(response) => return response,
     };
-    workspace_session_handler_response(measure_optional(
-        trace,
-        "WorkspaceSessionService::create_workspace_session",
-        || {
-            operations
-                .workspace_session
-                .create_workspace_session(CreateWorkspaceRequest { profile })
-        },
-    ))
+    workspace_session_handler_response(
+        operations
+            .workspace_session
+            .create_workspace_session(CreateWorkspaceRequest { profile }),
+    )
 }
 
 fn dispatch_destroy_workspace_session(
     operations: &SandboxRuntimeOperations,
     request: &Request,
-    trace: Option<&OperationTrace>,
 ) -> Response {
     let input = match parse_destroy_workspace_session(request) {
         Ok(input) => input,
@@ -142,16 +135,10 @@ fn dispatch_destroy_workspace_session(
                 Ok(handler) => handler,
                 Err(error) => return workspace_session_error_response(error),
             };
-            destroy_workspace_session_response(measure_optional(
-                trace,
-                "WorkspaceSessionService::destroy_session",
-                || {
-                    operations.workspace_session.destroy_session(
-                        handler,
-                        DestroyWorkspaceRequest {
-                            grace_s: input.grace_s,
-                        },
-                    )
+            destroy_workspace_session_response(operations.workspace_session.destroy_session(
+                handler,
+                DestroyWorkspaceRequest {
+                    grace_s: input.grace_s,
                 },
             ))
         },

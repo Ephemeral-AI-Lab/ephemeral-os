@@ -4,7 +4,7 @@ use std::io;
 use std::io::{Read, Write};
 use std::os::fd::{AsRawFd, OwnedFd, RawFd};
 use std::os::unix::process::{CommandExt, ExitStatusExt};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -26,6 +26,7 @@ pub trait NsRunnerLauncher: Send + Sync {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
+        cgroup_procs_path: Option<PathBuf>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError>;
 
     fn spawn_piped(
@@ -64,6 +65,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
+        cgroup_procs_path: Option<PathBuf>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
         let (mut spawned, master) = spawn_locked(None, |command| {
@@ -75,6 +77,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             install_pgid_leader_hook(command);
             Ok(master)
         })?;
+        place_child_in_cgroup(spawned.child.id(), cgroup_procs_path.as_deref());
         let pgid = spawned.pgid;
         let cancel: Box<dyn Fn() + Send + Sync> = Box::new(move || {
             cancelled.store(true, Ordering::Release);
@@ -223,6 +226,16 @@ fn child_pgid(child: &Child) -> Result<i32, NamespaceExecutionError> {
     i32::try_from(child.id()).map_err(|_| {
         NamespaceExecutionError::Spawn(format!("child pid does not fit i32: {}", child.id()))
     })
+}
+
+/// Best-effort placement of the freshly spawned `ns-runner` into the workspace
+/// cgroup by writing its pid to the workspace `cgroup.procs`. Membership inherits
+/// across the runner re-exec, fork/exec, and setns; a write failure never blocks
+/// execution (cgroup accounting degrades to unavailable instead).
+fn place_child_in_cgroup(pid: u32, cgroup_procs_path: Option<&Path>) {
+    if let Some(path) = cgroup_procs_path {
+        let _ = std::fs::write(path, pid.to_string());
+    }
 }
 
 fn install_pgid_leader_hook(command: &mut Command) {

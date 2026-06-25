@@ -37,6 +37,7 @@ impl WorkspaceSessionService {
                     base_manifest_version: Some(session.handle.base_revision.version),
                     base_root_hash: Some(session.handle.base_revision.root_hash.clone()),
                     layer_count: Some(session.handle.base_revision.layer_count),
+                    cgroup_path: session.cgroup_path.clone(),
                 }
             })
             .collect::<Vec<_>>();

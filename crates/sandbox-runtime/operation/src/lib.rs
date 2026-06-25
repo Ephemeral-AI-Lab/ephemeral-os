@@ -18,14 +18,9 @@ pub use cli_definition::{
 pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;
 pub use namespace_execution::{
-    NamespaceExecutionId, NamespaceExecutionLedger, NamespaceExecutionRecord,
-    NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
+    NamespaceExecutionId, NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };
-pub use observability::{
-    span_keys, AsyncTraceSink, CommandFinalizationTraceMetadata, CompletedOperationSpan,
-    CompletedOperationTrace, OperationTrace, RuntimeObservabilitySnapshot,
-    RuntimeWorkspaceSnapshot, SpanKey,
-};
+pub use observability::{RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot};
 pub use services::{
     CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
@@ -61,7 +56,6 @@ pub fn known_operation_name(operation: &str) -> Option<&'static str> {
 pub fn dispatch_operation(
     operations: &SandboxRuntimeOperations,
     request: &sandbox_protocol::Request,
-    trace: Option<&OperationTrace>,
 ) -> sandbox_protocol::Response {
-    operation::dispatch_operation(operations, request, trace)
+    operation::dispatch_operation(operations, request)
 }

@@ -264,6 +264,7 @@ impl NsRunnerLauncher for FakeLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
+        _cgroup_procs_path: Option<PathBuf>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         let (completion, script) = self.record(&request, transcript_path.clone());
         if let Some(error) = script.spawn_error {

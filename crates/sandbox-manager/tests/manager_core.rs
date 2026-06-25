@@ -277,7 +277,6 @@ fn daemon_snapshot(sandbox_id: &str) -> Value {
             "history": [],
         },
         "workspaces": [],
-        "recent_traces": [],
     })
 }
 
@@ -443,8 +442,6 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
         &services,
         "get_observability_tree",
         json!({
-            "include_recent_traces": 1,
-            "trace_limit": 500,
             "resource_window_ms": 999_999,
         }),
     );
@@ -468,12 +465,6 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
                 if sandbox_id == "sbox-1" || sandbox_id == "sbox-2"
         )
     }));
-    assert!(invocations
-        .iter()
-        .all(|invocation| invocation.args["include_recent_traces"] == true));
-    assert!(invocations
-        .iter()
-        .all(|invocation| invocation.args["trace_limit"] == 500));
     assert!(invocations
         .iter()
         .all(|invocation| invocation.args["resource_window_ms"] == 999_999));

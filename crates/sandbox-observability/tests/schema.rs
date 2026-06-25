@@ -2,8 +2,7 @@ mod support;
 
 use rusqlite::Connection;
 use sandbox_observability::{
-    NamespaceExecutionTraceRecord, ObservabilitySnapshotReadOptions, ObservabilityStore,
-    SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord,
+    ObservabilitySnapshotReadOptions, ObservabilityStore, SandboxSnapshotRecord, StoreError,
 };
 use support::{
     allowed_indexes, allowed_tables, column_names, current_unix_ms, index_names, migration_count,
@@ -23,10 +22,6 @@ fn schema_initialization_is_idempotent() -> TestResult {
     let connection = Connection::open(paths.database_path())?;
     assert_eq!(table_names(&connection)?, allowed_tables());
     assert_eq!(index_names(&connection)?, allowed_indexes());
-    let trace_columns = column_names(&connection, "traces")?;
-    assert!(trace_columns.contains("origin_request_id"));
-    assert!(trace_columns.contains("workspace_id"));
-    assert!(trace_columns.contains("namespace_execution_id"));
     let namespace_snapshot_columns = column_names(&connection, "namespace_execution_snapshots")?;
     assert!(namespace_snapshot_columns.contains("namespace_execution_id"));
     assert!(namespace_snapshot_columns.contains("workspace_session_id"));
@@ -46,11 +41,7 @@ fn schema_initialization_is_idempotent() -> TestResult {
             "namespace execution snapshots unexpectedly include {forbidden_column}"
         );
     }
-    let namespace_trace_columns = column_names(&connection, "namespace_execution_traces")?;
-    assert!(namespace_trace_columns.contains("namespace_execution_id"));
-    assert!(namespace_trace_columns.contains("workspace_session_id"));
-    assert!(namespace_trace_columns.contains("exit_code"));
-    assert_eq!(migration_count(&connection)?, 6);
+    assert_eq!(migration_count(&connection)?, 7);
     assert!(paths.database_path().exists());
     assert!(dir
         .path()
@@ -110,145 +101,12 @@ fn schema_migration_checksums_are_recorded() -> TestResult {
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    assert_eq!(checksums.len(), 6);
+    assert_eq!(checksums.len(), 7);
     assert!(
         checksums
             .iter()
             .all(|checksum| checksum.starts_with("fnv1a64:")),
         "{checksums:?}"
-    );
-    Ok(())
-}
-
-#[test]
-fn inserts_synthetic_trace_and_spans() -> TestResult {
-    let (_dir, paths) = test_paths("trace-span-insert")?;
-    let store = ObservabilityStore::open(&paths)?;
-
-    store.insert_trace(
-        &TraceRecord {
-            trace_id: "trace-1".to_owned(),
-            kind: "request".to_owned(),
-            status: "ok".to_owned(),
-            sandbox_id: "sandbox-1".to_owned(),
-            operation: "exec_command".to_owned(),
-            request_id: Some("request-1".to_owned()),
-            origin_request_id: None,
-            workspace_id: None,
-            namespace_execution_id: None,
-            started_at_unix_ms: 1_000,
-            finished_at_unix_ms: Some(1_025),
-            duration_ms: Some(25.0),
-            error_kind: None,
-            error_message: None,
-        },
-        &[
-            SpanRecord {
-                span_id: "span-1".to_owned(),
-                trace_id: "trace-1".to_owned(),
-                parent_span_id: None,
-                method_name: "dispatch_operation".to_owned(),
-                call_index: 0,
-                status: "ok".to_owned(),
-                started_at_unix_ms: 1_000,
-                finished_at_unix_ms: Some(1_005),
-                duration_ms: Some(5.0),
-                error_kind: None,
-                error_message: None,
-            },
-            SpanRecord {
-                span_id: "span-2".to_owned(),
-                trace_id: "trace-1".to_owned(),
-                parent_span_id: Some("span-1".to_owned()),
-                method_name: "CommandOperationService::exec_command".to_owned(),
-                call_index: 1,
-                status: "ok".to_owned(),
-                started_at_unix_ms: 1_005,
-                finished_at_unix_ms: Some(1_025),
-                duration_ms: Some(20.0),
-                error_kind: None,
-                error_message: None,
-            },
-        ],
-    )?;
-
-    let connection = Connection::open(paths.database_path())?;
-    assert_eq!(row_count(&connection, "traces")?, 1);
-    assert_eq!(row_count(&connection, "spans")?, 2);
-
-    let request_id: String = connection.query_row(
-        "SELECT request_id FROM traces WHERE trace_id = 'trace-1'",
-        [],
-        |row| row.get(0),
-    )?;
-    assert_eq!(request_id, "request-1");
-
-    let max_call_index: i64 =
-        connection.query_row("SELECT MAX(call_index) FROM spans", [], |row| row.get(0))?;
-    assert_eq!(max_call_index, 1);
-
-    Ok(())
-}
-
-#[test]
-fn schema_inserts_async_trace_fields_without_adding_async_indexes() -> TestResult {
-    let (_dir, paths) = test_paths("async-trace-insert")?;
-    let store = ObservabilityStore::open(&paths)?;
-
-    store.insert_trace(
-        &TraceRecord {
-            trace_id: "async:command_finalization:namespace_execution_id:cmd_1".to_owned(),
-            kind: "async".to_owned(),
-            status: "ok".to_owned(),
-            sandbox_id: "sandbox-1".to_owned(),
-            operation: "command_finalization".to_owned(),
-            request_id: None,
-            origin_request_id: Some("request-1".to_owned()),
-            workspace_id: Some("workspace-1".to_owned()),
-            namespace_execution_id: Some("cmd_1".to_owned()),
-            started_at_unix_ms: 1_000,
-            finished_at_unix_ms: Some(1_010),
-            duration_ms: Some(10.0),
-            error_kind: None,
-            error_message: None,
-        },
-        &[SpanRecord {
-            span_id: "async:command_finalization:namespace_execution_id:cmd_1:span:0".to_owned(),
-            trace_id: "async:command_finalization:namespace_execution_id:cmd_1".to_owned(),
-            parent_span_id: None,
-            method_name: "complete_terminal_command_with_services".to_owned(),
-            call_index: 0,
-            status: "ok".to_owned(),
-            started_at_unix_ms: 1_000,
-            finished_at_unix_ms: Some(1_010),
-            duration_ms: Some(10.0),
-            error_kind: None,
-            error_message: None,
-        }],
-    )?;
-
-    let connection = Connection::open(paths.database_path())?;
-    assert_eq!(index_names(&connection)?, allowed_indexes());
-    let row: (
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-    ) = connection.query_row(
-        "SELECT request_id, origin_request_id, workspace_id, namespace_execution_id
-             FROM traces
-             WHERE trace_id = 'async:command_finalization:namespace_execution_id:cmd_1'",
-        [],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-    )?;
-    assert_eq!(
-        row,
-        (
-            None,
-            Some("request-1".to_owned()),
-            Some("workspace-1".to_owned()),
-            Some("cmd_1".to_owned()),
-        )
     );
     Ok(())
 }
@@ -352,7 +210,7 @@ fn workspace_upsert_marks_stale_rows_destroyed_and_keeps_resource_history() -> T
 }
 
 #[test]
-fn namespace_execution_snapshot_and_completed_trace_use_typed_tables() -> TestResult {
+fn namespace_execution_snapshot_replace_keeps_latest_row() -> TestResult {
     let (_dir, paths) = test_paths("namespace-execution")?;
     let store = ObservabilityStore::open(&paths)?;
 
@@ -371,22 +229,6 @@ fn namespace_execution_snapshot_and_completed_trace_use_typed_tables() -> TestRe
             1_000,
         )],
     )?;
-    store.insert_namespace_execution_trace(&NamespaceExecutionTraceRecord {
-        trace_id: "namespace_execution:namespace_execution_1".to_owned(),
-        sandbox_id: "sandbox-1".to_owned(),
-        namespace_execution_id: "namespace_execution_1".to_owned(),
-        workspace_session_id: "workspace-1".to_owned(),
-        operation: "exec_command".to_owned(),
-        request_id: Some("request-1".to_owned()),
-        status: "ok".to_owned(),
-        exit_code: Some(0),
-        started_at_unix_ms: 1_000,
-        finished_at_unix_ms: 1_025,
-        duration_ms: 25.0,
-        error_kind: None,
-        error_message: None,
-    })?;
-
     let connection = Connection::open(paths.database_path())?;
     let snapshot: (String, String, String, String) = connection.query_row(
         "SELECT namespace_execution_id, workspace_session_id, operation, lifecycle_state
@@ -402,22 +244,6 @@ fn namespace_execution_snapshot_and_completed_trace_use_typed_tables() -> TestRe
             "workspace-1".to_owned(),
             "exec_command".to_owned(),
             "running".to_owned(),
-        )
-    );
-    let trace: (String, String, String, Option<i64>) = connection.query_row(
-        "SELECT namespace_execution_id, workspace_session_id, status, exit_code
-         FROM namespace_execution_traces
-         WHERE sandbox_id = 'sandbox-1'",
-        [],
-        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
-    )?;
-    assert_eq!(
-        trace,
-        (
-            "namespace_execution_1".to_owned(),
-            "workspace-1".to_owned(),
-            "ok".to_owned(),
-            Some(0),
         )
     );
 
@@ -483,8 +309,6 @@ fn aggregate_snapshot_read_returns_latest_resources_per_scope() -> TestResult {
     let rows = store.read_observability_snapshot(
         "sandbox-1",
         &ObservabilitySnapshotReadOptions {
-            include_recent_traces: false,
-            trace_limit: 20,
             resource_window_ms: None,
         },
     )?;
@@ -503,14 +327,12 @@ fn aggregate_snapshot_read_returns_latest_resources_per_scope() -> TestResult {
         ]
     );
     assert!(rows.resource_history.is_empty());
-    assert!(rows.recent_request_traces.is_empty());
-    assert!(rows.recent_namespace_traces.is_empty());
     Ok(())
 }
 
 #[test]
-fn aggregate_snapshot_read_history_and_traces_are_opt_in() -> TestResult {
-    let (_dir, paths) = test_paths("aggregate-history-traces")?;
+fn aggregate_snapshot_read_history_is_opt_in() -> TestResult {
+    let (_dir, paths) = test_paths("aggregate-history")?;
     let store = ObservabilityStore::open(&paths)?;
     let now = current_unix_ms()?;
 
@@ -530,70 +352,18 @@ fn aggregate_snapshot_read_history_and_traces_are_opt_in() -> TestResult {
         resource_sample("history-old", None, now.saturating_sub(10_000)),
         resource_sample("history-recent", None, now.saturating_sub(100)),
     ])?;
-    store.insert_trace(
-        &TraceRecord {
-            trace_id: "trace-1".to_owned(),
-            kind: "request".to_owned(),
-            status: "ok".to_owned(),
-            sandbox_id: "sandbox-1".to_owned(),
-            operation: "exec_command".to_owned(),
-            request_id: Some("request-1".to_owned()),
-            origin_request_id: None,
-            workspace_id: Some("workspace-1".to_owned()),
-            namespace_execution_id: Some("command-session-secret".to_owned()),
-            started_at_unix_ms: now.saturating_sub(50),
-            finished_at_unix_ms: Some(now.saturating_sub(25)),
-            duration_ms: Some(25.0),
-            error_kind: None,
-            error_message: None,
-        },
-        &[SpanRecord {
-            span_id: "span-1".to_owned(),
-            trace_id: "trace-1".to_owned(),
-            parent_span_id: None,
-            method_name: "secret.span.method".to_owned(),
-            call_index: 0,
-            status: "ok".to_owned(),
-            started_at_unix_ms: now.saturating_sub(50),
-            finished_at_unix_ms: Some(now.saturating_sub(25)),
-            duration_ms: Some(25.0),
-            error_kind: None,
-            error_message: None,
-        }],
-    )?;
-    store.insert_namespace_execution_trace(&NamespaceExecutionTraceRecord {
-        trace_id: "namespace_execution:namespace-1".to_owned(),
-        sandbox_id: "sandbox-1".to_owned(),
-        namespace_execution_id: "namespace-1".to_owned(),
-        workspace_session_id: "workspace-1".to_owned(),
-        operation: "exec_command".to_owned(),
-        request_id: Some("request-2".to_owned()),
-        status: "ok".to_owned(),
-        exit_code: Some(0),
-        started_at_unix_ms: now.saturating_sub(40),
-        finished_at_unix_ms: now.saturating_sub(10),
-        duration_ms: 30.0,
-        error_kind: None,
-        error_message: None,
-    })?;
 
     let default_rows = store.read_observability_snapshot(
         "sandbox-1",
         &ObservabilitySnapshotReadOptions {
-            include_recent_traces: false,
-            trace_limit: 20,
             resource_window_ms: None,
         },
     )?;
     assert!(default_rows.resource_history.is_empty());
-    assert!(default_rows.recent_request_traces.is_empty());
-    assert!(default_rows.recent_namespace_traces.is_empty());
 
     let requested_rows = store.read_observability_snapshot(
         "sandbox-1",
         &ObservabilitySnapshotReadOptions {
-            include_recent_traces: true,
-            trace_limit: 20,
             resource_window_ms: Some(1_000),
         },
     )?;
@@ -602,7 +372,5 @@ fn aggregate_snapshot_read_history_and_traces_are_opt_in() -> TestResult {
         requested_rows.resource_history[0].sampled_at_unix_ms,
         now.saturating_sub(100)
     );
-    assert_eq!(requested_rows.recent_request_traces.len(), 1);
-    assert_eq!(requested_rows.recent_namespace_traces.len(), 1);
     Ok(())
 }

@@ -30,6 +30,7 @@
 //!   UNEXPECTED_TOKEN_EXIT}`.
 #![forbid(unsafe_code)]
 
+mod cgroup_setup;
 mod holder;
 mod runner;
 mod serve;

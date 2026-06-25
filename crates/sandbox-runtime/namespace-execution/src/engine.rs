@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::panic::{catch_unwind, AssertUnwindSafe};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -88,14 +88,19 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         target: NamespaceTarget,
         id: NamespaceExecutionId,
         on_complete: impl FnOnce(&Result<S::Output, NamespaceExecutionError>) + Send + 'static,
+        cgroup_procs_path: Option<PathBuf>,
     ) -> Result<InteractiveExecution<S::Output>, NamespaceExecutionError> {
         let request = build_request(&target, &id, shell_args(op.command()), op.timeout_seconds());
         let transcript_path = op.transcript_path().map(Path::to_path_buf);
         let cancelled = Arc::new(AtomicBool::new(false));
         let op = Box::new(op);
         let (child, pty) = self.reserve_spawn(&id, || {
-            self.launcher
-                .spawn_pty(request, transcript_path, Arc::clone(&cancelled))
+            self.launcher.spawn_pty(
+                request,
+                transcript_path,
+                Arc::clone(&cancelled),
+                cgroup_procs_path,
+            )
         })?;
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
