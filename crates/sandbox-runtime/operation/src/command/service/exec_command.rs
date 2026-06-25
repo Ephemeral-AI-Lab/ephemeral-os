@@ -1,14 +1,18 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 
-use sandbox_runtime_namespace_execution::{NamespaceExecutionId, NamespaceTarget};
+use sandbox_runtime_namespace_execution::{
+    NamespaceExecutionError, NamespaceExecutionId, NamespaceTarget,
+};
 
-use crate::command::finalize::{build_on_complete, CommandFinalization};
 use crate::command::service::exec::ExecCommand;
 use crate::command::service::CommandOperationService;
-use crate::command::{CommandExecValue, CommandOutput, CommandServiceError, ExecCommandInput};
-use crate::workspace_crate::{WorkspaceEntry, WorkspaceSessionId};
-use crate::workspace_session::WorkspaceSessionHandler;
+use crate::command::{
+    CommandExecValue, CommandOutput, CommandServiceError, CommandTerminalResult, ExecCommandInput,
+};
+use crate::workspace_crate::{DestroyWorkspaceRequest, WorkspaceEntry, WorkspaceSessionId};
+use crate::workspace_session::{WorkspaceSessionHandler, WorkspaceSessionService};
 
 impl CommandOperationService {
     pub fn exec_command(
@@ -20,13 +24,13 @@ impl CommandOperationService {
                 message: "cmd must be non-empty".to_owned(),
             });
         }
-        let existing_session_admission = input
+        let existing_lifecycle_guard = input
             .workspace_session_id
             .is_some()
-            .then(|| self.begin_workspace_lifecycle_admission());
+            .then(|| self.lock_session_lifecycle());
         let workspace = self.resolve_exec_workspace(&input)?;
-        let admission_guard = existing_session_admission
-            .unwrap_or_else(|| self.begin_workspace_lifecycle_admission());
+        let lifecycle_guard =
+            existing_lifecycle_guard.unwrap_or_else(|| self.lock_session_lifecycle());
 
         let id = self.engine().allocate_id();
 
@@ -45,10 +49,7 @@ impl CommandOperationService {
             transcript_path: transcript_path.clone(),
             started_at,
         };
-        let on_complete = build_on_complete(
-            workspace.command_finalization(),
-            self.workspace_handle().clone(),
-        );
+        let on_complete = workspace.finalize_closure(self.workspace_handle().clone());
         let target = NamespaceTarget::from(entry);
 
         let cgroup_procs_path = workspace
@@ -84,7 +85,7 @@ impl CommandOperationService {
                 "exec_command",
             ),
         );
-        drop(admission_guard);
+        drop(lifecycle_guard);
 
         self.wait_for_command_yield(id.clone(), input.yield_time_ms.unwrap_or(1000), 0, false)
     }
@@ -160,11 +161,19 @@ impl ResolvedExecWorkspace {
             })
     }
 
-    fn command_finalization(&self) -> CommandFinalization {
-        if self.one_shot {
-            CommandFinalization::DestroyOneShot(Box::new(self.handler.clone()))
-        } else {
-            CommandFinalization::KeepSession
+    /// Build the engine `on_complete` closure: once the child reaches a terminal
+    /// state, apply the one-shot teardown policy. The one-shot decision is read
+    /// from `self.one_shot` exactly once; teardown errors stay internal to
+    /// finalization and never surface in the command result.
+    fn finalize_closure(
+        &self,
+        workspace: Arc<WorkspaceSessionService>,
+    ) -> impl FnOnce(&Result<CommandTerminalResult, NamespaceExecutionError>) + Send + 'static {
+        let one_shot_handler = self.one_shot.then(|| self.handler.clone());
+        move |_result| {
+            if let Some(handler) = one_shot_handler {
+                let _ = workspace.destroy_session(handler, DestroyWorkspaceRequest::default());
+            }
         }
     }
 }

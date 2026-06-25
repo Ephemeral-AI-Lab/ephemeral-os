@@ -9,14 +9,6 @@ impl WorkspaceSessionService {
         handler: WorkspaceSessionHandler,
         request: DestroyWorkspaceRequest,
     ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
-        self.destroy_session_inner(handler, request)
-    }
-
-    fn destroy_session_inner(
-        &self,
-        handler: WorkspaceSessionHandler,
-        request: DestroyWorkspaceRequest,
-    ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
         let mut sessions = self.lock_sessions()?;
         let session = sessions
             .get(&handler.workspace_session_id)

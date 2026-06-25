@@ -1,6 +1,5 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use sandbox_gateway::cli::client::GatewayClient;
 use sandbox_gateway::cli::config::{
@@ -17,11 +16,9 @@ use sandbox_protocol::{
 };
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixListener;
+use tokio::net::TcpListener;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
-
-static TEMP_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 #[test]
 fn manager_operation_uses_system_scope() -> TestResult {
@@ -647,6 +644,7 @@ fn config_precedence_cli_env_default() -> TestResult {
     let cli_config = GatewayConfig::discover_with(
         GatewayConfigOverrides {
             gateway_socket_path: Some(PathBuf::from("/cli/gateway.sock")),
+            gateway_auth_token: None,
             default_sandbox_id: Some("cli-sbox".to_owned()),
         },
         |_| None,
@@ -661,10 +659,8 @@ fn config_precedence_cli_env_default() -> TestResult {
 
 #[tokio::test]
 async fn gateway_client_sends_one_request_and_reads_one_response() -> TestResult {
-    let root = unique_temp_dir("sandbox-cli-client-test")?;
-    std::fs::create_dir_all(&root)?;
-    let socket_path = root.join("gateway.sock");
-    let listener = UnixListener::bind(&socket_path)?;
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let addr = listener.local_addr()?.to_string();
     let (tx, rx) = tokio::sync::oneshot::channel::<Value>();
 
     let handle = tokio::spawn(async move {
@@ -679,7 +675,7 @@ async fn gateway_client_sends_one_request_and_reads_one_response() -> TestResult
         Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
     });
 
-    let client = GatewayClient::new(&socket_path);
+    let client = GatewayClient::new(addr, None);
     let request = Request::new(
         "list_sandboxes",
         "req-1",
@@ -695,7 +691,41 @@ async fn gateway_client_sends_one_request_and_reads_one_response() -> TestResult
     assert_eq!(sent["request_id"], "req-1");
     assert_eq!(sent["scope"], json!({ "kind": "system" }));
     assert_eq!(sent["args"], json!({}));
-    let _ = std::fs::remove_dir_all(root);
+    Ok(())
+}
+
+#[tokio::test]
+async fn gateway_client_injects_auth_token_into_request() -> TestResult {
+    let listener = TcpListener::bind("127.0.0.1:0").await?;
+    let addr = listener.local_addr()?.to_string();
+    let (tx, rx) = tokio::sync::oneshot::channel::<Value>();
+
+    let handle = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await?;
+        let mut reader = BufReader::new(stream);
+        let mut line = Vec::new();
+        reader.read_until(b'\n', &mut line).await?;
+        let value = serde_json::from_slice::<Value>(&line)?;
+        let _ = tx.send(value);
+        let mut stream = reader.into_inner();
+        stream.write_all(b"{\"ok\":true}\n").await?;
+        Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+    });
+
+    let client = GatewayClient::new(addr, Some("secret-token".to_owned()));
+    let request = Request::new(
+        "list_sandboxes",
+        "req-1",
+        CliOperationScope::System,
+        json!({}),
+    );
+    let response = client.send(&request).await?;
+    let sent = rx.await?;
+    handle.await??;
+
+    assert_eq!(response, json!({ "ok": true }));
+    assert_eq!(sent["_sandbox_gateway_auth_token"], "secret-token");
+    assert_eq!(sent["op"], "list_sandboxes");
     Ok(())
 }
 
@@ -745,7 +775,8 @@ fn build_runtime_operation_request(
 
 fn config(default_sandbox_id: Option<&str>) -> GatewayConfig {
     GatewayConfig {
-        gateway_socket_path: PathBuf::from("/tmp/gateway.sock"),
+        gateway_socket_path: PathBuf::from("127.0.0.1:7878"),
+        gateway_auth_token: None,
         default_sandbox_id: default_sandbox_id.map(str::to_owned),
     }
 }
@@ -758,27 +789,4 @@ fn manager_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::
 fn runtime_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>>
 {
     Ok(runtime_catalog_document()?)
-}
-
-fn unique_temp_dir(prefix: &str) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
-    let mut label = prefix
-        .split('-')
-        .filter_map(|segment| segment.chars().next())
-        .take(8)
-        .collect::<String>();
-    if label.is_empty() {
-        label.push_str("tmp");
-    }
-
-    for _ in 0..1024 {
-        let attempt = TEMP_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
-        let root = std::env::temp_dir().join(format!("{label}-{}-{attempt}", std::process::id()));
-        match std::fs::create_dir(&root) {
-            Ok(()) => return Ok(root),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error.into()),
-        }
-    }
-
-    Err(format!("failed to create unique temp dir for {prefix}").into())
 }

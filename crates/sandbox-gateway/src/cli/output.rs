@@ -25,8 +25,11 @@ const EXIT_USAGE: u8 = 2;
 #[derive(Debug, Parser)]
 #[command(name = "sandbox-cli", disable_help_subcommand = true)]
 struct Cli {
-    #[arg(long = "gateway-socket", value_name = "PATH", global = true)]
+    #[arg(long = "gateway-socket", value_name = "HOST:PORT", global = true)]
     gateway_socket_path: Option<PathBuf>,
+
+    #[arg(long = "gateway-auth-token", value_name = "TOKEN", global = true)]
+    gateway_auth_token: Option<String>,
 
     #[arg(long = "default-sandbox-id", value_name = "SANDBOX_ID", global = true)]
     default_sandbox_id: Option<String>,
@@ -98,6 +101,7 @@ where
 
     let config_overrides = GatewayConfigOverrides {
         gateway_socket_path: cli.gateway_socket_path,
+        gateway_auth_token: cli.gateway_auth_token,
         default_sandbox_id: cli.default_sandbox_id,
     };
 
@@ -117,7 +121,10 @@ where
                 Ok(config) => config,
                 Err(exit) => return exit,
             };
-            let client = GatewayClient::new(config.gateway_socket_path.clone());
+            let client = GatewayClient::new(
+                config.gateway_socket_path.to_string_lossy().into_owned(),
+                config.gateway_auth_token.clone(),
+            );
             let request_input = BuildRequestInput {
                 execution_space: CliOperationExecutionSpace::Manager,
                 operation: command.operation,
@@ -162,7 +169,10 @@ where
                 operation_argv: command.operation_argv,
                 sandbox_id: Some(sandbox_id),
             };
-            let client = GatewayClient::new(config.gateway_socket_path.clone());
+            let client = GatewayClient::new(
+                config.gateway_socket_path.to_string_lossy().into_owned(),
+                config.gateway_auth_token.clone(),
+            );
             return run_request_from_catalog(
                 &client,
                 request_input,

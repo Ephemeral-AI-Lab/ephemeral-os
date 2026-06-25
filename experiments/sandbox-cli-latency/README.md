@@ -61,6 +61,38 @@ case with a real sandbox id:
 ]
 ```
 
+## Manager create/destroy lifecycle
+
+Use `--manager-lifecycle` to run a real gateway-backed manager lifecycle probe.
+Each warmup or measured sample creates one sandbox, parses the returned `id`,
+then destroys that same sandbox:
+
+```sh
+export PATH="$PWD/bin:$PATH"
+start-sandbox-gateway
+python3 experiments/sandbox-cli-latency/run.py \
+  --build \
+  --manager-lifecycle \
+  --manager-lifecycle-image ubuntu:24.04 \
+  --iterations 10 \
+  --warmups 1 \
+  --timeout 120
+```
+
+If the gateway is not using the default socket, pass it explicitly:
+
+```sh
+python3 experiments/sandbox-cli-latency/run.py \
+  --build \
+  --manager-lifecycle \
+  --manager-lifecycle-gateway-socket /tmp/eos-gateway.sock
+```
+
+Per-sample workspace roots are created under the run output directory by
+default. Use `--manager-lifecycle-workspace-base PATH` to place them elsewhere.
+The sample JSONL rows include the created `sandbox_id`, `workspace_root`,
+individual create/destroy durations, and the exact command list.
+
 ## Custom cases
 
 For one-off cases, use `NAME::ARGS`:

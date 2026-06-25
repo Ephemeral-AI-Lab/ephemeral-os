@@ -9,7 +9,7 @@ mod router;
 mod runtime;
 mod store;
 
-pub use daemon_client::{SandboxDaemonClient, UnixSandboxDaemonClient};
+pub use daemon_client::{SandboxDaemonClient, TcpSandboxDaemonClient};
 pub use daemon_install::{LocalSandboxDaemonInstaller, SandboxDaemonInstaller};
 pub use error::ManagerError;
 pub use model::{SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};

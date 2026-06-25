@@ -20,6 +20,8 @@ use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest
 use crate::error::NamespaceExecutionError;
 use crate::pty::{open_pty_pair, terminate_pgid, PtyMaster};
 
+pub(crate) const MOUNT_OVERLAY_MODE_FLAG: &str = "--mount-overlay";
+
 pub trait NsRunnerLauncher: Send + Sync {
     fn spawn_pty(
         &self,
@@ -29,9 +31,8 @@ pub trait NsRunnerLauncher: Send + Sync {
         cgroup_procs_path: Option<PathBuf>,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError>;
 
-    fn spawn_piped(
+    fn spawn_overlay_mount(
         &self,
-        mode_flag: &'static str,
         request: NamespaceRunnerRequest,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
@@ -98,14 +99,13 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         ))
     }
 
-    fn spawn_piped(
+    fn spawn_overlay_mount(
         &self,
-        mode_flag: &'static str,
         request: NamespaceRunnerRequest,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
-        let (spawned, ()) = spawn_locked(Some(mode_flag), |command| {
+        let (spawned, ()) = spawn_locked(Some(MOUNT_OVERLAY_MODE_FLAG), |command| {
             command
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
@@ -115,7 +115,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         })?;
         Ok(Box::new(spawned.into_child(
             &request_bytes,
-            Some(mode_flag),
+            Some(MOUNT_OVERLAY_MODE_FLAG),
             setup_timeout_s,
         )?))
     }

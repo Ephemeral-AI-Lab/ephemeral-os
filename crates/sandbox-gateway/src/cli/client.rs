@@ -1,15 +1,14 @@
-use std::path::PathBuf;
-
-use sandbox_protocol::{Request, MAX_REQUEST_BYTES};
+use sandbox_protocol::{Request, GATEWAY_AUTH_FIELD, MAX_REQUEST_BYTES};
 use serde_json::Value;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpStream;
 
 const MAX_RESPONSE_BYTES: usize = MAX_REQUEST_BYTES;
 
 #[derive(Debug)]
 pub struct GatewayClient {
-    socket_path: PathBuf,
+    addr: String,
+    auth_token: Option<String>,
 }
 
 #[derive(Debug)]
@@ -21,17 +20,21 @@ pub enum GatewayClientError {
 
 impl GatewayClient {
     #[must_use]
-    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
+    pub fn new(addr: impl Into<String>, auth_token: Option<String>) -> Self {
         Self {
-            socket_path: socket_path.into(),
+            addr: addr.into(),
+            auth_token,
         }
     }
 
     pub async fn send(&self, request: &Request) -> Result<Value, GatewayClientError> {
-        let mut stream = UnixStream::connect(&self.socket_path)
+        let mut stream = TcpStream::connect(self.addr.as_str())
             .await
             .map_err(GatewayClientError::Transport)?;
-        let request_value = serde_json::to_value(request).map_err(GatewayClientError::Json)?;
+        let mut request_value = serde_json::to_value(request).map_err(GatewayClientError::Json)?;
+        if let (Some(token), Value::Object(map)) = (&self.auth_token, &mut request_value) {
+            map.insert(GATEWAY_AUTH_FIELD.to_owned(), Value::String(token.clone()));
+        }
         stream
             .write_all(&json_line(&request_value))
             .await
@@ -66,7 +69,10 @@ impl std::fmt::Display for GatewayClientError {
 
 impl std::error::Error for GatewayClientError {}
 
-async fn read_response_line(stream: UnixStream) -> Result<Value, GatewayClientError> {
+async fn read_response_line<S>(stream: S) -> Result<Value, GatewayClientError>
+where
+    S: AsyncRead + Unpin,
+{
     let limit = u64::try_from(MAX_RESPONSE_BYTES)
         .unwrap_or(u64::MAX)
         .saturating_add(1);

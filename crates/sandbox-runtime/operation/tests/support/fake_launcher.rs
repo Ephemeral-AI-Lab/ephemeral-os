@@ -2,8 +2,8 @@
 //! can build an engine over a scripted fake runner without reaching the real fork
 //! path. Two drive modes share one type:
 //!
-//! - **manual** (engine suites): each `spawn_pty`/`spawn_piped` parks a pending
-//!   child; the test later `complete_latest`/`fail_latest_wait`.
+//! - **manual** (engine suites): each `spawn_pty`/`spawn_overlay_mount` parks a
+//!   pending child; the test later `complete_latest`/`fail_latest_wait`.
 //! - **scripted** (command/operation suites): push a [`FakeRunnerScript`] per
 //!   spawn upfront; `spawn_pty` applies it (writes transcript output, completes or
 //!   parks, sets a pgid) so the real condvar yield loop observes it.
@@ -165,8 +165,7 @@ struct FakeLauncherState {
     transcript_paths: Vec<Option<PathBuf>>,
     completions: Vec<Arc<FakeCompletion>>,
     scripts: VecDeque<FakeRunnerScript>,
-    piped_mode_flags: Vec<&'static str>,
-    piped_setup_timeouts: Vec<f64>,
+    overlay_mount_setup_timeouts: Vec<f64>,
 }
 
 /// A fake `NsRunnerLauncher`: records each request, hands back a `FakeRunnerChild`
@@ -211,13 +210,8 @@ impl FakeLauncher {
     }
 
     #[must_use]
-    pub fn piped_setup_timeouts(&self) -> Vec<f64> {
-        self.lock().piped_setup_timeouts.clone()
-    }
-
-    #[must_use]
-    pub fn recorded_piped_mode_flags(&self) -> Vec<&'static str> {
-        self.lock().piped_mode_flags.clone()
+    pub fn overlay_mount_setup_timeouts(&self) -> Vec<f64> {
+        self.lock().overlay_mount_setup_timeouts.clone()
     }
 
     /// Complete the most recently spawned execution.
@@ -305,16 +299,14 @@ impl NsRunnerLauncher for FakeLauncher {
         ))
     }
 
-    fn spawn_piped(
+    fn spawn_overlay_mount(
         &self,
-        mode_flag: &'static str,
         request: NamespaceRunnerRequest,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         let (completion, _script) = self.record(&request, None);
         let mut state = self.lock();
-        state.piped_mode_flags.push(mode_flag);
-        state.piped_setup_timeouts.push(setup_timeout_s);
+        state.overlay_mount_setup_timeouts.push(setup_timeout_s);
         Ok(Box::new(FakeRunnerChild {
             completion,
             _slave: None,

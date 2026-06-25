@@ -19,6 +19,9 @@ pub enum GatewayError {
 
     #[error("gateway request was not newline terminated")]
     MissingNewline,
+
+    #[error("gateway authentication token is missing or invalid")]
+    Unauthorized,
 }
 
 impl GatewayError {
@@ -29,6 +32,7 @@ impl GatewayError {
             Self::BadRequest { kind, .. } => kind,
             Self::RequestTooLarge { .. } => error_kind::REQUEST_TOO_LARGE,
             Self::MissingNewline => error_kind::INVALID_REQUEST,
+            Self::Unauthorized => error_kind::UNAUTHORIZED,
             Self::Io(_) => error_kind::INTERNAL_ERROR,
         }
     }

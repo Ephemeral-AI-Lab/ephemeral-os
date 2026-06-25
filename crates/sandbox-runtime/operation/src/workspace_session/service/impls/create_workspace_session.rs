@@ -10,13 +10,6 @@ impl WorkspaceSessionService {
         &self,
         request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        self.create_workspace_session_inner(request)
-    }
-
-    fn create_workspace_session_inner(
-        &self,
-        request: CreateWorkspaceRequest,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         let handle = self.workspace().create_workspace(request)?;
         let workspace_session_id = handle.id.clone();
         let cgroup_path = self.prepare_workspace_cgroup(&workspace_session_id);

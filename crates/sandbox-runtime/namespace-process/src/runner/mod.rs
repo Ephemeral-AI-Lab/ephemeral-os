@@ -2,10 +2,6 @@
 
 use protocol::{NamespaceRunnerRequest, RunResult};
 #[cfg(target_os = "linux")]
-use rustix::io::Errno;
-#[cfg(target_os = "linux")]
-use rustix::mount::{unmount, UnmountFlags};
-#[cfg(target_os = "linux")]
 use std::ffi::CString;
 #[cfg(target_os = "linux")]
 use std::os::unix::ffi::OsStrExt;
@@ -61,14 +57,6 @@ pub(crate) fn mask_model_shell_paths(hidden_paths: &[PathBuf]) -> Result<(), Run
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn unmask_model_shell_paths(hidden_paths: &[PathBuf]) -> Result<(), RunnerError> {
-    for path in hidden_paths.iter().rev() {
-        unmount_mask(path)?;
-    }
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
 fn mask_with_empty_tmpfs(path: &Path) -> Result<(), RunnerError> {
     if !path.is_dir() {
         return Err(RunnerError::InvalidRequest(format!(
@@ -98,14 +86,5 @@ fn mask_with_empty_tmpfs(path: &Path) -> Result<(), RunnerError> {
         Ok(())
     } else {
         Err(RunnerError::Syscall(std::io::Error::last_os_error()))
-    }
-}
-
-#[cfg(target_os = "linux")]
-fn unmount_mask(path: &Path) -> Result<(), RunnerError> {
-    match unmount(path, UnmountFlags::empty()) {
-        Ok(()) | Err(Errno::INVAL | Errno::NOENT) => Ok(()),
-        Err(_) => unmount(path, UnmountFlags::DETACH)
-            .map_err(|err| RunnerError::Syscall(std::io::Error::from(err))),
     }
 }

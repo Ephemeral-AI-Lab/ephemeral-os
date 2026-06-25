@@ -26,6 +26,7 @@ fn cli_config_precedence_is_cli_env_default() {
     let cli_config = GatewayConfig::discover_with(
         GatewayConfigOverrides {
             gateway_socket_path: Some(PathBuf::from("/cli/gateway.sock")),
+            gateway_auth_token: None,
             default_sandbox_id: Some("cli-sbox".to_owned()),
         },
         |_| None,
@@ -43,6 +44,7 @@ fn cli_config_rejects_blank_default_sandbox_id() {
     let err = GatewayConfig::discover_with(
         GatewayConfigOverrides {
             gateway_socket_path: None,
+            gateway_auth_token: None,
             default_sandbox_id: Some(" ".to_owned()),
         },
         |_| None,

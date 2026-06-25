@@ -16,7 +16,7 @@ pub mod launcher {
         use super::*;
 
         #[test]
-        fn piped_completion_timeout_terminates_and_reaps_child() {
+        fn overlay_mount_completion_timeout_terminates_and_reaps_child() {
             let (result_read, result_write) = result_pipe().expect("result pipe");
             drop(result_write);
             let mut command = Command::new("sh");

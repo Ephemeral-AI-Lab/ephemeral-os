@@ -83,14 +83,18 @@ impl fmt::Display for SandboxState {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SandboxDaemonEndpoint {
-    pub socket_path: PathBuf,
+    pub host: String,
+    pub port: u16,
+    pub auth_token: String,
 }
 
 impl SandboxDaemonEndpoint {
     #[must_use]
-    pub fn new(socket_path: impl Into<PathBuf>) -> Self {
+    pub fn new(host: impl Into<String>, port: u16, auth_token: impl Into<String>) -> Self {
         Self {
-            socket_path: socket_path.into(),
+            host: host.into(),
+            port,
+            auth_token: auth_token.into(),
         }
     }
 }

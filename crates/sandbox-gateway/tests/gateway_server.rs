@@ -14,7 +14,7 @@ use sandbox_manager::{
 use sandbox_protocol::{error_kind, CliOperationScope, Request, Response, MAX_REQUEST_BYTES};
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
+use tokio::net::TcpStream;
 use tokio_util::sync::CancellationToken;
 
 type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -46,10 +46,11 @@ impl SandboxDaemonInstaller for FakeInstaller {
     }
 
     fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
-        Ok(SandboxDaemonEndpoint::new(PathBuf::from(format!(
-            "/tmp/{}.sock",
-            record.id.as_str()
-        ))))
+        Ok(SandboxDaemonEndpoint::new(
+            "127.0.0.1",
+            7000,
+            format!("token-{}", record.id.as_str()),
+        ))
     }
 
     fn stop_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -63,7 +64,7 @@ impl SandboxDaemonInstaller for FakeInstaller {
 
 #[derive(Default)]
 struct RecordingDaemonClient {
-    invocations: Mutex<Vec<(PathBuf, String, CliOperationScope)>>,
+    invocations: Mutex<Vec<(u16, String, CliOperationScope)>>,
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
@@ -74,7 +75,7 @@ impl SandboxDaemonClient for RecordingDaemonClient {
         _timeout: Duration,
     ) -> Result<Response, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
-            endpoint.socket_path.clone(),
+            endpoint.port,
             request.op.clone(),
             request.scope.clone(),
         ));
@@ -102,13 +103,13 @@ fn services() -> (
 
 fn server(
     services: Arc<ManagerServices>,
-    socket_path: PathBuf,
+    bind_addr: String,
     pid_path: PathBuf,
     max_concurrent_connections: usize,
     shutdown: CancellationToken,
 ) -> SandboxGatewayServer {
     SandboxGatewayServer::with_shutdown(
-        GatewayConfig::new(socket_path, pid_path, max_concurrent_connections),
+        GatewayConfig::new(bind_addr, pid_path, max_concurrent_connections, None),
         SandboxManagerRouter::new(services),
         shutdown,
     )
@@ -164,41 +165,32 @@ async fn send_raw(server: &SandboxGatewayServer, raw: &[u8]) -> Value {
 }
 
 #[tokio::test]
-async fn gateway_binds_socket_writes_pid_file_and_cleans_up() -> TestResult {
+async fn gateway_binds_tcp_writes_pid_file_and_cleans_up() -> TestResult {
     let root = unique_temp_dir("sandbox-gateway-server-test")?;
-    let socket_path = root.join("gateway.sock");
     let pid_path = root.join("gateway.pid");
+    let bind_addr = reserve_local_addr()?;
     let shutdown = CancellationToken::new();
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        socket_path.clone(),
+        bind_addr.clone(),
         pid_path.clone(),
         8,
         shutdown.clone(),
     );
     let handle = tokio::spawn(server.serve());
 
-    wait_for_path(&socket_path).await?;
+    // The pid file is written only after the TCP listener binds, so its
+    // presence proves the loopback port is live.
     wait_for_path(&pid_path).await?;
     assert_eq!(
         tokio::fs::read_to_string(&pid_path).await?,
         std::process::id().to_string()
     );
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mode = tokio::fs::metadata(&socket_path)
-            .await?
-            .permissions()
-            .mode()
-            & 0o777;
-        assert_eq!(mode, 0o600);
-    }
+    wait_for_tcp(&bind_addr).await?;
 
     shutdown.cancel();
     handle.await??;
-    assert!(!socket_path.exists());
     assert!(!pid_path.exists());
     let _ = std::fs::remove_dir_all(root);
     Ok(())
@@ -209,7 +201,7 @@ async fn gateway_connection_decodes_request_and_writes_response() -> TestResult 
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        PathBuf::from("/tmp/test-gateway.sock"),
+        "127.0.0.1:0".to_owned(),
         PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
@@ -230,7 +222,7 @@ async fn gateway_connection_rejects_oversized_request() -> TestResult {
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        PathBuf::from("/tmp/test-gateway.sock"),
+        "127.0.0.1:0".to_owned(),
         PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
@@ -249,7 +241,7 @@ async fn gateway_connection_rejects_missing_newline() -> TestResult {
     let (services, _store, _daemon_client) = services();
     let server = server(
         services,
-        PathBuf::from("/tmp/test-gateway.sock"),
+        "127.0.0.1:0".to_owned(),
         PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
@@ -264,15 +256,21 @@ async fn gateway_connection_rejects_missing_newline() -> TestResult {
 #[tokio::test]
 async fn gateway_overload_response_is_structured_json() -> TestResult {
     let root = unique_temp_dir("sandbox-gateway-overload-test")?;
-    let socket_path = root.join("gateway.sock");
     let pid_path = root.join("gateway.pid");
+    let bind_addr = reserve_local_addr()?;
     let shutdown = CancellationToken::new();
     let (services, _store, _daemon_client) = services();
-    let server = server(services, socket_path.clone(), pid_path, 0, shutdown.clone());
+    let server = server(
+        services,
+        bind_addr.clone(),
+        pid_path.clone(),
+        0,
+        shutdown.clone(),
+    );
     let handle = tokio::spawn(server.serve());
 
-    wait_for_path(&socket_path).await?;
-    let stream = UnixStream::connect(&socket_path).await?;
+    wait_for_path(&pid_path).await?;
+    let stream = connect_tcp(&bind_addr).await?;
     let mut reader = BufReader::new(stream);
     let mut response = String::new();
     reader.read_line(&mut response).await?;
@@ -291,17 +289,54 @@ async fn gateway_overload_response_is_structured_json() -> TestResult {
 }
 
 #[tokio::test]
+async fn gateway_rejects_request_with_missing_or_wrong_auth_token() -> TestResult {
+    let (services, _store, _daemon_client) = services();
+    let server = SandboxGatewayServer::with_shutdown(
+        GatewayConfig::new(
+            "127.0.0.1:0",
+            PathBuf::from("/tmp/test-gateway.pid"),
+            8,
+            Some("expected-token".to_owned()),
+        ),
+        SandboxManagerRouter::new(services),
+        CancellationToken::new(),
+    );
+
+    let missing = send_value(
+        &server,
+        request("list_sandboxes", CliOperationScope::System, json!({})),
+    )
+    .await;
+    assert_eq!(missing["error"]["kind"], error_kind::UNAUTHORIZED);
+
+    let mut wrong = request("list_sandboxes", CliOperationScope::System, json!({}));
+    wrong["_sandbox_gateway_auth_token"] = json!("nope");
+    let wrong = send_value(&server, wrong).await;
+    assert_eq!(wrong["error"]["kind"], error_kind::UNAUTHORIZED);
+
+    let mut authorized = request("list_sandboxes", CliOperationScope::System, json!({}));
+    authorized["_sandbox_gateway_auth_token"] = json!("expected-token");
+    let authorized = send_value(&server, authorized).await;
+    assert_eq!(authorized["sandboxes"], json!([]));
+    Ok(())
+}
+
+#[tokio::test]
 async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult {
     let (services, store, daemon_client) = services();
     store
         .insert(ready_record(
             "sbox-1",
-            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock")),
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-1",
+            )),
         ))
         .expect("insert sandbox");
     let server = server(
         services,
-        PathBuf::from("/tmp/test-gateway.sock"),
+        "127.0.0.1:0".to_owned(),
         PathBuf::from("/tmp/test-gateway.pid"),
         8,
         CancellationToken::new(),
@@ -320,7 +355,7 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
     assert_eq!(response["forwarded"], true);
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
     assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].0, PathBuf::from("/tmp/sbox-1.sock"));
+    assert_eq!(invocations[0].0, 7000);
     assert_eq!(invocations[0].1, "exec_command");
     assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
     Ok(())
@@ -334,6 +369,27 @@ async fn wait_for_path(path: &std::path::Path) -> TestResult {
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
     Err(format!("timed out waiting for {}", path.display()).into())
+}
+
+/// Bind an ephemeral loopback port, then release it so the gateway under test
+/// can claim it. Standard test pattern; the tiny reuse window is acceptable.
+fn reserve_local_addr() -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    Ok(listener.local_addr()?.to_string())
+}
+
+async fn connect_tcp(addr: &str) -> Result<TcpStream, Box<dyn std::error::Error + Send + Sync>> {
+    for _ in 0..100 {
+        match TcpStream::connect(addr).await {
+            Ok(stream) => return Ok(stream),
+            Err(_) => tokio::time::sleep(std::time::Duration::from_millis(10)).await,
+        }
+    }
+    Err(format!("timed out connecting to {addr}").into())
+}
+
+async fn wait_for_tcp(addr: &str) -> TestResult {
+    connect_tcp(addr).await.map(|_| ())
 }
 
 fn unique_temp_dir(prefix: &str) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {

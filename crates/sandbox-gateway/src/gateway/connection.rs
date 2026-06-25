@@ -14,7 +14,7 @@ impl SandboxGatewayServer {
     {
         let (mut reader, mut writer) = tokio::io::split(stream);
         let response = match read_request_line(&mut reader).await {
-            Ok(bytes) => match decode_request_bytes(&bytes) {
+            Ok(bytes) => match self.authorize_and_decode(&bytes) {
                 Ok(request) => self
                     .manager
                     .dispatch_request(request)
@@ -29,6 +29,22 @@ impl SandboxGatewayServer {
             .await?;
         writer.shutdown().await?;
         Ok(())
+    }
+
+    fn authorize_and_decode(&self, bytes: &[u8]) -> Result<Request, GatewayError> {
+        let value = serde_json::from_slice::<Value>(bytes)?;
+        let Value::Object(mut object) = value else {
+            return decode_request(value);
+        };
+        let presented = object
+            .remove(sandbox_protocol::GATEWAY_AUTH_FIELD)
+            .and_then(|token| token.as_str().map(str::to_owned));
+        if let Some(expected) = self.config.auth_token.as_deref() {
+            if presented.as_deref() != Some(expected) {
+                return Err(GatewayError::Unauthorized);
+            }
+        }
+        decode_request(Value::Object(object))
     }
 }
 
@@ -67,8 +83,7 @@ where
     Ok(buf)
 }
 
-fn decode_request_bytes(bytes: &[u8]) -> Result<Request, GatewayError> {
-    let value = serde_json::from_slice::<Value>(bytes)?;
+fn decode_request(value: Value) -> Result<Request, GatewayError> {
     decode_request_value(value).map_err(|error| GatewayError::BadRequest {
         kind: error.kind(),
         message: error.message().to_owned(),

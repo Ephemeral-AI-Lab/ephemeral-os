@@ -174,7 +174,7 @@ fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
         "resolve_session",
         "refresh_after_publish",
         "capture_session_changes",
-        "with_workspace_destroy_admission",
+        "destroy_workspace_session_with_admission",
         "publish_changes",
         "process_store",
         "transcript",
@@ -247,7 +247,8 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
     }
 
     let adapter = include_str!("../src/cli_definition/workspace_session_operations.rs");
-    assert!(adapter.contains("operations.workspace_session"));
+    assert!(adapter.contains(".create_workspace_session("));
+    assert!(adapter.contains(".destroy_workspace_session_with_admission("));
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 

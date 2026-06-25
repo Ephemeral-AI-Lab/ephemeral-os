@@ -1,11 +1,11 @@
-use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
 
 use crate::{ManagerError, SandboxDaemonEndpoint};
+use sandbox_protocol::DAEMON_AUTH_FIELD;
 use serde_json::Value;
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
+use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpStream;
 
 const MAX_RESPONSE_BYTES: usize = sandbox_protocol::MAX_REQUEST_BYTES;
 
@@ -19,28 +19,29 @@ pub trait SandboxDaemonClient: Send + Sync {
 }
 
 #[derive(Debug, Default, Clone, Copy)]
-pub struct UnixSandboxDaemonClient;
+pub struct TcpSandboxDaemonClient;
 
-impl UnixSandboxDaemonClient {
+impl TcpSandboxDaemonClient {
     #[must_use]
     pub const fn new() -> Self {
         Self
     }
 }
 
-impl SandboxDaemonClient for UnixSandboxDaemonClient {
+impl SandboxDaemonClient for TcpSandboxDaemonClient {
     fn invoke_with_timeout(
         &self,
         endpoint: &SandboxDaemonEndpoint,
         request: sandbox_protocol::Request,
         timeout: Duration,
     ) -> Result<sandbox_protocol::Response, ManagerError> {
-        let socket_path = endpoint.socket_path.clone();
-        let request_line = request_line(&request)?;
+        let host = endpoint.host.clone();
+        let port = endpoint.port;
+        let request_line = request_line(&request, &endpoint.auth_token)?;
         if tokio::runtime::Handle::try_current().is_ok() {
             let worker = thread::Builder::new()
                 .name("sandbox-daemon-client".to_owned())
-                .spawn(move || run_exchange(socket_path, request_line, timeout))
+                .spawn(move || run_exchange(host, port, request_line, timeout))
                 .map_err(|error| ManagerError::ForwardingFailed {
                     message: format!("failed to spawn daemon client worker: {error}"),
                 })?;
@@ -48,12 +49,13 @@ impl SandboxDaemonClient for UnixSandboxDaemonClient {
                 message: "daemon client worker panicked".to_owned(),
             })?;
         }
-        run_exchange(socket_path, request_line, timeout)
+        run_exchange(host, port, request_line, timeout)
     }
 }
 
 fn run_exchange(
-    socket_path: PathBuf,
+    host: String,
+    port: u16,
     request_line: Vec<u8>,
     timeout: Duration,
 ) -> Result<sandbox_protocol::Response, ManagerError> {
@@ -65,7 +67,7 @@ fn run_exchange(
             message: format!("failed to build daemon client runtime: {error}"),
         })?;
     runtime.block_on(async move {
-        tokio::time::timeout(timeout, unix_exchange(socket_path, request_line))
+        tokio::time::timeout(timeout, tcp_exchange(host, port, request_line))
             .await
             .map_err(|_| ManagerError::ForwardingFailed {
                 message: format!("daemon request timed out after {} ms", timeout.as_millis()),
@@ -73,15 +75,16 @@ fn run_exchange(
     })
 }
 
-async fn unix_exchange(
-    socket_path: PathBuf,
+async fn tcp_exchange(
+    host: String,
+    port: u16,
     request_line: Vec<u8>,
 ) -> Result<sandbox_protocol::Response, ManagerError> {
-    let mut stream = UnixStream::connect(&socket_path).await.map_err(|error| {
-        ManagerError::ForwardingFailed {
-            message: format!("connect {} failed: {error}", socket_path.display()),
-        }
-    })?;
+    let mut stream = TcpStream::connect((host.as_str(), port))
+        .await
+        .map_err(|error| ManagerError::ForwardingFailed {
+            message: format!("connect {host}:{port} failed: {error}"),
+        })?;
     stream
         .write_all(&request_line)
         .await
@@ -99,7 +102,10 @@ async fn unix_exchange(
         .map(sandbox_protocol::Response::ok)
 }
 
-async fn read_response_line(stream: UnixStream) -> Result<Value, ManagerError> {
+async fn read_response_line<S>(stream: S) -> Result<Value, ManagerError>
+where
+    S: AsyncRead + Unpin,
+{
     let limit = u64::try_from(MAX_RESPONSE_BYTES)
         .unwrap_or(u64::MAX)
         .saturating_add(1);
@@ -131,8 +137,21 @@ async fn read_response_line(stream: UnixStream) -> Result<Value, ManagerError> {
     })
 }
 
-fn request_line(request: &sandbox_protocol::Request) -> Result<Vec<u8>, ManagerError> {
-    let mut line = serde_json::to_vec(request).map_err(|error| ManagerError::ForwardingFailed {
+fn request_line(
+    request: &sandbox_protocol::Request,
+    auth_token: &str,
+) -> Result<Vec<u8>, ManagerError> {
+    let mut value =
+        serde_json::to_value(request).map_err(|error| ManagerError::ForwardingFailed {
+            message: format!("encode daemon request failed: {error}"),
+        })?;
+    if let Value::Object(map) = &mut value {
+        map.insert(
+            DAEMON_AUTH_FIELD.to_owned(),
+            Value::String(auth_token.to_owned()),
+        );
+    }
+    let mut line = serde_json::to_vec(&value).map_err(|error| ManagerError::ForwardingFailed {
         message: format!("encode daemon request failed: {error}"),
     })?;
     if line.len().saturating_add(1) > sandbox_protocol::MAX_REQUEST_BYTES {

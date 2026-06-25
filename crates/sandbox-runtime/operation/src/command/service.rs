@@ -8,6 +8,7 @@ mod write_command_stdin;
 mod r#yield;
 
 pub use core::CommandOperationService;
+pub(crate) use core::WorkspaceDestroyOutcome;
 pub use dto::{
     CommandOutput, CommandStatus, ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };

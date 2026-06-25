@@ -1,16 +1,13 @@
 use std::path::PathBuf;
 
 #[cfg(target_os = "linux")]
-use sandbox_runtime_namespace_execution::NamespaceTarget;
-#[cfg(target_os = "linux")]
-use serde_json::json;
-
-#[cfg(target_os = "linux")]
 use crate::isolated_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 #[cfg(target_os = "linux")]
 use crate::model::WorkspaceHandle;
 use crate::profile::WorkspaceModeError;
 use crate::profile::WorkspaceModeHandle;
+#[cfg(target_os = "linux")]
+use sandbox_runtime_namespace_execution::NamespaceTarget;
 
 #[cfg(target_os = "linux")]
 use super::fds::{expect_line, write_all_fd};
@@ -47,13 +44,7 @@ impl NamespaceRuntime {
         entry.layer_paths = layer_paths.to_vec();
         let id = self.engine.allocate_id();
         self.engine
-            .run_mount(
-                "--mount-overlay",
-                NamespaceTarget::from(entry),
-                id,
-                json!({}),
-                |_| Ok(()),
-            )
+            .mount_overlay(NamespaceTarget::from(entry), id)
             .map_err(setup_error)?
             .wait()
             .map_err(setup_error)

@@ -2,7 +2,7 @@ use crate::support::{self, assertion as assert};
 
 // build.rs slug => `lifecycle_create_sandbox_returns_ready`, mounted by tests/manager.rs.
 #[test]
-fn create_sandbox_returns_ready_with_daemon_socket() {
+fn create_sandbox_returns_ready_with_daemon_endpoint() {
     let Some(h) = support::harness() else {
         return; // skip when not under eos-e2e (EOS_E2E_RUN_ROOT unset)
     };
@@ -23,6 +23,7 @@ fn create_sandbox_returns_ready_with_daemon_socket() {
         .chars()
         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.'))); // charset
     assert_eq!(assert::field(resp, "/state"), "ready"); // SandboxState::Ready
-    assert!(!assert::field(resp, "/daemon/socket_path").is_null()); // daemon endpoint present
+    assert_eq!(assert::field(resp, "/daemon/host"), "127.0.0.1"); // daemon endpoint present
+    assert!(assert::field(resp, "/daemon/port").is_u64()); // published TCP port
     // _sb drops here -> manager destroy_sandbox --sandbox-id (the one created).
 }

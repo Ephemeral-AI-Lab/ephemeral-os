@@ -12,7 +12,7 @@ pub(crate) mod observability;
     dead_code,
     reason = "test harness path-includes private CLI modules and exercises selected helpers"
 )]
-#[path = "../src/runner.rs"]
+#[path = "../src/runner/mod.rs"]
 mod runner_cli;
 #[allow(
     dead_code,

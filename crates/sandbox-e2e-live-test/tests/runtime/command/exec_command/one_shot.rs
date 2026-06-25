@@ -10,6 +10,7 @@ fn one_shot_exec_returns_ok_and_zero_exit() {
 
     // sandbox-cli runtime --sandbox-id {sb.id} exec_command pwd
     let rec = h.cli().runtime(&sb.id, "exec_command", &["pwd"]);
+    sb.record(&rec); // emit into reports/{id}/exchange.jsonl for latency evidence
     let resp = rec.response();
     assert::ok(resp); // success: no top-level "error"
     assert_eq!(assert::field(resp, "/status"), "ok"); // CommandStatus::Ok => "ok"

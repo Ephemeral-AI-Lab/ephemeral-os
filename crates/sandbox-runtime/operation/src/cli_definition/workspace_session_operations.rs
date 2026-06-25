@@ -3,10 +3,10 @@ use serde_json::{json, Value};
 use crate::cli_definition::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
+use crate::command::WorkspaceDestroyOutcome;
 use crate::operation::OperationEntry;
 use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
-    WorkspaceSessionId,
+    CreateWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile, WorkspaceSessionId,
 };
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionHandler};
 use crate::SandboxRuntimeOperations;
@@ -121,28 +121,18 @@ fn dispatch_destroy_workspace_session(
         Ok(input) => input,
         Err(response) => return response,
     };
-    operations.command.with_workspace_destroy_admission(
-        &input.workspace_session_id,
-        |active_command_session_ids| {
-            if !active_command_session_ids.is_empty() {
-                return active_command_rejection(active_command_session_ids);
-            }
-
-            let handler = match operations
-                .workspace_session
-                .resolve_session(input.workspace_session_id.clone())
-            {
-                Ok(handler) => handler,
-                Err(error) => return workspace_session_error_response(error),
-            };
-            destroy_workspace_session_response(operations.workspace_session.destroy_session(
-                handler,
-                DestroyWorkspaceRequest {
-                    grace_s: input.grace_s,
-                },
-            ))
-        },
-    )
+    match operations
+        .command
+        .destroy_workspace_session_with_admission(input.workspace_session_id, input.grace_s)
+    {
+        WorkspaceDestroyOutcome::ActiveCommands {
+            active_command_session_ids,
+        } => active_command_rejection(&active_command_session_ids),
+        WorkspaceDestroyOutcome::Destroyed(result) => {
+            Response::ok(destroy_workspace_session_value(*result))
+        }
+        WorkspaceDestroyOutcome::Failed(error) => workspace_session_error_response(error),
+    }
 }
 
 fn parse_workspace_profile(request: &Request) -> Result<WorkspaceProfile, Response> {
@@ -184,15 +174,6 @@ fn workspace_session_handler_response(
 ) -> Response {
     match result {
         Ok(handler) => Response::ok(create_workspace_session_value(handler)),
-        Err(error) => workspace_session_error_response(error),
-    }
-}
-
-fn destroy_workspace_session_response(
-    result: Result<DestroyWorkspaceResult, WorkspaceSessionError>,
-) -> Response {
-    match result {
-        Ok(result) => Response::ok(destroy_workspace_session_value(result)),
         Err(error) => workspace_session_error_response(error),
     }
 }

@@ -35,10 +35,11 @@ impl SandboxDaemonInstaller for FakeInstaller {
     }
 
     fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
-        Ok(SandboxDaemonEndpoint::new(PathBuf::from(format!(
-            "/tmp/{}.sock",
-            record.id.as_str()
-        ))))
+        Ok(SandboxDaemonEndpoint::new(
+            "127.0.0.1",
+            7000,
+            format!("token-{}", record.id.as_str()),
+        ))
     }
 
     fn stop_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -52,7 +53,7 @@ impl SandboxDaemonInstaller for FakeInstaller {
 
 #[derive(Default)]
 struct RecordingDaemonClient {
-    invocations: Mutex<Vec<(PathBuf, String, CliOperationScope)>>,
+    invocations: Mutex<Vec<(u16, String, CliOperationScope)>>,
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
@@ -63,7 +64,7 @@ impl SandboxDaemonClient for RecordingDaemonClient {
         _timeout: Duration,
     ) -> Result<Response, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
-            endpoint.socket_path.clone(),
+            endpoint.port,
             request.op.clone(),
             request.scope.clone(),
         ));
@@ -167,7 +168,11 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     store
         .insert(ready_record(
             "sbox-1",
-            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock")),
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-1",
+            )),
         ))
         .expect("insert sandbox");
     let router = router(services);
@@ -184,7 +189,7 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     assert_eq!(response["forwarded"], true);
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
     assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].0, PathBuf::from("/tmp/sbox-1.sock"));
+    assert_eq!(invocations[0].0, 7000);
     assert_eq!(invocations[0].1, "exec_command");
     assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
 }
@@ -195,7 +200,11 @@ async fn manager_router_rejects_private_observability_snapshot_forwarding() {
     store
         .insert(ready_record(
             "sbox-1",
-            Some(SandboxDaemonEndpoint::new("/tmp/sbox-1.sock")),
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-1",
+            )),
         ))
         .expect("insert sandbox");
     let router = router(services);

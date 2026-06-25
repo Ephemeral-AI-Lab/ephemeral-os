@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use tokio::io::{AsyncWrite, AsyncWriteExt};
-use tokio::net::UnixListener;
+use tokio::net::TcpListener;
 use tokio::sync::Semaphore;
 
 use super::{error, GatewayError, SandboxGatewayServer};
@@ -10,9 +10,7 @@ impl SandboxGatewayServer {
     pub async fn serve(self) -> Result<(), GatewayError> {
         let server = Arc::new(self);
         prepare_paths(&server).await?;
-        remove_file_if_exists(&server.config.socket_path).await?;
-        let listener = UnixListener::bind(&server.config.socket_path)?;
-        set_socket_permissions(&server).await?;
+        let listener = TcpListener::bind(server.config.bind_addr.as_str()).await?;
         tokio::fs::write(&server.config.pid_path, std::process::id().to_string()).await?;
 
         let permits = Arc::new(Semaphore::new(server.config.max_concurrent_connections));
@@ -23,9 +21,6 @@ impl SandboxGatewayServer {
 }
 
 async fn prepare_paths(server: &SandboxGatewayServer) -> Result<(), GatewayError> {
-    if let Some(parent) = server.config.socket_path.parent() {
-        tokio::fs::create_dir_all(parent).await?;
-    }
     if let Some(parent) = server.config.pid_path.parent() {
         tokio::fs::create_dir_all(parent).await?;
     }
@@ -34,7 +29,7 @@ async fn prepare_paths(server: &SandboxGatewayServer) -> Result<(), GatewayError
 
 async fn accept_until_shutdown(
     server: Arc<SandboxGatewayServer>,
-    listener: UnixListener,
+    listener: TcpListener,
     permits: Arc<Semaphore>,
 ) -> Result<(), GatewayError> {
     loop {
@@ -74,28 +69,6 @@ where
     let _ = stream.shutdown().await;
 }
 
-async fn set_socket_permissions(server: &SandboxGatewayServer) -> Result<(), GatewayError> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        tokio::fs::set_permissions(
-            &server.config.socket_path,
-            std::fs::Permissions::from_mode(0o600),
-        )
-        .await?;
-    }
-    Ok(())
-}
-
 async fn cleanup_paths(server: &SandboxGatewayServer) {
     let _ = tokio::fs::remove_file(&server.config.pid_path).await;
-    let _ = tokio::fs::remove_file(&server.config.socket_path).await;
-}
-
-async fn remove_file_if_exists(path: &std::path::Path) -> Result<(), GatewayError> {
-    match tokio::fs::remove_file(path).await {
-        Ok(()) => Ok(()),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error.into()),
-    }
 }

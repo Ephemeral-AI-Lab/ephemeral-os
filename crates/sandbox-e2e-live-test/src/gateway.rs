@@ -1,4 +1,4 @@
-use std::os::unix::net::UnixStream;
+use std::net::TcpStream;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -9,18 +9,20 @@ use std::time::{Duration, Instant};
 pub const DEFAULT_READY_TIMEOUT: Duration = Duration::from_secs(5);
 const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
-/// Poll until the gateway socket exists and accepts a connection, or `timeout`
-/// elapses. Attach mode only — never spawns a gateway. Returns `Err` naming the
-/// socket if it never becomes ready.
+/// Poll until the gateway TCP address accepts a connection, or `timeout`
+/// elapses. The address is carried as a path-shaped `host:port` string.
+/// Attach mode only — never spawns a gateway. Returns `Err` naming the address
+/// if it never becomes ready.
 pub fn await_ready(socket: &Path, timeout: Duration) -> anyhow::Result<()> {
+    let addr = socket.to_string_lossy();
     let deadline = Instant::now() + timeout;
     loop {
-        if socket.exists() && UnixStream::connect(socket).is_ok() {
+        if TcpStream::connect(addr.as_ref()).is_ok() {
             return Ok(());
         }
         if Instant::now() >= deadline {
             anyhow::bail!(
-                "gateway socket {} did not become ready within {timeout:?}",
+                "gateway address {} did not become ready within {timeout:?}",
                 socket.display()
             );
         }

@@ -32,6 +32,20 @@ class Case:
     args: list[str]
     description: str = ""
     env: dict[str, str] | None = None
+    kind: str = "command"
+    image: str | None = None
+    workspace_base: Path | None = None
+    gateway_socket: Path | None = None
+
+
+@dataclass(frozen=True)
+class CommandResult:
+    command: list[str]
+    returncode: int | None
+    timed_out: bool
+    stdout: bytes
+    stderr: bytes
+    duration_ms: float
 
 
 DEFAULT_CASES = [
@@ -75,8 +89,12 @@ def main() -> int:
 
     records: list[dict[str, Any]] = []
     for case in cases:
-        records.extend(run_case(cli_path, case, args.warmups, "warmup", args.timeout))
-        records.extend(run_case(cli_path, case, args.iterations, "measure", args.timeout))
+        records.extend(
+            run_case(cli_path, case, args.warmups, "warmup", args.timeout, output_dir)
+        )
+        records.extend(
+            run_case(cli_path, case, args.iterations, "measure", args.timeout, output_dir)
+        )
 
     write_samples_csv(output_dir / "samples.csv", records)
     write_samples_jsonl(output_dir / "samples.jsonl", records)
@@ -156,6 +174,26 @@ def parse_args() -> argparse.Namespace:
         help="Include default safe cases in addition to --commands-file or --case cases.",
     )
     parser.add_argument(
+        "--manager-lifecycle",
+        action="store_true",
+        help="Add a real gateway-backed manager create_sandbox + destroy_sandbox lifecycle case.",
+    )
+    parser.add_argument(
+        "--manager-lifecycle-image",
+        default="ubuntu:24.04",
+        help="Container image used by --manager-lifecycle.",
+    )
+    parser.add_argument(
+        "--manager-lifecycle-workspace-base",
+        type=Path,
+        help="Base directory for per-sample lifecycle workspace roots. Defaults under the output directory.",
+    )
+    parser.add_argument(
+        "--manager-lifecycle-gateway-socket",
+        type=Path,
+        help="Gateway socket passed to sandbox-cli for --manager-lifecycle. Defaults to sandbox-cli config/env/default.",
+    )
+    parser.add_argument(
         "--allow-failures",
         action="store_true",
         help="Write results and exit 0 even when measured invocations fail.",
@@ -194,6 +232,8 @@ def resolve_cases(args: argparse.Namespace) -> list[Case]:
     if args.commands_file:
         custom_cases.extend(load_cases_file(args.commands_file))
     custom_cases.extend(parse_case_specs(args.case_specs))
+    if args.manager_lifecycle:
+        custom_cases.append(manager_lifecycle_case(args))
 
     cases: list[Case] = []
     if args.include_default_cases or not custom_cases:
@@ -201,6 +241,51 @@ def resolve_cases(args: argparse.Namespace) -> list[Case]:
     cases.extend(custom_cases)
     ensure_unique_case_names(cases)
     return cases
+
+
+def manager_lifecycle_case(args: argparse.Namespace) -> Case:
+    image = args.manager_lifecycle_image
+    if not isinstance(image, str) or not image.strip():
+        raise SystemExit("--manager-lifecycle-image must be a non-empty string")
+    workspace_base = (
+        resolve_repo_path(args.manager_lifecycle_workspace_base)
+        if args.manager_lifecycle_workspace_base
+        else None
+    )
+    gateway_socket = (
+        resolve_repo_path(args.manager_lifecycle_gateway_socket)
+        if args.manager_lifecycle_gateway_socket
+        else None
+    )
+    gateway_args = (
+        ["--gateway-socket", str(gateway_socket)] if gateway_socket is not None else []
+    )
+    return Case(
+        name="manager_create_destroy_sandbox",
+        args=[
+            *gateway_args,
+            "manager",
+            "create_sandbox",
+            "--image",
+            image,
+            "--workspace-root",
+            "<per-sample-workspace>",
+            "&&",
+            *gateway_args,
+            "manager",
+            "destroy_sandbox",
+            "--sandbox-id",
+            "<created-id>",
+        ],
+        description=(
+            "Real gateway-backed manager lifecycle: create a sandbox, parse the returned id, "
+            "then destroy that sandbox."
+        ),
+        kind="manager_lifecycle",
+        image=image,
+        workspace_base=workspace_base,
+        gateway_socket=gateway_socket,
+    )
 
 
 def load_cases_file(path: Path) -> list[Case]:
@@ -324,9 +409,17 @@ def run_case(
     iterations: int,
     phase: str,
     timeout: float,
+    output_dir: Path,
 ) -> list[dict[str, Any]]:
     return [
-        run_once(cli_path=cli_path, case=case, iteration=index, phase=phase, timeout=timeout)
+        run_once(
+            cli_path=cli_path,
+            case=case,
+            iteration=index,
+            phase=phase,
+            timeout=timeout,
+            output_dir=output_dir,
+        )
         for index in range(iterations)
     ]
 
@@ -337,7 +430,18 @@ def run_once(
     iteration: int,
     phase: str,
     timeout: float,
+    output_dir: Path,
 ) -> dict[str, Any]:
+    if case.kind == "manager_lifecycle":
+        return run_manager_lifecycle_once(
+            cli_path=cli_path,
+            case=case,
+            iteration=iteration,
+            phase=phase,
+            timeout=timeout,
+            output_dir=output_dir,
+        )
+
     env = os.environ.copy()
     if case.env:
         env.update(case.env)
@@ -387,6 +491,194 @@ def run_once(
         "stdout_sample": decode_sample(stdout),
         "stderr_sample": decode_sample(stderr),
     }
+
+
+def run_manager_lifecycle_once(
+    cli_path: Path,
+    case: Case,
+    iteration: int,
+    phase: str,
+    timeout: float,
+    output_dir: Path,
+) -> dict[str, Any]:
+    if case.image is None:
+        raise SystemExit(f"{case.name} requires an image")
+
+    env = os.environ.copy()
+    if case.env:
+        env.update(case.env)
+
+    workspace_root = lifecycle_workspace_root(case, output_dir, phase, iteration)
+    workspace_root.mkdir(parents=True, exist_ok=True)
+    gateway_args = (
+        ["--gateway-socket", str(case.gateway_socket)]
+        if case.gateway_socket is not None
+        else []
+    )
+    create_args = [
+        *gateway_args,
+        "manager",
+        "create_sandbox",
+        "--image",
+        case.image,
+        "--workspace-root",
+        str(workspace_root.resolve()),
+    ]
+    destroy_result: CommandResult | None = None
+    sandbox_id: str | None = None
+    lifecycle_error: str | None = None
+
+    started_at = datetime.now(timezone.utc).isoformat()
+    started_ns = time.perf_counter_ns()
+    create_result = run_cli_subprocess([str(cli_path), *create_args], env, timeout)
+
+    if command_ok(create_result):
+        sandbox_id, lifecycle_error = parse_created_sandbox_id(create_result.stdout)
+        if sandbox_id is not None:
+            destroy_args = [
+                *gateway_args,
+                "manager",
+                "destroy_sandbox",
+                "--sandbox-id",
+                sandbox_id,
+            ]
+            destroy_result = run_cli_subprocess([str(cli_path), *destroy_args], env, timeout)
+    else:
+        lifecycle_error = "create_sandbox failed"
+
+    duration_ms = (time.perf_counter_ns() - started_ns) / 1_000_000
+    results = [("create", create_result)]
+    if destroy_result is not None:
+        results.append(("destroy", destroy_result))
+
+    ok = (
+        command_ok(create_result)
+        and sandbox_id is not None
+        and destroy_result is not None
+        and command_ok(destroy_result)
+    )
+    returncode = lifecycle_returncode(create_result, destroy_result, ok)
+    stdout = labeled_stream(results, "stdout")
+    stderr = labeled_stream(results, "stderr")
+    record = {
+        "case": case.name,
+        "phase": phase,
+        "iteration": iteration,
+        "started_at": started_at,
+        "command": lifecycle_command_summary(results),
+        "commands": [result.command for _, result in results],
+        "ok": ok,
+        "returncode": returncode,
+        "timed_out": create_result.timed_out
+        or (destroy_result.timed_out if destroy_result else False),
+        "duration_ms": duration_ms,
+        "stdout_bytes": len(stdout),
+        "stderr_bytes": len(stderr),
+        "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+        "stdout_sample": decode_sample(stdout),
+        "stderr_sample": decode_sample(stderr),
+        "sandbox_id": sandbox_id,
+        "workspace_root": str(workspace_root),
+        "create_duration_ms": create_result.duration_ms,
+        "destroy_duration_ms": destroy_result.duration_ms if destroy_result else None,
+    }
+    if lifecycle_error is not None:
+        record["lifecycle_error"] = lifecycle_error
+    return record
+
+
+def lifecycle_workspace_root(
+    case: Case, output_dir: Path, phase: str, iteration: int
+) -> Path:
+    base = case.workspace_base or output_dir / "workspaces" / case.name
+    return base / f"{phase}-{iteration}"
+
+
+def run_cli_subprocess(
+    command: list[str], env: dict[str, str], timeout: float
+) -> CommandResult:
+    started_ns = time.perf_counter_ns()
+    timed_out = False
+    returncode: int | None
+    stdout = b""
+    stderr = b""
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=REPO_ROOT,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=timeout,
+            check=False,
+        )
+        returncode = completed.returncode
+        stdout = completed.stdout or b""
+        stderr = completed.stderr or b""
+    except subprocess.TimeoutExpired as error:
+        timed_out = True
+        returncode = None
+        stdout = bytes_or_empty(error.stdout)
+        stderr = bytes_or_empty(error.stderr)
+    duration_ms = (time.perf_counter_ns() - started_ns) / 1_000_000
+    return CommandResult(
+        command=command,
+        returncode=returncode,
+        timed_out=timed_out,
+        stdout=stdout,
+        stderr=stderr,
+        duration_ms=duration_ms,
+    )
+
+
+def command_ok(result: CommandResult) -> bool:
+    return result.returncode == 0 and not result.timed_out
+
+
+def parse_created_sandbox_id(stdout: bytes) -> tuple[str | None, str | None]:
+    try:
+        response = json.loads(stdout.decode("utf-8", errors="replace"))
+    except json.JSONDecodeError as error:
+        return None, f"create_sandbox stdout was not JSON: {error}"
+    sandbox_id = response.get("id") if isinstance(response, dict) else None
+    if not isinstance(sandbox_id, str) or not sandbox_id:
+        return None, f"create_sandbox response did not contain a string id: {response!r}"
+    return sandbox_id, None
+
+
+def lifecycle_returncode(
+    create_result: CommandResult, destroy_result: CommandResult | None, ok: bool
+) -> int | None:
+    if ok:
+        return 0
+    if not command_ok(create_result):
+        return create_result.returncode
+    if destroy_result is None:
+        return 1
+    return destroy_result.returncode
+
+
+def labeled_stream(results: list[tuple[str, CommandResult]], stream_name: str) -> bytes:
+    parts: list[bytes] = []
+    for label, result in results:
+        value = getattr(result, stream_name)
+        if not value:
+            continue
+        parts.append(f"[{label} {stream_name}]\n".encode("utf-8"))
+        parts.append(value)
+        if not value.endswith(b"\n"):
+            parts.append(b"\n")
+    return b"".join(parts)
+
+
+def lifecycle_command_summary(results: list[tuple[str, CommandResult]]) -> list[str]:
+    summary: list[str] = []
+    for index, (_label, result) in enumerate(results):
+        if index > 0:
+            summary.append("&&")
+        summary.extend(result.command)
+    return summary
 
 
 def bytes_or_empty(value: bytes | str | None) -> bytes:

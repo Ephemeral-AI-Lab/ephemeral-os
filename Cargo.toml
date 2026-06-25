@@ -13,6 +13,7 @@ members = [
     "crates/sandbox-runtime/namespace-execution",
     "crates/sandbox-runtime/layerstack",
     "crates/sandbox-runtime/overlay",
+    "crates/sandbox-provider-docker",
     "xtask",
     "crates/sandbox-e2e-live-test",
 ]
@@ -47,12 +48,15 @@ rustix = { version = "0.38", features = ["fs", "mount", "process", "thread"] }
 nix = "0.29"
 libc = "0.2"
 anyhow = "1"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 proptest = "1"
 base64 = "0.22"
 futures-util = "0.3"
 rtnetlink = "0.21"
 netlink-sys = "0.8"
+bollard = "0.17"
+bytes = "1"
+tar = "0.4"
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-config = { path = "crates/sandbox-config" }
@@ -66,6 +70,7 @@ sandbox-observability = { path = "crates/sandbox-observability" }
 sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }
+sandbox-provider-docker = { path = "crates/sandbox-provider-docker" }
 xtask = { path = "xtask" }
 
 [workspace.lints.clippy]

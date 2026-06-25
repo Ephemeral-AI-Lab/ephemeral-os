@@ -1,0 +1,22 @@
+[package]
+name = "sandbox-provider-docker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+sandbox-manager.workspace = true
+sandbox-config.workspace = true
+sandbox-protocol.workspace = true
+bollard.workspace = true
+bytes.workspace = true
+tar.workspace = true
+tokio.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+futures-util.workspace = true
+
+[lints]
+workspace = true

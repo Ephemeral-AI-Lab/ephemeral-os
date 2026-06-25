@@ -1,17 +1,19 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use sandbox_config::configs::manager::ManagerConfig;
 use sandbox_gateway::{
     GatewayConfig, SandboxGatewayServer, DEFAULT_GATEWAY_PID, DEFAULT_GATEWAY_SOCKET,
-    DEFAULT_MAX_CONCURRENT_CONNECTIONS, SANDBOX_GATEWAY_SOCKET_ENV,
+    DEFAULT_MAX_CONCURRENT_CONNECTIONS, SANDBOX_GATEWAY_AUTH_TOKEN_ENV, SANDBOX_GATEWAY_SOCKET_ENV,
 };
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxManagerRouter, SandboxRecord,
-    SandboxRuntime, SandboxStore, UnixSandboxDaemonClient,
+    SandboxRuntime, SandboxStore, TcpSandboxDaemonClient,
 };
+use sandbox_provider_docker::{DockerSandboxDaemonInstaller, DockerSandboxRuntime};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Debug, Parser)]
@@ -26,10 +28,30 @@ enum Command {
     Serve(ServeCommand),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum Backend {
+    None,
+    Docker,
+}
+
 #[derive(Debug, Args)]
 struct ServeCommand {
-    #[arg(long = "gateway-socket", value_name = "PATH")]
-    gateway_socket: Option<PathBuf>,
+    #[arg(long = "gateway-socket", value_name = "HOST:PORT")]
+    gateway_socket: Option<String>,
+
+    #[arg(long = "auth-token", value_name = "TOKEN")]
+    auth_token: Option<String>,
+
+    #[arg(
+        long = "backend",
+        value_enum,
+        default_value = "none",
+        env = "EOS_GATEWAY_BACKEND"
+    )]
+    backend: Backend,
+
+    #[arg(long = "config-yaml", value_name = "PATH")]
+    config_yaml: Option<PathBuf>,
 
     #[arg(long = "pid-file", value_name = "PATH")]
     pid_file: Option<PathBuf>,
@@ -63,24 +85,86 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 async fn serve(command: ServeCommand) -> Result<(), Box<dyn std::error::Error>> {
     let shutdown = CancellationToken::new();
     install_ctrl_c_shutdown(shutdown.clone());
+    let auth_token = resolve_gateway_auth_token(command.auth_token)?;
+    let services = build_manager_services(command.backend, command.config_yaml.as_deref())?;
     let config = GatewayConfig::new(
-        gateway_socket_path(command.gateway_socket),
+        resolve_bind_addr(command.gateway_socket),
         command
             .pid_file
             .unwrap_or_else(|| PathBuf::from(DEFAULT_GATEWAY_PID)),
         command.max_concurrent_connections,
+        Some(auth_token),
     );
-    let manager = SandboxManagerRouter::new(default_manager_services());
+    let manager = SandboxManagerRouter::new(services);
     SandboxGatewayServer::with_shutdown(config, manager, shutdown)
         .serve()
         .await?;
     Ok(())
 }
 
-fn gateway_socket_path(cli_socket: Option<PathBuf>) -> PathBuf {
+fn build_manager_services(
+    backend: Backend,
+    config_yaml: Option<&Path>,
+) -> Result<Arc<ManagerServices>, Box<dyn std::error::Error>> {
+    match backend {
+        Backend::None => Ok(default_manager_services()),
+        Backend::Docker => build_docker_services(config_yaml),
+    }
+}
+
+fn build_docker_services(
+    config_yaml: Option<&Path>,
+) -> Result<Arc<ManagerServices>, Box<dyn std::error::Error>> {
+    let path = config_yaml.ok_or("--config-yaml is required when --backend docker")?;
+    let document = sandbox_config::load_path(path)?;
+    let manager_config: ManagerConfig = document.section("manager")?;
+    let docker_config = manager_config
+        .docker
+        .ok_or("config is missing the manager.docker section")?;
+    docker_config.validate()?;
+
+    let store = Arc::new(SandboxStore::new());
+    let runtime = DockerSandboxRuntime::new(docker_config.clone());
+    match runtime.recover_sandboxes() {
+        Ok(records) => {
+            for record in records {
+                let id = record.id.clone();
+                if let Err(error) = store.insert(record) {
+                    eprintln!("skipping recovered sandbox {id}: {error}");
+                }
+            }
+        }
+        Err(error) => eprintln!("sandbox recovery failed; starting with an empty store: {error}"),
+    }
+
+    Ok(Arc::new(ManagerServices::new(
+        store,
+        Arc::new(runtime),
+        Arc::new(DockerSandboxDaemonInstaller::new(docker_config)),
+        Arc::new(TcpSandboxDaemonClient::new()),
+    )))
+}
+
+fn resolve_bind_addr(cli_socket: Option<String>) -> String {
     cli_socket
-        .or_else(|| std::env::var_os(SANDBOX_GATEWAY_SOCKET_ENV).map(PathBuf::from))
-        .unwrap_or_else(|| PathBuf::from(DEFAULT_GATEWAY_SOCKET))
+        .or_else(|| std::env::var(SANDBOX_GATEWAY_SOCKET_ENV).ok())
+        .filter(|addr| !addr.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_GATEWAY_SOCKET.to_owned())
+}
+
+fn resolve_gateway_auth_token(
+    cli_token: Option<String>,
+) -> Result<String, Box<dyn std::error::Error>> {
+    cli_token
+        .or_else(|| std::env::var(SANDBOX_GATEWAY_AUTH_TOKEN_ENV).ok())
+        .filter(|token| !token.trim().is_empty())
+        .ok_or_else(|| {
+            format!(
+                "gateway auth token is required; pass --auth-token or set \
+                 {SANDBOX_GATEWAY_AUTH_TOKEN_ENV}"
+            )
+            .into()
+        })
 }
 
 fn install_ctrl_c_shutdown(shutdown: CancellationToken) {
@@ -96,7 +180,7 @@ fn default_manager_services() -> Arc<ManagerServices> {
         Arc::new(SandboxStore::new()),
         Arc::new(UnconfiguredRuntime),
         Arc::new(UnconfiguredDaemonInstaller),
-        Arc::new(UnixSandboxDaemonClient::new()),
+        Arc::new(TcpSandboxDaemonClient::new()),
     ))
 }
 

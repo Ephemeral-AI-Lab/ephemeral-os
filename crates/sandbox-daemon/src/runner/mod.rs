@@ -3,8 +3,14 @@ use std::io::{Read, Write};
 use std::os::fd::RawFd;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use sandbox_config::configs::runner::RunnerConfig;
+
+mod mount_overlay;
+mod shell;
+
+#[cfg(test)]
+pub(crate) use mount_overlay::mount_overlay_result;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 
@@ -29,36 +35,8 @@ fn dispatch_runner_mode(
     runner_config: &RunnerConfig,
 ) -> Result<sandbox_runtime_namespace_process::runner::protocol::RunResult> {
     match operation {
-        NsRunnerOperation::MountOverlay => Ok(mount_overlay_result(
-            sandbox_runtime_namespace_process::runner::setns::setns_overlay_mount(
-                request,
-                &runner_config.mount_mask.hidden_paths,
-            ),
-        )),
-        NsRunnerOperation::Run => {
-            sandbox_runtime_namespace_process::runner::run(request).context("ns-runner failed")
-        }
-    }
-}
-
-pub(crate) fn mount_overlay_result(
-    outcome: Result<(), impl std::fmt::Display>,
-) -> sandbox_runtime_namespace_process::runner::protocol::RunResult {
-    match outcome {
-        Ok(()) => ok_result(),
-        Err(error) => sandbox_runtime_namespace_process::runner::protocol::RunResult {
-            exit_code: 1,
-            payload: serde_json::json!({
-                "error": format!("ns-runner setns overlay mount failed: {error}")
-            }),
-        },
-    }
-}
-
-fn ok_result() -> sandbox_runtime_namespace_process::runner::protocol::RunResult {
-    sandbox_runtime_namespace_process::runner::protocol::RunResult {
-        exit_code: 0,
-        payload: serde_json::json!({"success": true, "status": "ok"}),
+        NsRunnerOperation::MountOverlay => mount_overlay::run(request, runner_config),
+        NsRunnerOperation::Run => shell::run(request),
     }
 }
 

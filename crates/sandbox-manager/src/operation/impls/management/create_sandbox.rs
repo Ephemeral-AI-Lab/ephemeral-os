@@ -1,4 +1,6 @@
-use crate::{CreateSandboxRequest, SandboxState};
+use crate::{
+    CreateSandboxRequest, ManagerError, SandboxDaemonEndpoint, SandboxRecord, SandboxState,
+};
 
 use super::{image, record_value, workspace_root};
 use sandbox_protocol::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
@@ -59,35 +61,54 @@ pub(crate) fn dispatch(
         image,
         workspace_root: workspace_root.clone(),
     };
-    match services.runtime.create_sandbox(&create_request) {
-        Ok(created) => {
-            let id = created.id;
-            if let Err(error) = services.store.create(id.clone(), workspace_root.clone()) {
-                return error.into_response();
-            }
-            let record = match services.store.transition_state(
-                &id,
-                SandboxState::Creating,
-                SandboxState::Ready,
-            ) {
-                Ok(record) => record,
-                Err(error) => return error.into_response(),
-            };
-            if let Err(error) = services.daemon_installer.install_daemon(&record) {
-                return error.into_response();
-            }
-            let endpoint = match services.daemon_installer.start_daemon(&record) {
-                Ok(endpoint) => endpoint,
-                Err(error) => return error.into_response(),
-            };
-            if let Err(error) = services.daemon_installer.check_daemon(&endpoint) {
-                return error.into_response();
-            }
-            match services.store.update_endpoint(&id, Some(endpoint)) {
-                Ok(record) => sandbox_protocol::Response::ok(record_value(record)),
-                Err(error) => error.into_response(),
-            }
+    let created = match services.runtime.create_sandbox(&create_request) {
+        Ok(created) => created,
+        Err(error) => return error.into_response(),
+    };
+    let id = created.id;
+    let record = match services.store.create(id.clone(), workspace_root.clone()) {
+        Ok(record) => record,
+        Err(error) => {
+            let untracked = SandboxRecord::new(id, workspace_root, SandboxState::Creating);
+            let _ = services.runtime.destroy_sandbox(&untracked);
+            return error.into_response();
         }
-        Err(error) => error.into_response(),
+    };
+    let endpoint = match provision_daemon(services, &record) {
+        Ok(endpoint) => endpoint,
+        Err(error) => {
+            rollback(services, &record);
+            return error.into_response();
+        }
+    };
+    if let Err(error) = services.store.update_endpoint(&id, Some(endpoint)) {
+        rollback(services, &record);
+        return error.into_response();
     }
+    match services
+        .store
+        .transition_state(&id, SandboxState::Creating, SandboxState::Ready)
+    {
+        Ok(ready) => sandbox_protocol::Response::ok(record_value(ready)),
+        Err(error) => {
+            rollback(services, &record);
+            error.into_response()
+        }
+    }
+}
+
+fn provision_daemon(
+    services: &crate::operation::ManagerServices,
+    record: &SandboxRecord,
+) -> Result<SandboxDaemonEndpoint, ManagerError> {
+    services.daemon_installer.install_daemon(record)?;
+    let endpoint = services.daemon_installer.start_daemon(record)?;
+    services.daemon_installer.check_daemon(&endpoint)?;
+    Ok(endpoint)
+}
+
+fn rollback(services: &crate::operation::ManagerServices, record: &SandboxRecord) {
+    let _ = services.daemon_installer.stop_daemon(record);
+    let _ = services.runtime.destroy_sandbox(record);
+    let _ = services.store.remove(&record.id);
 }

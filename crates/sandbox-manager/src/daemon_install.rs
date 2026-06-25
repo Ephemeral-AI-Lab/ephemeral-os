@@ -1,3 +1,4 @@
+use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -17,6 +18,7 @@ const DAEMON_READY_TIMEOUT: Duration = Duration::from_secs(2);
 const DAEMON_READY_POLL: Duration = Duration::from_millis(20);
 const DAEMON_STOP_TIMEOUT: Duration = Duration::from_secs(2);
 const DAEMON_STOP_POLL: Duration = Duration::from_millis(20);
+const DAEMON_TCP_HOST: &str = "127.0.0.1";
 
 pub trait SandboxDaemonInstaller: Send + Sync {
     fn install_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
@@ -91,8 +93,19 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
 
     fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
         let spec = self.launch_spec(record)?;
+        let port = reserve_local_port()?;
+        let auth_token = uuid::Uuid::new_v4().to_string();
+        let port_arg = port.to_string();
         let mut command = Command::new(&spec.executable);
         command.args(&spec.args);
+        command.args([
+            "--tcp-host",
+            DAEMON_TCP_HOST,
+            "--tcp-port",
+            port_arg.as_str(),
+            "--auth-token",
+            auth_token.as_str(),
+        ]);
         command.stdin(Stdio::null());
         let status = command.status().map_err(|error| {
             daemon_install_error(format!(
@@ -106,7 +119,11 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
                 record.id
             )));
         }
-        Ok(SandboxDaemonEndpoint::new(spec.socket_path))
+        Ok(SandboxDaemonEndpoint::new(
+            DAEMON_TCP_HOST,
+            port,
+            auth_token,
+        ))
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -130,17 +147,32 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
 
     fn check_daemon(&self, endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
         let deadline = Instant::now() + DAEMON_READY_TIMEOUT;
-        while Instant::now() < deadline {
-            if endpoint.socket_path.exists() {
+        loop {
+            if TcpStream::connect((endpoint.host.as_str(), endpoint.port)).is_ok() {
                 return Ok(());
+            }
+            if Instant::now() >= deadline {
+                return Err(daemon_install_error(format!(
+                    "sandbox daemon did not accept connections at {}:{}",
+                    endpoint.host, endpoint.port
+                )));
             }
             std::thread::sleep(DAEMON_READY_POLL);
         }
-        Err(daemon_install_error(format!(
-            "sandbox daemon socket did not appear: {}",
-            endpoint.socket_path.display()
-        )))
     }
+}
+
+fn reserve_local_port() -> Result<u16, ManagerError> {
+    let listener = TcpListener::bind("127.0.0.1:0").map_err(|error| {
+        daemon_install_error(format!("failed to reserve local daemon port: {error}"))
+    })?;
+    let port = listener
+        .local_addr()
+        .map_err(|error| {
+            daemon_install_error(format!("failed to read reserved daemon port: {error}"))
+        })?
+        .port();
+    Ok(port)
 }
 
 #[derive(Debug)]

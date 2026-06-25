@@ -10,7 +10,7 @@ use serde_json::Value;
 
 use crate::error::NamespaceExecutionError;
 use crate::execution::{ExecutionHandle, InteractiveExecution};
-use crate::launcher::{ForkRunnerLauncher, NsRunnerLauncher, RunnerChild};
+use crate::launcher::{ForkRunnerLauncher, NsRunnerLauncher, RunnerChild, MOUNT_OVERLAY_MODE_FLAG};
 use crate::promise::CompletionPromise;
 use crate::registry::ExecutionRegistry;
 use crate::shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
@@ -122,18 +122,15 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         ))
     }
 
-    pub fn run_mount<O: Send + 'static>(
+    pub fn mount_overlay(
         &self,
-        mode_flag: &'static str,
         target: NamespaceTarget,
         id: NamespaceExecutionId,
-        args: Value,
-        parse: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
-    ) -> Result<ExecutionHandle<O>, NamespaceExecutionError> {
-        let request = build_request(&target, &id, args, None);
+    ) -> Result<ExecutionHandle<()>, NamespaceExecutionError> {
+        let request = build_request(&target, &id, serde_json::json!({}), None);
         let child = self.reserve_spawn(&id, || {
             self.launcher
-                .spawn_piped(mode_flag, request, self.setup_timeout_s)
+                .spawn_overlay_mount(request, self.setup_timeout_s)
         })?;
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
@@ -142,8 +139,8 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             child,
             Arc::clone(&promise),
             Arc::new(AtomicBool::new(false)),
-            Some(mode_flag),
-            parse,
+            Some(MOUNT_OVERLAY_MODE_FLAG),
+            |_| Ok(()),
         );
         Ok(ExecutionHandle::new(id, promise))
     }

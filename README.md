@@ -39,6 +39,7 @@ sandbox-config
 | `sandbox-runtime-namespace-process` | lib | namespace holder/runner bodies and setns execution | own operation dispatch |
 | `sandbox-runtime-overlay` | lib | low-level overlay mount and unmount primitives | own workspace lifecycle |
 | `sandbox-config` | lib | sandbox YAML loading, merging, and typed gateway/manager/CLI/daemon/runtime config schemas | own runtime behavior |
+| `sandbox-provider-docker` | lib | implement the Docker-backed `SandboxRuntime` and `SandboxDaemonInstaller` behind the manager provider traits using the Docker Engine API (bollard) | own generic lifecycle/rollback or depend on `sandbox-daemon` |
 
 **Boundary law:** daemon transport vocabulary lives in
 `crates/sandbox-protocol`; daemon request dispatch lives in

@@ -47,22 +47,59 @@ impl SandboxRuntime for FakeRuntime {
 struct FakeInstaller {
     started: Mutex<Vec<String>>,
     stopped: Mutex<Vec<String>>,
+    fail_install: bool,
+    fail_start: bool,
+    fail_check: bool,
+}
+
+impl FakeInstaller {
+    fn failing_install() -> Self {
+        Self {
+            fail_install: true,
+            ..Self::default()
+        }
+    }
+
+    fn failing_start() -> Self {
+        Self {
+            fail_start: true,
+            ..Self::default()
+        }
+    }
+
+    fn failing_check() -> Self {
+        Self {
+            fail_check: true,
+            ..Self::default()
+        }
+    }
 }
 
 impl SandboxDaemonInstaller for FakeInstaller {
     fn install_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
+        if self.fail_install {
+            return Err(ManagerError::DaemonInstallFailed {
+                message: "install stage failed".to_owned(),
+            });
+        }
         Ok(())
     }
 
     fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
+        if self.fail_start {
+            return Err(ManagerError::DaemonInstallFailed {
+                message: "start stage failed".to_owned(),
+            });
+        }
         self.started
             .lock()
             .expect("started lock")
             .push(record.id.as_str().to_owned());
-        Ok(SandboxDaemonEndpoint::new(PathBuf::from(format!(
-            "/tmp/{}.sock",
-            record.id.as_str()
-        ))))
+        Ok(SandboxDaemonEndpoint::new(
+            "127.0.0.1",
+            7000,
+            format!("token-{}", record.id.as_str()),
+        ))
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -74,6 +111,11 @@ impl SandboxDaemonInstaller for FakeInstaller {
     }
 
     fn check_daemon(&self, _endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
+        if self.fail_check {
+            return Err(ManagerError::DaemonInstallFailed {
+                message: "check stage failed".to_owned(),
+            });
+        }
         Ok(())
     }
 }
@@ -99,7 +141,6 @@ struct RecordingTreeClient {
 
 #[derive(Debug)]
 struct TreeInvocation {
-    socket_path: PathBuf,
     op: String,
     scope: CliOperationScope,
     args: Value,
@@ -120,7 +161,6 @@ impl RecordingTreeClient {
             .expect("invocations lock")
             .iter()
             .map(|invocation| TreeInvocation {
-                socket_path: invocation.socket_path.clone(),
                 op: invocation.op.clone(),
                 scope: invocation.scope.clone(),
                 args: invocation.args.clone(),
@@ -133,7 +173,7 @@ impl RecordingTreeClient {
 impl SandboxDaemonClient for RecordingTreeClient {
     fn invoke_with_timeout(
         &self,
-        endpoint: &SandboxDaemonEndpoint,
+        _endpoint: &SandboxDaemonEndpoint,
         request: Request,
         timeout: Duration,
     ) -> Result<Response, ManagerError> {
@@ -146,7 +186,6 @@ impl SandboxDaemonClient for RecordingTreeClient {
             .lock()
             .expect("invocations lock")
             .push(TreeInvocation {
-                socket_path: endpoint.socket_path.clone(),
                 op: request.op.clone(),
                 scope: request.scope.clone(),
                 args: request.args.clone(),
@@ -223,6 +262,16 @@ fn services() -> (
     (services, runtime, installer, client)
 }
 
+fn services_with_installer(
+    installer: Arc<FakeInstaller>,
+) -> (ManagerServices, Arc<FakeRuntime>, Arc<SandboxStore>) {
+    let store = Arc::new(SandboxStore::new());
+    let runtime = Arc::new(FakeRuntime::default());
+    let client = Arc::new(FakeClient);
+    let services = ManagerServices::new(Arc::clone(&store), runtime.clone(), installer, client);
+    (services, runtime, store)
+}
+
 fn services_with_client(
     client: Arc<dyn SandboxDaemonClient>,
 ) -> (ManagerServices, Arc<SandboxStore>) {
@@ -243,7 +292,7 @@ fn id(value: &str) -> SandboxId {
 }
 
 fn endpoint(value: &str) -> SandboxDaemonEndpoint {
-    SandboxDaemonEndpoint::new(PathBuf::from(format!("/tmp/{value}.sock")))
+    SandboxDaemonEndpoint::new("127.0.0.1", 7000, format!("token-{value}"))
 }
 
 fn sandbox_record(
@@ -362,15 +411,13 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     assert_eq!(created["state"], "ready");
     assert_eq!(
         created["daemon"],
-        json!({"socket_path": "/tmp/container-1.sock"})
+        json!({"host": "127.0.0.1", "port": 7000})
     );
 
     let listed = dispatch(&services, "list_sandboxes", json!({}));
     assert_eq!(listed["sandboxes"][0]["id"], "container-1");
-    assert_eq!(
-        listed["sandboxes"][0]["daemon"]["socket_path"],
-        "/tmp/container-1.sock"
-    );
+    assert_eq!(listed["sandboxes"][0]["daemon"]["host"], "127.0.0.1");
+    assert_eq!(listed["sandboxes"][0]["daemon"]["port"], 7000);
 
     let inspected = dispatch(
         &services,
@@ -409,6 +456,98 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     assert_eq!(
         installer.stopped.lock().expect("stopped lock").as_slice(),
         ["container-1"]
+    );
+}
+
+#[test]
+fn create_sandbox_rolls_back_runtime_and_store_when_install_fails() {
+    let installer = Arc::new(FakeInstaller::failing_install());
+    let (services, runtime, store) = services_with_installer(installer);
+
+    let response = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+    );
+
+    assert_eq!(
+        response["error"]["kind"],
+        sandbox_protocol::error_kind::INTERNAL_ERROR
+    );
+    assert!(response["error"]["message"]
+        .as_str()
+        .expect("message")
+        .contains("install stage failed"));
+    assert_eq!(
+        runtime.destroyed.lock().expect("destroyed lock").as_slice(),
+        ["container-1"],
+        "a failed install must destroy the runtime sandbox exactly once"
+    );
+    assert!(
+        store.list().expect("list").is_empty(),
+        "a failed install must leave no store record"
+    );
+}
+
+#[test]
+fn create_sandbox_rolls_back_runtime_and_store_when_start_fails() {
+    let installer = Arc::new(FakeInstaller::failing_start());
+    let (services, runtime, store) = services_with_installer(installer);
+
+    let response = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+    );
+
+    assert_eq!(
+        response["error"]["kind"],
+        sandbox_protocol::error_kind::INTERNAL_ERROR
+    );
+    assert!(response["error"]["message"]
+        .as_str()
+        .expect("message")
+        .contains("start stage failed"));
+    assert_eq!(
+        runtime.destroyed.lock().expect("destroyed lock").as_slice(),
+        ["container-1"]
+    );
+    assert!(store.list().expect("list").is_empty());
+}
+
+#[test]
+fn create_sandbox_rolls_back_runtime_and_store_when_check_fails() {
+    let installer = Arc::new(FakeInstaller::failing_check());
+    let (services, runtime, store) = services_with_installer(installer.clone());
+
+    let response = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+    );
+
+    assert_eq!(
+        response["error"]["kind"],
+        sandbox_protocol::error_kind::INTERNAL_ERROR
+    );
+    assert!(response["error"]["message"]
+        .as_str()
+        .expect("message")
+        .contains("check stage failed"));
+    assert_eq!(
+        runtime.destroyed.lock().expect("destroyed lock").as_slice(),
+        ["container-1"]
+    );
+    assert!(store.list().expect("list").is_empty());
+    assert_eq!(
+        installer.started.lock().expect("started lock").as_slice(),
+        ["container-1"],
+        "start ran before the failing readiness check"
+    );
+    assert_eq!(
+        installer.stopped.lock().expect("stopped lock").as_slice(),
+        ["container-1"],
+        "rollback must best-effort stop the daemon"
     );
 }
 

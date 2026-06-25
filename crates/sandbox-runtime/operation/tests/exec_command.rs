@@ -662,13 +662,12 @@ impl NsRunnerLauncher for BlockingNsLauncher {
             .spawn_pty(request, transcript_path, cancelled, cgroup_procs_path)
     }
 
-    fn spawn_piped(
+    fn spawn_overlay_mount(
         &self,
-        mode_flag: &'static str,
         request: NamespaceRunnerRequest,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        self.inner.spawn_piped(mode_flag, request, setup_timeout_s)
+        self.inner.spawn_overlay_mount(request, setup_timeout_s)
     }
 }
 

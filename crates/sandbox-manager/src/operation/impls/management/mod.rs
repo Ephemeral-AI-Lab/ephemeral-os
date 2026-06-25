@@ -96,6 +96,7 @@ fn record_value(record: SandboxRecord) -> Value {
 
 fn endpoint_value(endpoint: SandboxDaemonEndpoint) -> Value {
     json!({
-        "socket_path": endpoint.socket_path.to_string_lossy(),
+        "host": endpoint.host,
+        "port": endpoint.port,
     })
 }

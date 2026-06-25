@@ -17,7 +17,7 @@ pub mod request;
 pub mod response;
 pub mod scope;
 
-pub use auth::DAEMON_AUTH_FIELD;
+pub use auth::{DAEMON_AUTH_FIELD, GATEWAY_AUTH_FIELD};
 pub use catalog::{
     catalog_from_value, catalog_to_value, operation_execution_space_name, ArgCliSpecDocument,
     ArgSpecDocument, CatalogDecodeError, CliOperationCatalog, CliOperationCatalogDocument,

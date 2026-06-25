@@ -18,6 +18,7 @@ path = "src/cli/main.rs"
 sandbox-config.workspace = true
 sandbox-manager.workspace = true
 sandbox-protocol.workspace = true
+sandbox-provider-docker.workspace = true
 sandbox-runtime.workspace = true
 clap.workspace = true
 serde_json.workspace = true

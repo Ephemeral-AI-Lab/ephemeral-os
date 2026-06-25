@@ -261,8 +261,8 @@ fn unavailable_node(
 
 fn daemon_value(endpoint: Option<&SandboxDaemonEndpoint>) -> Value {
     json!({
-        "socket_path": endpoint.map(|endpoint| endpoint.socket_path.to_string_lossy().into_owned()),
-        "pid_path": Value::Null,
+        "host": endpoint.map(|endpoint| endpoint.host.clone()),
+        "port": endpoint.map(|endpoint| endpoint.port),
         "daemon_pid": Value::Null,
         "runtime_dir": Value::Null,
     })

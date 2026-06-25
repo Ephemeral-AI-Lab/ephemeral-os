@@ -22,10 +22,10 @@ pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: CommandConfig,
     engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
-    workspace_lifecycle_admission: Mutex<()>,
+    session_lifecycle_lock: Mutex<()>,
 }
 
-pub(crate) type WorkspaceLifecycleAdmission<'a> = MutexGuard<'a, ()>;
+pub(crate) type SessionLifecycleGuard<'a> = MutexGuard<'a, ()>;
 
 impl CommandOperationService {
     #[must_use]
@@ -51,7 +51,7 @@ impl CommandOperationService {
             workspace,
             config,
             engine,
-            workspace_lifecycle_admission: Mutex::new(()),
+            session_lifecycle_lock: Mutex::new(()),
         }
     }
 
@@ -81,24 +81,39 @@ impl CommandOperationService {
         &self.engine
     }
 
-    pub(crate) fn begin_workspace_lifecycle_admission(&self) -> WorkspaceLifecycleAdmission<'_> {
-        self.workspace_lifecycle_admission
+    pub(crate) fn lock_session_lifecycle(&self) -> SessionLifecycleGuard<'_> {
+        self.session_lifecycle_lock
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
     }
 
-    pub(crate) fn with_workspace_destroy_admission<R>(
+    pub(crate) fn destroy_workspace_session_with_admission(
         &self,
-        workspace_session_id: &WorkspaceSessionId,
-        dispatch: impl FnOnce(&[NamespaceExecutionId]) -> R,
-    ) -> R {
-        let _lifecycle_admission = self.begin_workspace_lifecycle_admission();
+        workspace_session_id: WorkspaceSessionId,
+        grace_s: Option<f64>,
+    ) -> WorkspaceDestroyOutcome {
+        let _session_lifecycle = self.lock_session_lifecycle();
         let mut active_command_session_ids = self.engine.live_values(|command| {
-            (command.workspace_session_id == *workspace_session_id)
+            (command.workspace_session_id == workspace_session_id)
                 .then(|| command.exec.id().clone())
         });
         active_command_session_ids.sort();
-        dispatch(&active_command_session_ids)
+        if !active_command_session_ids.is_empty() {
+            return WorkspaceDestroyOutcome::ActiveCommands {
+                active_command_session_ids,
+            };
+        }
+        let handler = match self.workspace.resolve_session(workspace_session_id) {
+            Ok(handler) => handler,
+            Err(error) => return WorkspaceDestroyOutcome::Failed(error),
+        };
+        match self
+            .workspace
+            .destroy_session(handler, DestroyWorkspaceRequest { grace_s })
+        {
+            Ok(result) => WorkspaceDestroyOutcome::Destroyed(Box::new(result)),
+            Err(error) => WorkspaceDestroyOutcome::Failed(error),
+        }
     }
 
     pub(crate) fn resolve_workspace_session(
@@ -128,4 +143,15 @@ impl CommandOperationService {
     pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
+}
+
+/// The result of a guarded workspace-session destroy. The command service holds
+/// the session-lifecycle lock across the active-command check and the destroy,
+/// so the CLI layer only formats the outcome it returns.
+pub(crate) enum WorkspaceDestroyOutcome {
+    ActiveCommands {
+        active_command_session_ids: Vec<NamespaceExecutionId>,
+    },
+    Destroyed(Box<DestroyWorkspaceResult>),
+    Failed(WorkspaceSessionError),
 }

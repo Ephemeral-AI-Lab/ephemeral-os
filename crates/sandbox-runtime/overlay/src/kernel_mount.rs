@@ -14,8 +14,6 @@
 use std::fs::{self, File};
 #[cfg(target_os = "linux")]
 use std::os::fd::AsRawFd;
-#[cfg(target_os = "linux")]
-use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "linux")]

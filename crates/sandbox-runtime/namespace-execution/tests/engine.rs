@@ -5,7 +5,6 @@ include!("support/namespace_execution_src.rs");
 
 mod support;
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
@@ -180,83 +179,21 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
 }
 
 #[test]
-fn mount_execution_resolves_parsed_output() {
+fn mount_overlay_execution_resolves_unit_output() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
     let engine = test_engine(&fake, observer.clone(), 4);
     let id = id("mount");
 
     let handle = engine
-        .run_mount(
-            "--mount-overlay",
-            sample_target(),
-            id.clone(),
-            json!({}),
-            |outcome| Ok(outcome.exit_code()),
-        )
+        .mount_overlay(sample_target(), id.clone())
         .expect("mount admitted");
     assert_eq!(handle.id().0, id.0);
-    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--mount-overlay"]);
 
     fake.complete_latest(run_result(0, "ok"));
-    assert_eq!(handle.wait().expect("mount resolved"), 0);
+    handle.wait().expect("mount resolved");
     let (status, exit_code) = observer.await_terminal();
     assert_eq!(status, NamespaceExecutionTerminalStatus::Ok);
-    assert_eq!(exit_code, Some(0));
-}
-
-#[test]
-fn mount_parse_error_resolves_terminal_error() {
-    let fake = FakeLauncher::new();
-    let observer = Arc::new(FakeObserver::new());
-    let engine = test_engine(&fake, observer.clone(), 4);
-
-    let handle = engine
-        .run_mount(
-            "--mount-overlay",
-            sample_target(),
-            id("mount_err"),
-            json!({}),
-            |_outcome| Err::<i64, _>(NamespaceExecutionError::Finalize("bad parse".to_owned())),
-        )
-        .expect("admitted");
-    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--mount-overlay"]);
-    fake.complete_latest(run_result(0, "ok"));
-
-    let error = handle.wait().expect_err("parse error surfaced");
-    assert!(matches!(error, NamespaceExecutionError::Finalize(_)));
-    let (status, _exit) = observer.await_terminal();
-    assert_eq!(status, NamespaceExecutionTerminalStatus::Error);
-}
-
-#[test]
-fn mount_parse_panic_resolves_terminal_error_and_completes_registry() {
-    let fake = FakeLauncher::new();
-    let observer = Arc::new(FakeObserver::new());
-    let engine = test_engine(&fake, observer.clone(), 4);
-    let id = id("mount_panic");
-
-    let handle = engine
-        .run_mount(
-            "--mount-overlay",
-            sample_target(),
-            id.clone(),
-            json!({}),
-            |_outcome| -> Result<i64, NamespaceExecutionError> { panic!("panic mount parse") },
-        )
-        .expect("admitted");
-    fake.complete_latest(run_result(0, "ok"));
-
-    let error = handle
-        .wait()
-        .expect_err("panic is mapped to finalize error");
-    assert!(matches!(
-        error,
-        NamespaceExecutionError::Finalize(detail) if detail.contains("panic mount parse")
-    ));
-    assert!(engine.is_completed(&id));
-    let (status, exit_code) = observer.await_terminal();
-    assert_eq!(status, NamespaceExecutionTerminalStatus::Error);
     assert_eq!(exit_code, Some(0));
 }
 
@@ -287,56 +224,35 @@ fn shell_request_carries_args_timeout_and_target_fields() {
 }
 
 #[test]
-fn run_mount_passes_args_to_the_runner_request() {
+fn mount_overlay_passes_empty_args_to_the_runner_request() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
     let engine = test_engine(&fake, observer, 4);
     let target = sample_target();
     let id = id("args");
-    let args = json!({
-        "check": "expected",
-    });
 
     let handle = engine
-        .run_mount(
-            "--mount-overlay",
-            target.clone(),
-            id.clone(),
-            args.clone(),
-            |_| Ok(()),
-        )
+        .mount_overlay(target.clone(), id.clone())
         .expect("admitted");
 
     let requests = fake.recorded_requests();
     assert_eq!(requests.len(), 1);
     let request = &requests[0];
     assert_request_target_fields(request, &target, &id);
-    assert_eq!(request.args, args);
+    assert_eq!(request.args, json!({}));
     assert_eq!(request.timeout_seconds, None);
-    assert_eq!(fake.recorded_piped_mode_flags(), vec!["--mount-overlay"]);
     fake.complete_latest(run_result(0, "ok"));
     handle.wait().expect("resolved");
 }
 
 #[test]
-fn run_mount_short_circuits_nonzero_exit_before_parse() {
+fn mount_overlay_nonzero_exit_is_terminal_error() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
     let engine = test_engine(&fake, observer.clone(), 4);
-    let parse_called = Arc::new(AtomicBool::new(false));
-    let parse_called_in_closure = Arc::clone(&parse_called);
 
     let handle = engine
-        .run_mount(
-            "--mount-overlay",
-            sample_target(),
-            id("nonzero"),
-            json!({}),
-            move |_| {
-                parse_called_in_closure.store(true, Ordering::SeqCst);
-                Ok(())
-            },
-        )
+        .mount_overlay(sample_target(), id("nonzero"))
         .expect("admitted");
 
     fake.complete_latest(
@@ -354,30 +270,23 @@ fn run_mount_short_circuits_nonzero_exit_before_parse() {
         NamespaceExecutionError::Finalize(detail)
             if detail.contains("--mount-overlay") && detail.contains("mount exploded")
     ));
-    assert!(!parse_called.load(Ordering::SeqCst));
     let (status, exit_code) = observer.await_terminal();
     assert_eq!(status, NamespaceExecutionTerminalStatus::Error);
     assert_eq!(exit_code, Some(1));
 }
 
 #[test]
-fn run_mount_passes_setup_timeout_to_piped_launcher() {
+fn mount_overlay_passes_setup_timeout_to_launcher() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
     let engine: NamespaceExecutionEngine =
         NamespaceExecutionEngine::with_launcher(Box::new(fake.clone()), observer, 4, 12.5);
 
     let handle = engine
-        .run_mount(
-            "--mount-overlay",
-            sample_target(),
-            id("timeout"),
-            json!({}),
-            |_| Ok(()),
-        )
+        .mount_overlay(sample_target(), id("timeout"))
         .expect("admitted");
 
-    assert_eq!(fake.piped_setup_timeouts(), vec![12.5]);
+    assert_eq!(fake.overlay_mount_setup_timeouts(), vec![12.5]);
     fake.complete_latest(run_result(0, "ok"));
     handle.wait().expect("resolved");
 }
