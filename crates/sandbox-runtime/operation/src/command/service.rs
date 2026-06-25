@@ -1,14 +1,13 @@
-mod contract;
 mod core;
+mod dto;
 mod exec;
-pub(crate) mod helpers;
-mod impls;
-pub mod test_support;
-pub(crate) mod transcript;
+mod exec_command;
+mod read_command_lines;
+mod render;
+mod write_command_stdin;
+mod r#yield;
 
-pub use contract::{
-    CommandOutput, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
-    WriteCommandStdinInput,
-};
 pub use core::CommandOperationService;
-pub(crate) use core::{command_session_id, execution_id};
+pub use dto::{
+    CommandOutput, CommandStatus, ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
+};

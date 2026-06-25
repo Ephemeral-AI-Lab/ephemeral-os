@@ -18,8 +18,7 @@ pub use cli_definition::{
 pub use command::CommandOperationService;
 pub use layerstack::LayerStackService;
 pub use namespace_execution::{
-    BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionId,
-    NamespaceExecutionLedger, NamespaceExecutionLifecycle, NamespaceExecutionRecord,
+    NamespaceExecutionId, NamespaceExecutionLedger, NamespaceExecutionRecord,
     NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };
 pub use observability::{

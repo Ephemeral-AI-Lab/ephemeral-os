@@ -8,11 +8,10 @@ use std::sync::{Arc, Mutex};
 mod fake_launcher;
 pub use fake_launcher::{FakeLauncher, FakeRunnerScript};
 use sandbox_runtime_namespace_execution::{
-    ExecutionObserver, NamespaceExecutionEngine, NamespaceExecutionError,
+    NamespaceExecutionEngine, NamespaceExecutionError, NoopObserver,
 };
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
-use sandbox_runtime::command::test_support::command_service_from_engine;
 use sandbox_runtime::command::{CommandOperationService, CommandServiceError};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::{AsyncTraceSink, NamespaceExecutionLedger};
@@ -301,11 +300,11 @@ pub(crate) fn build_command_service(
 ) -> CommandOperationService {
     let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
         Box::new(launch_driver.launcher()),
-        Arc::clone(&namespace_execution) as Arc<dyn ExecutionObserver>,
+        Arc::new(NoopObserver),
         MAX_ACTIVE_COMMANDS,
         SETUP_TIMEOUT_S,
     ));
-    command_service_from_engine(
+    CommandOperationService::with_engine(
         Arc::clone(workspace),
         test_command_config(),
         engine,

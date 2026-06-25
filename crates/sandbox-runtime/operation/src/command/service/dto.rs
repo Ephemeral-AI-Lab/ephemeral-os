@@ -1,7 +1,6 @@
-use crate::workspace_crate::WorkspaceSessionId;
+use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct CommandSessionId(pub String);
+use crate::workspace_crate::WorkspaceSessionId;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecCommandInput {
@@ -13,14 +12,14 @@ pub struct ExecCommandInput {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WriteCommandStdinInput {
-    pub command_session_id: CommandSessionId,
+    pub command_session_id: NamespaceExecutionId,
     pub stdin: String,
     pub yield_time_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReadCommandLinesInput {
-    pub command_session_id: CommandSessionId,
+    pub command_session_id: NamespaceExecutionId,
     pub start_offset: Option<u64>,
     pub limit: Option<usize>,
 }
@@ -53,7 +52,7 @@ impl CommandStatus {
 /// running or has more output to drain; `read_command_lines` always sets it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CommandOutput {
-    pub command_session_id: Option<CommandSessionId>,
+    pub command_session_id: Option<NamespaceExecutionId>,
     pub status: CommandStatus,
     pub exit_code: Option<i64>,
     pub wall_time_seconds: f64,

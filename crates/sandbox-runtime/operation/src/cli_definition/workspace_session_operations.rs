@@ -3,7 +3,6 @@ use serde_json::{json, Value};
 use crate::cli_definition::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
-use crate::command::CommandSessionId;
 use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::OperationEntry;
 use crate::workspace_crate::{
@@ -215,7 +214,9 @@ fn workspace_session_error_response(error: WorkspaceSessionError) -> Response {
     Response::fault_with_details("operation_failed", error.to_string(), json!({}))
 }
 
-fn active_command_rejection(active_command_session_ids: &[CommandSessionId]) -> Response {
+fn active_command_rejection(
+    active_command_session_ids: &[sandbox_runtime_namespace_execution::NamespaceExecutionId],
+) -> Response {
     Response::fault_with_details(
         "operation_failed",
         "workspace session has active command sessions",

@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard};
+use std::collections::{HashSet, VecDeque};
+use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sandbox_runtime_namespace_execution::ExecutionObserver;
+use sandbox_runtime_namespace_execution::NamespaceExecutionError;
 
+use crate::command::CommandTerminalResult;
 use crate::workspace_crate::WorkspaceSessionId;
 
 pub use sandbox_runtime_namespace_execution::{
@@ -16,11 +16,13 @@ const DEFAULT_MAX_RECENT_PROJECTED: usize = 256;
 const DEFAULT_MAX_PARTIAL_ERRORS: usize = 32;
 const MAX_ERROR_FIELD_BYTES: usize = 4096;
 
+/// A pure completed-projection buffer: it ingests fully-built terminal
+/// `NamespaceExecutionRecord`s (via `record_completed`) and hands them to the
+/// daemon projection through `drain`/`ack`. Liveness is owned by the engine
+/// registry, not here.
 #[derive(Debug)]
 pub struct NamespaceExecutionLedger {
     inner: Mutex<NamespaceExecutionState>,
-    next_id: AtomicU64,
-    force_mutation_errors: AtomicBool,
     max_pending_projection: usize,
     max_recent_projected: usize,
     max_partial_errors: usize,
@@ -28,7 +30,6 @@ pub struct NamespaceExecutionLedger {
 
 #[derive(Debug)]
 struct NamespaceExecutionState {
-    active: HashMap<NamespaceExecutionId, NamespaceExecutionRecord>,
     pending_projection: VecDeque<NamespaceExecutionRecord>,
     recent_projected: VecDeque<NamespaceExecutionRecord>,
     partial_errors: VecDeque<String>,
@@ -40,7 +41,6 @@ pub struct NamespaceExecutionRecord {
     pub workspace_session_id: WorkspaceSessionId,
     pub operation_name: String,
     pub origin_request_id: Option<String>,
-    pub lifecycle_state: NamespaceExecutionLifecycle,
     pub started_at_unix_ms: i64,
     pub finished_at_unix_ms: Option<i64>,
     pub duration_ms: Option<f64>,
@@ -50,37 +50,45 @@ pub struct NamespaceExecutionRecord {
     pub error_message: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NamespaceExecutionLifecycle {
-    Starting,
-    Running,
-    Terminal,
-}
-
-impl NamespaceExecutionLifecycle {
-    #[must_use]
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Starting => "starting",
-            Self::Running => "running",
-            Self::Terminal => "terminal",
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BeginNamespaceExecution {
+/// The command-owned provenance for a completed record: stamped once at
+/// `exec_command` and reused by the `on_complete` closure.
+pub struct CompletedNamespaceExecutionMeta {
+    pub namespace_execution_id: NamespaceExecutionId,
     pub workspace_session_id: WorkspaceSessionId,
     pub operation_name: String,
     pub origin_request_id: Option<String>,
+    pub started_at_unix_ms: i64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CompleteNamespaceExecution {
-    pub terminal_status: NamespaceExecutionTerminalStatus,
-    pub exit_code: Option<i64>,
-    pub error_kind: Option<String>,
-    pub error_message: Option<String>,
+impl NamespaceExecutionRecord {
+    #[must_use]
+    pub fn completed(
+        meta: CompletedNamespaceExecutionMeta,
+        result: &Result<CommandTerminalResult, NamespaceExecutionError>,
+    ) -> Self {
+        let finished_at_unix_ms = unix_ms();
+        let (terminal_status, exit_code, error_message) = match result {
+            Ok(terminal) => (terminal.status, Some(terminal.exit_code), None),
+            Err(error) => (
+                NamespaceExecutionTerminalStatus::Error,
+                None,
+                Some(bound_error_field(error.to_string())),
+            ),
+        };
+        Self {
+            namespace_execution_id: meta.namespace_execution_id,
+            workspace_session_id: meta.workspace_session_id,
+            operation_name: meta.operation_name,
+            origin_request_id: meta.origin_request_id,
+            started_at_unix_ms: meta.started_at_unix_ms,
+            finished_at_unix_ms: Some(finished_at_unix_ms),
+            duration_ms: Some(duration_ms(meta.started_at_unix_ms, finished_at_unix_ms)),
+            terminal_status: Some(terminal_status),
+            exit_code,
+            error_kind: None,
+            error_message,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -88,8 +96,6 @@ pub struct RuntimeNamespaceExecutionSnapshot {
     pub namespace_execution_id: NamespaceExecutionId,
     pub workspace_session_id: WorkspaceSessionId,
     pub operation_name: String,
-    pub lifecycle_state: NamespaceExecutionLifecycle,
-    pub started_at_unix_ms: i64,
 }
 
 impl NamespaceExecutionLedger {
@@ -110,127 +116,34 @@ impl NamespaceExecutionLedger {
     ) -> Self {
         Self {
             inner: Mutex::new(NamespaceExecutionState {
-                active: HashMap::new(),
                 pending_projection: VecDeque::new(),
                 recent_projected: VecDeque::new(),
                 partial_errors: VecDeque::new(),
             }),
-            next_id: AtomicU64::new(1),
-            force_mutation_errors: AtomicBool::new(false),
             max_pending_projection,
             max_recent_projected,
             max_partial_errors,
         }
     }
 
-    #[must_use]
-    pub fn allocate_namespace_execution_id(&self) -> NamespaceExecutionId {
-        let next_id = self.next_id.fetch_add(1, Ordering::Relaxed);
-        NamespaceExecutionId(format!("namespace_execution_{next_id}"))
-    }
-
-    pub fn begin_namespace_execution(
-        &self,
-        namespace_execution_id: NamespaceExecutionId,
-        begin: BeginNamespaceExecution,
-    ) -> Result<(), String> {
+    pub fn record_completed(&self, record: NamespaceExecutionRecord) -> Result<(), String> {
         let mut state = self.lock_state()?;
-        self.fail_forced_mutation(&mut state, "begin_namespace_execution")?;
-        if state.active.contains_key(&namespace_execution_id)
-            || state
-                .pending_projection
-                .iter()
-                .any(|record| record.namespace_execution_id == namespace_execution_id)
-            || state
-                .recent_projected
-                .iter()
-                .any(|record| record.namespace_execution_id == namespace_execution_id)
-        {
-            return Err(format!(
-                "namespace execution id {} already exists",
-                namespace_execution_id.0
-            ));
-        }
-        let record = NamespaceExecutionRecord {
-            namespace_execution_id: namespace_execution_id.clone(),
-            workspace_session_id: begin.workspace_session_id,
-            operation_name: begin.operation_name,
-            origin_request_id: begin.origin_request_id,
-            lifecycle_state: NamespaceExecutionLifecycle::Starting,
-            started_at_unix_ms: unix_ms(),
-            finished_at_unix_ms: None,
-            duration_ms: None,
-            terminal_status: None,
-            exit_code: None,
-            error_kind: None,
-            error_message: None,
-        };
-        state.active.insert(namespace_execution_id, record);
-        Ok(())
-    }
-
-    pub fn mark_namespace_execution_running(
-        &self,
-        namespace_execution_id: &NamespaceExecutionId,
-    ) -> Result<(), String> {
-        let mut state = self.lock_state()?;
-        self.fail_forced_mutation(&mut state, "mark_namespace_execution_running")?;
-        let Some(record) = state.active.get_mut(namespace_execution_id) else {
-            if find_terminal_record(&state, namespace_execution_id).is_some() {
-                return Ok(());
-            }
-            return Err(format!(
-                "namespace execution id {} is not active",
-                namespace_execution_id.0
-            ));
-        };
-        record.lifecycle_state = NamespaceExecutionLifecycle::Running;
-        Ok(())
-    }
-
-    pub fn complete_namespace_execution(
-        &self,
-        namespace_execution_id: &NamespaceExecutionId,
-        completion: CompleteNamespaceExecution,
-    ) -> Result<NamespaceExecutionRecord, String> {
-        let mut state = self.lock_state()?;
-        self.fail_forced_mutation(&mut state, "complete_namespace_execution")?;
-        if let Some(record) = find_terminal_record(&state, namespace_execution_id) {
-            return Ok(record.clone());
-        }
-        let Some(mut record) = state.active.remove(namespace_execution_id) else {
-            return Err(format!(
-                "namespace execution id {} is not active",
-                namespace_execution_id.0
-            ));
-        };
-
-        let finished_at_unix_ms = unix_ms();
-        record.lifecycle_state = NamespaceExecutionLifecycle::Terminal;
-        record.finished_at_unix_ms = Some(finished_at_unix_ms);
-        record.duration_ms = Some(duration_ms(record.started_at_unix_ms, finished_at_unix_ms));
-        record.terminal_status = Some(completion.terminal_status);
-        record.exit_code = completion.exit_code;
-        record.error_kind = completion.error_kind.map(bound_error_field);
-        record.error_message = completion.error_message.map(bound_error_field);
-
         if self.max_pending_projection > 0 {
             while state.pending_projection.len() >= self.max_pending_projection {
-                if let Some(dropped) = state.pending_projection.pop_front() {
-                    push_partial_error(
-                        &mut state,
-                        self.max_partial_errors,
-                        format!(
-                            "dropped namespace execution {} before projection acknowledgement",
-                            dropped.namespace_execution_id.0
-                        ),
-                    );
-                    push_recent_projected(&mut state, self.max_recent_projected, dropped);
-                } else {
+                let Some(dropped) = state.pending_projection.pop_front() else {
                     break;
-                }
+                };
+                push_partial_error(
+                    &mut state,
+                    self.max_partial_errors,
+                    format!(
+                        "dropped namespace execution {} before projection acknowledgement",
+                        dropped.namespace_execution_id.0
+                    ),
+                );
+                push_recent_projected(&mut state, self.max_recent_projected, dropped);
             }
-            state.pending_projection.push_back(record.clone());
+            state.pending_projection.push_back(record);
         } else {
             push_partial_error(
                 &mut state,
@@ -240,31 +153,9 @@ impl NamespaceExecutionLedger {
                     record.namespace_execution_id.0
                 ),
             );
-            push_recent_projected(&mut state, self.max_recent_projected, record.clone());
+            push_recent_projected(&mut state, self.max_recent_projected, record);
         }
-        Ok(record)
-    }
-
-    pub fn snapshot_active_namespace_executions(
-        &self,
-    ) -> Result<Vec<RuntimeNamespaceExecutionSnapshot>, String> {
-        let state = self.lock_state()?;
-        let mut snapshots = state
-            .active
-            .values()
-            .map(|record| RuntimeNamespaceExecutionSnapshot {
-                namespace_execution_id: record.namespace_execution_id.clone(),
-                workspace_session_id: record.workspace_session_id.clone(),
-                operation_name: record.operation_name.clone(),
-                lifecycle_state: record.lifecycle_state,
-                started_at_unix_ms: record.started_at_unix_ms,
-            })
-            .collect::<Vec<_>>();
-        snapshots.sort_by(|left, right| {
-            left.namespace_execution_id
-                .cmp(&right.namespace_execution_id)
-        });
-        Ok(snapshots)
+        Ok(())
     }
 
     pub fn drain_completed_namespace_executions(
@@ -285,7 +176,6 @@ impl NamespaceExecutionLedger {
         namespace_execution_ids: &[NamespaceExecutionId],
     ) -> Result<(), String> {
         let mut state = self.lock_state()?;
-        self.fail_forced_mutation(&mut state, "ack_completed_namespace_executions")?;
         let ids = namespace_execution_ids.iter().collect::<HashSet<_>>();
         let mut kept = VecDeque::new();
         let mut acked = Vec::new();
@@ -308,28 +198,10 @@ impl NamespaceExecutionLedger {
         Ok(state.partial_errors.drain(..).collect())
     }
 
-    #[doc(hidden)]
-    pub fn set_force_mutation_errors_for_test(&self, enabled: bool) {
-        self.force_mutation_errors.store(enabled, Ordering::Relaxed);
-    }
-
-    fn lock_state(&self) -> Result<MutexGuard<'_, NamespaceExecutionState>, String> {
+    fn lock_state(&self) -> Result<std::sync::MutexGuard<'_, NamespaceExecutionState>, String> {
         self.inner
             .lock()
             .map_err(|_| "namespace execution store lock is poisoned".to_owned())
-    }
-
-    fn fail_forced_mutation(
-        &self,
-        state: &mut NamespaceExecutionState,
-        operation: &'static str,
-    ) -> Result<(), String> {
-        if !self.force_mutation_errors.load(Ordering::Relaxed) {
-            return Ok(());
-        }
-        let error = format!("forced namespace execution store mutation failure: {operation}");
-        push_partial_error(state, self.max_partial_errors, error.clone());
-        Err(error)
     }
 }
 
@@ -337,44 +209,6 @@ impl Default for NamespaceExecutionLedger {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// The engine drives the ledger's running/terminal transitions through this
-/// observer; `begin` stays with the operation layer (it owns the
-/// `WorkspaceSessionId`), so the `Starting → Running → Terminal` chain is
-/// preserved: begin (operation) → `on_running` → `on_terminal` (both engine).
-impl ExecutionObserver for NamespaceExecutionLedger {
-    fn on_running(&self, id: &NamespaceExecutionId) {
-        let _ = self.mark_namespace_execution_running(id);
-    }
-
-    fn on_terminal(
-        &self,
-        id: &NamespaceExecutionId,
-        status: NamespaceExecutionTerminalStatus,
-        exit_code: Option<i64>,
-    ) {
-        let _ = self.complete_namespace_execution(
-            id,
-            CompleteNamespaceExecution {
-                terminal_status: status,
-                exit_code,
-                error_kind: None,
-                error_message: None,
-            },
-        );
-    }
-}
-
-fn find_terminal_record<'a>(
-    state: &'a NamespaceExecutionState,
-    namespace_execution_id: &NamespaceExecutionId,
-) -> Option<&'a NamespaceExecutionRecord> {
-    state
-        .pending_projection
-        .iter()
-        .chain(state.recent_projected.iter())
-        .find(|record| &record.namespace_execution_id == namespace_execution_id)
 }
 
 fn push_recent_projected(
@@ -422,7 +256,7 @@ fn duration_ms(started_at_unix_ms: i64, finished_at_unix_ms: i64) -> f64 {
         .max(0) as f64
 }
 
-fn unix_ms() -> i64 {
+pub(crate) fn unix_ms() -> i64 {
     i64::try_from(
         SystemTime::now()
             .duration_since(UNIX_EPOCH)

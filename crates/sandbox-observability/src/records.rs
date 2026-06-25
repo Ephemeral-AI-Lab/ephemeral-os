@@ -39,7 +39,7 @@ pub struct TraceRecord {
     pub request_id: Option<String>,
     pub origin_request_id: Option<String>,
     pub workspace_id: Option<String>,
-    pub command_session_id: Option<String>,
+    pub namespace_execution_id: Option<String>,
     pub started_at_unix_ms: i64,
     pub finished_at_unix_ms: Option<i64>,
     pub duration_ms: Option<f64>,
@@ -62,8 +62,8 @@ impl TraceRecord {
         )?;
         validate_optional("workspace_id", self.workspace_id.as_deref(), MAX_ID_LENGTH)?;
         validate_optional(
-            "command_session_id",
-            self.command_session_id.as_deref(),
+            "namespace_execution_id",
+            self.namespace_execution_id.as_deref(),
             MAX_ID_LENGTH,
         )?;
         validate_optional(

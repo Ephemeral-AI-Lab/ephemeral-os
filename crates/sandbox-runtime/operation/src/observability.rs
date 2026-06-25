@@ -5,7 +5,8 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use crate::command::CommandSessionId;
+use sandbox_runtime_namespace_execution::NamespaceExecutionId;
+
 use crate::namespace_execution::{NamespaceExecutionRecord, RuntimeNamespaceExecutionSnapshot};
 use crate::workspace_crate::{WorkspaceProfile, WorkspaceSessionId};
 
@@ -36,8 +37,8 @@ pub type AsyncTraceSink =
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandFinalizationTraceMetadata {
     pub origin_request_id: String,
-    pub workspace_session_id: Option<WorkspaceSessionId>,
-    pub command_session_id: CommandSessionId,
+    pub workspace_session_id: WorkspaceSessionId,
+    pub namespace_execution_id: NamespaceExecutionId,
     pub finalizer_error: Option<String>,
 }
 

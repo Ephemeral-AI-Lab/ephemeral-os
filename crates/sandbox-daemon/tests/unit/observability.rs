@@ -11,12 +11,10 @@ use sandbox_observability::{
     ResourceSampleRecord, SandboxSnapshotRecord, SpanRecord, StoreError, TraceRecord,
     WorkspaceSnapshotRecord,
 };
-use sandbox_runtime::command::CommandSessionId;
 use sandbox_runtime::{
-    span_keys, BeginNamespaceExecution, CommandFinalizationTraceMetadata,
-    CompleteNamespaceExecution, CompletedOperationSpan, CompletedOperationTrace,
-    NamespaceExecutionId, NamespaceExecutionLifecycle, NamespaceExecutionRecord,
-    NamespaceExecutionTerminalStatus, SandboxRuntimeOperations, WorkspaceSessionId,
+    span_keys, CommandFinalizationTraceMetadata, CompletedOperationSpan, CompletedOperationTrace,
+    NamespaceExecutionId, NamespaceExecutionRecord, NamespaceExecutionTerminalStatus,
+    SandboxRuntimeOperations, WorkspaceSessionId,
 };
 use sandbox_runtime::{
     RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
@@ -71,7 +69,7 @@ impl TestObservabilityStore {
                     request_id,
                     origin_request_id,
                     workspace_id,
-                    command_session_id,
+                    namespace_execution_id,
                     started_at_unix_ms,
                     finished_at_unix_ms,
                     duration_ms,
@@ -90,7 +88,7 @@ impl TestObservabilityStore {
                         request_id: row.get(5)?,
                         origin_request_id: row.get(6)?,
                         workspace_id: row.get(7)?,
-                        command_session_id: row.get(8)?,
+                        namespace_execution_id: row.get(8)?,
                         started_at_unix_ms: row.get(9)?,
                         finished_at_unix_ms: row.get(10)?,
                         duration_ms: row.get(11)?,
@@ -427,8 +425,6 @@ fn observability_collection_writes_namespace_execution_tables() -> TestResult {
             namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
-            lifecycle_state: NamespaceExecutionLifecycle::Running,
-            started_at_unix_ms: 1_000,
         }],
         completed_namespace_executions: vec![completed_namespace_execution(
             "namespace_execution_2",
@@ -474,8 +470,6 @@ fn namespace_execution_snapshots_do_not_persist_command_payload_data() -> TestRe
             namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
-            lifecycle_state: NamespaceExecutionLifecycle::Running,
-            started_at_unix_ms: 1_000,
         }],
         completed_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),
@@ -535,7 +529,9 @@ fn daemon_collect_acks_only_successful_namespace_trace_projection() -> TestResul
 
     let pending = server
         .operations
-        .drain_completed_namespace_executions_for_test(10)
+        .command
+        .namespace_execution_store()
+        .drain_completed_namespace_executions(10)
         .expect("pending namespace records drain");
     assert_eq!(pending.len(), 1);
     assert_eq!(pending[0].namespace_execution_id, bad);
@@ -575,8 +571,6 @@ fn observability_collection_bounds_rows_and_keeps_valid_rows() -> TestResult {
             namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".repeat(20),
-            lifecycle_state: NamespaceExecutionLifecycle::Running,
-            started_at_unix_ms: 1_000,
         }],
         completed_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),
@@ -837,7 +831,7 @@ fn completed_async_command_finalization_trace_maps_and_persists_success() -> Tes
     )?;
 
     let store = store_for_config(&config)?;
-    let trace_id = "async:command_finalization:command_session_id:cmd_1";
+    let trace_id = "async:command_finalization:namespace_execution_id:cmd_1";
     let trace = trace_for(&store, trace_id)?;
     assert_eq!(trace.kind, "async");
     assert_eq!(trace.status, "ok");
@@ -846,7 +840,7 @@ fn completed_async_command_finalization_trace_maps_and_persists_success() -> Tes
     assert!(trace.request_id.is_none());
     assert_eq!(trace.origin_request_id.as_deref(), Some("req-origin"));
     assert_eq!(trace.workspace_id.as_deref(), Some("workspace-1"));
-    assert_eq!(trace.command_session_id.as_deref(), Some("cmd_1"));
+    assert_eq!(trace.namespace_execution_id.as_deref(), Some("cmd_1"));
 
     let spans = store.spans_for_test(trace_id)?;
     assert_eq!(
@@ -859,11 +853,11 @@ fn completed_async_command_finalization_trace_maps_and_persists_success() -> Tes
     );
     assert_eq!(
         spans[1].parent_span_id.as_deref(),
-        Some("async:command_finalization:command_session_id:cmd_1:span:0")
+        Some("async:command_finalization:namespace_execution_id:cmd_1:span:0")
     );
     assert_eq!(
         spans[2].parent_span_id.as_deref(),
-        Some("async:command_finalization:command_session_id:cmd_1:span:0")
+        Some("async:command_finalization:namespace_execution_id:cmd_1:span:0")
     );
     Ok(())
 }
@@ -879,14 +873,14 @@ fn completed_async_command_finalization_trace_maps_error_text() -> TestResult {
         completed_trace(&[(None, "complete_terminal_command_with_services", 0)]),
         CommandFinalizationTraceMetadata {
             origin_request_id: "req-origin".to_owned(),
-            workspace_session_id: Some(WorkspaceSessionId("workspace-1".to_owned())),
-            command_session_id: CommandSessionId("cmd_1".to_owned()),
+            workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
+            namespace_execution_id: NamespaceExecutionId("cmd_1".to_owned()),
             finalizer_error: Some("raw finalizer error".to_owned()),
         },
     )?;
 
     let store = store_for_config(&config)?;
-    let trace = trace_for(&store, "async:command_finalization:command_session_id:cmd_1")?;
+    let trace = trace_for(&store, "async:command_finalization:namespace_execution_id:cmd_1")?;
     assert_eq!(trace.status, "error");
     assert!(trace.error_kind.is_none());
     assert_eq!(trace.error_message.as_deref(), Some("raw finalizer error"));
@@ -1339,12 +1333,12 @@ fn completed_trace_with_durations(
 fn command_finalization_metadata(
     origin_request_id: &str,
     workspace_session_id: &str,
-    command_session_id: &str,
+    namespace_execution_id: &str,
 ) -> CommandFinalizationTraceMetadata {
     CommandFinalizationTraceMetadata {
         origin_request_id: origin_request_id.to_owned(),
-        workspace_session_id: Some(WorkspaceSessionId(workspace_session_id.to_owned())),
-        command_session_id: CommandSessionId(command_session_id.to_owned()),
+        workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
+        namespace_execution_id: NamespaceExecutionId(namespace_execution_id.to_owned()),
         finalizer_error: None,
     }
 }
@@ -1362,7 +1356,6 @@ fn completed_namespace_execution(
         workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
         operation_name: operation_name.to_owned(),
         origin_request_id: request_id.map(str::to_owned),
-        lifecycle_state: NamespaceExecutionLifecycle::Terminal,
         started_at_unix_ms: 1_000,
         finished_at_unix_ms: Some(1_025),
         duration_ms: Some(25.0),
@@ -1378,28 +1371,20 @@ fn seed_completed_namespace_execution(
     namespace_execution_id: &str,
     operation_name: &str,
 ) -> NamespaceExecutionId {
-    let id = NamespaceExecutionId(namespace_execution_id.to_owned());
+    let record = completed_namespace_execution(
+        namespace_execution_id,
+        "workspace-1",
+        operation_name,
+        NamespaceExecutionTerminalStatus::Ok,
+        Some("req-parent"),
+        Some(0),
+    );
+    let id = record.namespace_execution_id.clone();
     operations
-        .begin_namespace_execution_for_test(
-            id.clone(),
-            BeginNamespaceExecution {
-                workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
-                operation_name: operation_name.to_owned(),
-                origin_request_id: Some("req-parent".to_owned()),
-            },
-        )
-        .expect("begin namespace execution succeeds");
-    operations
-        .complete_namespace_execution_for_test(
-            &id,
-            CompleteNamespaceExecution {
-                terminal_status: NamespaceExecutionTerminalStatus::Ok,
-                exit_code: Some(0),
-                error_kind: None,
-                error_message: None,
-            },
-        )
-        .expect("complete namespace execution succeeds");
+        .command
+        .namespace_execution_store()
+        .record_completed(record)
+        .expect("record completed namespace execution succeeds");
     id
 }
 
@@ -1460,7 +1445,7 @@ fn assert_no_trace_text(trace: &TraceRecord, spans: &[SpanRecord], forbidden: &s
     values.extend(trace.request_id.as_deref());
     values.extend(trace.origin_request_id.as_deref());
     values.extend(trace.workspace_id.as_deref());
-    values.extend(trace.command_session_id.as_deref());
+    values.extend(trace.namespace_execution_id.as_deref());
     values.extend(trace.error_kind.as_deref());
     values.extend(trace.error_message.as_deref());
     for span in spans {
@@ -1485,8 +1470,6 @@ fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
             namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
-            lifecycle_state: NamespaceExecutionLifecycle::Running,
-            started_at_unix_ms: 1_000,
         }],
         completed_namespace_executions: Vec::new(),
         partial_errors: Vec::new(),

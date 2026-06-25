@@ -1,15 +1,13 @@
-mod config;
+mod contract;
 mod error;
-mod execution;
-mod result;
+mod exec_value;
+mod finalize;
 mod service;
 
-pub use config::CommandConfig;
+pub use contract::{CommandConfig, CommandTerminalResult};
 pub use error::CommandServiceError;
-pub use execution::CommandExecution;
-pub use result::CommandTerminalResult;
-pub use service::test_support;
+pub use exec_value::CommandExecValue;
 pub use service::{
-    CommandOperationService, CommandOutput, CommandSessionId, CommandStatus, ExecCommandInput,
-    ReadCommandLinesInput, WriteCommandStdinInput,
+    CommandOperationService, CommandOutput, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
+    WriteCommandStdinInput,
 };

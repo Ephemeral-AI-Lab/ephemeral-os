@@ -1,34 +1,31 @@
 use std::time::{Duration, Instant};
 
-use sandbox_runtime_namespace_execution::{
-    NamespaceExecutionError, NamespaceExecutionTerminalStatus,
-};
+use sandbox_runtime_namespace_execution::{NamespaceExecutionError, NamespaceExecutionId};
 
-use super::core::{execution_id, CommandOperationService};
-use super::transcript::command_output;
-use crate::command::CommandExecution;
-use crate::command::{CommandOutput, CommandServiceError, CommandSessionId, CommandStatus};
+use super::core::CommandOperationService;
+use super::render::{command_output, command_status};
+use crate::command::{CommandOutput, CommandServiceError, CommandStatus};
 
 const QUIET_MS: Duration = Duration::from_millis(50);
 
 impl CommandOperationService {
     pub(crate) fn wait_for_command_yield(
         &self,
-        command_session_id: CommandSessionId,
+        command_session_id: NamespaceExecutionId,
         yield_time_ms: u64,
         start_offset: u64,
         include_terminal_command_session_id: bool,
     ) -> Result<CommandOutput, CommandServiceError> {
-        let id = execution_id(&command_session_id);
+        let id = command_session_id.clone();
         let deadline = Instant::now() + Duration::from_millis(yield_time_ms);
         let mut last_offset = start_offset;
         let mut last_change = Instant::now();
         loop {
             let Some((finished, offset, waiter)) = self.engine().with_value(&id, |command| {
                 (
-                    command.is_finished(),
-                    command.output_len(),
-                    command.completion(),
+                    command.exec.is_finished(),
+                    command.exec.output_len(),
+                    command.exec.completion(),
                 )
             }) else {
                 return command_not_found(command_session_id);
@@ -46,7 +43,10 @@ impl CommandOperationService {
             }
             let settled = offset > start_offset && now.duration_since(last_change) >= QUIET_MS;
             if settled || now >= deadline {
-                return match self.engine().with_value(&id, CommandExecution::is_finished) {
+                return match self
+                    .engine()
+                    .with_value(&id, |command| command.exec.is_finished())
+                {
                     Some(true) => self.completed_command_output(
                         command_session_id,
                         include_terminal_command_session_id,
@@ -62,9 +62,9 @@ impl CommandOperationService {
 
     fn running_command_output(
         &self,
-        command_session_id: CommandSessionId,
+        command_session_id: NamespaceExecutionId,
     ) -> Result<CommandOutput, CommandServiceError> {
-        let id = execution_id(&command_session_id);
+        let id = command_session_id.clone();
         let output = self.engine().with_value(&id, |command| {
             let start = command.take_snapshot_offset();
             let window = command.transcript_window(start, usize::MAX);
@@ -83,12 +83,12 @@ impl CommandOperationService {
 
     pub(crate) fn completed_command_output(
         &self,
-        command_session_id: CommandSessionId,
+        command_session_id: NamespaceExecutionId,
         include_terminal_command_session_id: bool,
     ) -> Result<CommandOutput, CommandServiceError> {
-        let id = execution_id(&command_session_id);
+        let id = command_session_id.clone();
         let read = self.engine().with_value(&id, |command| {
-            let result = command.terminal_result();
+            let result = command.exec.resolved();
             let start = command.take_snapshot_offset();
             let window = command.transcript_window(start, usize::MAX);
             let elapsed = command.elapsed_seconds();
@@ -118,17 +118,8 @@ impl CommandOperationService {
     }
 }
 
-pub(crate) const fn command_status(status: NamespaceExecutionTerminalStatus) -> CommandStatus {
-    match status {
-        NamespaceExecutionTerminalStatus::Ok => CommandStatus::Ok,
-        NamespaceExecutionTerminalStatus::Error => CommandStatus::Error,
-        NamespaceExecutionTerminalStatus::TimedOut => CommandStatus::TimedOut,
-        NamespaceExecutionTerminalStatus::Cancelled => CommandStatus::Cancelled,
-    }
-}
-
 pub(crate) fn finalization_failed(
-    command_session_id: CommandSessionId,
+    command_session_id: NamespaceExecutionId,
     error: &NamespaceExecutionError,
 ) -> CommandServiceError {
     CommandServiceError::CommandFinalizationFailed {
@@ -138,7 +129,7 @@ pub(crate) fn finalization_failed(
 }
 
 pub(crate) fn command_not_found<T>(
-    command_session_id: CommandSessionId,
+    command_session_id: NamespaceExecutionId,
 ) -> Result<T, CommandServiceError> {
     Err(CommandServiceError::CommandNotFound { command_session_id })
 }

@@ -326,11 +326,9 @@ fn operation_trace_records_command_finalization_async_span_tree(
     assert_eq!(metadata.origin_request_id, "req-async-finalize");
     assert_eq!(
         metadata.workspace_session_id,
-        Some(sandbox_runtime::WorkspaceSessionId(
-            "one-shot-session".to_owned()
-        ))
+        sandbox_runtime::WorkspaceSessionId("one-shot-session".to_owned())
     );
-    assert_eq!(metadata.command_session_id.0, "namespace_execution_1");
+    assert_eq!(metadata.namespace_execution_id.0, "namespace_execution_1");
     assert!(metadata.finalizer_error.is_none());
     assert_completed_span_sequence(
         &async_trace,

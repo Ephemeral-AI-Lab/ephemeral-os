@@ -1,187 +1,83 @@
 use sandbox_runtime::{
-    BeginNamespaceExecution, CompleteNamespaceExecution, NamespaceExecutionLedger,
-    NamespaceExecutionLifecycle, NamespaceExecutionTerminalStatus, WorkspaceSessionId,
+    NamespaceExecutionId, NamespaceExecutionLedger, NamespaceExecutionRecord,
+    NamespaceExecutionTerminalStatus, WorkspaceSessionId,
 };
 
+fn ok_record(id: &str, workspace_session_id: &str) -> NamespaceExecutionRecord {
+    NamespaceExecutionRecord {
+        namespace_execution_id: NamespaceExecutionId(id.to_owned()),
+        workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
+        operation_name: "exec_command".to_owned(),
+        origin_request_id: None,
+        started_at_unix_ms: 1_000,
+        finished_at_unix_ms: Some(1_025),
+        duration_ms: Some(25.0),
+        terminal_status: Some(NamespaceExecutionTerminalStatus::Ok),
+        exit_code: Some(0),
+        error_kind: None,
+        error_message: None,
+    }
+}
+
 #[test]
-fn namespace_store_lifecycle_duplicate_completion_and_ack() {
-    let store = NamespaceExecutionLedger::new();
-    let id = store.allocate_namespace_execution_id();
-    assert_eq!(id.0, "namespace_execution_1");
+fn record_completed_drains_non_consuming_until_acked() {
+    let ledger = NamespaceExecutionLedger::new();
+    let record = ok_record("namespace_execution_1", "workspace-session");
 
-    store
-        .begin_namespace_execution(
-            id.clone(),
-            BeginNamespaceExecution {
-                workspace_session_id: WorkspaceSessionId("workspace-session".to_owned()),
-                operation_name: "exec_command".to_owned(),
-                origin_request_id: Some("req-parent".to_owned()),
-            },
-        )
-        .expect("begin succeeds");
+    ledger
+        .record_completed(record.clone())
+        .expect("record completed succeeds");
 
-    let active = store
-        .snapshot_active_namespace_executions()
-        .expect("snapshot succeeds");
-    assert_eq!(active.len(), 1);
-    assert_eq!(active[0].namespace_execution_id, id);
+    // drain is a non-consuming peek: it stays pending until ack.
     assert_eq!(
-        active[0].lifecycle_state,
-        NamespaceExecutionLifecycle::Starting
-    );
-
-    store
-        .mark_namespace_execution_running(&id)
-        .expect("mark running succeeds");
-    assert_eq!(
-        store
-            .snapshot_active_namespace_executions()
-            .expect("snapshot succeeds")[0]
-            .lifecycle_state,
-        NamespaceExecutionLifecycle::Running
-    );
-
-    let completed = store
-        .complete_namespace_execution(
-            &id,
-            CompleteNamespaceExecution {
-                terminal_status: NamespaceExecutionTerminalStatus::Ok,
-                exit_code: Some(0),
-                error_kind: None,
-                error_message: None,
-            },
-        )
-        .expect("completion succeeds");
-    assert_eq!(
-        completed.lifecycle_state,
-        NamespaceExecutionLifecycle::Terminal
-    );
-    assert_eq!(
-        completed.terminal_status,
-        Some(NamespaceExecutionTerminalStatus::Ok)
-    );
-    assert_eq!(completed.exit_code, Some(0));
-    assert!(store
-        .snapshot_active_namespace_executions()
-        .expect("snapshot succeeds")
-        .is_empty());
-
-    let duplicate = store
-        .complete_namespace_execution(
-            &id,
-            CompleteNamespaceExecution {
-                terminal_status: NamespaceExecutionTerminalStatus::Error,
-                exit_code: Some(9),
-                error_kind: Some("second".to_owned()),
-                error_message: Some("ignored".to_owned()),
-            },
-        )
-        .expect("duplicate completion is idempotent");
-    assert_eq!(duplicate, completed);
-    assert_eq!(
-        store
+        ledger
             .drain_completed_namespace_executions(10)
             .expect("drain succeeds"),
-        vec![completed.clone()]
+        vec![record.clone()]
+    );
+    assert_eq!(
+        ledger
+            .drain_completed_namespace_executions(10)
+            .expect("drain succeeds"),
+        vec![record.clone()]
     );
 
-    store
-        .ack_completed_namespace_executions(std::slice::from_ref(&id))
+    ledger
+        .ack_completed_namespace_executions(std::slice::from_ref(&record.namespace_execution_id))
         .expect("ack succeeds");
-    assert!(store
+    assert!(ledger
         .drain_completed_namespace_executions(10)
         .expect("drain succeeds")
         .is_empty());
-    let after_ack_duplicate = store
-        .complete_namespace_execution(
-            &id,
-            CompleteNamespaceExecution {
-                terminal_status: NamespaceExecutionTerminalStatus::Cancelled,
-                exit_code: Some(130),
-                error_kind: None,
-                error_message: None,
-            },
-        )
-        .expect("recent projected completion stays idempotent");
-    assert_eq!(after_ack_duplicate, completed);
 }
 
 #[test]
-fn namespace_id_allocation_survives_forced_mutation_failure() {
-    let store = NamespaceExecutionLedger::new();
-    let id = store.allocate_namespace_execution_id();
-    store.set_force_mutation_errors_for_test(true);
+fn retention_drop_records_partial_error() {
+    let ledger = NamespaceExecutionLedger::with_limits(1, 4, 4);
+    let first = ok_record("namespace_execution_1", "workspace-one");
+    let second = ok_record("namespace_execution_2", "workspace-two");
 
-    let error = store
-        .begin_namespace_execution(
-            id.clone(),
-            BeginNamespaceExecution {
-                workspace_session_id: WorkspaceSessionId("workspace-session".to_owned()),
-                operation_name: "exec_command".to_owned(),
-                origin_request_id: None,
-            },
-        )
-        .expect_err("forced mutation failure rejects begin");
+    ledger
+        .record_completed(first.clone())
+        .expect("record first succeeds");
+    ledger
+        .record_completed(second.clone())
+        .expect("record second succeeds");
 
-    assert!(error.contains("begin_namespace_execution"));
-    assert_eq!(id.0, "namespace_execution_1");
-    assert_eq!(
-        store.allocate_namespace_execution_id().0,
-        "namespace_execution_2"
-    );
-    assert!(store
-        .drain_partial_errors()
-        .expect("partial errors drain")
-        .iter()
-        .any(|error| error.contains("begin_namespace_execution")));
-}
-
-#[test]
-fn namespace_store_retention_drop_records_partial_error() {
-    let store = NamespaceExecutionLedger::with_limits(1, 4, 4);
-    let first = complete_success(&store, "workspace-one");
-    let second = complete_success(&store, "workspace-two");
-
-    let pending = store
+    let pending = ledger
         .drain_completed_namespace_executions(10)
         .expect("drain succeeds");
     assert_eq!(pending.len(), 1);
-    assert_eq!(pending[0].namespace_execution_id, second);
+    assert_eq!(
+        pending[0].namespace_execution_id,
+        second.namespace_execution_id
+    );
 
-    let errors = store.drain_partial_errors().expect("partial errors drain");
+    let errors = ledger.drain_partial_errors().expect("partial errors drain");
     assert!(
-        errors
-            .iter()
-            .any(|error| error.contains(&first.0) && error.contains("dropped")),
+        errors.iter().any(|error| {
+            error.contains(&first.namespace_execution_id.0) && error.contains("dropped")
+        }),
         "{errors:?}"
     );
-}
-
-fn complete_success(
-    store: &NamespaceExecutionLedger,
-    workspace_session_id: &str,
-) -> sandbox_runtime::NamespaceExecutionId {
-    let id = store.allocate_namespace_execution_id();
-    store
-        .begin_namespace_execution(
-            id.clone(),
-            BeginNamespaceExecution {
-                workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
-                operation_name: "exec_command".to_owned(),
-                origin_request_id: None,
-            },
-        )
-        .expect("begin succeeds");
-    store
-        .complete_namespace_execution(
-            &id,
-            CompleteNamespaceExecution {
-                terminal_status: NamespaceExecutionTerminalStatus::Ok,
-                exit_code: Some(0),
-                error_kind: None,
-                error_message: None,
-            },
-        )
-        .expect("complete succeeds");
-    id
 }

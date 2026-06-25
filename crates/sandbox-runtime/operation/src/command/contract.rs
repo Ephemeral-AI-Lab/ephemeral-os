@@ -1,6 +1,22 @@
-//! Command substrate DTOs.
+//! Command substrate types: the command configuration and the terminal result
+//! projection the engine promise retains.
+
+use std::path::PathBuf;
 
 use sandbox_runtime_namespace_execution::NamespaceExecutionTerminalStatus;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandConfig {
+    pub scratch_root: PathBuf,
+}
+
+impl Default for CommandConfig {
+    fn default() -> Self {
+        Self {
+            scratch_root: PathBuf::from("/eos/scratch/commands"),
+        }
+    }
+}
 
 /// The trimmed terminal projection of a finished command: terminal status, exit
 /// code, and total wall time. The command op's `finalize` builds it from a

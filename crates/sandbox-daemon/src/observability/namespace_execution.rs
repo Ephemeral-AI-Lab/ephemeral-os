@@ -24,7 +24,7 @@ pub(crate) fn snapshot_record(
         namespace_execution_id,
         workspace_session_id,
         operation: bound_operation(execution.operation_name.clone()),
-        lifecycle_state: bound_state(execution.lifecycle_state.as_str().to_owned()),
+        lifecycle_state: bound_state("running".to_owned()),
         sampled_at_unix_ms,
         error_message: None,
     }

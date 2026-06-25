@@ -1,8 +1,6 @@
-use crate::command::service::helpers::{command_not_found, finalize_message};
-use crate::command::service::{execution_id, CommandOperationService};
-use crate::command::{
-    CommandExecution, CommandOutput, CommandServiceError, WriteCommandStdinInput,
-};
+use crate::command::service::r#yield::{command_not_found, finalize_message};
+use crate::command::service::CommandOperationService;
+use crate::command::{CommandOutput, CommandServiceError, WriteCommandStdinInput};
 
 impl CommandOperationService {
     pub fn write_command_stdin(
@@ -12,15 +10,15 @@ impl CommandOperationService {
         let command_session_id = input.command_session_id;
         let yield_time_ms = input.yield_time_ms.unwrap_or(1000);
         let is_kill_input = is_kill_input(&input.stdin);
-        let id = execution_id(&command_session_id);
+        let id = command_session_id.clone();
 
         let target = self.engine().with_value(&id, |command| {
-            if !command.is_finished() {
+            if !command.exec.is_finished() {
                 return WriteTarget::Live {
-                    start_offset: command.output_len(),
+                    start_offset: command.exec.output_len(),
                 };
             }
-            match command.terminal_result() {
+            match command.exec.resolved() {
                 Some(Err(error)) => WriteTarget::FinalizationFailed(finalize_message(&error)),
                 _ => WriteTarget::AlreadyCompleted,
             }
@@ -40,15 +38,17 @@ impl CommandOperationService {
         };
 
         if is_kill_input {
-            match self.engine().with_value(&id, CommandExecution::cancel) {
+            match self
+                .engine()
+                .with_value(&id, |command| command.exec.cancel())
+            {
                 Some(()) => {}
                 None => return command_not_found(command_session_id),
             }
         } else {
-            match self
-                .engine()
-                .with_value(&id, |command| command.write_stdin(input.stdin.as_bytes()))
-            {
+            match self.engine().with_value(&id, |command| {
+                command.exec.write_stdin(input.stdin.as_bytes())
+            }) {
                 Some(Ok(())) => {}
                 Some(Err(error)) => {
                     return Err(CommandServiceError::CommandIo {

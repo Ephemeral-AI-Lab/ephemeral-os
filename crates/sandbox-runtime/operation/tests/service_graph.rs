@@ -77,6 +77,7 @@ fn service_graph_runtime_operations_exposes_command_lane(
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
         CommandConfig::default(),
+        None,
     ));
     let operations = SandboxRuntimeOperations::new(
         Arc::clone(&command),
@@ -88,22 +89,6 @@ fn service_graph_runtime_operations_exposes_command_lane(
     assert!(Arc::ptr_eq(&operations.workspace_session, &workspace));
     assert!(Arc::ptr_eq(&operations.layerstack, &layerstack));
     Ok(())
-}
-
-#[test]
-#[should_panic(
-    expected = "SandboxRuntimeOperations command service must use the same workspace_session Arc"
-)]
-fn service_graph_runtime_operations_rejects_mismatched_workspace_session_arc() {
-    let command_workspace = workspace_session();
-    let aggregate_workspace = workspace_session();
-    let command = Arc::new(CommandOperationService::new(
-        command_workspace,
-        CommandConfig::default(),
-    ));
-    let layerstack = layerstack_service().expect("layerstack service builds");
-
-    let _operations = SandboxRuntimeOperations::new(command, aggregate_workspace, layerstack);
 }
 
 #[test]
@@ -287,6 +272,7 @@ fn squash_dispatch_projects_stable_no_op_json(
         Arc::new(CommandOperationService::new(
             Arc::clone(&workspace),
             CommandConfig::default(),
+            None,
         )),
         workspace,
         layerstack_service()?,

@@ -4,14 +4,15 @@ use crate::cli_definition::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
 use crate::command::{
-    CommandOutput, CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput,
-    ReadCommandLinesInput, WriteCommandStdinInput,
+    CommandOutput, CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
+    WriteCommandStdinInput,
 };
 use crate::observability::{measure_optional, OperationTrace};
 use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
+use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 
 pub(crate) const COMMAND_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "command",
@@ -242,7 +243,7 @@ fn dispatch_write_command_stdin(
 
 fn parse_write_command_stdin_input(request: &Request) -> Result<WriteCommandStdinInput, Response> {
     Ok(WriteCommandStdinInput {
-        command_session_id: CommandSessionId(request.required_string("command_session_id")?),
+        command_session_id: NamespaceExecutionId(request.required_string("command_session_id")?),
         stdin: request.required_string("stdin")?,
         yield_time_ms: request.optional_u64("yield_time_ms")?,
     })
@@ -257,16 +258,16 @@ fn dispatch_read_command_lines(
         Ok(input) => input,
         Err(response) => return response,
     };
-    command_output_response(measure_optional(
+    command_output_response(Ok(measure_optional(
         trace,
         "CommandOperationService::read_command_lines",
         || operations.command.read_command_lines(input),
-    ))
+    )))
 }
 
 fn parse_read_command_lines_input(request: &Request) -> Result<ReadCommandLinesInput, Response> {
     Ok(ReadCommandLinesInput {
-        command_session_id: CommandSessionId(request.required_string("command_session_id")?),
+        command_session_id: NamespaceExecutionId(request.required_string("command_session_id")?),
         start_offset: request.optional_u64("start_offset")?,
         limit: request.optional_usize("limit")?,
     })

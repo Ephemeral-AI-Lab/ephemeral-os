@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use sandbox_runtime::command::{
-    CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
-    WriteCommandStdinInput,
+    CommandStatus, ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
+use sandbox_runtime::NamespaceExecutionId;
 use sandbox_runtime_workspace::WorkspaceProfile;
 
 use support::{
@@ -20,7 +20,7 @@ use support::{
 /// the bytes to the transcript file at spawn time and parks the child.
 fn session_with_transcript(
     transcript: &str,
-) -> (TestServices, CommandSessionId, Arc<FakeLaunchDriver>) {
+) -> (TestServices, NamespaceExecutionId, Arc<FakeLaunchDriver>) {
     let driver = Arc::new(FakeLaunchDriver::new());
     driver.push_outcome(ScriptedCommandYield::Running(transcript.to_owned()));
     let (env, id) = build_session(&driver);
@@ -30,7 +30,7 @@ fn session_with_transcript(
 /// Build a running command session with no transcript output (no file written).
 /// Reproduces `MissingTranscriptLaunchDriver::running`: command stays alive, no
 /// bytes are written because `FakeRunnerScript::running(Vec::new())` is a no-op.
-fn session_pending() -> (TestServices, CommandSessionId, Arc<FakeLaunchDriver>) {
+fn session_pending() -> (TestServices, NamespaceExecutionId, Arc<FakeLaunchDriver>) {
     let driver = Arc::new(FakeLaunchDriver::new());
     driver.push_outcome(ScriptedCommandYield::Running(String::new()));
     let (env, id) = build_session(&driver);
@@ -42,7 +42,7 @@ fn session_pending() -> (TestServices, CommandSessionId, Arc<FakeLaunchDriver>) 
 /// single `Completed` outcome that writes `transcript` to the file at spawn
 /// time and fires the watcher immediately. Uses a longer yield window so the
 /// watcher thread has time to resolve the promise before the yield loop exits.
-fn completed_session_with_transcript(transcript: &str) -> (TestServices, CommandSessionId) {
+fn completed_session_with_transcript(transcript: &str) -> (TestServices, NamespaceExecutionId) {
     let driver = Arc::new(FakeLaunchDriver::new());
     driver.push_outcome(ScriptedCommandYield::Completed(success_exit(transcript)));
     let fake = Arc::new(FakeWorkspaceService::new());
@@ -77,11 +77,11 @@ fn completed_session_with_transcript(transcript: &str) -> (TestServices, Command
     // recover the id from the exec id allocator (first command = namespace_execution_1).
     let command_session_id = output
         .command_session_id
-        .unwrap_or_else(|| CommandSessionId("namespace_execution_1".to_owned()));
+        .unwrap_or_else(|| NamespaceExecutionId("namespace_execution_1".to_owned()));
     (env, command_session_id)
 }
 
-fn build_session(driver: &Arc<FakeLaunchDriver>) -> (TestServices, CommandSessionId) {
+fn build_session(driver: &Arc<FakeLaunchDriver>) -> (TestServices, NamespaceExecutionId) {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_root = PathBuf::from("/workspace/session");
     fake.push_create_result(Ok(workspace_handle(
@@ -113,7 +113,7 @@ fn build_session(driver: &Arc<FakeLaunchDriver>) -> (TestServices, CommandSessio
     // may be None; fall back to the deterministic first-allocated ID.
     let command_session_id = output
         .command_session_id
-        .unwrap_or_else(|| CommandSessionId("namespace_execution_1".to_owned()));
+        .unwrap_or_else(|| NamespaceExecutionId("namespace_execution_1".to_owned()));
     (env, command_session_id)
 }
 
@@ -126,14 +126,11 @@ fn command_transcript_rows_preserve_offsets_streams_and_window_metadata() {
     );
     let (env, command_session_id, _driver) = session_with_transcript(transcript);
 
-    let output = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: Some(1),
-            limit: Some(1),
-        })
-        .expect("owner can read active command rows");
+    let output = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id: command_session_id.clone(),
+        start_offset: Some(1),
+        limit: Some(1),
+    });
 
     assert_eq!(output.command_session_id, Some(command_session_id.clone()));
     assert_eq!(output.status, CommandStatus::Running);
@@ -154,14 +151,11 @@ fn command_transcript_rows_parse_raw_pty_transcript_as_stdout_rows() {
     );
     let (env, command_session_id, _driver) = session_with_transcript(transcript);
 
-    let output = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: None,
-            limit: None,
-        })
-        .expect("owner can read raw transcript rows with default window");
+    let output = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: None,
+        limit: None,
+    });
 
     assert_eq!(output.end_offset, 3);
     assert_eq!(output.total_lines, 3);
@@ -172,14 +166,11 @@ fn command_transcript_rows_parse_raw_pty_transcript_as_stdout_rows() {
 fn command_transcript_rows_keep_empty_window_end_offset_at_request() {
     let (env, command_session_id, _driver) = session_with_transcript("one\ntwo\nthree\n");
 
-    let output = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: Some(10),
-            limit: Some(5),
-        })
-        .expect("owner can request beyond retained rows");
+    let output = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: Some(10),
+        limit: Some(5),
+    });
 
     assert_eq!(output.start_offset, 10);
     assert_eq!(output.end_offset, 10);
@@ -195,14 +186,11 @@ fn command_transcript_rows_report_bounded_window_truncation() {
     transcript.push_str("kept-one\nkept-two\n");
     let (env, command_session_id, _driver) = session_with_transcript(&transcript);
 
-    let output = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect("owner can read bounded row window");
+    let output = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: Some(0),
+        limit: Some(10),
+    });
 
     assert_eq!(output.start_offset, 0);
     assert_eq!(output.total_lines, 5);
@@ -215,14 +203,11 @@ fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_wind
     // MissingTranscriptLaunchDriver::running() — no transcript output, command stays alive.
     let (env, command_session_id, _driver) = session_pending();
 
-    let output = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect("active command without output yet returns an empty pending window");
+    let output = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: Some(0),
+        limit: Some(10),
+    });
 
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(output.exit_code, None);
@@ -232,26 +217,22 @@ fn command_transcript_rows_allow_active_missing_transcript_as_empty_pending_wind
 }
 
 #[test]
-fn command_transcript_rows_error_when_completed_transcript_is_missing() {
-    // MissingTranscriptLaunchDriver::running_then_completed("terminal stdout\n"):
-    // command completes but the transcript file is absent.
-    // In the new model the PTY reader always creates the transcript file, so we
-    // reproduce the "missing" case by deleting it after the command completes.
+fn command_transcript_rows_completed_missing_transcript_reads_empty_best_effort() {
+    // command completes but the transcript file is absent. The infallible reader
+    // returns the terminal status with an empty best-effort window rather than an
+    // error: deleting the transcript after completion reproduces the "missing" case.
     let driver = Arc::new(FakeLaunchDriver::new());
     driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
         "terminal stdout\n",
     )));
     let (env, command_session_id) = build_session(&driver);
 
-    // write_command_stdin on an already-completed command returns AlreadyCompleted;
-    // the original test ignored the result so we do the same.
     let _ = env.command.write_command_stdin(WriteCommandStdinInput {
         command_session_id: command_session_id.clone(),
         stdin: "\n".to_owned(),
         yield_time_ms: Some(1),
     });
 
-    // Remove the transcript so required_transcript_window cannot open it.
     let transcript_path = env
         .command
         .config()
@@ -260,22 +241,17 @@ fn command_transcript_rows_error_when_completed_transcript_is_missing() {
         .join("transcript.log");
     let _ = std::fs::remove_file(&transcript_path);
 
-    let error = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect_err("completed command with missing retained transcript is not empty output");
+    let output = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id: command_session_id.clone(),
+        start_offset: Some(0),
+        limit: Some(10),
+    });
 
-    // In the new model path is always None (not threaded through to the error).
-    assert!(matches!(
-        error,
-        CommandServiceError::CommandTranscriptUnavailable { command_session_id: id, path: None, error }
-            if id == command_session_id
-                && error.contains("open transcript")
-    ));
+    assert_eq!(output.command_session_id, Some(command_session_id));
+    assert_eq!(output.status, CommandStatus::Ok);
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.total_lines, 0);
+    assert!(output.output.is_empty());
 }
 
 #[test]
@@ -286,14 +262,11 @@ fn command_transcript_rows_keep_completed_rows() {
     let transcript = "completed one\ncompleted two\ncompleted three\n";
     let (env, command_session_id) = completed_session_with_transcript(transcript);
 
-    let lines = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect("owner can read completed rows");
+    let lines = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id: command_session_id.clone(),
+        start_offset: Some(0),
+        limit: Some(10),
+    });
     assert_eq!(lines.status, CommandStatus::Ok);
     assert_eq!(lines.exit_code, Some(0));
     assert_eq!(lines.total_lines, 3);
@@ -302,14 +275,11 @@ fn command_transcript_rows_keep_completed_rows() {
         "completed one\ncompleted two\ncompleted three"
     );
 
-    let window = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: Some(1),
-            limit: Some(1),
-        })
-        .expect("owner can read a completed command window");
+    let window = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id: command_session_id.clone(),
+        start_offset: Some(1),
+        limit: Some(1),
+    });
     assert_eq!(window.status, CommandStatus::Ok);
     assert_eq!(window.exit_code, Some(0));
     assert_eq!(window.total_lines, 3);
@@ -350,14 +320,11 @@ fn command_transcript_rows_report_running_status_for_active_command() {
         .command_session_id
         .expect("command session id is returned");
 
-    let rows = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: Some(0),
-            limit: Some(1),
-        })
-        .expect("active rows can be read");
+    let rows = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: Some(0),
+        limit: Some(1),
+    });
 
     assert_eq!(rows.status, CommandStatus::Running);
     assert_eq!(rows.exit_code, None);

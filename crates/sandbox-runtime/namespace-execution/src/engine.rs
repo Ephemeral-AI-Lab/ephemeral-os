@@ -87,6 +87,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         op: S,
         target: NamespaceTarget,
         id: NamespaceExecutionId,
+        on_complete: impl FnOnce(&Result<S::Output, NamespaceExecutionError>) + Send + 'static,
     ) -> Result<InteractiveExecution<S::Output>, NamespaceExecutionError> {
         let request = build_request(&target, &id, shell_args(op.command()), op.timeout_seconds());
         let transcript_path = op.transcript_path().map(Path::to_path_buf);
@@ -104,7 +105,11 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             Arc::clone(&promise),
             cancelled,
             None,
-            move |outcome| op.finalize(outcome),
+            move |outcome| {
+                let result = op.finalize(outcome);
+                on_complete(&result);
+                result
+            },
         );
         Ok(InteractiveExecution::new(
             ExecutionHandle::new(id, promise),

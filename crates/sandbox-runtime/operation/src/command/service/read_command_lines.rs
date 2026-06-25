@@ -1,0 +1,64 @@
+use sandbox_runtime_namespace_execution::{transcript_window, NamespaceExecutionId};
+
+use crate::command::service::render::{command_output, command_status};
+use crate::command::service::CommandOperationService;
+use crate::command::{CommandExecValue, CommandOutput, CommandStatus, ReadCommandLinesInput};
+
+const DEFAULT_READ_LIMIT: usize = 200;
+const MAX_READ_LIMIT: usize = 1000;
+
+impl CommandOperationService {
+    #[must_use]
+    pub fn read_command_lines(&self, input: ReadCommandLinesInput) -> CommandOutput {
+        let command_session_id = input.command_session_id;
+        let start_offset = input.start_offset.unwrap_or(0);
+        let limit = input
+            .limit
+            .unwrap_or(DEFAULT_READ_LIMIT)
+            .clamp(1, MAX_READ_LIMIT);
+
+        self.engine()
+            .with_value(&command_session_id, |command| {
+                read_command_window(command, &command_session_id, start_offset, limit)
+            })
+            .unwrap_or_else(|| empty_terminal_output(command_session_id))
+    }
+}
+
+fn read_command_window(
+    command: &CommandExecValue,
+    command_session_id: &NamespaceExecutionId,
+    start_offset: u64,
+    limit: usize,
+) -> CommandOutput {
+    let window = command.transcript_window(start_offset, limit);
+    let elapsed = command.elapsed_seconds();
+    let (status, exit_code, command_total_time_seconds) = match command.exec.resolved() {
+        None => (CommandStatus::Running, None, elapsed),
+        Some(Ok(result)) => (
+            command_status(result.status),
+            Some(result.exit_code),
+            result.command_total_time_seconds,
+        ),
+        Some(Err(_)) => (CommandStatus::Error, None, elapsed),
+    };
+    command_output(
+        window,
+        Some(command_session_id.clone()),
+        status,
+        exit_code,
+        elapsed,
+        command_total_time_seconds,
+    )
+}
+
+fn empty_terminal_output(command_session_id: NamespaceExecutionId) -> CommandOutput {
+    command_output(
+        transcript_window(None, 0, 1),
+        Some(command_session_id),
+        CommandStatus::Ok,
+        None,
+        0.0,
+        0.0,
+    )
+}

@@ -33,7 +33,7 @@ const MAX_METHOD_LENGTH: usize = 256;
 const REQUEST_TRACE_PREFIX: &str = "request:";
 const COMMAND_FINALIZATION_OPERATION: &str = "command_finalization";
 const ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX: &str =
-    "async:command_finalization:command_session_id:";
+    "async:command_finalization:namespace_execution_id:";
 const SPAN_ID_SEPARATOR: &str = ":span:";
 const MAX_CALL_INDEX_TEXT_LENGTH: usize = 20;
 const MAX_TRACE_ID_LENGTH: usize =
@@ -154,7 +154,7 @@ impl DaemonObservability {
             request_id: Some(bound_id(request_id)),
             origin_request_id: None,
             workspace_id: None,
-            command_session_id: None,
+            namespace_execution_id: None,
             started_at_unix_ms: trace.started_at_unix_ms,
             finished_at_unix_ms: Some(trace.finished_at_unix_ms),
             duration_ms: Some(trace.duration_ms),
@@ -177,7 +177,7 @@ impl DaemonObservability {
         trace: CompletedOperationTrace,
         metadata: CommandFinalizationTraceMetadata,
     ) -> Result<(), StoreError> {
-        let trace_id = trace_id_for_command_finalization(&metadata.command_session_id.0);
+        let trace_id = trace_id_for_command_finalization(&metadata.namespace_execution_id.0);
         let error_message = metadata.finalizer_error.map(bound_error);
         let status = if error_message.is_some() {
             "error"
@@ -192,10 +192,8 @@ impl DaemonObservability {
             operation: COMMAND_FINALIZATION_OPERATION.to_owned(),
             request_id: None,
             origin_request_id: Some(bound_id(metadata.origin_request_id)),
-            workspace_id: metadata
-                .workspace_session_id
-                .map(|workspace_session_id| bound_id(workspace_session_id.0)),
-            command_session_id: Some(bound_id(metadata.command_session_id.0)),
+            workspace_id: Some(bound_id(metadata.workspace_session_id.0)),
+            namespace_execution_id: Some(bound_id(metadata.namespace_execution_id.0)),
             started_at_unix_ms: trace.started_at_unix_ms,
             finished_at_unix_ms: Some(trace.finished_at_unix_ms),
             duration_ms: Some(trace.duration_ms),
@@ -684,10 +682,10 @@ fn public_trace_id(trace: &ObservabilityRequestTraceRow) -> String {
         .strip_prefix(ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX)
         .map_or_else(
             || trace.trace_id.clone(),
-            |command_session_id| {
+            |namespace_execution_id| {
                 format!(
                     "async:command_finalization:{:016x}",
-                    stable_hash(command_session_id.as_bytes())
+                    stable_hash(namespace_execution_id.as_bytes())
                 )
             },
         )
@@ -819,12 +817,15 @@ fn trace_id_for_request(request_id: &str) -> String {
     )
 }
 
-fn trace_id_for_command_finalization(command_session_id: &str) -> String {
-    let max_command_session_id_len =
+fn trace_id_for_command_finalization(namespace_execution_id: &str) -> String {
+    let max_namespace_execution_id_len =
         MAX_TRACE_ID_LENGTH - ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX.len();
     format!(
         "{ASYNC_COMMAND_FINALIZATION_TRACE_PREFIX}{}",
-        bound_string_with_hash(command_session_id.to_owned(), max_command_session_id_len)
+        bound_string_with_hash(
+            namespace_execution_id.to_owned(),
+            max_namespace_execution_id_len
+        )
     )
 }
 

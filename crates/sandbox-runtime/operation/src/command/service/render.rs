@@ -1,6 +1,9 @@
-use sandbox_runtime_namespace_execution::{CommandTranscriptRow, CommandTranscriptWindow};
+use sandbox_runtime_namespace_execution::{
+    CommandTranscriptRow, CommandTranscriptWindow, NamespaceExecutionId,
+    NamespaceExecutionTerminalStatus,
+};
 
-use crate::command::{CommandOutput, CommandSessionId, CommandStatus};
+use crate::command::{CommandOutput, CommandStatus};
 
 /// Build the merged `CommandOutput` DTO from a transcript window plus the
 /// status/exit/timing projection. `command_session_id` is `Some` for running
@@ -8,7 +11,7 @@ use crate::command::{CommandOutput, CommandSessionId, CommandStatus};
 #[must_use]
 pub(crate) fn command_output(
     window: CommandTranscriptWindow,
-    command_session_id: Option<CommandSessionId>,
+    command_session_id: Option<NamespaceExecutionId>,
     status: CommandStatus,
     exit_code: Option<i64>,
     wall_time_seconds: f64,
@@ -43,4 +46,13 @@ fn render_transcript_text(rows: &[CommandTranscriptRow]) -> String {
         .map(|row| row.text.as_str())
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+pub(crate) const fn command_status(status: NamespaceExecutionTerminalStatus) -> CommandStatus {
+    match status {
+        NamespaceExecutionTerminalStatus::Ok => CommandStatus::Ok,
+        NamespaceExecutionTerminalStatus::Error => CommandStatus::Error,
+        NamespaceExecutionTerminalStatus::TimedOut => CommandStatus::TimedOut,
+        NamespaceExecutionTerminalStatus::Cancelled => CommandStatus::Cancelled,
+    }
 }

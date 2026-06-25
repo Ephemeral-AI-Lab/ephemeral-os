@@ -34,6 +34,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "phase_4_6_mechanical_namespace_execution_unification",
         sql: V5_SCHEMA_SQL,
     },
+    Migration {
+        version: 6,
+        name: "phase_4_7_trace_namespace_execution_id_rename",
+        sql: V6_SCHEMA_SQL,
+    },
 ];
 
 const SCHEMA_MIGRATIONS_SQL: &str = r#"
@@ -225,6 +230,10 @@ const V5_SCHEMA_SQL: &str = r#"
 DROP INDEX IF EXISTS idx_execution_snapshots_workspace;
 DROP INDEX IF EXISTS idx_execution_snapshots_command;
 DROP TABLE IF EXISTS execution_snapshots;
+"#;
+
+const V6_SCHEMA_SQL: &str = r#"
+ALTER TABLE traces RENAME COLUMN command_session_id TO namespace_execution_id;
 "#;
 
 pub(super) fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {

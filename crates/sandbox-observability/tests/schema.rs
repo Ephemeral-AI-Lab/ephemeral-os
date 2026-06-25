@@ -26,7 +26,7 @@ fn schema_initialization_is_idempotent() -> TestResult {
     let trace_columns = column_names(&connection, "traces")?;
     assert!(trace_columns.contains("origin_request_id"));
     assert!(trace_columns.contains("workspace_id"));
-    assert!(trace_columns.contains("command_session_id"));
+    assert!(trace_columns.contains("namespace_execution_id"));
     let namespace_snapshot_columns = column_names(&connection, "namespace_execution_snapshots")?;
     assert!(namespace_snapshot_columns.contains("namespace_execution_id"));
     assert!(namespace_snapshot_columns.contains("workspace_session_id"));
@@ -50,7 +50,7 @@ fn schema_initialization_is_idempotent() -> TestResult {
     assert!(namespace_trace_columns.contains("namespace_execution_id"));
     assert!(namespace_trace_columns.contains("workspace_session_id"));
     assert!(namespace_trace_columns.contains("exit_code"));
-    assert_eq!(migration_count(&connection)?, 5);
+    assert_eq!(migration_count(&connection)?, 6);
     assert!(paths.database_path().exists());
     assert!(dir
         .path()
@@ -110,7 +110,7 @@ fn schema_migration_checksums_are_recorded() -> TestResult {
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    assert_eq!(checksums.len(), 5);
+    assert_eq!(checksums.len(), 6);
     assert!(
         checksums
             .iter()
@@ -135,7 +135,7 @@ fn inserts_synthetic_trace_and_spans() -> TestResult {
             request_id: Some("request-1".to_owned()),
             origin_request_id: None,
             workspace_id: None,
-            command_session_id: None,
+            namespace_execution_id: None,
             started_at_unix_ms: 1_000,
             finished_at_unix_ms: Some(1_025),
             duration_ms: Some(25.0),
@@ -197,7 +197,7 @@ fn schema_inserts_async_trace_fields_without_adding_async_indexes() -> TestResul
 
     store.insert_trace(
         &TraceRecord {
-            trace_id: "async:command_finalization:command_session_id:cmd_1".to_owned(),
+            trace_id: "async:command_finalization:namespace_execution_id:cmd_1".to_owned(),
             kind: "async".to_owned(),
             status: "ok".to_owned(),
             sandbox_id: "sandbox-1".to_owned(),
@@ -205,7 +205,7 @@ fn schema_inserts_async_trace_fields_without_adding_async_indexes() -> TestResul
             request_id: None,
             origin_request_id: Some("request-1".to_owned()),
             workspace_id: Some("workspace-1".to_owned()),
-            command_session_id: Some("cmd_1".to_owned()),
+            namespace_execution_id: Some("cmd_1".to_owned()),
             started_at_unix_ms: 1_000,
             finished_at_unix_ms: Some(1_010),
             duration_ms: Some(10.0),
@@ -213,8 +213,8 @@ fn schema_inserts_async_trace_fields_without_adding_async_indexes() -> TestResul
             error_message: None,
         },
         &[SpanRecord {
-            span_id: "async:command_finalization:command_session_id:cmd_1:span:0".to_owned(),
-            trace_id: "async:command_finalization:command_session_id:cmd_1".to_owned(),
+            span_id: "async:command_finalization:namespace_execution_id:cmd_1:span:0".to_owned(),
+            trace_id: "async:command_finalization:namespace_execution_id:cmd_1".to_owned(),
             parent_span_id: None,
             method_name: "complete_terminal_command_with_services".to_owned(),
             call_index: 0,
@@ -235,9 +235,9 @@ fn schema_inserts_async_trace_fields_without_adding_async_indexes() -> TestResul
         Option<String>,
         Option<String>,
     ) = connection.query_row(
-        "SELECT request_id, origin_request_id, workspace_id, command_session_id
+        "SELECT request_id, origin_request_id, workspace_id, namespace_execution_id
              FROM traces
-             WHERE trace_id = 'async:command_finalization:command_session_id:cmd_1'",
+             WHERE trace_id = 'async:command_finalization:namespace_execution_id:cmd_1'",
         [],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
     )?;
@@ -540,7 +540,7 @@ fn aggregate_snapshot_read_history_and_traces_are_opt_in() -> TestResult {
             request_id: Some("request-1".to_owned()),
             origin_request_id: None,
             workspace_id: Some("workspace-1".to_owned()),
-            command_session_id: Some("command-session-secret".to_owned()),
+            namespace_execution_id: Some("command-session-secret".to_owned()),
             started_at_unix_ms: now.saturating_sub(50),
             finished_at_unix_ms: Some(now.saturating_sub(25)),
             duration_ms: Some(25.0),

@@ -1,11 +1,11 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use sandbox_runtime_namespace_execution::{
-    ExecutionObserver, NamespaceExecutionEngine, NamespaceExecutionId,
+    NamespaceExecutionEngine, NamespaceExecutionId, NoopObserver,
 };
 
-use crate::command::{CommandConfig, CommandExecution, CommandSessionId};
-use crate::namespace_execution::{NamespaceExecutionLedger, NamespaceExecutionRecord};
+use crate::command::{CommandConfig, CommandExecValue};
+use crate::namespace_execution::{NamespaceExecutionLedger, RuntimeNamespaceExecutionSnapshot};
 use crate::observability::AsyncTraceSink;
 use crate::workspace_crate::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
@@ -22,7 +22,7 @@ const COMMAND_ENGINE_SETUP_TIMEOUT_S: f64 = 30.0;
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
     config: CommandConfig,
-    engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
+    engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
     namespace_execution: Arc<NamespaceExecutionLedger>,
     async_trace_sink: Option<AsyncTraceSink>,
     workspace_lifecycle_admission: Mutex<()>,
@@ -32,41 +32,33 @@ pub(crate) type WorkspaceLifecycleAdmission<'a> = MutexGuard<'a, ()>;
 
 impl CommandOperationService {
     #[must_use]
-    pub fn new(workspace: Arc<WorkspaceSessionService>, config: CommandConfig) -> Self {
-        Self::new_with_async_trace_sink(
-            workspace,
-            config,
-            Arc::new(NamespaceExecutionLedger::new()),
-            None,
-        )
-    }
-
-    #[must_use]
-    pub(crate) fn new_with_async_trace_sink(
+    pub fn new(
         workspace: Arc<WorkspaceSessionService>,
         config: CommandConfig,
-        namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
     ) -> Self {
-        let observer = Arc::clone(&namespace_execution) as Arc<dyn ExecutionObserver>;
         let engine = Arc::new(NamespaceExecutionEngine::new(
-            observer,
+            Arc::new(NoopObserver),
             MAX_ACTIVE_COMMANDS,
             COMMAND_ENGINE_SETUP_TIMEOUT_S,
         ));
-        Self::from_parts(
+        Self::with_engine(
             workspace,
             config,
             engine,
-            namespace_execution,
+            Arc::new(NamespaceExecutionLedger::new()),
             async_trace_sink,
         )
     }
 
-    pub(super) fn from_parts(
+    /// Build a command service over a caller-supplied engine. The test harness
+    /// wires that engine to a local fake launcher; production goes through `new`.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn with_engine(
         workspace: Arc<WorkspaceSessionService>,
         config: CommandConfig,
-        engine: Arc<NamespaceExecutionEngine<CommandExecution>>,
+        engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
         namespace_execution: Arc<NamespaceExecutionLedger>,
         async_trace_sink: Option<AsyncTraceSink>,
     ) -> Self {
@@ -81,33 +73,24 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub(crate) fn shares_workspace_session(
-        &self,
-        workspace: &Arc<WorkspaceSessionService>,
-    ) -> bool {
-        Arc::ptr_eq(&self.workspace, workspace)
-    }
-
-    #[must_use]
-    pub(crate) fn shares_namespace_execution_store(
-        &self,
-        namespace_execution: &Arc<NamespaceExecutionLedger>,
-    ) -> bool {
-        Arc::ptr_eq(&self.namespace_execution, namespace_execution)
-    }
-
-    #[must_use]
-    pub(crate) fn namespace_execution_store(&self) -> &Arc<NamespaceExecutionLedger> {
+    pub fn namespace_execution_store(&self) -> &Arc<NamespaceExecutionLedger> {
         &self.namespace_execution
     }
 
-    #[doc(hidden)]
-    pub fn drain_completed_namespace_executions_for_test(
-        &self,
-        limit: usize,
-    ) -> Result<Vec<NamespaceExecutionRecord>, String> {
-        self.namespace_execution
-            .drain_completed_namespace_executions(limit)
+    #[must_use]
+    pub fn active_namespace_executions(&self) -> Vec<RuntimeNamespaceExecutionSnapshot> {
+        let mut snapshots = self.engine.live_values(|command| {
+            Some(RuntimeNamespaceExecutionSnapshot {
+                namespace_execution_id: command.exec.id().clone(),
+                workspace_session_id: command.workspace_session_id.clone(),
+                operation_name: command.operation_name.to_owned(),
+            })
+        });
+        snapshots.sort_by(|left, right| {
+            left.namespace_execution_id
+                .cmp(&right.namespace_execution_id)
+        });
+        snapshots
     }
 
     #[must_use]
@@ -116,22 +99,13 @@ impl CommandOperationService {
     }
 
     #[must_use]
-    pub(crate) fn engine(&self) -> &Arc<NamespaceExecutionEngine<CommandExecution>> {
+    pub(crate) fn engine(&self) -> &Arc<NamespaceExecutionEngine<CommandExecValue>> {
         &self.engine
     }
 
     #[must_use]
     pub(crate) fn async_trace_sink(&self) -> Option<AsyncTraceSink> {
         self.async_trace_sink.clone()
-    }
-
-    #[doc(hidden)]
-    pub fn namespace_execution_id_for_command_for_test(
-        &self,
-        command_session_id: &CommandSessionId,
-    ) -> Option<NamespaceExecutionId> {
-        let id = execution_id(command_session_id);
-        (self.engine.is_live(&id) || self.engine.is_completed(&id)).then_some(id)
     }
 
     pub(crate) fn begin_workspace_lifecycle_admission(&self) -> WorkspaceLifecycleAdmission<'_> {
@@ -143,12 +117,12 @@ impl CommandOperationService {
     pub(crate) fn with_workspace_destroy_admission<R>(
         &self,
         workspace_session_id: &WorkspaceSessionId,
-        dispatch: impl FnOnce(&[CommandSessionId]) -> R,
+        dispatch: impl FnOnce(&[NamespaceExecutionId]) -> R,
     ) -> R {
         let _lifecycle_admission = self.begin_workspace_lifecycle_admission();
         let mut active_command_session_ids = self.engine.live_values(|command| {
-            (command.workspace_session_id() == workspace_session_id)
-                .then(|| command_session_id(command.id()))
+            (command.workspace_session_id == *workspace_session_id)
+                .then(|| command.exec.id().clone())
         });
         active_command_session_ids.sort();
         dispatch(&active_command_session_ids)
@@ -181,12 +155,4 @@ impl CommandOperationService {
     pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
-}
-
-pub(crate) fn execution_id(command_session_id: &CommandSessionId) -> NamespaceExecutionId {
-    NamespaceExecutionId(command_session_id.0.clone())
-}
-
-pub(crate) fn command_session_id(id: &NamespaceExecutionId) -> CommandSessionId {
-    CommandSessionId(id.0.clone())
 }

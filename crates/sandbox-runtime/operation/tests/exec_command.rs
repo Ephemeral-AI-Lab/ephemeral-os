@@ -7,12 +7,12 @@ use std::time::Duration;
 
 use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::command::{
-    CommandServiceError, CommandSessionId, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
+    CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
 use sandbox_runtime::{
-    AsyncTraceSink, LayerStackService, NamespaceExecutionLedger, NamespaceExecutionTerminalStatus,
-    SandboxRuntimeOperations,
+    AsyncTraceSink, LayerStackService, NamespaceExecutionId, NamespaceExecutionLedger,
+    NamespaceExecutionTerminalStatus, SandboxRuntimeOperations,
 };
 use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild,
@@ -23,8 +23,7 @@ use serde_json::json;
 
 use support::{
     build_services, build_services_with_launch_driver,
-    build_services_with_launch_driver_and_async_trace_sink,
-    build_services_with_launch_driver_namespace_store, create_request, success_exit,
+    build_services_with_launch_driver_and_async_trace_sink, create_request, success_exit,
     workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
     FakeLaunchDriver, FakeLauncher, FakeRunnerScript, FakeWorkspaceService, ScriptedCommandExit,
     ScriptedCommandYield, TestServices,
@@ -117,14 +116,11 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
     assert_eq!(output.status, CommandStatus::Running);
     assert_eq!(fake.create_requests().len(), create_count_before_exec);
     assert!(fake.destroy_calls().is_empty());
-    let lines = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id: command_session_id.clone(),
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect("session command can be read");
+    let lines = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id: command_session_id.clone(),
+        start_offset: Some(0),
+        limit: Some(10),
+    });
     assert_eq!(lines.command_session_id, Some(command_session_id));
     assert_eq!(lines.status, CommandStatus::Running);
 }
@@ -242,14 +238,11 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
     assert_eq!(output.status, CommandStatus::Ok);
     assert_eq!(output.output, "kept");
 
-    let lines = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: None,
-            limit: None,
-        })
-        .expect("completed command output remains readable");
+    let lines = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: None,
+        limit: None,
+    });
     assert_eq!(lines.output, "kept");
 }
 
@@ -304,14 +297,11 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
         fake.destroy_calls(),
         vec![WorkspaceSessionId("one-shot-session".to_owned())]
     );
-    let lines = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect("completed one-shot command can be read");
+    let lines = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: Some(0),
+        limit: Some(10),
+    });
     assert_eq!(lines.status, CommandStatus::Ok);
 }
 
@@ -326,7 +316,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("namespace_execution_1".to_owned()),
+        command_session_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -377,7 +367,7 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("namespace_execution_1".to_owned()),
+        command_session_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
         error: "spawn failed".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -411,7 +401,7 @@ fn exec_command_spawn_failure_completes_namespace_execution_error() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
-        command_session_id: CommandSessionId("namespace_execution_1".to_owned()),
+        command_session_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
         error: "spawn failed at /tmp/secret/transcript.log".to_owned(),
     });
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -430,7 +420,8 @@ fn exec_command_spawn_failure_completes_namespace_execution_error() {
 
     let completed = env
         .command
-        .drain_completed_namespace_executions_for_test(10)
+        .namespace_execution_store()
+        .drain_completed_namespace_executions(10)
         .expect("namespace completed records drain");
     assert_eq!(completed.len(), 1);
     assert_eq!(completed[0].workspace_session_id, workspace_session_id);
@@ -450,52 +441,6 @@ fn exec_command_spawn_failure_completes_namespace_execution_error() {
     // The error_message/error_kind fields must not leak sensitive spawn details.
     assert!(!record_debug.contains("/tmp/secret"));
     assert!(!record_debug.contains("transcript.log"));
-}
-
-#[test]
-fn namespace_store_mutation_failure_does_not_fail_command_or_drop_command_bridge_id() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let namespace_execution = Arc::new(NamespaceExecutionLedger::new());
-    namespace_execution.set_force_mutation_errors_for_test(true);
-    let launch_driver = Arc::new(FakeLaunchDriver::new());
-    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
-    let env = build_services_with_launch_driver_namespace_store(
-        Arc::clone(&fake),
-        launch_driver,
-        Arc::clone(&namespace_execution),
-    );
-    let workspace_session_id = create_session(
-        &fake,
-        &env,
-        "workspace-session",
-        PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
-    );
-
-    let output = env
-        .command
-        .exec_command(exec_input(workspace_session_id), None)
-        .expect("command starts despite namespace store mutation failure");
-    let command_session_id = output
-        .command_session_id
-        .expect("running command has command id");
-    let namespace_execution_id = env
-        .command
-        .namespace_execution_id_for_command_for_test(&command_session_id)
-        .expect("command record keeps allocated namespace id");
-
-    assert_eq!(namespace_execution_id.0, "namespace_execution_1");
-    let snapshot = SandboxRuntimeOperations::new(
-        Arc::clone(&env.command),
-        Arc::clone(&env.workspace),
-        layerstack_service().expect("layerstack service"),
-    )
-    .observability_snapshot();
-    assert!(snapshot.active_namespace_executions.is_empty());
-    assert!(snapshot
-        .partial_errors
-        .iter()
-        .any(|error| error.contains("begin_namespace_execution")));
 }
 
 #[test]
@@ -536,7 +481,8 @@ fn namespace_execution_terminal_status_maps_command_result_without_output_text()
 
         let completed = env
             .command
-            .drain_completed_namespace_executions_for_test(10)
+            .namespace_execution_store()
+            .drain_completed_namespace_executions(10)
             .expect("namespace completed records drain");
         assert_eq!(completed.len(), 1);
         let record = &completed[0];
@@ -587,7 +533,8 @@ fn namespace_execution_request_id_comes_from_runtime_request_not_runner_request(
     assert_eq!(response["status"], "ok");
     let completed = env
         .command
-        .drain_completed_namespace_executions_for_test(10)
+        .namespace_execution_store()
+        .drain_completed_namespace_executions(10)
         .expect("namespace completed records drain");
     assert_eq!(completed.len(), 1);
     assert_eq!(
@@ -615,8 +562,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
     let engine = Arc::new(
         sandbox_runtime_namespace_execution::NamespaceExecutionEngine::with_launcher(
             Box::new(blocking_launcher),
-            Arc::clone(&namespace_execution)
-                as Arc<dyn sandbox_runtime_namespace_execution::ExecutionObserver>,
+            Arc::new(sandbox_runtime_namespace_execution::NoopObserver),
             256,
             30.0,
         ),
@@ -632,7 +578,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         )),
     };
     let command = Arc::new(
-        sandbox_runtime::command::test_support::command_service_from_engine(
+        sandbox_runtime::command::CommandOperationService::with_engine(
             Arc::clone(&workspace),
             config,
             engine,
@@ -686,7 +632,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         .expect("exec command succeeds");
     assert_eq!(
         exec_output.command_session_id,
-        Some(CommandSessionId("namespace_execution_1".to_owned()))
+        Some(NamespaceExecutionId("namespace_execution_1".to_owned()))
     );
 
     let destroy_response = destroy_handle
@@ -724,7 +670,7 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
 
     assert_eq!(
         output.command_session_id,
-        Some(CommandSessionId("namespace_execution_1".to_owned()))
+        Some(NamespaceExecutionId("namespace_execution_1".to_owned()))
     );
     let requests = launch_driver.recorded_requests();
     assert_eq!(requests.len(), 1);
@@ -868,7 +814,7 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
     assert!(matches!(
         error,
         CommandServiceError::CommandIo { command_session_id, .. }
-            if command_session_id == CommandSessionId("namespace_execution_1".to_owned())
+            if command_session_id == NamespaceExecutionId("namespace_execution_1".to_owned())
     ));
     assert!(launch_driver.recorded_requests().is_empty());
     assert!(fake.destroy_calls().is_empty());
@@ -1123,14 +1069,11 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
     );
     assert_eq!(output.command_session_id, Some(command_session_id.clone()));
 
-    let lines = env
-        .command
-        .read_command_lines(ReadCommandLinesInput {
-            command_session_id,
-            start_offset: Some(0),
-            limit: Some(10),
-        })
-        .expect("completed command can still be read");
+    let lines = env.command.read_command_lines(ReadCommandLinesInput {
+        command_session_id,
+        start_offset: Some(0),
+        limit: Some(10),
+    });
     assert_eq!(lines.status, CommandStatus::Ok);
 }
 
