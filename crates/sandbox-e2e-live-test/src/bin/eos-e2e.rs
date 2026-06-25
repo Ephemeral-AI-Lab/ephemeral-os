@@ -15,9 +15,11 @@ use sandbox_e2e_live_test::config::{
 };
 use sandbox_e2e_live_test::{gateway, report};
 
-/// The SOLE stage-aware line in the whole crate. Stage 2 flips it to the full
-/// suite (drop `--test manager`) and changes nothing else here (§9).
-const STAGE1_DEFAULT_TARGET: &[&str] = &["--test", "manager"];
+/// The SOLE stage-aware line in the whole crate. Stage 2 is flipped on: the
+/// orchestrator now runs both the manager lifecycle suite and the runtime
+/// oneshot matrix under one process so the observability poller produces
+/// cgroup/perf evidence for the runtime sandboxes (§9).
+const STAGE1_DEFAULT_TARGET: &[&str] = &["--test", "manager", "--test", "runtime"];
 
 const RUN_ROOT_ENV: &str = "EOS_E2E_RUN_ROOT";
 const RUN_MANIFEST_FILE: &str = "run-manifest.json";
@@ -280,9 +282,11 @@ fn run_pipeline(args: &RunArgs) -> ExitCode {
 /// need a gateway socket, so `eos-e2e preflight` surfaces these before demanding
 /// one.
 fn preflight_environment(image: &str) -> Result<(), String> {
-    if std::env::consts::OS != "linux" {
+    if std::env::consts::OS != "linux" && !non_linux_host_opt_in() {
         return Err(format!(
-            "EphemeralOS E2E is Linux+Docker only; current OS={}",
+            "EphemeralOS E2E is Linux+Docker only; current OS={}. Set \
+             EOS_E2E_ALLOW_NON_LINUX=1 to validate against a Linux Docker engine \
+             (e.g. Docker Desktop's linux VM) from a non-Linux host.",
             std::env::consts::OS
         ));
     }
@@ -295,6 +299,18 @@ fn preflight_environment(image: &str) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+/// Explicit, reviewable opt-in for the macOS/Windows-host case (handoff §1/§6):
+/// the orchestrator binary runs on a non-Linux host while driving a Linux Docker
+/// engine (Docker Desktop's linux VM), so sandboxes are still real Linux
+/// containers. The default still refuses non-Linux; only a truthy
+/// `EOS_E2E_ALLOW_NON_LINUX` relaxes the gate.
+fn non_linux_host_opt_in() -> bool {
+    matches!(
+        std::env::var("EOS_E2E_ALLOW_NON_LINUX").ok().as_deref(),
+        Some("1") | Some("true") | Some("yes")
+    )
 }
 
 /// Preflight check 4 (§3.2.1): the one black-box `create_sandbox` that trips the

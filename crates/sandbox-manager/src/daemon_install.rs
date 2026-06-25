@@ -27,7 +27,11 @@ pub trait SandboxDaemonInstaller: Send + Sync {
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
 
-    fn check_daemon(&self, endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError>;
+    fn check_daemon(
+        &self,
+        record: &SandboxRecord,
+        endpoint: &SandboxDaemonEndpoint,
+    ) -> Result<(), ManagerError>;
 }
 
 #[derive(Debug, Clone)]
@@ -145,7 +149,11 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
         Ok(())
     }
 
-    fn check_daemon(&self, endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
+    fn check_daemon(
+        &self,
+        _record: &SandboxRecord,
+        endpoint: &SandboxDaemonEndpoint,
+    ) -> Result<(), ManagerError> {
         let deadline = Instant::now() + DAEMON_READY_TIMEOUT;
         loop {
             if TcpStream::connect((endpoint.host.as_str(), endpoint.port)).is_ok() {

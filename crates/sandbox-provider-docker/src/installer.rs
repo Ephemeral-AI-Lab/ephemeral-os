@@ -8,10 +8,10 @@ use std::time::{Duration, Instant};
 
 use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_manager::{ManagerError, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxRecord};
-use sandbox_protocol::DAEMON_AUTH_FIELD;
 
 use crate::archive::build_install_archive;
 use crate::engine::{DockerEngine, DockerError};
+use crate::readiness::{readiness_request_line, validate_readiness_response};
 
 const ARCHIVE_ROOT: &str = "/";
 const STOP_TIMEOUT_SECS: i64 = 5;
@@ -91,11 +91,17 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
             .map_err(install_error)
     }
 
-    fn check_daemon(&self, endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
+    fn check_daemon(
+        &self,
+        record: &SandboxRecord,
+        endpoint: &SandboxDaemonEndpoint,
+    ) -> Result<(), ManagerError> {
         let timeout = Duration::from_millis(self.engine.config().readiness_timeout_ms);
-        poll_until_ready(endpoint, timeout).map_err(|error| {
+        let sandbox_id = record.id.as_str();
+        poll_until_ready(endpoint, sandbox_id, timeout).map_err(|error| {
+            let context = self.engine.capture_failure_context(sandbox_id.to_owned());
             daemon_install_failed(format!(
-                "daemon at {}:{} did not become ready within {} ms: {error}",
+                "daemon at {}:{} for {sandbox_id} did not become ready within {} ms: {error}; container {context}",
                 endpoint.host,
                 endpoint.port,
                 timeout.as_millis()
@@ -104,14 +110,24 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
     }
 }
 
-/// Poll the published port with an authenticated request until any framed JSON
-/// response arrives (a bare TCP connect through Docker's proxy is not a reliable
-/// readiness signal), or the deadline elapses.
-fn poll_until_ready(endpoint: &SandboxDaemonEndpoint, timeout: Duration) -> Result<(), String> {
-    let request_line = readiness_request_line(&endpoint.auth_token);
+/// Poll the published port with an authenticated, sandbox-scoped readiness
+/// request until the daemon confirms it is ready for this sandbox (a bare TCP
+/// connect through Docker's proxy is not a reliable readiness signal), or the
+/// deadline elapses.
+fn poll_until_ready(
+    endpoint: &SandboxDaemonEndpoint,
+    sandbox_id: &str,
+    timeout: Duration,
+) -> Result<(), String> {
+    let request_line = readiness_request_line(sandbox_id, &endpoint.auth_token);
     let deadline = Instant::now() + timeout;
     loop {
-        let error = match authenticated_exchange(&endpoint.host, endpoint.port, &request_line) {
+        let error = match authenticated_exchange(
+            &endpoint.host,
+            endpoint.port,
+            &request_line,
+            sandbox_id,
+        ) {
             Ok(()) => return Ok(()),
             Err(error) => error,
         };
@@ -122,7 +138,12 @@ fn poll_until_ready(endpoint: &SandboxDaemonEndpoint, timeout: Duration) -> Resu
     }
 }
 
-fn authenticated_exchange(host: &str, port: u16, request_line: &[u8]) -> Result<(), String> {
+fn authenticated_exchange(
+    host: &str,
+    port: u16,
+    request_line: &[u8],
+    expected_sandbox_id: &str,
+) -> Result<(), String> {
     let mut stream =
         TcpStream::connect((host, port)).map_err(|error| format!("connect: {error}"))?;
     stream.set_read_timeout(Some(READINESS_IO_TIMEOUT)).ok();
@@ -136,25 +157,7 @@ fn authenticated_exchange(host: &str, port: u16, request_line: &[u8]) -> Result<
     reader
         .read_until(b'\n', &mut response)
         .map_err(|error| format!("read: {error}"))?;
-    if response.is_empty() {
-        return Err("daemon returned an empty response".to_owned());
-    }
-    serde_json::from_slice::<serde_json::Value>(&response)
-        .map(|_| ())
-        .map_err(|error| format!("decode: {error}"))
-}
-
-fn readiness_request_line(auth_token: &str) -> Vec<u8> {
-    let mut request = serde_json::json!({
-        "op": "eos_readiness_probe",
-        "request_id": "docker-readiness",
-        "scope": { "kind": "system" },
-        "args": {},
-    });
-    request[DAEMON_AUTH_FIELD] = serde_json::Value::String(auth_token.to_owned());
-    let mut line = serde_json::to_vec(&request).unwrap_or_default();
-    line.push(b'\n');
-    line
+    validate_readiness_response(&response, expected_sandbox_id)
 }
 
 fn install_error(error: DockerError) -> ManagerError {

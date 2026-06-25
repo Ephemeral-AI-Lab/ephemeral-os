@@ -61,21 +61,27 @@ the poller and produce no `observability.json`.
 ```sh
 export PATH="$PWD/bin:$PATH"            # repo wrappers: sandbox-cli reads the gateway token file
 
-# (1) Package the Linux daemon artifact the provider uploads into each container.
-cargo run -p xtask -- package --builder cross    # -> dist/sandbox-daemon-linux-amd64
+# (1) Package the Linux daemon artifact on this host. Do not build a custom
+#     sandbox image/container: create_sandbox uses the requested base image and
+#     the Docker provider uploads this musl binary into each stopped sandbox
+#     container before starting it.
+cargo run -p xtask -- package --target x86_64-unknown-linux-musl    # -> dist/sandbox-daemon-linux-amd64
+#     For a linux/arm64 Docker engine, build the matching artifact instead:
+#     cargo run -p xtask -- package --target aarch64-unknown-linux-musl
 #     If you only have a linux/amd64 daemon on an arm64 host, set
 #     manager.docker.platform: linux/amd64 in config/prd.yml.
 
 # (2) Pre-pull the base image (v1 does not auto-pull).
-docker pull ubuntu:22.04
+docker pull python:3.11-bookworm
 
 # (3) Build the gateway + cli + orchestrator.
 cargo build -p sandbox-gateway -p sandbox-e2e-live-test
 ```
 
 Confirm `config/prd.yml` `manager.docker` paths resolve from the gateway's
-working directory (they are repo-relative by default: `dist/sandbox-daemon-linux-amd64`,
-`config/prd.yml`). Container paths (`/eos/...`, `/workspace`) must stay absolute.
+working directory and point at the artifact you just built, for example
+`dist/sandbox-daemon-linux-amd64` or `dist/sandbox-daemon-linux-arm64`.
+Container paths (`/eos/...`, `/workspace`) must stay absolute.
 
 ## 4. Start the docker-wired gateway
 
@@ -95,14 +101,14 @@ full `UNCONFIGURED_GATEWAY_MESSAGE`).
 
 ```sh
 # Preflight (Linux + Docker reachable + image present + one real create/destroy probe).
-eos-e2e preflight --gateway-socket 127.0.0.1:7878 --image ubuntu:22.04
+eos-e2e preflight --gateway-socket 127.0.0.1:7878 --image python:3.11-bookworm
 
 # Full run: manager lifecycle + runtime oneshot matrix. Keep artifacts for analysis.
-eos-e2e --gateway-socket 127.0.0.1:7878 --image ubuntu:22.04 \
+eos-e2e --gateway-socket 127.0.0.1:7878 --image python:3.11-bookworm \
         --run-id docker-live-1 --keep-artifacts
 
 # Narrow to just the oneshot exec matrix while iterating:
-eos-e2e --gateway-socket 127.0.0.1:7878 --image ubuntu:22.04 --keep-artifacts \
+eos-e2e --gateway-socket 127.0.0.1:7878 --image python:3.11-bookworm --keep-artifacts \
         --test-names \
           command_exec_command_oneshot_success_and_output \
           command_exec_command_oneshot_failure_and_validation \
@@ -184,12 +190,13 @@ time (`timing.runner.gateway_attach_ms`), and `observability.poll_cycles` /
 
 ## 10. Likely failure modes to watch
 
-- **`nftables` absent in `ubuntu:22.04`** (spec §9.8): isolated-network workspaces
+- **`nftables` absent in `python:3.11-bookworm`** (spec §9.8): isolated-network workspaces
   fail at `nft`. One-shot `exec_command` defaults to a Shared-network workspace, so
   the matrix should be unaffected; if a case fails at network setup, confirm the
   workspace network mode or bake `nftables` into the image.
-- **`python3` absent**: the matrix deliberately uses portable shell
-  (`head -c … /dev/zero | wc -c`, shell loops), so no Python is required.
+- **Python is available but not load-bearing**: the matrix deliberately keeps its
+  core assertions on portable shell (`head -c ... /dev/zero | wc -c`, shell loops)
+  so the daemon/runtime lane is not coupled to Python package behavior.
 - **Readiness timeout**: if `check_daemon` times out, raise
   `manager.docker.readiness_timeout_ms`; the installer captures container
   `State`/logs into the `ManagerError` for diagnosis (`installer.rs` →

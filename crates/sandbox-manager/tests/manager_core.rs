@@ -47,6 +47,7 @@ impl SandboxRuntime for FakeRuntime {
 struct FakeInstaller {
     started: Mutex<Vec<String>>,
     stopped: Mutex<Vec<String>>,
+    checked: Mutex<Vec<String>>,
     fail_install: bool,
     fail_start: bool,
     fail_check: bool,
@@ -110,7 +111,15 @@ impl SandboxDaemonInstaller for FakeInstaller {
         Ok(())
     }
 
-    fn check_daemon(&self, _endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
+    fn check_daemon(
+        &self,
+        record: &SandboxRecord,
+        _endpoint: &SandboxDaemonEndpoint,
+    ) -> Result<(), ManagerError> {
+        self.checked
+            .lock()
+            .expect("checked lock")
+            .push(record.id.as_str().to_owned());
         if self.fail_check {
             return Err(ManagerError::DaemonInstallFailed {
                 message: "check stage failed".to_owned(),
@@ -454,6 +463,11 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
         ["container-1"]
     );
     assert_eq!(
+        installer.checked.lock().expect("checked lock").as_slice(),
+        ["container-1"],
+        "readiness check must receive the sandbox record"
+    );
+    assert_eq!(
         installer.stopped.lock().expect("stopped lock").as_slice(),
         ["container-1"]
     );
@@ -543,6 +557,11 @@ fn create_sandbox_rolls_back_runtime_and_store_when_check_fails() {
         installer.started.lock().expect("started lock").as_slice(),
         ["container-1"],
         "start ran before the failing readiness check"
+    );
+    assert_eq!(
+        installer.checked.lock().expect("checked lock").as_slice(),
+        ["container-1"],
+        "readiness check ran against the started record before failing"
     );
     assert_eq!(
         installer.stopped.lock().expect("stopped lock").as_slice(),

@@ -45,7 +45,7 @@ fn memory_command_completes_with_baseline() {
     let baseline = exec(h, &sb, &["pwd"]);
     assert::ok(baseline.response());
 
-    // Portable 32 MiB pass (ubuntu:22.04 has no python3 by default); the output
+    // Portable 32 MiB pass; the output
     // byte count proves completion while the report reads memory_current_bytes.
     let rec = exec(h, &sb, &["sh -c 'head -c 33554432 /dev/zero | wc -c'"]);
     let resp = rec.response();

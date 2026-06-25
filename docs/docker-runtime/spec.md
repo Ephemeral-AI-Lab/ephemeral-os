@@ -12,7 +12,8 @@ provider) is portable. Every sandbox is a Linux Docker container, and the
 `sandbox-daemon` plus namespace/overlay/cgroup runtime are Linux binaries that
 run inside that container.
 
-**Image model:** use the requested normal Docker image, such as `ubuntu:22.04`.
+**Image model:** use the requested normal Docker image. The live verification
+target for this spec is `python:3.11-bookworm`.
 There is no required pre-built custom runtime image in v1. The Docker provider
 creates a stopped container from the requested image, then `install_daemon`
 uploads the Linux `sandbox-daemon` artifact and config into that container during
@@ -29,7 +30,7 @@ Anchors (§12) were gathered against this working branch
 
 ## 1. Context & Problem
 
-`sandbox-cli manager create_sandbox --image ubuntu:22.04 --workspace-root <abs>`
+`sandbox-cli manager create_sandbox --image python:3.11-bookworm --workspace-root <abs>`
 fails today with `sandbox runtime is not configured`. The gateway hardcodes
 `UnconfiguredRuntime` + `UnconfiguredDaemonInstaller` in `default_manager_services()`
 (`crates/sandbox-gateway/src/gateway/main.rs:94-101`), and **no production
@@ -148,7 +149,7 @@ Multiple sandboxes are independent containers owned by one gateway instance:
                               Linux containers
 ┌──────────────────────────────┐  ┌──────────────────────────────┐
 │ container eos-sb-001          │  │ container eos-sb-002          │
-│ image: ubuntu:22.04           │  │ image: ubuntu:22.04           │
+│ image: python:3.11-bookworm   │  │ image: python:3.11-bookworm   │
 │ workspace: /workspace         │  │ workspace: /workspace         │
 │ sandbox-daemon uploaded       │  │ sandbox-daemon uploaded       │
 │ daemon TCP: 0.0.0.0:7000      │  │ daemon TCP: 0.0.0.0:7000      │
@@ -158,7 +159,7 @@ Multiple sandboxes are independent containers owned by one gateway instance:
 
 ┌──────────────────────────────┐
 │ container eos-sb-003          │
-│ image: ubuntu:22.04           │
+│ image: python:3.11-bookworm   │
 │ workspace: /workspace         │
 │ sandbox-daemon uploaded       │
 │ daemon TCP: 0.0.0.0:7000      │
@@ -173,7 +174,7 @@ Per-sandbox creation flow:
 manager create_sandbox
   -> Docker create stopped container from requested normal image
   -> store record as Creating
-  -> upload sandbox-daemon + config into container
+  -> upload prebuilt musl sandbox-daemon + config into container
   -> Docker start container
   -> inspect Docker-assigned host port
   -> authenticated TCP readiness check
@@ -389,8 +390,8 @@ installer starts it so the daemon is reachable via a Docker-published TCP port.
 
 - **`DockerSandboxRuntime: SandboxRuntime`**
   - `create_sandbox`: gen `id` + `auth_token` (uuid); create a **stopped**
-    container from the requested normal base image (`request.image`, for example
-    `ubuntu:22.04`) with **Binds**:
+    container from the requested normal base image (`request.image`; live tests
+    use `python:3.11-bookworm`) with **Binds**:
     `request.workspace_root` mounted to `container_workspace_root` (default
     `/workspace`); **PortBindings**
     `7000/tcp → 127.0.0.1:0`; **`Privileged:true, CgroupnsMode:"private",
@@ -401,7 +402,8 @@ installer starts it so the daemon is reachable via a Docker-published TCP port.
     --workspace-root <container-workspace> --socket <container-runtime.sock> \
     --pid-file <container-runtime.pid> --tcp-host 0.0.0.0 --tcp-port 7000 \
     --auth-token <tok> --sandbox-id <id>`. Return `id` = container name
-    (`eos-<uuid>`). Do **not** install daemon assets or start the container here.
+    (`eos-<uuid>`). Do **not** build a custom image, install daemon assets, or
+    start the container here.
   - `destroy_sandbox`: `remove_container(force)`.
   - `recover_sandboxes`: list containers with `eos.gateway_instance_id=<this gateway>`,
     inspect labels and published ports, and return `SandboxRecord`s with TCP
@@ -468,10 +470,12 @@ Workspace wiring: root `Cargo.toml` `members` += crate; `[workspace.dependencies
 Harness is **attach-only** (`src/bin/eos-e2e.rs`) — it connects to an externally
 started, docker-wired gateway; no harness logic change beyond the Phase 2 TCP probe.
 
-Prereqs: (1) `cargo run -p xtask -- package --builder cross` →
-`dist/sandbox-daemon-linux-amd64` (or a matching Linux daemon artifact for the
-configured Docker `platform`); (2) pre-pull `ubuntu:22.04` on the Docker host;
-(3) `start-sandbox-gateway --backend docker --config-yaml config/prd.yml`.
+Prereqs: (1) run `cargo run -p xtask -- package --target <linux-musl-target>` on
+the host before creating sandboxes, producing `dist/sandbox-daemon-linux-amd64`
+or `dist/sandbox-daemon-linux-arm64`; do not build a custom sandbox image, because
+the Docker provider uploads that host musl binary into each stopped sandbox
+container during `create_sandbox`; (2) pre-pull `python:3.11-bookworm` on the Docker
+host; (3) `start-sandbox-gateway --backend docker --config-yaml config/prd.yml`.
 
 Order: (1) manual black-box smoke (create → inspect → `exec_command pwd` → destroy);
 (2) manager lifecycle suite (`tests/manager/lifecycle/`); (3) runtime smoke
@@ -597,7 +601,7 @@ mounting on a virtiofs mountpoint + umount latency — validate, don't assume.
    flags on Windows.
 7. **Container privileges** — without `Privileged + CgroupnsMode:private + Init` the
    daemon's overlay/namespace/cgroup-v2 work fails or cgroup samples degrade.
-8. **`nftables` absent in `ubuntu:22.04`** — isolated-network workspaces fail at
+8. **`nftables` absent in `python:3.11-bookworm`** — isolated-network workspaces fail at
    `nft`; install it in the image or default the workspace network to Shared.
    Validate during the runtime smoke.
 9. **Auth token in a Docker label** is readable by anyone with Docker access (already
@@ -629,7 +633,7 @@ cargo check -p sandbox-daemon -p sandbox-runtime --target x86_64-unknown-linux-g
 # Phase 6 (Linux/macOS/Windows host + Linux container runtime)
 cargo run -p xtask -- package --builder cross
 start-sandbox-gateway --backend docker --config-yaml config/prd.yml
-sandbox-cli manager create_sandbox --image ubuntu:22.04 --workspace-root "$PWD/.eos-ws"
+sandbox-cli manager create_sandbox --image python:3.11-bookworm --workspace-root "$PWD/.eos-ws"
 sandbox-cli manager inspect_sandbox --sandbox-id <id>
 sandbox-cli runtime --sandbox-id <id> exec_command pwd
 sandbox-cli manager destroy_sandbox --sandbox-id <id>

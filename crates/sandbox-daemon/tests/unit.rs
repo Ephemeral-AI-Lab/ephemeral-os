@@ -42,7 +42,10 @@ mod connection_tests {
 }
 
 mod dispatch_tests {
-    pub(crate) use crate::server::dispatch::{decode_request, validate_daemon_scope};
+    pub(crate) use crate::server::dispatch::{
+        decode_request, sandbox_daemon_ready_response, strip_tcp_auth, validate_daemon_scope,
+    };
+    pub(crate) use crate::server::SandboxDaemonError;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/dispatch.rs"

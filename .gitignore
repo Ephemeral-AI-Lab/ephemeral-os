@@ -23,6 +23,7 @@
 # Rust build output
 target/
 **/target/
+target-linux-container-gnu/
 
 # Generated reports, caches, and local tool state
 /crates/e2e-test/test-reports/

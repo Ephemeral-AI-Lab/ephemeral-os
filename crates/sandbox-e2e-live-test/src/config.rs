@@ -16,7 +16,7 @@ const RUN_CLOCK_ENV: &str = "EOS_E2E_RUN_CLOCK";
 const RUN_SALT_ENV: &str = "EOS_E2E_RUN_SALT";
 const GATEWAY_SOCKET_ENV: &str = "SANDBOX_GATEWAY_SOCKET";
 
-const DEFAULT_IMAGE: &str = "ubuntu:24.04";
+const DEFAULT_IMAGE: &str = "python:3.11-bookworm";
 const DEFAULT_CARGO_PROFILE: &str = "package-fast";
 const DEFAULT_CLI_TIMEOUT_SECS: f64 = 30.0;
 const DEFAULT_GATEWAY_READY_TIMEOUT_SECS: f64 = 5.0;
@@ -284,7 +284,7 @@ impl RunConfig {
     }
 }
 
-/// Resolve the sandbox image (precedence `--image` > default `ubuntu:24.04`).
+/// Resolve the sandbox image (precedence `--image` > default `python:3.11-bookworm`).
 /// Needs no gateway socket, so preflight checks 1–3 can run without one.
 pub fn resolve_image(args: &RunArgs) -> anyhow::Result<String> {
     let image = args

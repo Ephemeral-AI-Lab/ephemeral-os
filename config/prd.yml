@@ -45,9 +45,9 @@ runner:
 # this root section. Host paths resolve against the gateway's working directory.
 manager:
   docker:
-    # Linux sandbox-daemon artifact uploaded into each container
-    # (`cargo run -p xtask -- package --builder cross`).
-    daemon_binary_path: dist/sandbox-daemon-linux-amd64
+    # Host-built Linux musl sandbox-daemon artifact uploaded into each sandbox
+    # container. create_sandbox does not build a custom container image.
+    daemon_binary_path: dist/sandbox-daemon-linux-arm64
     # Daemon config YAML uploaded into each container.
     daemon_config_yaml_path: config/prd.yml
     container_daemon_binary_path: /eos/bin/sandbox-daemon

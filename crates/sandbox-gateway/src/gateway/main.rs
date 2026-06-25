@@ -222,7 +222,11 @@ impl SandboxDaemonInstaller for UnconfiguredDaemonInstaller {
         Ok(())
     }
 
-    fn check_daemon(&self, _endpoint: &SandboxDaemonEndpoint) -> Result<(), ManagerError> {
+    fn check_daemon(
+        &self,
+        _record: &SandboxRecord,
+        _endpoint: &SandboxDaemonEndpoint,
+    ) -> Result<(), ManagerError> {
         Err(ManagerError::DaemonInstallFailed {
             message: "sandbox daemon installer is not configured".to_owned(),
         })

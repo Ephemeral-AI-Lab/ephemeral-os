@@ -103,7 +103,7 @@ fn provision_daemon(
 ) -> Result<SandboxDaemonEndpoint, ManagerError> {
     services.daemon_installer.install_daemon(record)?;
     let endpoint = services.daemon_installer.start_daemon(record)?;
-    services.daemon_installer.check_daemon(&endpoint)?;
+    services.daemon_installer.check_daemon(record, &endpoint)?;
     Ok(endpoint)
 }
 
