@@ -53,6 +53,8 @@ mod test_fixture;
 
 #[path = "unit/model.rs"]
 mod model_tests;
+#[path = "unit/observe.rs"]
+mod observe_tests;
 #[path = "unit/publish.rs"]
 mod publish_tests;
 #[path = "unit/service.rs"]

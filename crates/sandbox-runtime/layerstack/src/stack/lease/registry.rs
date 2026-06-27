@@ -83,6 +83,13 @@ impl LeaseRegistry {
     pub(in crate::stack) fn active_count(&self) -> usize {
         self.leases.len()
     }
+
+    pub(in crate::stack) fn lease_newest_layers(&self) -> Vec<LayerRef> {
+        self.leases
+            .values()
+            .filter_map(|lease| lease.manifest.layers.first().cloned())
+            .collect()
+    }
 }
 
 fn new_lease_id() -> String {
