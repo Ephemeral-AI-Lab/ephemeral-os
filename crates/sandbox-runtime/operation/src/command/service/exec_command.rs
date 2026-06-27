@@ -75,14 +75,14 @@ impl CommandOperationService {
                 self.obs().context(),
                 names::NAMESPACE_EXEC_RUN_SHELL,
                 |child_ctx| {
+                    let trace_handoff = child_ctx.zip(observability_log_path);
                     self.engine().run_shell_interactive(
                         exec_command,
                         target,
                         id.clone(),
                         on_complete,
                         cgroup_procs_path,
-                        child_ctx,
-                        observability_log_path,
+                        trace_handoff,
                     )
                 },
             );

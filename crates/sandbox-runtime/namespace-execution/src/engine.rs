@@ -90,16 +90,14 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         id: NamespaceExecutionId,
         on_complete: impl FnOnce(&Result<S::Output, NamespaceExecutionError>) + Send + 'static,
         cgroup_procs_path: Option<PathBuf>,
-        trace: Option<TraceContext>,
-        observability_log_path: Option<PathBuf>,
+        trace_handoff: Option<(TraceContext, PathBuf)>,
     ) -> Result<InteractiveExecution<S::Output>, NamespaceExecutionError> {
         let request = build_request(
             &target,
             &id,
             shell_args(op.command()),
             op.timeout_seconds(),
-            trace,
-            observability_log_path,
+            trace_handoff,
         );
         let transcript_path = op.transcript_path().map(Path::to_path_buf);
         let cancelled = Arc::new(AtomicBool::new(false));
@@ -136,7 +134,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         target: NamespaceTarget,
         id: NamespaceExecutionId,
     ) -> Result<ExecutionHandle<()>, NamespaceExecutionError> {
-        let request = build_request(&target, &id, serde_json::json!({}), None, None, None);
+        let request = build_request(&target, &id, serde_json::json!({}), None, None);
         let child = self.reserve_spawn(&id, || {
             self.launcher
                 .spawn_overlay_mount(request, self.setup_timeout_s)
@@ -261,11 +259,10 @@ fn build_request(
     id: &NamespaceExecutionId,
     args: Value,
     timeout_seconds: Option<f64>,
-    trace: Option<TraceContext>,
-    observability_log_path: Option<PathBuf>,
+    trace_handoff: Option<(TraceContext, PathBuf)>,
 ) -> NamespaceRunnerRequest {
-    let (trace, parent, observability_log_path) = match (trace, observability_log_path) {
-        (Some(trace), Some(path)) => (
+    let (trace, parent, observability_log_path) = match trace_handoff {
+        Some((trace, path)) => (
             Some(trace.trace.to_string()),
             trace.parent.as_ref().map(|parent| parent.to_string()),
             Some(path),
