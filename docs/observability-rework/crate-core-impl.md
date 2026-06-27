@@ -305,7 +305,7 @@ impl Observer {
     pub fn new(config: ObserverConfig, sink: Sink) -> Self;   // builds the core (named gate, not a bare bool)
 
     pub fn span(&self, name: &'static str) -> SpanGuard;          // sync; nests under thread-local parent
-    pub fn scope<T, E>(&self, name: &'static str, body: impl FnOnce(&SpanGuard) -> Result<T, E>) -> Result<T, E>;  // self-sets Error on Err before drop
+    pub fn scope<T, E>(&self, name: &'static str, body: impl FnOnce(&SpanGuard) -> Result<T, E>) -> Result<T, E>;  // Error on Err only if status is still Completed
     pub fn event(&self, name: &'static str, attrs: impl Into<Value>);          // nests under thread-local parent; drops if ctx is None
     pub fn sample(&self, scope: &str, metrics: impl Into<Value>);
 
@@ -332,6 +332,16 @@ pub enum SpanStatus { Completed, Error, Cancelled, TimedOut }
   clone a refcount bump, not a string copy. A **thread-local** holds the current
   context; `span()` reads it and pushes its own new span id as the parent for nested
   guards.
+- **Thread-local safety contract.** Treat `CTX` as a scoped parent cursor, not a global
+  slot. `span()` must clone the previous context, set `CTX` to the child context, and
+  store the previous context in the `SpanGuard`; `SpanGuard::drop` records the span then
+  restores that previous context. `with_context` follows the same save/set/restore rule
+  and must run `f` even when `ctx` is `None` — a cleared/`None` context ⟺ observability
+  disabled, so any span/event inside `f` no-ops rather than emitting an orphan `trace=""`
+  record (the same drop rule as `event`). Do not
+  hold a `RefCell` borrow across `f`, a sink write, or user/runtime code. `SpanGuard`
+  stays `!Send` and must not be held across `.await`; use `SpanRegistry` for work that
+  crosses an async/thread/process boundary. Drop paths are best-effort and must not panic.
 - `event` reads the thread-local parent (the enclosing span), so call sites are just
   `obs.event(name, json!({…}))` — no `ctx` argument to thread, and `json!(…)` (a `Value`)
   compiles because emit args take `impl Into<Value>` (M1). When the thread-local ctx is
@@ -356,7 +366,10 @@ impl SpanGuard {
 operation fails. For a fallible `Result`-returning seam, prefer the `Observer::scope`
 combinator (§3.7): it runs the body and **self-sets `Error` on the `Err` before the guard
 drops if the status is still `Completed`**, so a `?`/early-return cannot silently regress a
-failed op to green and an explicit `TimedOut`/`Cancelled` is not clobbered. The chainable
+failed op to green and an explicit `TimedOut`/`Cancelled` is not clobbered. `scope` sets only
+the `status` — `E` is opaque, so it cannot record the failure *reason*; the body adds that via
+`.attr("reason", …)` on the passed-in guard (as `layerstack.publish` does for
+`manifest_conflict`, `span-trace-impl.md` §6). The chainable
 `status` is then just the one-liner for an explicit `Err` arm
 (`some_call().inspect_err(|_| span.status(Error))?`). Without these every sync span would
 write `completed` with empty `attrs`, and the renderer would color failures green. A bare
@@ -375,10 +388,10 @@ pub struct SpanRegistry<K: Eq + Hash> { obs: Observer, open: Mutex<HashMap<K, Op
 struct OpenSpan { span: String, ctx: TraceContext, name: &'static str, start_ms: i64 }   // span = minted id
 impl<K: Eq + Hash> SpanRegistry<K> {
     pub fn new(obs: Observer) -> Self;
-    pub fn open(&self, id: K, ctx: TraceContext, name: &'static str) -> TraceContext;   // mint span id + park + self-stamp start_ms; returns child ctx { trace, parent: <new id> }
+    pub(crate) fn open(&self, id: K, ctx: TraceContext, name: &'static str) -> TraceContext;   // mint span id + park + self-stamp start_ms; returns child ctx { trace, parent: <new id> }
     pub fn launch<T, E>(&self, id: K, ctx: Option<TraceContext>, name: &'static str, f: impl FnOnce(Option<TraceContext>) -> Result<T, E>) -> Result<T, E>;   // open iff ctx Some, pass child ctx to f, cancel on Err
-    pub fn record(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>);   // pop + self-stamp end + write one Span
-    pub fn cancel(&self, id: &K);                                       // pop without emitting (launch failed before run)
+    pub fn record(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>);   // pop + self-stamp end + write one Span; no-op if id was never parked
+    pub(crate) fn cancel(&self, id: &K);                                // pop without emitting (launch failed before run); no-op if id was never parked
 }                                                                        // Drop ⇒ record remaining as Cancelled (shutdown sweep)
 ```
 
@@ -406,7 +419,12 @@ impl<K: Eq + Hash> SpanRegistry<K> {
   `ctx` is `Some`), runs `f`, and `cancel`s internally on `Err`, so the caller never writes
   the cancel by hand and a forgotten `cancel`/`open` can't leak or drop a span
   (`span-trace-impl.md` §4). With `launch` covering the production launch path, `open`/`cancel`
-  stay low-level escape hatches for nonstandard handoffs only (M3).
+  are **`pub(crate)`** — internal to `launch`, never called by a consumer (M3); the public
+  async surface is `new`/`launch`/`record` + the `TerminalHook` trait, so the
+  open↔record/cancel pairing cannot be broken from outside the crate. `record`/`cancel` on
+  an id that was **never parked** (e.g. `launch` skipped `open` because `ctx` was `None`,
+  yet the engine still calls `on_terminal` → `record`) **no-op**: they pop nothing and
+  write nothing.
 - **Drop is a shutdown sweep, not a per-span net.** A registry lives for the process,
   so its `Drop` (recording leftovers as `cancelled`) only fires at teardown. A watcher
   that panics before recording leaks its entry until then; that is acceptable for a
@@ -428,10 +446,19 @@ pub trait TerminalHook<K>: Send + Sync {
 pub struct NoopHook;
 impl<K> TerminalHook<K> for NoopHook { fn on_terminal(&self, _: &K, _: SpanStatus, _: Option<i64>) {} }
 
-// The registry is itself the hook — no per-source adapter (m1):
-impl<K: Eq + Hash> TerminalHook<K> for SpanRegistry<K> {
+// A span key contributes its own domain attrs (e.g. exec_id). Implemented by each id
+// type in ITS OWN crate (foreign trait + local type ⇒ orphan-legal), so the leaf names
+// no domain attr and there is no per-source hook adapter type:
+pub trait SpanKeyAttrs { fn write_attrs(&self, attrs: &mut Attrs); }
+
+// The registry is itself the hook — no per-source adapter TYPE (m1). The generic terminal
+// attrs are folded here; the key folds its own domain attrs via SpanKeyAttrs. A specific
+// `impl TerminalHook<NamespaceExecutionId> for SpanRegistry<…>` is NOT legal — it would
+// overlap this blanket impl (E0119; specialization is nightly-only) — so the domain
+// residual lives on the KEY, not a second hook impl:
+impl<K: Eq + Hash + SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
-        // folds exit_code into attrs + stamps async:true, then calls record(id, status, attrs)
+        // stamps async:true, folds exit_code, then id.write_attrs(&mut attrs), then record(id, status, attrs)
     }
 }
 ```
@@ -445,14 +472,19 @@ impl<K: Eq + Hash> TerminalHook<K> for SpanRegistry<K> {
 - **`NoopHook` is generic** (`impl<K>`), so it serves any engine's `K`. It and the
   `TerminalHook<K>` trait move here from `namespace-execution` (`types.rs:19,30`); the
   engine swap is `span-trace-impl.md` §4 — it binds `K`, which the leaf must not know.
-  With the blanket `impl<K> TerminalHook<K> for SpanRegistry<K>` above, the engine wires
-  its `Arc<SpanRegistry<NamespaceExecutionId>>` **directly** as the hook — the old
-  `NamespaceExecutionObserver` adapter collapses to (at most) its one domain attr
-  (`exec_id`) or disappears (m1).
+  With the blanket `impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K>` above, the
+  engine wires its `Arc<SpanRegistry<NamespaceExecutionId>>` **directly** as the hook with
+  **no per-source adapter type**: the generic terminal attrs (`async`, `exit_code`) are
+  folded by the blanket impl, and the one domain residual `exec_id = id.0` is folded by
+  `NamespaceExecutionId`'s own `SpanKeyAttrs::write_attrs`. It rides on the *key* (not a
+  second `TerminalHook` impl on `SpanRegistry`, which would overlap the blanket impl —
+  E0119) and lives in `namespace-execution`, so the opaque `K` of the blanket impl never
+  has to read `id.0`.
 - **A different execution type** wires its own `SpanRegistry<ItsId>` as the hook directly
-  (via the blanket impl), or a thin impl over it if it needs source-specific terminal
-  attrs; the leaf does not change. The generality lives in `<K>` (the right axis: each
-  source has a distinct id type and its own mutex), not in a per-source enum.
+  (via the blanket impl) and impls `SpanKeyAttrs` for `ItsId` (empty body if it has no
+  domain attr); the leaf does not change. The generality lives in `<K>` (the right axis:
+  each source has a distinct id type, its own mutex, and its own key attrs), not in a
+  per-source enum or a per-source hook impl.
 - **`exit_code: Option<i64>` is a documented pragmatic universal.** It is an exec-only
   datum: a non-exec async source (compaction/GC) passes `None` forever, and the namespace
   impl re-inserts it into `attrs`. Keep it on the trait as the one optional terminal code,
@@ -489,8 +521,10 @@ pub struct ObservabilityConfig {
 ```
 
 - **Default on in-sandbox.** The in-container daemon reads
-  `doc.section::<ObservabilityConfig>("observability")` (missing section → enabled)
-  and passes `enabled` into the process `Observer::new` (and thus every clone).
+  `doc.section::<ObservabilityConfig>("observability")` (missing section → enabled),
+  constructs the leaf-owned `ObserverConfig { proc: record::proc::DAEMON, enabled }` (§3.4),
+  and passes it into the process `Observer::new` (and thus every clone); `max_file_bytes`
+  is handed to the `Sink` (rotation policy), not the `Observer`.
 - **Off for the host CLI.** The host process never constructs an in-sandbox
   `Observer` (it only ever uses the `Reader` over a fetched file), so emit stays
   off there with no flag.
@@ -512,7 +546,7 @@ be a **new call site, not a crate change**. What is open vs. closed:
 | event  | `name`, `attrs` — fully open | — |
 | sample | `scope`, every `metrics` key, and its counter/gauge tag (set at emit) — fully open | — |
 | trace  | any participant joins by sharing `trace` + `parent` | single `parent` ⇒ tree, not DAG |
-| async source | wire a `SpanRegistry<ItsId>` as `TerminalHook<K>` (blanket impl) | — |
+| async source | wire a `SpanRegistry<ItsId>` as `TerminalHook<K>` (blanket impl) + impl `SpanKeyAttrs` for `ItsId` | — |
 
 Four conventions keep the open axes open and the closed ones honest:
 
@@ -538,10 +572,12 @@ Four conventions keep the open axes open and the closed ones honest:
    inferred. The Reader Δs the emitter-tagged counters (§3.3) and leaves gauges/identity
    metrics without a Δ; the leaf stays metric-agnostic and a new metric is genuinely one
    new call site.
-4. **New async source = wire a `SpanRegistry<ItsId>` as `TerminalHook<K>`.** Because the
-   engine-facing interface is generic over the id and the storage is the generic
-   `SpanRegistry<K>`, instrumenting a new async subsystem is wiring the registry itself as
-   the hook (blanket impl m1), not a crate change (§3.4).
+4. **New async source = wire a `SpanRegistry<ItsId>` as `TerminalHook<K>` + impl
+   `SpanKeyAttrs` for `ItsId`.** Because the engine-facing interface is generic over the id
+   and the storage is the generic `SpanRegistry<K>`, instrumenting a new async subsystem is
+   wiring the registry itself as the hook (blanket impl m1) and giving its id type a
+   `write_attrs` (empty if there is no domain attr) — both in the source's own crate, not a
+   leaf change (§3.4).
 
 **Known ceiling — trace is a tree, not a DAG.** `parent: Option<String>` cannot
 express fan-in (one coalesced `layerstack.publish` serving N sessions belongs under N
@@ -557,7 +593,9 @@ user-facing grep/jq targets in an append-only file, so state **one grammar rule*
 `record::names`: **spans = `subsystem[.area].action` (imperative); events =
 `subsystem.fact` (past-tense)** — e.g. spans `command.exec`, `workspace_session.create`,
 `namespace.exec.mount_overlay`, `layerstack.publish`; events `lease.acquired`,
-`lease.released` (the span name follows the same span/op split that the span
+`lease.released`. The one exception is the `namespace.exec.<kind>` family, whose leaf
+inherits the engine's `NamespaceExecutionKind` names (so `namespace.exec.shell` carries the
+noun `shell`, not a free-chosen imperative verb) (the span name follows the same span/op split that the span
 `workspace_session.create` vs the op `create_workspace_session` already uses — the op identity persists in
 `attrs.op`/`operation_name`). Beside it, add `record::proc` consts (`DAEMON = "d"`,
 `NS = "np"`) so the `<proc>` token (§2.3) is a named const, not a bare magic string a typo
@@ -566,8 +604,9 @@ could split into a phantom proc (m7).
 ### 3.7 API reference — the method surface
 
 Every timestamp is self-stamped by the `Core`; **no caller passes a clock**. There are
-three producers — `span`/`scope` (sync, RAII), `SpanRegistry::open`/`launch`/`record`
-(async, keyed), and `event`/`sample` (point-in-time) — and two plumbers — `with_context`
+three producers — `span`/`scope` (sync, RAII), `SpanRegistry::launch`/`record`
+(async, keyed; `open`/`cancel` are `pub(crate)` internals of `launch`), and `event`/`sample`
+(point-in-time) — and two plumbers — `with_context`
 (set the chain) and `context` (snapshot it to cross a thread). There is **no** `event_in`:
 a span-less explicit-parent emit is `with_context(ctx, || obs.event(name, attrs))` (M5).
 
@@ -580,7 +619,7 @@ a span-less explicit-parent emit is `with_context(ctx, || obs.event(name, attrs)
 |---|---|---|---|---|
 | `new` | `config: ObserverConfig, sink: Sink` | `Observer` | — | builds the `Core` (sink + `SpanIds`); `config` carries the proc token + the named gate |
 | `span` | `name: &'static str` | `SpanGuard` | on **drop** | thread-local parent; pushes its own id |
-| `scope` | `name: &'static str, body: impl FnOnce(&SpanGuard) -> Result<T, E>` | `Result<T, E>` | on **drop** | thread-local parent; self-sets `Error` on `Err` before drop only if status is still `Completed` |
+| `scope` | `name: &'static str, body: impl FnOnce(&SpanGuard) -> Result<T, E>` | `Result<T, E>` | on **drop** | thread-local parent; sets `Error` (status only — reason via body `.attr()`) on `Err` only if status is still `Completed` |
 | `event` | `name: &'static str, attrs: impl Into<Value>` | `()` | **now** | thread-local parent; drops if ctx is `None` |
 | `sample` | `scope: &str, metrics: impl Into<Value>` | `()` | **now** | no `trace`/`parent` |
 | `context` | — | `Option<TraceContext>` | — | snapshot the thread-local ctx |
@@ -592,7 +631,7 @@ a span-less explicit-parent emit is `with_context(ctx, || obs.event(name, attrs)
 |---|---|---|---|
 | `attr` | `key: &'static str, value: impl Into<Value>` | `&Self` | annotate a fact on a live guard (chainable) |
 | `status` | `status: SpanStatus` | `&Self` | override the default `Completed` (chainable) |
-| *(Drop)* | — | — | write one `Span`: `dur_ms = now − start`, accumulated `status` + `attrs` |
+| *(Drop)* | — | — | write one `Span`, then restore the previous thread-local parent; `dur_ms = now − start`, accumulated `status` + `attrs` |
 
 > **`span()` must be let-bound (m3).** `attr`/`status` annotate a *live* guard; they do not
 > construct one. `obs.span("x").attr(…);` compiles but immediately drops the temporary,
@@ -605,14 +644,15 @@ a span-less explicit-parent emit is `with_context(ctx, || obs.event(name, attrs)
 | Method | Args | Returns | Writes? | Effect |
 |---|---|---|---|---|
 | `new` | `obs: Observer` | `SpanRegistry<K>` | — | empty registry sharing the `Core` |
-| `open` | `id: K, ctx: TraceContext, name: &'static str` | `TraceContext` | — | mint span id + park; self-stamp start; return child ctx `{ trace, parent: <new id> }` (M7) |
+| `open` *(pub(crate))* | `id: K, ctx: TraceContext, name: &'static str` | `TraceContext` | — | internal to `launch`: mint span id + park; self-stamp start; return child ctx `{ trace, parent: <new id> }` (M7) |
 | `launch` | `id: K, ctx: Option<TraceContext>, name: &'static str, f: impl FnOnce(Option<TraceContext>) -> Result<T, E>` | `Result<T, E>` | on `record` | open iff `ctx` is `Some`, pass child ctx to `f`, `cancel` on `Err` (M3) |
-| `record` | `id: &K, status: SpanStatus, attrs: impl Into<Value>` | `()` | **now** | pop + write one `Span`; `dur_ms = now − start` |
-| `cancel` | `id: &K` | `()` | — | pop without writing (launch failed before run) |
+| `record` | `id: &K, status: SpanStatus, attrs: impl Into<Value>` | `()` | **now** | pop + write one `Span`; `dur_ms = now − start`; no-op if `id` was never parked |
+| `cancel` *(pub(crate))* | `id: &K` | `()` | — | internal to `launch`: pop without writing; no-op if `id` was never parked |
 | *(Drop)* | — | — | `record` leftovers as `Cancelled` (shutdown sweep) |
 
-> `launch` is the normal launch path because it makes register+cancel atomic and exposes
-> the child context Phase B needs. Use `open`/`cancel` directly only for nonstandard handoffs.
+> `launch` is the normal (and only) launch path: it makes register+cancel atomic and exposes
+> the child context Phase B needs. `open`/`cancel` are `pub(crate)` — used only inside
+> `launch`, never by a consumer — so the open↔record/cancel pairing can't be broken externally.
 
 **Engine hook — `TerminalHook<K>` (trait) and its impls** (the engine swap lives with its
 source, `span-trace-impl.md` §4):
@@ -621,7 +661,7 @@ source, `span-trace-impl.md` §4):
 |---|---|---|---|
 | `trait TerminalHook<K>` | `on_terminal` | `id: &K, status: SpanStatus, exit_code: Option<i64>` | the terminal edge the engine calls; no timestamp |
 | `NoopHook` | `on_terminal` | *(same)* | no-op (`impl<K>`, any engine) |
-| `SpanRegistry<K>` | `on_terminal` | *(same)* | blanket impl: folds `exit_code` into attrs, stamps `async:true`, calls `record` (m1) |
+| `SpanRegistry<K: SpanKeyAttrs>` | `on_terminal` | *(same)* | blanket impl: stamps `async:true`, folds `exit_code` + `id.write_attrs` (e.g. `exec_id`), calls `record` (m1) |
 
 **Read side — `Reader`:**
 
@@ -706,7 +746,7 @@ partly rotated-out.
 `SpanStatus` + `Attrs` + `MAX_LINE_BYTES` + `record::names` const labels + `record::proc`
 consts, §3.6), `Sink`, `Reader` (+ `SpanNode`/`SampleDelta`/`RawFilter`),
 `Observer`/`ObserverConfig`/`SpanGuard`/`SpanRegistry`/`TraceContext`,
-`TerminalHook`/`NoopHook`, `collect::{sample_layerstack, cgroup, disk}`. The
+`TerminalHook`/`NoopHook`/`SpanKeyAttrs`, `collect::{sample_layerstack, cgroup, disk}`. The
 records are write-internal (§2.1); only `Reader` view outputs and the emit API are
 caller-facing.
 
@@ -786,14 +826,20 @@ the system to the span phase (`span-trace-impl.md`).
   `status(Error)` (and via the `scope` combinator on an `Err` body); `event` with no
   thread-local ctx drops the fact (no orphan record); **two cloned `Observer`s on one
   core** share the `SpanIds` (no duplicate `d-0`) and the thread-local context (a runtime
-  span nests under a daemon-set parent); span ids unique across the
+  span nests under a daemon-set parent); nested span drop restores the previous parent so
+  sibling spans do not nest under each other; `with_context(None, f)` still runs `f` and
+  restores the caller's context; `with_context` restores after an unwinding body; span ids
+  unique across the
   `record::proc::{DAEMON, NS}` tokens.
-- **SpanRegistry / TerminalHook:** `open` mints the id and returns the child `TraceContext`;
-  `open` then `record` writes one `Span` with `dur_ms = now - start` (recorded at the
-  `record` call); `launch` cancels on an `Err` body and records on `Ok`; `record` from
-  another thread works (the `Sink` serializes); `cancel` emits nothing; the `Drop` sweep
-  records a leaked entry as `cancelled`; `NoopHook` writes nothing for any `K`, and the
-  blanket `SpanRegistry<K>` hook folds `exit_code`/`async:true` into the span.
+- **SpanRegistry / TerminalHook:** `launch` on an `Ok` body parks a span (via the internal
+  `open`) and exposes a child `TraceContext { trace, parent: <minted id> }`; the engine's
+  `on_terminal` then writes one `Span` with `dur_ms = now - start` (recorded at the
+  `on_terminal`/`record` call); `launch` on an `Err` body cancels internally and writes
+  **no** span (no bogus `cancelled`); `on_terminal` from another thread works (the `Sink`
+  serializes); `record`/`cancel` on a never-parked id no-op; the `Drop` sweep records a
+  leaked entry as `cancelled`; `NoopHook` writes nothing for any `K`, and the blanket
+  `SpanRegistry<K>` hook folds `async:true`/`exit_code` + the key's
+  `SpanKeyAttrs::write_attrs` (the fake `K` adds its own attr) into the span.
 - **Daemon:** `snapshot`/`cgroup` views render from the live registry + `Reader`
   with **no** SQLite; `collect()` writes `obs.sample` lines for `sandbox`/`<ws>`/
   `stack`.

@@ -108,7 +108,7 @@ id, so it never depends on append order.
 ### 3.1 `span` — a completed unit of work, **one** record
 
 ```json
-{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","attrs":{"exec_id":"ns-9","async":true,"exit_code":0}}
+{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
 ```
 
 `ts` = completion time; `dur_ms` = wall duration (so **start = `ts - dur_ms`**);
@@ -138,7 +138,7 @@ reads that directly (Case B). The log is purely historical.
 ### 3.2 `event` — a point-in-time domain fact, hung off a span
 
 ```json
-{"ts":1719500004295,"kind":"event","trace":"req-7f3","parent":"d-6","name":"lease.released","attrs":{"revision":"r5"}}
+{"ts":1719500004320,"kind":"event","trace":"req-7f3","parent":"d-8","name":"lease.released","attrs":{"revision":"r5"}}
 ```
 
 Side-effects (lease, state transition, error) — carry `trace`/`parent`
@@ -161,15 +161,18 @@ last); the reader resolves `parent` by id.
 
 Each case shows the **trace diagram**, the **raw NDJSON** (append order = `ts`
 order), and the **rendered view** a developer sees. Span `ts` is completion time;
-the renderer plots each bar from `ts - dur_ms`.
+the renderer plots each bar from `ts - dur_ms`. Span ids (`d-0`, `np-0`, …) are
+**illustrative** — they are minted per process at span open (§3.1), so the contract a
+reader checks is the trace/parent shape, not the literal slot numbers.
 
 ### 4.1 Case A — one-shot `exec_command` (sync call + async tail + finalize-teardown)
 
 A client runs a command with no existing session. The runtime creates a one-shot
 workspace (mount over a layerstack lease), runs the shell, and on child exit
 finalizes the workspace **on the watcher thread, after the call already
-returned**: capture upperdir changes, publish them to the layerstack, refresh the
-session handle, then destroy the workspace and release the original lease.
+returned**: capture upperdir changes (which refreshes the session's base revision),
+publish them to the layerstack (the publish result is not surfaced), then destroy the
+workspace and release the original lease.
 
 ```
 req-7f3   command.exec  (one-shot)
@@ -209,9 +212,8 @@ Note `d-1`/`d-0` complete at ~1.05 s while `d-5` is still running (no record yet
 finalize tail); the watcher then writes `capture_changes` (`d-6`), `layerstack.publish`
 (`d-7`), and `workspace_session.destroy` (`d-8`) under `d-1` — the originating
 `command.exec`, not the shell span. The mount (`d-4`) is a **sync** span under
-`workspace_session.create`; the `d-3` slot is vacant — `workspace.create` was
-dropped (C1) — so the shell stays `d-5` and Phase B's `np-0.parent = d-5`
-resolves. `layerstack.publish` carries the new revision (`r6`); `lease.released`
+`workspace_session.create` (`workspace.create` was dropped, C1). `layerstack.publish`
+carries the new revision (`r6`); `lease.released`
 still reports the released original lease revision (`r5`). The reader orders by
 `ts`/`parent`, never by append order — all under `req-7f3`.
 
@@ -236,9 +238,9 @@ trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
 **Phase split for this case.** Everything renders under `req-7f3` in **Phase A**
 *except* `np-0` — it is emitted by the forked namespace-process, and its
 `trace`/`parent` only cross the fork in **Phase B**. Until then `np-0` appears
-under its own trace. The async tail (`d-5`, `d-6`, and the `lease.released`
-event) is in-process (the watcher runs in the daemon process), so it correlates
-in Phase A — this is the threading work §9.3 calls out.
+under its own trace. The async tail (`d-5`, `d-6`/`d-7`/`d-8`, and the
+`lease.released` event) is in-process (the watcher runs in the daemon process), so
+it correlates in Phase A — this is the threading work §9.3 calls out.
 
 ### 4.2 Case B — persistent session + an in-flight snapshot
 
@@ -247,10 +249,11 @@ asks for the live snapshot. The command shows up as **in flight** — sourced fr
 the runtime registry, **not** from the log (the span has no record until it
 completes).
 
-**Raw log so far** (only the completed span is present):
+**Raw log so far** (only completed spans are present):
 
 ```json
-{"ts":1719500101020,"kind":"span","trace":"req-9a1","span":"d-10","name":"command.exec","dur_ms":1020.0,"status":"completed","attrs":{"workspace_session":"ws-7","one_shot":false}}
+{"ts":1719500101021,"kind":"span","trace":"req-9a1","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1020.0,"status":"completed","attrs":{"workspace_session":"ws-7","one_shot":false}}
+{"ts":1719500101021,"kind":"span","trace":"req-9a1","span":"d-0","name":"daemon.dispatch","dur_ms":1021.0,"status":"completed","attrs":{"op":"exec_command"}}
 ```
 
 The async `namespace.exec.shell` (`ns-42`) is still running, so it has **no line
@@ -284,7 +287,7 @@ Periodic `sample` lines; the reader computes deltas at read time (none stored).
 {"ts":1719500020000,"kind":"sample","scope":"ws-1","cpu_usec":4250000,"mem_cur":20500000,"disk_bytes":1320000,"files":340}
 ```
 
-**Rendered — `sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window 60000`:**
+**Rendered — `sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000`:**
 
 ```
 scope ws-1   window 60s   (Δ computed at read)
@@ -302,7 +305,7 @@ scope ws-1   window 60s   (Δ computed at read)
 Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 
 ```
- sync scope        →  obs.scope("workspace_session.create", |s| { … })  (RAII guard; one record on drop; .attr()/.status(); Error on Err)
+ sync scope        →  obs.scope("workspace_session.create", |s| { … })  (RAII guard; Error on Err only if status is still Completed)
  sync ns mount     →  let _s = obs.span("namespace.exec.mount_overlay");  (mount_overlay is .wait()ed → sync guard)
  async ns exec     →  caller: SpanRegistry::launch (ctx, "namespace.exec.<kind>") at launch
                       TerminalHook::on_terminal  → write the one span record at child-exit (watcher thread)
@@ -324,8 +327,10 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
   is wired as `NoopObserver` (`operation/src/command/service/core.rs:34`). Replace it
   with the generic `TerminalHook<NamespaceExecutionId>` hook (`crate-core-impl.md`
   §3.4); the recording impl **is** the generic `SpanRegistry<NamespaceExecutionId>`
-  itself, via a blanket `impl<K> TerminalHook<K> for SpanRegistry<K>` (§6) — no
-  bespoke `NamespaceExecutionObserver` adapter. Because the engine hands the
+  itself, via a blanket `impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K>` (§6) —
+  no bespoke namespace-exec adapter type; the one domain attr `exec_id` is folded by
+  `NamespaceExecutionId`'s own `SpanKeyAttrs` impl (a specific hook impl would overlap the
+  blanket one, E0119). Because the engine hands the
   terminal edge **only** the exec id, the **caller** `SpanRegistry::launch`es
   `(ctx, "namespace.exec.<kind>")` at launch (`engine.rs` shell, where kind + ctx are
   in scope), parking an open span; `on_terminal` (watcher thread, called right after
@@ -336,7 +341,8 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 - The one-shot finalize (`exec_command.rs:181`) runs inside that watcher but
   **captures no context today** — snapshot the request's `TraceContext` on the
   dispatch thread (at closure construction, not inside the `move`) so its `destroy`
-  span and `lease.released` event land under the originating trace (Case A tail).
+  capture/publish/destroy spans and `lease.released` event land under the originating
+  trace (Case A tail).
   Teardown must run whether or not context was captured — observability must not
   change behavior (M4). This in-process threading is Phase-A work (§9.3), distinct
   from the cross-process threading deferred to Phase B.
@@ -352,7 +358,7 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 | `src/store.rs` | **Delete+replace** | `rusqlite` store → `Sink` (append `O_APPEND` writer, one write/line) |
 | `src/store/schema.rs` | **Delete** | 8 migrations gone |
 | `src/store/{read,rows}.rs` | **Delete+replace** | SQL queries → `Reader` + history views |
-| `src/lib.rs` | **Rewrite** | export `Observer`, `SpanGuard`, `SpanRegistry`, `TerminalHook`/`NoopHook`, `TraceContext`, `Reader`, record + view types |
+| `src/lib.rs` | **Rewrite** | export `Observer`, `SpanGuard`, `SpanRegistry`, `TerminalHook`/`NoopHook`/`SpanKeyAttrs`, `TraceContext`, `Reader`, record + view types |
 | `Cargo.toml` | **Edit** | drop `rusqlite`; add `serde`/`serde_json` |
 
 ```
@@ -385,7 +391,7 @@ or secret-bearing paths — the file is shipped to the host over the daemon RPC.
 ```rust
 impl Observer {                                                // Clone; one per process
     fn span(&self, name: &'static str) -> SpanGuard;            // sync; thread-local parent; one record on drop
-    fn scope<T, E>(&self, name: &'static str,                   // fallible sync scope: Error on Err, then drop
+    fn scope<T, E>(&self, name: &'static str,                   // fallible sync scope: Error on Err only if still Completed
                    body: impl FnOnce(&SpanGuard) -> Result<T, E>) -> Result<T, E>;
     fn event(&self, name: &'static str, attrs: impl Into<Value>);          // thread-local parent
     fn sample(&self, scope: &str, metrics: impl Into<Value>);
@@ -402,13 +408,14 @@ impl SpanGuard {                         // sync, !Send: ends on drop, same thre
 impl<K: Eq + Hash> SpanRegistry<K> {
     fn open(&self, id: K, ctx: TraceContext,                               // park + self-stamp start;
             name: &'static str) -> TraceContext;                           //   returns child ctx (parent = new span id)
-    fn launch<T, E>(&self, id: K, ctx: impl Into<Option<TraceContext>>,    // open → run f → cancel on Err
+    fn launch<T, E>(&self, id: K, ctx: Option<TraceContext>,               // open → run f → cancel on Err
                     name: &'static str, f: impl FnOnce(Option<TraceContext>) -> Result<T, E>) -> Result<T, E>;
     fn record(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>); // pop + write one record (self-stamps end)
     fn cancel(&self, id: &K);                                              // pop without writing
 }
 trait TerminalHook<K> { fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>); }
-impl<K: Eq + Hash> TerminalHook<K> for SpanRegistry<K> { /* folds exit_code + async:true, then record */ }
+trait SpanKeyAttrs { fn write_attrs(&self, attrs: &mut Attrs); }   // a span key folds its own domain attrs (e.g. exec_id)
+impl<K: Eq + Hash + SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> { /* folds async:true + exit_code + id.write_attrs, then record */ }
 ```
 
 `TraceContext = { trace, parent }` — the two ids needed to cross a thread or
@@ -423,9 +430,13 @@ complete-by-key-from-another — but each writes exactly one record. There is **
 standalone async-span handle: the only async shape is the parked one, so the registry
 owns the open span as plain data and `record` writes it (self-stamping the end). A
 new async source is a new `K` + its own `SpanRegistry<K>` (wired as the engine's
-`TerminalHook<K>` by the blanket impl), not new map/lock code. The engine-facing hook `TerminalHook<K>`
+`TerminalHook<K>` by the blanket impl) + a `SpanKeyAttrs` impl on `K` (empty if it has no
+domain attr), not new map/lock code. The engine-facing hook `TerminalHook<K>`
 carries only the terminal edge (`on_terminal`) — one-record-at-completion needs no
 `on_running`, and no timestamp (the span is recorded at the completion call).
+Thread-local context is scoped state, not an ambient global: `SpanGuard`/`with_context`
+save the previous parent and restore it on drop, thread hops must pass an explicit
+`TraceContext`, and sync guards must not cross `.await` (`crate-core-impl.md` §3.4).
 
 Emit is config-gated (`observability.enabled`, default on in-sandbox; off for the
 host CLI unless a flag) and near-free when disabled. Observability MUST never
@@ -466,7 +477,7 @@ flag:
 ```
 op: "get_observability"
 params: { view:"snapshot"|"trace"|"events"|"cgroup"|"layerstack"|"raw",
-          trace?, name?, scope?, workspace?, samples?,
+          trace?, name?, scope?, workspace?,
           since_ms?, window_ms? (≤600_000), kind? }
 → JSON of the view
 ```
@@ -542,7 +553,7 @@ events  sandbox eos-abc   name=lease.released   2 matched
 
   ts        trace     parent  attrs
   +04.320   req-7f3   d-8     revision=r5
-  +18.122   req-9c2   d-31    revision=r7
+  +18.130   req-9c2   d-31    revision=r7
 ```
 
 ### 7.4 `cgroup` — resource series for a scope (cpu/mem/io + disk)
@@ -569,7 +580,7 @@ Layer inventory (leased / booked-by) and the stack time-series. Full examples in
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc                  # stack inventory (leased / booked-by)
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7 # one session's lowers + private upper
-$ sandbox-cli observability layerstack --sandbox-id eos-abc --samples --window-ms 60000   # stack time-series
+$ sandbox-cli observability layerstack --sandbox-id eos-abc --window-ms 60000   # stack time-series
 ```
 
 ### 7.6 `raw` — filtered NDJSON lines
@@ -578,8 +589,11 @@ Returns the matching log lines verbatim (newline-delimited), for grep/jq.
 
 ```console
 $ sandbox-cli observability raw --sandbox-id eos-abc --trace req-7f3 --kind span
+{"ts":1719500000040,"kind":"span","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed"}
 {"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed"}
+{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{"exec_id":"ns-9"}}
 {"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
+{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
 {"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","attrs":{"exec_id":"ns-9","async":true,"exit_code":0}}
 {"ts":1719500004286,"kind":"span","trace":"req-7f3","span":"d-6","parent":"d-1","name":"workspace_session.capture_changes","dur_ms":11.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500004299,"kind":"span","trace":"req-7f3","span":"d-7","parent":"d-1","name":"layerstack.publish","dur_ms":12.0,"status":"completed","attrs":{"base":"r5","revision":"r6","layers_added":1,"bytes":40960,"no_op":false}}
@@ -592,7 +606,7 @@ $ sandbox-cli observability raw --sandbox-id eos-abc --trace req-7f3 --kind span
 $ sandbox-cli observability trace --sandbox-id eos-abc --id nope
 trace nope   sandbox eos-abc   (no records — unknown trace, or rotated out)
 
-$ sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window 999999999
+$ sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 999999999
 error: window_ms exceeds max (600000)
 ```
 
@@ -648,7 +662,7 @@ layer-projection domain concept, not timing.
    `dispatch_request`; the `SpanRegistry<exec_id>` wired as the engine's `TerminalHook`
    for the async exec span; the one-shot finalize closure captures the
    `TraceContext`. This in-process threading is what makes **Case A's async tail**
-   (`d-5`, `d-6`, `lease.released`) correlate in Phase A.
+   (`d-5`, `d-6`/`d-7`/`d-8`, `lease.released`) correlate in Phase A.
 4. **Layerstack facts** (`lease.acquired`/`lease.released` events; `layerstack.publish` span).
 5. **Removal checklist** (§8) — the scoped greps gate the change.
 6. **Phase B (follow-up):** thread `trace`/`parent` through
@@ -667,17 +681,19 @@ layer-projection domain concept, not timing.
   under N concurrent appenders (every line parses; none interleaved); the
   serialized-line cap truncates `attrs`, never the line; span ids are unique
   across simulated processes; `Reader` folds — trace tree + offsets from
-  `ts - dur_ms`, pairwise sample deltas, raw filter; rotation emits the drop
-  reader spans both files; empty trace output says "unknown trace, or rotated out."
+  `ts - dur_ms`, pairwise sample deltas, raw filter; rotation renames and reopens
+  the log, and the reader spans both files; empty trace output says "unknown trace,
+  or rotated out."
 - **Integration:** an `exec_command` reproduces Case A's shape (one record per
   span, `namespace.exec.shell` written on terminal under `req-7f3`, finalize
   `capture_changes` + `layerstack.publish` + `destroy` span + `lease.released`
   event share the trace); the `snapshot`
   view reflects live-registry in-flight (Case B) with **no** log dependency.
 - **Fetch:** `get_observability` returns each `view`; `trace` the waterfall,
-  `events` the flat stream, `cgroup` the series with deltas, `snapshot` from the
-  live registry, `raw` the filtered lines — each selected by the matching
-  `observability <view> --sandbox-id …` subcommand.
+  `events` the flat stream, `cgroup` the series with deltas, `layerstack` the
+  inventory + stack series, `snapshot` from the live registry, `raw` the filtered
+  lines — each selected by the matching `observability <view> --sandbox-id …`
+  subcommand.
 - **Gates:** the scoped removal greps return nothing (`timing::` empty in
   `sandbox-runtime` + `sandbox-daemon`; `rusqlite` empty; `runtime_timing_env`
   empty); `cargo build`, `cargo test`, `cargo clippy --all-targets` clean.

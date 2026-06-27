@@ -28,6 +28,16 @@ fn daemon_launch_argv_uses_container_paths_and_tcp_flags() {
     assert_eq!(argv[1], "serve");
     assert!(has_flag(&argv, "--config-yaml", "/eos/config/daemon.yml"));
     assert!(has_flag(&argv, "--workspace-root", "/workspace"));
+    assert!(has_flag(
+        &argv,
+        "--socket",
+        "/eos/runtime/daemon/runtime.sock"
+    ));
+    assert!(has_flag(
+        &argv,
+        "--pid-file",
+        "/eos/runtime/daemon/runtime.pid"
+    ));
     assert!(has_flag(&argv, "--tcp-host", "0.0.0.0"));
     assert!(has_flag(&argv, "--tcp-port", "7000"));
     assert!(has_flag(&argv, "--auth-token", "tok-123"));

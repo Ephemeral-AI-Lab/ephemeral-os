@@ -28,7 +28,7 @@ Phase B; `M10`) and minus `workspace.create`, which is **not** re-added (dropped
 
 | Shape | Where | Mechanism |
 |---|---|---|
-| **sync span** | in-daemon synchronous scopes (dispatch, exec_command, session create+destroy, mount_overlay) | `obs.span(name)` → `SpanGuard`, ends on drop on the same thread; nests via the thread-local parent; `.attr()`/`.status()` carry facts + outcome; a fallible seam wraps `obs.scope(name, …)` so an `Err` self-sets `Error` (§5, M2) |
+| **sync span** | in-daemon synchronous scopes (dispatch, exec_command, session create+destroy, mount_overlay) | `obs.span(name)` → `SpanGuard`, ends on drop on the same thread; nests via the thread-local parent; `.attr()`/`.status()` carry facts + outcome; a fallible seam wraps `obs.scope(name, …)` so an `Err` sets `Error` only if the status is still `Completed` (§5, M2) |
 | **async span** | the namespace exec **shell** that outlives the call | the `SpanRegistry<NamespaceExecutionId>` itself, wired as the engine's `TerminalHook` (`crate-core-impl.md` §3.4, m1); parked at launch, recorded on the watcher thread at child-exit (recorded **before** teardown, so it self-stamps the right instant — no timestamp argument); a launch that fails before the work runs is discarded by `launch`'s internal `cancel` (M3) — `Cancelled` is the shutdown-sweep backstop for a watcher that dies before recording |
 | **event** | point-in-time domain facts (lease acquire/release) | `obs.event(name, attrs)`, written immediately, hung off the enclosing span via the thread-local parent |
 
@@ -185,26 +185,29 @@ promise.resolve(result);
   maps to `SpanStatus` via a small `to_span_status()` on the local type (avoids an
   orphan `From` impl).
 
-With m1's blanket `impl<K> TerminalHook<K> for SpanRegistry<K>` (`crate-core-impl.md`
-§3.4), the `SpanRegistry<NamespaceExecutionId>` **is** the engine's terminal hook —
-there is no bespoke `NamespaceExecutionObserver` adapter struct. The blanket impl folds
-the generic terminal payload (`async:true`, `exit_code`) into the one Span record at
+With m1's blanket `impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K>`
+(`crate-core-impl.md` §3.4), the `SpanRegistry<NamespaceExecutionId>` **is** the engine's
+terminal hook. The blanket impl folds the generic terminal payload (`async:true`,
+`exit_code`) plus the key's own domain attrs (`id.write_attrs`) into the one Span record at
 `on_terminal`, which calls `record`:
 
 ```rust
-impl<K> TerminalHook<K> for SpanRegistry<K> {
+impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
         let mut attrs = Attrs::new();
         attrs.insert("async".into(), true.into());
         if let Some(code) = exit_code { attrs.insert("exit_code".into(), code.into()); }
+        id.write_attrs(&mut attrs);       // domain residual, e.g. exec_id = id.0 (SpanKeyAttrs)
         self.record(id, status, attrs);   // pop + self-stamp end + write the one Span
     }
 }
 ```
 
-The namespace's `exec_id = id.0` is the single domain residual; the wiring records it
-from the span key (m1: "the adapter shrinks to that one attr or disappears"). The caller
-drives the registry directly — `spans.launch(id, ctx, name, || …)` at launch (M3),
+The namespace's `exec_id = id.0` is the single domain residual, folded by
+`NamespaceExecutionId`'s own `SpanKeyAttrs` impl (in `namespace-execution`: a foreign trait
+on a local type, orphan-legal) — **not** a second `TerminalHook` impl on `SpanRegistry`,
+which would overlap the blanket impl (E0119). The caller
+drives the registry directly — `spans.launch(id, ctx, name, |child_ctx| …)` at launch (M3),
 `on_terminal` → `record` at child-exit. No bespoke map, lock, or `remove`-then-`end`
 dance: it is all in `SpanRegistry`, so the next async source (background compaction, GC,
 prefetch) reuses the same primitive with a different `K` and the **same** blanket hook —
@@ -252,9 +255,9 @@ Add `obs.span(name)` guards at the lifecycle edges below. Names follow the §6 l
 grammar — the former timing labels, renamed where it applies (`README.md` §8.2). Wrap a
 **fallible** seam (one that returns `Result`) in the `obs.scope(name, |span| …)`
 combinator (`crate-core-impl.md` §3.4 / M2) so an early-return or explicit `Err`
-self-sets `status:"error"` before the guard drops — a bare `obs.span(name)` guard that
-just drops records `completed`, which is correct only for an infallible
-success-with-no-facts scope. Attach facts with `.attr()`; an explicit `Err` arm can chain
+sets `status:"error"` before the guard drops only when the status is still `Completed` —
+a bare `obs.span(name)` guard that just drops records `completed`, which is correct only
+for an infallible success-with-no-facts scope. Attach facts with `.attr()`; an explicit `Err` arm can chain
 `.status(SpanStatus::Error)` (m2, now `-> &Self`). The Case A waterfall (`README.md`
 §4.1) fixes the minimum set:
 
@@ -263,7 +266,7 @@ success-with-no-facts scope. Attach facts with `.attr()`; an explicit `Err` arm 
 | `daemon.dispatch` | `dispatch.rs` blocking closure (§2) | root (`d-0`); `.attr("op", …)`; fault `Response` → `.status(Error)` (M2, §2) |
 | `command.exec` | `exec_command.rs:18` (`exec_command`) | `d-1`; span label is `command.exec`, but the op name / `attrs.op` stay `exec_command` (M10); `.attr("one_shot", …)`; the sync call body (returns at yield) |
 | `workspace_session.create` | `create_workspace_session.rs:9` | `d-2`; `lease.acquired` (§6 event) + the mount span nest inside it (C1) |
-| `namespace.exec.mount_overlay` | `workspace/src/namespace/setns_runner.rs:37` (wrap the `.wait()`) | `d-4`; **sync** `SpanGuard`, status from the `wait()` `Result`; nested under `workspace_session.create` (C1/M8); the `d-3` slot is vacant after dropping `workspace.create` |
+| `namespace.exec.mount_overlay` | `workspace/src/namespace/setns_runner.rs:37` (wrap the `.wait()`) | `d-4`; **sync** `SpanGuard`, status from the `wait()` `Result`; nested under `workspace_session.create` (C1/M8) |
 | `workspace_session.capture_changes` | `capture_session_changes.rs:7` | `d-6`; one-shot finalize tail (§7), parent `d-1` |
 | `workspace_session.destroy` | `destroy_session.rs:7` | `d-8`; one-shot finalize tail (§7), parent `d-1` |
 
@@ -280,8 +283,10 @@ Each guard nests automatically via the thread-local parent set by its enclosing 
 With the runtime now depending on the obs leaf (§3), emit the lease facts as `event`
 records. They nest under the enclosing span via the thread-local parent, so each is a
 plain `obs.event(name, attrs)` — no `ctx` threading. **Label grammar (M10):** events are
-`subsystem.fact` (past-tense), spans are `subsystem[.area].action` (imperative); state
-this rule next to `record::names` so the on-disk vocabulary does not drift. The Case A
+`subsystem.fact` (past-tense), spans are `subsystem[.area].action` (imperative) — except
+the `namespace.exec.<kind>` family, whose leaf inherits the engine's exec-kind names
+(`namespace.exec.shell` is a noun); state this rule next to `record::names` so the on-disk
+vocabulary does not drift. The Case A
 lease facts are `lease.acquired` (at session create) and `lease.released` (at one-shot
 destroy after publish), served as
 `events` view rows (`cli-observability.md` §3.4, via `Reader::raw(kind=event, name=…)`,
@@ -298,9 +303,10 @@ destroy after publish), served as
 `publish.rs:41-46`) as a **sync `SpanGuard`** named `layerstack.publish`, with
 `attrs{base, revision, layers_added, bytes, no_op}`, and `status=error` +
 `attrs.reason="manifest_conflict"` on the `ManifestConflict` path (`publish.rs:89-97`) —
-this **folds the deleted `layerstack.publish_rejected` event** into the span's status.
+this folds rejected publishes into the span's status.
 The publish span fires in Case A's one-shot finalization (`exec_command.rs:finalize_one_shot`):
-capture session changes, publish, refresh the session handle on success, then destroy. The
+capture session changes (which refreshes the session's base revision), publish (result
+discarded), then destroy. The
 cross-trace publish audit therefore moves from `events --name layerstack.publish` to
 `raw --kind span --name layerstack.publish` (`cli-observability.md` §4.3, M9); the event
 mechanism still serves `lease.*`.
@@ -323,11 +329,12 @@ mechanism still serves `lease.*`.
 
 ## 7. One-shot finalize — capture the trace once
 
-The one-shot finalize (`exec_command.rs:finalize_closure:164-178`) runs inside the
-watcher thread and today captures only `one_shot_handler` + `workspace`
-(`:172`), then calls `workspace.destroy_session(...)` (`:175`). It **captures no
-trace context** — so its `destroy` span and the `lease.released` event would
-land under no trace (`README.md` §5, §9.3).
+The one-shot finalize (`exec_command.rs:finalize_closure:175-186`) runs inside the
+watcher thread and calls `finalize_one_shot` (`:189-227`): capture session changes
+(which refreshes the session's base revision), publish them to the layerstack (the
+publish result is discarded — completion hooks cannot surface it yet), then
+destroy the workspace. It must capture trace context so those tail spans and the
+`lease.released` event land under the originating command trace (`README.md` §5, §9.3).
 
 Capture the request's `TraceContext` into the closure at creation time (on the
 dispatch thread, where the thread-local is still set — its `parent` is the
@@ -340,8 +347,8 @@ let ctx = obs.context();               // snapshot on the dispatch thread (paren
 let one_shot_handler = self.one_shot.then(|| self.handler.clone());
 move |_result| {
     if let Some(handler) = one_shot_handler {   // one-shot gate ONLY — not an observability gate (M4)
-        obs.with_context(ctx, || {     // with_context accepts Option<TraceContext> (M4): None → teardown still runs, uncorrelated
-            let _ = workspace.destroy_session(handler, DestroyWorkspaceRequest::default());
+        obs.with_context(ctx, || {     // with_context accepts Option<TraceContext> (M4): None ⟺ obs disabled → teardown still runs, spans/events no-op
+            finalize_one_shot(workspace, layerstack, handler);
         });
     }
 }
@@ -349,22 +356,20 @@ move |_result| {
 
 Threading the `Observer` in and making `with_context` accept `Option<TraceContext>`
 (M4) is the load-bearing fix: the old `if let (Some(handler), Some(ctx))` form
-**skipped `destroy_session` entirely** when `ctx` was `None`, coupling a
+**skipped `finalize_one_shot` entirely** when `ctx` was `None`, coupling a
 correctness-critical teardown to observability presence — a breach of "instrumentation
-cannot change behavior." Now only the one-shot handler gates the teardown; a `None` ctx
-just runs it uncorrelated.
+cannot change behavior." Now only the one-shot handler gates finalization; a `None` ctx
+(⟺ observability disabled) still runs the teardown, its spans/events simply emitting nothing.
 
-Inside `destroy_session`, `obs.span("workspace_session.destroy")` reads the
-thread-local (parent = `d-1`) and pushes `d-6`; the `lease.released` event
-(`obs.event(...)`, §6) then reads the thread-local and attaches under `d-6`. So
-**`workspace_session.destroy` (`d-6`) is a child of `command.exec` (`d-1`)** — the
-one-shot teardown belongs to the originating command — and the event nests under
-`d-6`. (This is the corrected Case A shape: the teardown is a sibling of
-`namespace.exec.shell` under `d-1`, not a child of the shell span; `README.md` §4.1 /
-`cli-observability.md` §3.3 render it that way.)
+Inside `finalize_one_shot`, `workspace_session.capture_changes` (`d-6`),
+`layerstack.publish` (`d-7`), and `workspace_session.destroy` (`d-8`) read the
+thread-local (parent = `d-1`). The `lease.released` event (`obs.event(...)`, §6)
+then reads the destroy span's thread-local parent and attaches under `d-8`. These tail
+spans are siblings of `namespace.exec.shell` under `d-1`, not children of the shell span;
+`README.md` §4.1 / `cli-observability.md` §4.2 render that shape.
 
-This in-process threading is what makes Case A's async tail (`d-5`, `d-6`, and the
-`lease.released` event) correlate in Phase A — distinct from the cross-process
+This in-process threading is what makes Case A's async tail (`d-5`, `d-6`/`d-7`/`d-8`,
+and the `lease.released` event) correlate in Phase A — distinct from the cross-process
 threading deferred to Phase B (`removal-and-phaseb-impl.md`).
 
 ---
@@ -398,10 +403,10 @@ threading deferred to Phase B (`removal-and-phaseb-impl.md`).
 3. **Sync seams** (§5) — the guard set in the §5 table (incl. the sync `mount_overlay`),
    with `.attr()`/`.status()`; fallible seams via `obs.scope` (M2).
 4. **One-shot finalize capture** (§7) — `Observer` + `TraceContext` snapshot into the
-   finalize closure + `with_context` (Option-accepting) once around `destroy_session`; no
-   teardown-skip when ctx is `None` (M4).
+   finalize closure + `with_context` (Option-accepting) once around capture/publish/destroy;
+   no finalize-skip when ctx is `None` (M4).
 5. **Layerstack events** (§6) — `lease.acquired`/`lease.released` events nesting via the
-   thread-local parent (publish is now the `layerstack.publish` span, M9, not in Case A).
+   thread-local parent; publish is the `layerstack.publish` span (M9).
 
 Steps build strictly on `crate-core-impl.md`; nothing here touches SQLite (already
 gone) or the cross-process fork (Phase B).
@@ -413,13 +418,15 @@ gone) or the cross-process fork (Phase B).
 - **Integration (Case A):** an `exec_command` with no existing session produces, in
   one `observability.ndjson`: one record per span; `namespace.exec.shell` written on
   terminal under `req-…` with `start = ts - dur_ms` before its own `ts` and **before**
-  the `lease.released` tail (recorded at child-exit, before finalize); the finalize
-  `workspace_session.destroy` span has **parent `d-1`** (the `command.exec` span) with
-  `lease.released` nested under it; `lease.acquired` + the sync
+  the finalize tail (recorded at child-exit, before finalize); the finalize
+  `workspace_session.capture_changes`, `layerstack.publish`, and `workspace_session.destroy`
+  spans have **parent `d-1`** (the `command.exec` span), with `lease.released` nested under
+  destroy; `lease.acquired` + the sync
   `namespace.exec.mount_overlay` span (`d-4`) nest under `workspace_session.create`
-  (`d-2`); the `d-3` slot is vacant (no `workspace.create`); there is **no**
-  `layerstack.publish` (evict-only, C1/C3) — all sharing the trace. `Reader::trace`
-  renders the corrected `README.md` §4.1 / `cli-observability.md` §3.3 shape (offsets,
+  (`d-2`) — all sharing the trace (span ids are illustrative; the contract is the
+  parent/child shape, `cli-observability-examples.md` §0).
+  `Reader::trace`
+  renders the corrected `README.md` §4.1 / `cli-observability.md` §4.2 shape (offsets,
   nesting, `[async]` bars).
 - **Sync outcome:** a fallible sync seam whose body returns `Err` records
   `status:"error"` (via `obs.scope`/`.status`, M2), a fault `Response` flips the

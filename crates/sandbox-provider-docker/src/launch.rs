@@ -6,9 +6,9 @@ use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_manager::SandboxRecord;
 
 /// In-container Unix socket the daemon binds (unused by the host, which uses TCP).
-pub const CONTAINER_RUNTIME_SOCKET: &str = "/tmp/eos-runtime.sock";
+pub const CONTAINER_RUNTIME_SOCKET: &str = "/eos/runtime/daemon/runtime.sock";
 /// In-container pid file the daemon writes.
-pub const CONTAINER_RUNTIME_PID: &str = "/tmp/eos-runtime.pid";
+pub const CONTAINER_RUNTIME_PID: &str = "/eos/runtime/daemon/runtime.pid";
 /// The daemon binds its TCP listener on all container interfaces; Docker
 /// publishes it to a loopback host port.
 pub const DAEMON_TCP_BIND_HOST: &str = "0.0.0.0";

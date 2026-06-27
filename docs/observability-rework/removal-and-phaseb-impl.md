@@ -120,19 +120,20 @@ pub struct NamespaceRunnerRequest {
 ```
 
 - **Populate at build.** `build_request` (`engine.rs:248-264`) is the single
-  construction point (called from `run_shell_interactive:93` and
-  `mount_overlay:130`). It already copies `request_id = id.0`; add
-  `trace: <the launching exec span's child TraceContext>`. The id this `parent`
-  needs must already exist at build time, so `SpanRegistry::open`
-  (`crate-core-impl.md` §3) **mints the exec span id AT LAUNCH** — at the moment
-  the async source opens the span, the same call that precedes `build_request` —
-  and **returns a child `TraceContext { trace, parent: <the new exec span id> }`**
-  rather than minting the id later at terminal/`record`. There is no
-  mint-at-complete step to wait on and no new public handle: the id lives in one
-  added `OpenSpan` field and rides out on `open`'s return value. `build_request`
-  (or its callers) is handed that returned child ctx — threaded alongside the `id`
-  already passed in — and stamps it verbatim as `trace`, so on the wire
-  `np-0.parent` = the exec span's id (`d-5`) and `np-0.trace` = the request trace.
+  construction point. For the **shell** path it runs inside the `SpanRegistry::launch`
+  closure (`span-trace-impl.md` §4): `launch` mints the exec span id by calling `open`
+  **internally** at launch — before `build_request` runs — and passes the child
+  `TraceContext { trace, parent: <the new exec span id> }` as the **closure argument**
+  (`crate-core-impl.md` §3.4, M7). `build_request` already copies `request_id = id.0`;
+  inside that closure it also stamps `trace: <that child ctx>`, so on the wire
+  `np-0.parent` = the exec span's id (`d-5`) and `np-0.trace` = the request trace. The id
+  exists at build time precisely because `open` mints it at launch, not later at
+  terminal/`record` — there is no mint-at-complete step to wait on, and no public
+  `open`-return to thread by hand (the child ctx arrives as the launch closure's argument;
+  `open`/`cancel` are `pub(crate)`, internal to `launch`). The overlay mount is **not**
+  launched through the registry — it is a sync `SpanGuard` (`span-trace-impl.md` §4–§5,
+  C1) — so a mount-side `np` span, if ever added (§B.3), parents off the sync mount
+  guard's id by a separate handoff, not a launch-minted child ctx.
 - **Crosses the existing pipe unchanged.** The request is JSON-serialized
   (`encode_request`, `launcher.rs:343-347`), written to `--request-fd`
   (`write_request:216-221`, `into_child:122-145`), and read + deserialized on the

@@ -29,12 +29,12 @@ from the specs in §2. Three small deltas:
    `operation_execution_space_name` arm `"observability"`.
 2. `catalog_title` arm `"Sandbox Observability Help"` (`help.rs:240`).
 3. An observability catalog (`CliOperationCatalog::new(Observability,
-   &[&OBSERVABILITY_FAMILY], &[…5 specs…])`), served read-only.
+   &[&OBSERVABILITY_FAMILY], &[…6 specs…])`), served read-only.
 
-**One transport, five views.** All five operations resolve to the single daemon op
+**One transport, six views.** All six operations resolve to the single daemon op
 `get_observability`; the operation `name` *is* the `view` value, and the CLI flags
-map to that op's params (`trace`, `name`, `scope`, `window_ms`, `since_ms`,
-`kind`). The specs exist so each view gets its own subcommand, help page, and
+map to that op's params (`trace`, `name`, `scope`, `workspace`, `window_ms`,
+`since_ms`, `kind`). The specs exist so each view gets its own subcommand, help page, and
 args.
 
 ---
@@ -183,13 +183,49 @@ bytes/files) carried in the same record.",
     related: &["snapshot"],
 };
 
+// ── layerstack ───────────────────────────────────────────────────────────────
+const LAYERSTACK_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "layerstack",
+    family: "observability",
+    summary: "Per-layer leasing/booking inventory, and stack series.",
+    description: "Show the active manifest as a per-layer inventory: disk bytes, \
+how many workspaces lease each layer, and which leased layers book each base. \
+Served live from the runtime; does not read the log.",
+    args: &[
+        SANDBOX_ID_ARG,
+        ArgSpec::optional(
+            "workspace",
+            ArgKind::String,
+            "Show one workspace's lower layers and private upperdir.",
+            None,
+            Some(ArgCliSpec { flag: Some("--workspace"), positional: None }),
+        ),
+        ArgSpec::optional(
+            "window_ms",
+            ArgKind::Integer,
+            "Lookback window in milliseconds for the stack trend (max 600000).",
+            Some("60000"),
+            Some(ArgCliSpec { flag: Some("--window-ms"), positional: None }),
+        ),
+    ],
+    cli: Some(CliSpec {
+        path: &["observability", "layerstack"],
+        usage: "sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]",
+        examples: &[
+            "sandbox-cli observability layerstack --sandbox-id eos-abc",
+            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7",
+        ],
+    }),
+    related: &["snapshot", "cgroup"],
+};
+
 // ── raw ─────────────────────────────────────────────────────────────────────
 const RAW_SPEC: CliOperationSpec = CliOperationSpec {
     name: "raw",
     family: "observability",
     summary: "Print matching NDJSON log lines.",
     description: "Forward-scan the log and print matching records verbatim \
-(newline-delimited JSON), for grep/jq. Filter by kind, trace, and start time.",
+    (newline-delimited JSON), for grep/jq. Filter by kind, name, trace, and start time.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
@@ -198,6 +234,13 @@ const RAW_SPEC: CliOperationSpec = CliOperationSpec {
             "Filter by record kind: span | event | sample.",
             None,
             Some(ArgCliSpec { flag: Some("--kind"), positional: None }),
+        ),
+        ArgSpec::optional(
+            "name",
+            ArgKind::String,
+            "Filter by exact record name.",
+            None,
+            Some(ArgCliSpec { flag: Some("--name"), positional: None }),
         ),
         ArgSpec::optional(
             "trace",
@@ -216,9 +259,10 @@ const RAW_SPEC: CliOperationSpec = CliOperationSpec {
     ],
     cli: Some(CliSpec {
         path: &["observability", "raw"],
-        usage: "sandbox-cli observability raw --sandbox-id ID [--kind K] [--trace ID] [--since-ms MS]",
+        usage: "sandbox-cli observability raw --sandbox-id ID [--kind K] [--name NAME] [--trace ID] [--since-ms MS]",
         examples: &[
             "sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3",
+            "sandbox-cli observability raw --sandbox-id eos-abc --kind span --name layerstack.publish",
         ],
     }),
     related: &["trace", "events"],
@@ -396,16 +440,18 @@ Family
   Observability
 
 Description
-  Forward-scan the log and print matching records verbatim (newline-delimited JSON), for grep/jq. Filter by kind, trace, and start time.
+  Forward-scan the log and print matching records verbatim (newline-delimited JSON), for grep/jq. Filter by kind, name, trace, and start time.
 
 Usage
-  sandbox-cli observability raw --sandbox-id ID [--kind K] [--trace ID] [--since-ms MS]
+  sandbox-cli observability raw --sandbox-id ID [--kind K] [--name NAME] [--trace ID] [--since-ms MS]
 
 Arguments
   --sandbox-id string required
     Target sandbox id (selects the daemon to query).
   --kind string optional
     Filter by record kind: span | event | sample.
+  --name string optional
+    Filter by exact record name.
   --trace string optional
     Filter to one trace id.
   --since-ms integer optional
@@ -413,10 +459,43 @@ Arguments
 
 Examples
   sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3
+  sandbox-cli observability raw --sandbox-id eos-abc --kind span --name layerstack.publish
 
 Related Operations
   trace
   events
+```
+
+### 3.7 `sandbox-cli observability help layerstack`
+
+```text
+layerstack
+
+Family
+  Observability
+
+Description
+  Show the active manifest as a per-layer inventory: disk bytes, how many workspaces lease each layer, and which leased layers book each base. Served live from the runtime; does not read the log.
+
+Usage
+  sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]
+
+Arguments
+  --sandbox-id string required
+    Target sandbox id (selects the daemon to query).
+  --workspace string optional
+    Show one workspace's lower layers and private upperdir.
+  --window-ms integer optional
+    Lookback window in milliseconds for the stack trend (max 600000).
+    Default: 60000
+
+Examples
+  sandbox-cli observability layerstack --sandbox-id eos-abc
+  sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
+
+Related Operations
+  snapshot
+  cgroup
 ```
 
 ---
@@ -458,25 +537,28 @@ sandbox eos-abc   state ready
 
 ```console
 $ sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3
-trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
+trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
 
   +00.000  daemon.dispatch op=exec_command                 1051ms  ✓
   +00.002   └ command.exec one_shot                        1048ms  ✓
-  +00.003      ├ workspace_session.create                    38ms  ✓
+  +00.003      ├ workspace_session.create                    39ms  ✓
   +00.009      │   • lease.acquired r5
   +00.013      │   └ namespace.exec.mount_overlay            27ms  ✓
-  +00.042      ├ namespace.exec.shell           [async]    4231ms  ✓ exit0
-  +00.055      │   └ namespace.runner.spawn_child            6ms  ✓   [Phase B]
-  +04.275      └ workspace_session.destroy one_shot         25ms  ✓
-  +04.295         • lease.released r5
+  +00.042      ├ namespace.exec.shell           [async]    4231ms  ✓ exit0   ← outlives call
+  +00.055      │   └ namespace.runner.spawn_child            6ms  ✓   [Phase B: cross-process]
+  +04.275      ├ workspace_session.capture_changes           11ms  ✓
+  +04.287      ├ layerstack.publish r5→r6 +1 layer 40KB      12ms  ✓
+  +04.300      └ workspace_session.destroy one_shot          25ms  ✓
+  +04.320         • lease.released r5
 ```
 
 ```console
 $ sandbox-cli observability trace --sandbox-id eos-abc        # --id defaults to "last"
 trace req-9a1   sandbox eos-abc   wall — (in flight)   1 span open
 
-  +00.000  command.exec ws-7                                1020ms  ✓
-  +00.020   └ namespace.exec.shell  ns-42  [async]          running  (live, from registry)
+  +00.000  daemon.dispatch op=exec_command                 1021ms  ✓
+  +00.001   └ command.exec ws-7                            1020ms  ✓
+  +00.020      └ namespace.exec.shell  ns-42  [async]      running  (live, from registry)
 ```
 
 ```console
@@ -491,8 +573,8 @@ $ sandbox-cli observability events --sandbox-id eos-abc
 events  sandbox eos-abc   12 matched (newest first)
 
   ts        name                trace     parent  attrs
-  +04.295   lease.released      req-7f3   d-6     revision=r5
-  +00.009   lease.acquired      req-7f3   d-2     revision=r5 owner=req-7f3
+  +04.320   lease.released      req-7f3   d-8     revision=r5
+  +00.009   lease.acquired      req-7f3   d-2     revision=r5
   …
 ```
 
@@ -501,7 +583,7 @@ $ sandbox-cli observability events --sandbox-id eos-abc --name lease.released
 events  sandbox eos-abc   name=lease.released   2 matched
 
   ts        trace     parent  attrs
-  +04.295   req-7f3   d-6     revision=r5
+  +04.320   req-7f3   d-8     revision=r5
   +18.130   req-9c2   d-31    revision=r7
 ```
 
@@ -510,7 +592,7 @@ $ sandbox-cli observability events --sandbox-id eos-abc --since-ms 1719500004280
 events  sandbox eos-abc   since 1719500004280   1 matched
 
   ts        name                trace     parent  attrs
-  +04.295   lease.released      req-7f3   d-6     revision=r5
+  +04.320   lease.released      req-7f3   d-8     revision=r5
 ```
 
 ```console
@@ -518,7 +600,7 @@ $ sandbox-cli observability events --sandbox-id eos-abc --name lease.acquired --
 events  sandbox eos-abc   name=lease.acquired since 1719500000000   1 matched
 
   ts        trace     parent  attrs
-  +00.009   req-7f3   d-2     revision=r5 owner=req-7f3
+  +00.009   req-7f3   d-2     revision=r5
 ```
 
 ### 4.4 `cgroup` — default scope / workspace / window cap error
@@ -552,8 +634,14 @@ error: window_ms exceeds max (600000)
 ```console
 $ sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3
 {"ts":1719500000040,"kind":"span","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed"}
+{"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed"}
+{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{"exec_id":"ns-9"}}
 {"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
+{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
 {"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","attrs":{"exec_id":"ns-9","async":true,"exit_code":0}}
+{"ts":1719500004286,"kind":"span","trace":"req-7f3","span":"d-6","parent":"d-1","name":"workspace_session.capture_changes","dur_ms":11.0,"status":"completed","attrs":{"one_shot":true}}
+{"ts":1719500004299,"kind":"span","trace":"req-7f3","span":"d-7","parent":"d-1","name":"layerstack.publish","dur_ms":12.0,"status":"completed","attrs":{"base":"r5","revision":"r6","layers_added":1,"bytes":40960,"no_op":false}}
+{"ts":1719500004325,"kind":"span","trace":"req-7f3","span":"d-8","parent":"d-1","name":"workspace_session.destroy","dur_ms":25.0,"status":"completed","attrs":{"one_shot":true}}
 ```
 
 ```console
@@ -570,6 +658,19 @@ $ sandbox-cli observability raw --sandbox-id eos-abc --trace nope
                                                                # empty: no matching lines (exit 0)
 ```
 
+### 4.6 `layerstack` — inventory / one workspace / stack series
+
+Three forms (plus the window-cap error); the exact rendered shapes — per-layer inventory,
+one-session lowers+upper, and the `--window-ms` stack trend with read-time Δ — are the
+source of truth in `layerstack-impl.md` §4 and are not duplicated here.
+
+| Command | Outcome |
+|---|---|
+| `… layerstack --sandbox-id eos-abc` | active manifest as a per-layer inventory (disk bytes, leased-by, books-base) — live from the registry |
+| `… layerstack --sandbox-id eos-abc --workspace ws-7` | one session's lower layers + private upperdir |
+| `… layerstack --sandbox-id eos-abc --window-ms 60000` | stack time-series (`layers`/`layers_bytes`), Δ at read |
+| `… layerstack --sandbox-id eos-abc --window-ms 999999999` | `error: window_ms exceeds max (600000)` |
+
 ### 4.7 Permutation coverage summary
 
 | view | flags | distinct forms shown |
@@ -578,7 +679,8 @@ $ sandbox-cli observability raw --sandbox-id eos-abc --trace nope
 | `trace` | `--id {id\|last\|unknown}` | 4 |
 | `events` | `--name`?, `--since-ms`? | 4 |
 | `cgroup` | `--scope`?, `--window-ms`? (+cap error) | 3 |
-| `raw` | `--kind`?, `--trace`?, `--since-ms`? | 4 |
+| `layerstack` | `--workspace`?, `--window-ms`? (+cap error) | 4 |
+| `raw` | `--kind`?, `--name`?, `--trace`?, `--since-ms`? | 5 |
 | global | `help`, `help <view>`, missing/unknown | 4 |
 
 ---
@@ -590,17 +692,16 @@ $ sandbox-cli observability raw --sandbox-id eos-abc --trace nope
   spellings in early `README.md` §7 prose (`--window`, `--since`) defer to this
   file.
 - **`get_observability` params** map 1:1 from flags: `view` = subcommand name,
-  `trace` ⇄ `--id`/`--trace`, `name`, `scope`, `window_ms`, `since_ms`, `kind`.
+  `trace` ⇄ `--id`/`--trace`, `name`, `scope`, `workspace`, `window_ms`, `since_ms`, `kind`.
   `--sandbox-id` is CLI routing, not an op param.
 - **Publish is a span, not an event.** `layerstack.publish` is no longer a
   point-in-time event: a real publish is the sync span `layerstack.publish`
   (`attrs{base, revision, layers_added, bytes, no_op}`; `status=error` +
-  `attrs.reason="manifest_conflict"` on a rejected publish — the old
-  `layerstack.publish_rejected` event is gone). One-shot teardown never publishes
-  (it evicts the upperdir and releases the lease), so Case A's tail is
-  `lease.released` alone, carrying the same revision as `lease.acquired`. The
+  `attrs.reason="manifest_conflict"` on a rejected publish; the old rejected-publish
+  event is gone). One-shot finalization publishes after
+  capture and before destroy; standalone destroy still only releases the lease. The
   cross-trace publish audit therefore moves off `events --name layerstack.publish`
-  to `raw --kind span` filtered on `name == "layerstack.publish"` (jq); the
+  to `raw --kind span --name layerstack.publish`; the
   `events` view still serves `lease.*` and the other domain facts. The capacity
   columns (`base`/`revision`/`layers_added`/`bytes`) survive verbatim as span
   attrs.
