@@ -315,26 +315,6 @@ fn read_command_lines_omits_default_window_args_when_flags_are_absent() -> TestR
 }
 
 #[test]
-fn squash_maps_no_runtime_args() -> TestResult {
-    let catalog = runtime_catalog()?;
-    let request = build_request_from_catalog_with_id(
-        BuildRequestInput {
-            execution_space: CliOperationExecutionSpace::Runtime,
-            operation: "squash".to_owned(),
-            operation_argv: vec![],
-            sandbox_id: Some("sbox-1".to_owned()),
-        },
-        &config(None),
-        &catalog,
-        "req-1",
-    )?;
-
-    assert_eq!(request.op, "squash");
-    assert_eq!(request.args, json!({}));
-    Ok(())
-}
-
-#[test]
 fn output_writes_success_to_stdout() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
@@ -462,8 +442,6 @@ async fn runtime_help_renders_grouped_catalog_help() -> TestResult {
     assert!(help.contains("Workspace Session"));
     assert!(help.contains("create_workspace_session"));
     assert!(help.contains("destroy_workspace_session"));
-    assert!(help.contains("Layer Stack"));
-    assert!(help.contains("squash"));
     assert!(!help.contains("--sandbox-id"));
     assert!(stderr.is_empty());
     Ok(())
@@ -537,28 +515,6 @@ async fn runtime_help_destroy_workspace_session_renders_detail_without_sandbox_i
     assert!(help.contains(
         "Examples\n  sandbox-cli runtime destroy_workspace_session --workspace-session-id ws-1"
     ));
-    assert!(!help.contains("--sandbox-id"));
-    assert!(stderr.is_empty());
-    Ok(())
-}
-
-#[tokio::test]
-async fn runtime_help_squash_operation_renders_detail_without_sandbox_id() -> TestResult {
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
-    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
-        ["sandbox-cli", "runtime", "help", "squash"],
-        &mut stdout,
-        &mut stderr,
-    )
-    .await;
-
-    assert_eq!(exit, 0);
-    let help = String::from_utf8(stdout)?;
-    assert!(help.contains("squash"));
-    assert!(help.contains("Family\n  Layer Stack"));
-    assert!(help.contains("Usage\n  sandbox-cli runtime squash"));
-    assert!(help.contains("Examples\n  sandbox-cli runtime squash"));
     assert!(!help.contains("--sandbox-id"));
     assert!(stderr.is_empty());
     Ok(())

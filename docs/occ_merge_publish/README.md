@@ -297,7 +297,6 @@ Leases are retention and remount safety, not merge participants:
 - acquiring a workspace snapshot records a leased manifest and refcounts its
   layers
 - release removes only layers that are no longer active and no longer leased
-- compaction may replace layer identities while preserving visible content
 
 The merge code must use the `base_manifest` carried by the publish request. It
 must not re-read a lease by id during publish. A workspace session can be
@@ -444,13 +443,11 @@ Workspace/operation tests:
   manifest
 - remount after publish sees the merged active manifest
 
-Lease/compaction tests:
+Lease tests:
 
 - auto-merge succeeds when command base has multiple layers
 - auto-merge succeeds after unrelated active layers are added
 - auto-merge uses the request base manifest, not the active manifest suffix
-- auto-merge remains correct after lease parent compaction retargets the
-  session manifest
 - releasing unrelated leases does not affect merge results
 
 ## Rollout
@@ -458,7 +455,7 @@ Lease/compaction tests:
 1. Land tests that characterize current conservative conflicts.
 2. Add internal merge module and unit tests independent of layerstack publish.
 3. Wire resolver into `publish_validated_changes`.
-4. Add mixed changeset and lease/compaction coverage.
+4. Add mixed changeset and lease coverage.
 5. Keep the feature enabled by default only after conflict, atomicity, and
    performance caps are tested.
 

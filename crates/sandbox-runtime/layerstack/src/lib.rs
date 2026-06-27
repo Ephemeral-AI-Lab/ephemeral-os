@@ -20,10 +20,7 @@ pub use stack::publish::model::{
     PublishBaseRevision, PublishReject, PublishRejectReason, PublishRouteSummary,
     PublishValidatedChangesRequest, PublishValidatedChangesResult, SourceConflict,
 };
-pub use stack::reclaim_unpinned_layers::{
-    ReclaimUnpinnedLayersCopyThroughOutcome, ReclaimUnpinnedLayersOutcome,
-};
-pub use stack::{LayerStack, Lease, MergedView, SquashOutcome};
+pub use stack::{LayerStack, Lease, MergedView};
 pub use workspace_base::{
     build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
     WorkspaceBinding, WORKSPACE_BINDING_FILE,

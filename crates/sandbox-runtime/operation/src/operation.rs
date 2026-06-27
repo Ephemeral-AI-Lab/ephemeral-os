@@ -1,8 +1,7 @@
 use std::sync::OnceLock;
 
 use crate::cli_definition::{
-    command_operations, layerstack_operations, workspace_session_operations,
-    CliOperationFamilySpec, CliOperationSpec,
+    command_operations, workspace_session_operations, CliOperationFamilySpec, CliOperationSpec,
 };
 use crate::services::SandboxRuntimeOperations;
 
@@ -35,7 +34,6 @@ impl OperationEntry {
 const CLI_FAMILIES: &[&CliOperationFamilySpec] = &[
     &command_operations::COMMAND_FAMILY,
     &workspace_session_operations::WORKSPACE_SESSION_FAMILY,
-    &layerstack_operations::LAYERSTACK_FAMILY,
 ];
 static CLI_SPECS: OnceLock<&'static [&'static CliOperationSpec]> = OnceLock::new();
 
@@ -76,10 +74,9 @@ pub(crate) fn known_operation_name(operation: &str) -> Option<&'static str> {
         .find_map(|entry| (entry.name == operation).then_some(entry.name))
 }
 
-fn operation_entry_groups() -> [&'static [OperationEntry]; 3] {
+fn operation_entry_groups() -> [&'static [OperationEntry]; 2] {
     [
         command_operations::operation_entries(),
         workspace_session_operations::operation_entries(),
-        layerstack_operations::operation_entries(),
     ]
 }

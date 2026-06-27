@@ -587,8 +587,8 @@ fn collect_inline_test_policy_violations(
     path: &Path,
     violations: &mut Vec<InlineTestPolicyViolation>,
 ) -> Result<()> {
-    for_each_attribute(path, |line_number, raw_attribute, compact_attribute| {
-        if let Some(kind) = compact_attribute_violation_kind(compact_attribute) {
+    for_each_attribute(path, |line_number, raw_attribute, normalized_attribute| {
+        if let Some(kind) = normalized_attribute_violation_kind(normalized_attribute) {
             violations.push(InlineTestPolicyViolation {
                 path: path.to_path_buf(),
                 line_number,
@@ -603,8 +603,8 @@ fn collect_cfg_policy_violations(
     path: &Path,
     violations: &mut Vec<CfgPolicyViolation>,
 ) -> Result<()> {
-    for_each_attribute(path, |line_number, raw_attribute, compact_attribute| {
-        if compact_attribute_is_cfg(compact_attribute) {
+    for_each_attribute(path, |line_number, raw_attribute, normalized_attribute| {
+        if normalized_attribute_is_cfg(normalized_attribute) {
             violations.push(CfgPolicyViolation {
                 path: path.to_path_buf(),
                 line_number,
@@ -618,8 +618,8 @@ fn collect_test_support_policy_violations(
     path: &Path,
     violations: &mut Vec<TestSupportPolicyViolation>,
 ) -> Result<()> {
-    for_each_attribute(path, |line_number, raw_attribute, compact_attribute| {
-        if compact_attribute_is_test_support_gate(compact_attribute) {
+    for_each_attribute(path, |line_number, raw_attribute, normalized_attribute| {
+        if normalized_attribute_is_test_support_gate(normalized_attribute) {
             violations.push(TestSupportPolicyViolation {
                 path: path.to_path_buf(),
                 line_number,
@@ -636,12 +636,12 @@ where
     let body = fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
     let mut pending_attribute: Option<(usize, String, String)> = None;
     for (line_index, line) in body.lines().enumerate() {
-        if let Some((start_line, raw_attribute, compact_attribute)) = &mut pending_attribute {
+        if let Some((start_line, raw_attribute, normalized_attribute)) = &mut pending_attribute {
             raw_attribute.push(' ');
             raw_attribute.push_str(line.trim());
-            compact_attribute.push_str(&compact_attribute_text(line));
-            if compact_attribute.contains(']') {
-                visit(*start_line, raw_attribute, compact_attribute);
+            normalized_attribute.push_str(&normalized_attribute_text(line));
+            if normalized_attribute.contains(']') {
+                visit(*start_line, raw_attribute, normalized_attribute);
                 pending_attribute = None;
             }
             continue;
@@ -652,29 +652,29 @@ where
             continue;
         }
         let raw_attribute = trimmed.to_owned();
-        let compact_attribute = compact_attribute_text(trimmed);
-        if compact_attribute.contains(']') {
-            visit(line_index + 1, &raw_attribute, &compact_attribute);
+        let normalized_attribute = normalized_attribute_text(trimmed);
+        if normalized_attribute.contains(']') {
+            visit(line_index + 1, &raw_attribute, &normalized_attribute);
         } else {
-            pending_attribute = Some((line_index + 1, raw_attribute, compact_attribute));
+            pending_attribute = Some((line_index + 1, raw_attribute, normalized_attribute));
         }
     }
     Ok(())
 }
 
-fn compact_attribute_is_cfg(compact: &str) -> bool {
-    let Some(attribute) = attribute_body(compact) else {
+fn normalized_attribute_is_cfg(normalized: &str) -> bool {
+    let Some(attribute) = attribute_body(normalized) else {
         return false;
     };
     let (path, _args) = attribute_path_and_args(attribute);
     path == "cfg" || path == "cfg_attr"
 }
 
-fn compact_attribute_is_test_support_gate(compact: &str) -> bool {
-    if !compact.contains("feature=\"test-support\"") {
+fn normalized_attribute_is_test_support_gate(normalized: &str) -> bool {
+    if !normalized.contains("feature=\"test-support\"") {
         return false;
     }
-    let Some(attribute) = attribute_body(compact) else {
+    let Some(attribute) = attribute_body(normalized) else {
         return false;
     };
     let (path, _args) = attribute_path_and_args(attribute);
@@ -685,30 +685,30 @@ fn is_attribute_start(trimmed: &str) -> bool {
     trimmed.starts_with("#[") || trimmed.starts_with("#![")
 }
 
-fn compact_attribute_text(line: &str) -> String {
+fn normalized_attribute_text(line: &str) -> String {
     line.chars()
         .filter(|ch| !ch.is_whitespace())
         .collect::<String>()
 }
 
-fn compact_attribute_violation_kind(compact: &str) -> Option<InlineTestPolicyViolationKind> {
-    if is_forbidden_cfg_test_attribute(compact) {
+fn normalized_attribute_violation_kind(normalized: &str) -> Option<InlineTestPolicyViolationKind> {
+    if is_forbidden_cfg_test_attribute(normalized) {
         Some(InlineTestPolicyViolationKind::CfgTest)
     } else {
-        attribute_violation_kind(compact)
+        attribute_violation_kind(normalized)
     }
 }
 
-fn is_forbidden_cfg_test_attribute(compact: &str) -> bool {
-    let Some(attribute) = attribute_body(compact) else {
+fn is_forbidden_cfg_test_attribute(normalized: &str) -> bool {
+    let Some(attribute) = attribute_body(normalized) else {
         return false;
     };
     let (path, args) = attribute_path_and_args(attribute);
     path == "cfg" && args.is_some_and(cfg_predicate_is_forbidden_test_gate)
 }
 
-fn attribute_violation_kind(compact_line: &str) -> Option<InlineTestPolicyViolationKind> {
-    let attribute = attribute_body(compact_line)?;
+fn attribute_violation_kind(normalized_line: &str) -> Option<InlineTestPolicyViolationKind> {
+    let attribute = attribute_body(normalized_line)?;
     let (path, args) = attribute_path_and_args(attribute);
     if is_test_attribute(path) {
         Some(InlineTestPolicyViolationKind::TestAttribute)
@@ -729,10 +729,10 @@ fn attribute_violation_kind(compact_line: &str) -> Option<InlineTestPolicyViolat
     }
 }
 
-fn attribute_body(compact_line: &str) -> Option<&str> {
-    let attribute = compact_line
+fn attribute_body(normalized_line: &str) -> Option<&str> {
+    let attribute = normalized_line
         .strip_prefix("#![")
-        .or_else(|| compact_line.strip_prefix("#["))?;
+        .or_else(|| normalized_line.strip_prefix("#["))?;
     attribute.strip_suffix(']').or_else(|| {
         attribute
             .split_once(']')

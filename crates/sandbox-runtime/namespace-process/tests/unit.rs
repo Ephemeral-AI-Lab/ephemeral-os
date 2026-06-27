@@ -70,6 +70,14 @@ mod runner_shell_exec_request_tests {
     ));
 }
 
+#[cfg(target_os = "linux")]
+mod runner_shell_exec_execute_tests {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/runner/shell_exec/execute.rs"
+    ));
+}
+
 #[cfg(not(target_os = "linux"))]
 mod runner_non_linux_tests {
     #[test]

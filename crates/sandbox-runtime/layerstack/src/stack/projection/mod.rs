@@ -3,7 +3,6 @@ use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 
 mod apply;
-mod checkpoint;
 
 use crate::error::LayerStackError;
 use crate::fs::{join_layer_path, remove_path, resolve_layer_path, validate_layer_ref};
@@ -11,8 +10,6 @@ use crate::model::{LayerPath, LayerRef, Manifest};
 use apply::apply_layer;
 
 use crate::whiteout::{is_kernel_whiteout, logical_whiteout_path_for_target, OPAQUE_MARKER};
-
-pub(in crate::stack) use apply::layer_has_boundary_markers;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MergedEntry {

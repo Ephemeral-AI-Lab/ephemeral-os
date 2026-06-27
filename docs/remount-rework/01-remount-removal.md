@@ -24,11 +24,6 @@ There are **two** remount layers in the tree; **both are removed**:
 - `setns::setns_overlay_mount` / `run_setns` / `join_namespaces` / `setns_fd` /
   `setns_user_mnt` / `namespace_fd_order_with_types` in `namespace-process`.
 - `NsRunnerOperation::MountOverlay` arm in the daemon runner.
-- `LayerStackService::squash` (`operation/layerstack`) — it compacts layers and
-  *returns* `layer_paths`; it never called remount. It stays untouched. (Its
-  `layer_paths` output simply stops having a remount consumer — which there
-  wasn't, in production, anyway.)
-
 ## 1. Removal classes
 
 Each item below is either **[DELETE]** (whole file/dir removed) or **[EDIT]**
@@ -111,7 +106,7 @@ The session state machine has remount woven into its core; excise it.
 
 ```
 [EDIT] operation/src/lib.rs                  (drop `pub mod workspace_remount;` + `pub use workspace_remount::WorkspaceRemountService;`)
-[EDIT] operation/src/observability.rs        (drop SpanKey/const for remount, if any remount-only; `LAYERSTACK_SQUASH_*` stay)
+[EDIT] operation/src/observability.rs        (drop SpanKey/const for remount, if any remount-only)
 ```
 
 ### 1.6 `workspace` crate — lifecycle/remount mechanism ([DELETE] + [EDIT])
@@ -180,19 +175,7 @@ The session state machine has remount woven into its core; excise it.
 > If any deployed DB must survive, that's a migration concern — flag to the
 > owner; this spec assumes schema is rebuilt.
 
-### 1.10 `layerstack` — compact-for-remount ([EDIT], verify scope)
-
-```
-[EDIT] crates/sandbox-runtime/layerstack/src/stack/ops/reclaim_unpinned_layers.rs
-         - DELETE `compact_leased_parent_for_remount` (the remount-specific entry)
-         - VERIFY whether `reclaim_unpinned_layers` / `LeaseParentCompactionOutcome`
-           / `copy_through` have NON-remount callers (general GC). If yes, KEEP the
-           general reclaim and only strip the `_for_remount` veneer. If the only
-           caller was remount, delete the whole op.
-[EDIT] crates/sandbox-runtime/layerstack/src/lib.rs   (drop `_for_remount` re-exports accordingly)
-```
-
-### 1.11 Tests ([DELETE] whole files; [EDIT] mixed files)
+### 1.10 Tests ([DELETE] whole files; [EDIT] mixed files)
 
 ```
 [DELETE] operation/tests/workspace_remount.rs          (153 remount hits)
@@ -242,7 +225,7 @@ All must be empty (except, by design, `--mount-overlay`/`MountOverlay`/
 ## 4. Acceptance
 
 - `cargo build` clean.
-- `cargo test` whole workspace green (mount/create/destroy/publish/squash/command
+- `cargo test` whole workspace green (mount/create/destroy/publish/command
   exec all unaffected).
 - `cargo clippy --all-targets` clean; `cargo fmt` applied.
 - The README component table row for `sandbox-runtime-workspace` no longer lists

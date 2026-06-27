@@ -22,11 +22,7 @@ pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
-pub(crate) use stack::reclaim_unpinned_layers::{
-    plan_reclaim_unpinned_layers, ReclaimUnpinnedLayersCheckpointMode, ReclaimUnpinnedLayersPlan,
-    ReclaimUnpinnedLayersPlanEntry,
-};
-pub use stack::{LayerStack, Lease, MergedView, SquashOutcome};
+pub use stack::{LayerStack, Lease, MergedView};
 pub use workspace_base::{
     build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
     WorkspaceBinding, WORKSPACE_BINDING_FILE,
@@ -51,7 +47,6 @@ pub(crate) fn process_state_test_lock() -> std::sync::MutexGuard<'static, ()> {
 
 pub(crate) use lock::*;
 pub(crate) use model::*;
-pub(crate) use stack::squash::*;
 
 #[path = "unit/test_fixture.rs"]
 mod test_fixture;
@@ -60,12 +55,8 @@ mod test_fixture;
 mod model_tests;
 #[path = "unit/publish.rs"]
 mod publish_tests;
-#[path = "unit/reclaim_unpinned_layers.rs"]
-mod reclaim_unpinned_layers_tests;
 #[path = "unit/service.rs"]
 mod service_tests;
-#[path = "unit/squash.rs"]
-mod squash_tests;
 #[path = "unit/stack.rs"]
 mod stack_tests;
 #[path = "unit/storage_lock.rs"]

@@ -12,14 +12,12 @@ mod lease;
 mod ops;
 mod projection;
 pub mod publish;
-pub(crate) mod reclaim_unpinned_layers;
-pub(crate) mod squash;
 
+use lease::release_lease_locked;
 pub(crate) use lease::reset_shared_registries_for_tests;
 use lease::{
     lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
 };
-use lease::{release_lease_locked, retarget_lease_locked};
 
 pub use projection::MergedView;
 
@@ -30,12 +28,6 @@ pub struct Lease {
     pub root_hash: String,
     pub manifest: Manifest,
     pub layer_paths: Vec<String>,
-}
-
-#[derive(Debug)]
-pub struct SquashOutcome {
-    pub manifest: Option<Manifest>,
-    pub lease_release_error: Option<LayerStackError>,
 }
 
 #[derive(Debug)]
@@ -98,17 +90,6 @@ impl LayerStack {
         let _guard = self.writer_lock.exclusive()?;
         let mut leases = lock_shared_registry(&self.leases)?;
         release_lease_locked(&self.storage_root, &mut leases, lease_id)
-    }
-
-    #[doc(hidden)]
-    pub fn retarget_lease_manifest(
-        &mut self,
-        lease_id: &str,
-        manifest: Manifest,
-    ) -> Result<bool, LayerStackError> {
-        let _guard = self.writer_lock.exclusive()?;
-        let mut leases = lock_shared_registry(&self.leases)?;
-        retarget_lease_locked(&self.storage_root, &mut leases, lease_id, manifest)
     }
 
     #[must_use]

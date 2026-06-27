@@ -23,11 +23,3 @@ pub struct PublishChangesResult {
     pub route_summary: sandbox_runtime_layerstack::PublishRouteSummary,
     pub no_op: bool,
 }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SquashLayerStackResult {
-    pub squashed: bool,
-    pub revision: Option<LayerStackRevision>,
-    pub layer_paths: Vec<PathBuf>,
-    pub lease_release_error: Option<String>,
-}

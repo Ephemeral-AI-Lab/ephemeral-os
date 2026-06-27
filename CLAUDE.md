@@ -32,6 +32,8 @@ crosses them is wrong even if it compiles.
 - **Parallel workers.** Other agents may be editing this repo concurrently. Only
   touch what your task requires, never revert or overwrite changes you did not
   make, and prefer additive, localized edits.
+- **Work on `main`.** Always work on the `main` branch. Do not create new
+  branches or git worktrees; commit your changes directly to `main`.
 
 ## Build & test
 

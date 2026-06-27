@@ -294,22 +294,3 @@ fn layerstack_service_ignored_only_publish_preserves_route_summary(
     );
     Ok(())
 }
-
-#[test]
-fn layerstack_service_squash_reports_no_op_for_unsquashable_stack(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let fixture = PublishFixture::new("service-squash-no-op")?;
-    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
-    let base = fixture.build_base()?;
-    let service = fixture.service()?;
-
-    let result = service.squash()?;
-
-    assert!(!result.squashed);
-    assert_eq!(result.revision, None);
-    assert!(result.layer_paths.is_empty());
-    let active = sandbox_runtime_layerstack::LayerStack::open(fixture.root.clone())?
-        .read_active_manifest()?;
-    assert_eq!(active, base);
-    Ok(())
-}

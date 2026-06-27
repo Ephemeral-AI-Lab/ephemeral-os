@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -74,31 +74,8 @@ impl LeaseRegistry {
         Some(lease)
     }
 
-    pub(in crate::stack) fn retarget(
-        &mut self,
-        lease_id: &str,
-        manifest: Manifest,
-    ) -> Option<LayerStackLeaseRecord> {
-        let lease = self.leases.get_mut(lease_id)?;
-        let old = lease.clone();
-        decrement_layers(&mut self.refcounts, &old.manifest.layers);
-        increment_layers(&mut self.refcounts, &manifest.layers);
-        lease.manifest = manifest;
-        Some(old)
-    }
-
     pub(in crate::stack) fn leased_layers(&self) -> Vec<LayerRef> {
         self.refcounts.keys().cloned().collect()
-    }
-
-    pub(in crate::stack) fn lease_head_layers(&self) -> Vec<LayerRef> {
-        self.leases
-            .values()
-            .filter_map(|lease| lease.manifest.layers.first())
-            .cloned()
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .collect()
     }
 
     pub(in crate::stack) fn active_count(&self) -> usize {

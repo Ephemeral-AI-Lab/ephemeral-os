@@ -34,7 +34,7 @@ sandbox-config
 | `sandbox-daemon` | bin+lib | bind daemon transport and dispatch runtime requests | know about Docker fleets |
 | `sandbox-runtime` | lib | command operation surface plus internal workspace session orchestration | own low-level runtime primitives |
 | `sandbox-runtime-workspace` | lib | workspace runtime lifecycle, namespace handles, capture, and destroy | own command process state |
-| `sandbox-runtime-layerstack` | lib | content hashes, manifest/layer types, storage, leases, compaction | own command execution |
+| `sandbox-runtime-layerstack` | lib | content hashes, manifest/layer types, storage, leases | own command execution |
 | `sandbox-runtime-namespace-execution` | lib | namespace execution engine, PTY I/O, and transcript read/write windowing | own workspace lifecycle |
 | `sandbox-runtime-namespace-process` | lib | namespace holder/runner bodies and setns execution | own operation dispatch |
 | `sandbox-runtime-overlay` | lib | low-level overlay mount and unmount primitives | own workspace lifecycle |

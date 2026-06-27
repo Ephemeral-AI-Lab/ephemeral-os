@@ -19,9 +19,9 @@ Processes run inside a **mount namespace** that contains this mount. They hold
 live references into `R`: a current directory (`cwd`), an open root (`root`),
 open file descriptors, memory-mapped files, and the mount itself.
 
-When the layer history is **compacted** (squash), many intermediate lower layers
-`L1..Ln` collapse into a smaller, **content-equivalent** stack `L1'..Lm'`
-(`m ≤ n`). To reclaim the old layers we must point the mount at the new stack:
+When the layer history changes, lower layers `L1..Ln` may be replaced by a
+different **content-equivalent** stack `L1'..Lm'`. To drop the old layers we must
+point the mount at the new stack:
 
 ```
 before: lowerdir = L1:L2:...:Ln
@@ -35,7 +35,7 @@ still resolve to the same content.
 
 Two facts make this safe to attempt:
 
-- **Content equivalence.** The compacted stack yields byte-identical file
+- **Content equivalence.** The replacement stack yields byte-identical file
   content. A process reading a file before and after the swap sees the same
   bytes.
 - **Preserved writable layer.** `upperdir = U` and `workdir = W` are **unchanged**
@@ -166,7 +166,7 @@ identity is by owned-token + captured-id-set, not by liveness at resume time.)
 The swap is only declared good when **all** hold:
 
 - **Structural:** `mountinfo` at `R` shows `fs_type == overlay` and the lowerdir
-  list matches the requested compacted stack exactly (count + order).
+  list matches the requested replacement stack exactly (count + order).
 - **Behavioral:** the read probe reads a known file at a known relative path and,
   when given, matches expected content — proving the new mount actually serves
   the workspace's data, not an empty or wrong overlay.

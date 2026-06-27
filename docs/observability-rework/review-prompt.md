@@ -26,7 +26,7 @@ smaller design over a cleverer one.
      (the `ExecutionObserver` / watcher-thread seam the async spans hook)
    - `crates/sandbox-runtime/operation/src/command/service/exec_command.rs`
      (the one-shot finalize tail)
-   - `crates/sandbox-runtime/layerstack/src/stack/**` (lease / publish / squash)
+   - `crates/sandbox-runtime/layerstack/src/stack/**` (lease / publish)
    - `crates/sandbox-provider-docker/src/runtime.rs` (env forwarding being removed)
 
 ## The bar to judge against (hard constraints — do not relitigate these as if they were open)

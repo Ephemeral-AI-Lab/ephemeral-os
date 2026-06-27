@@ -6,15 +6,8 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Context, Result};
 use sandbox_config::configs::runner::RunnerConfig;
 
-mod mount_overlay;
+pub(crate) mod mount_overlay;
 mod shell;
-
-#[cfg(test)]
-#[allow(
-    unused_imports,
-    reason = "integration unit harness path-includes this module and imports the helper through the re-export"
-)]
-pub(crate) use mount_overlay::mount_overlay_result;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
 

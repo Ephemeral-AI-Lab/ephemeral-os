@@ -4,10 +4,8 @@ Status: ready-to-implement (additive to the main spec).
 
 The formal CLI surface for observability, written in the repo's **operation-family
 / operation-spec** format (`sandbox-protocol/src/cli_operation_spec.rs`,
-`catalog.rs`, rendered by `help.rs`). Companion to:
-
-- `README.md` — the data model, views, and the `get_observability` transport op.
-- `layerstack-observability.md` — the `layerstack` / `cgroup` stat readers.
+`catalog.rs`, rendered by `help.rs`). Companion to `README.md` — the data model,
+views, and the `get_observability` transport op.
 
 This document is the source of truth for: **(§2)** the `CliOperationFamilySpec` +
 `CliOperationSpec`s, **(§3)** the rendered `help` manual those specs produce, and
@@ -31,14 +29,13 @@ from the specs in §2. Three small deltas:
    `operation_execution_space_name` arm `"observability"`.
 2. `catalog_title` arm `"Sandbox Observability Help"` (`help.rs:240`).
 3. An observability catalog (`CliOperationCatalog::new(Observability,
-   &[&OBSERVABILITY_FAMILY], &[…6 specs…])`), served read-only.
+   &[&OBSERVABILITY_FAMILY], &[…5 specs…])`), served read-only.
 
-**One transport, six views.** All six operations resolve to the single daemon op
+**One transport, five views.** All five operations resolve to the single daemon op
 `get_observability`; the operation `name` *is* the `view` value, and the CLI flags
-map to that op's params (`trace`, `name`, `scope`, `workspace`, `window_ms`,
-`since_ms`, `kind`). The six specs exist so each view gets its own subcommand,
-help page, and args — the distinction the main spec calls for (trace vs event vs
-cgroup vs layerstack).
+map to that op's params (`trace`, `name`, `scope`, `window_ms`, `since_ms`,
+`kind`). The specs exist so each view gets its own subcommand, help page, and
+args.
 
 ---
 
@@ -57,8 +54,8 @@ pub const OBSERVABILITY_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec 
     title: "Observability",
     summary: "Inspect traces, events, and resource stats for a sandbox.",
     description: "Read a sandbox's observability stream — span waterfalls, domain \
-events, cgroup/disk and layerstack resource series — and live state, over the \
-daemon get_observability op.",
+events, cgroup/disk resource series, and live state, over the daemon \
+get_observability op.",
 };
 
 const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
@@ -74,7 +71,7 @@ const SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
     family: "observability",
     summary: "Show live sandbox state.",
     description: "Show current state from the runtime registry: sandbox lifecycle \
-state, workspaces (with layer/pin counts), in-flight executions, and the latest \
+state, workspaces (with layer counts), in-flight executions, and the latest \
 resource sample per scope. Served live; does not read the log.",
     args: &[SANDBOX_ID_ARG],
     cli: Some(CliSpec {
@@ -82,7 +79,7 @@ resource sample per scope. Served live; does not read the log.",
         usage: "sandbox-cli observability snapshot --sandbox-id ID",
         examples: &["sandbox-cli observability snapshot --sandbox-id eos-abc"],
     }),
-    related: &["trace", "cgroup", "layerstack"],
+    related: &["trace", "cgroup"],
 };
 
 // ── trace ───────────────────────────────────────────────────────────────────
@@ -183,45 +180,7 @@ bytes/files) carried in the same record.",
             "sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000",
         ],
     }),
-    related: &["snapshot", "layerstack"],
-};
-
-// ── layerstack ──────────────────────────────────────────────────────────────
-const LAYERSTACK_SPEC: CliOperationSpec = CliOperationSpec {
-    name: "layerstack",
-    family: "observability",
-    summary: "Layer inventory (leased / booked-by), and stack series.",
-    description: "Inspect the shared layer stack. Default: stack inventory (per-layer \
-bytes, leased, and booked-by). With --workspace: one session's mounted layers \
-(shared with whom) plus its private upper/workdir. With --window-ms: the stack \
-time series (layers/bytes/squashable over time).",
-    args: &[
-        SANDBOX_ID_ARG,
-        ArgSpec::optional(
-            "workspace",
-            ArgKind::String,
-            "Show one session's leased layers + its private upper/workdir.",
-            None,
-            Some(ArgCliSpec { flag: Some("--workspace"), positional: None }),
-        ),
-        ArgSpec::optional(
-            "window_ms",
-            ArgKind::Integer,
-            "Present ⇒ stack time series over this window in ms (max 600000).",
-            None,
-            Some(ArgCliSpec { flag: Some("--window-ms"), positional: None }),
-        ),
-    ],
-    cli: Some(CliSpec {
-        path: &["observability", "layerstack"],
-        usage: "sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]",
-        examples: &[
-            "sandbox-cli observability layerstack --sandbox-id eos-abc",
-            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7",
-            "sandbox-cli observability layerstack --sandbox-id eos-abc --window-ms 60000",
-        ],
-    }),
-    related: &["snapshot", "cgroup"],
+    related: &["snapshot"],
 };
 
 // ── raw ─────────────────────────────────────────────────────────────────────
@@ -266,11 +225,8 @@ const RAW_SPEC: CliOperationSpec = CliOperationSpec {
 };
 ```
 
-**Format notes.** `ArgKind` has no `Bool`, so layerstack mode is selected by
-*presence* of `--workspace` / `--window-ms` rather than a boolean flag — no format
-change. (If a presence flag like `--samples` is preferred, it needs an additive
-`ArgKind::Bool`; deliberately avoided here.) Arg `name` is the wire param sent to
-`get_observability`; the CLI flag is the spelling (e.g. `trace` ⇄ `--id`).
+**Format notes.** Arg `name` is the wire param sent to `get_observability`; the
+CLI flag is the spelling (e.g. `trace` ⇄ `--id`).
 
 ---
 
@@ -301,7 +257,7 @@ Observability
     Resource series for a scope (cpu/mem/io + disk).
 
   layerstack
-    Layer inventory (leased / booked-by), and stack series.
+    Per-layer leasing/booking inventory, and stack series.
 
   raw
     Print matching NDJSON log lines.
@@ -319,7 +275,7 @@ Family
   Observability
 
 Description
-  Show current state from the runtime registry: sandbox lifecycle state, workspaces (with layer/pin counts), in-flight executions, and the latest resource sample per scope. Served live; does not read the log.
+  Show current state from the runtime registry: sandbox lifecycle state, workspaces (with layer counts), in-flight executions, and the latest resource sample per scope. Served live; does not read the log.
 
 Usage
   sandbox-cli observability snapshot --sandbox-id ID
@@ -429,42 +385,9 @@ Examples
 
 Related Operations
   snapshot
-  layerstack
 ```
 
-### 3.6 `sandbox-cli observability help layerstack`
-
-```text
-layerstack
-
-Family
-  Observability
-
-Description
-  Inspect the shared layer stack. Default: stack inventory (per-layer bytes, leased, and booked-by). With --workspace: one session's mounted layers (shared with whom) plus its private upper/workdir. With --window-ms: the stack time series (layers/bytes/squashable over time).
-
-Usage
-  sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]
-
-Arguments
-  --sandbox-id string required
-    Target sandbox id (selects the daemon to query).
-  --workspace string optional
-    Show one session's leased layers + its private upper/workdir.
-  --window-ms integer optional
-    Present ⇒ stack time series over this window in ms (max 600000).
-
-Examples
-  sandbox-cli observability layerstack --sandbox-id eos-abc
-  sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
-  sandbox-cli observability layerstack --sandbox-id eos-abc --window-ms 60000
-
-Related Operations
-  snapshot
-  cgroup
-```
-
-### 3.7 `sandbox-cli observability help raw`
+### 3.6 `sandbox-cli observability help raw`
 
 ```text
 raw
@@ -501,15 +424,15 @@ Related Operations
 ## 4. Command permutation matrix — exact output shapes
 
 Every meaningful flag combination per subcommand, with the exact rendered shape.
-All examples use sandbox `eos-abc` and the data from `README.md` §4 / the
-layerstack side spec, so shapes line up across docs.
+All examples use sandbox `eos-abc` and the data from `README.md` §4, so shapes
+line up across docs.
 
 ### 4.0 Global forms
 
 | Command | Outcome |
 |---|---|
 | `sandbox-cli observability help` | §3.1 catalog page |
-| `sandbox-cli observability help <view>` | §3.2–3.7 operation page |
+| `sandbox-cli observability help <view>` | §3.2–3.6 operation page |
 | `sandbox-cli observability <view>` *(no `--sandbox-id`)* | `error: missing required --sandbox-id` |
 | `sandbox-cli observability bogus --sandbox-id eos-abc` | `unknown observability operation: bogus` + `Did you mean:` suggestions (help.rs) |
 
@@ -518,8 +441,6 @@ layerstack side spec, so shapes line up across docs.
 ```console
 $ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
-
-  stack   r6   5 layers (4 needed, 1 squashable)   2.55MB   2 leases
 
   workspaces
     ws-7   active   profile=default   head l3   mounts 4   upper 156KB
@@ -559,16 +480,6 @@ trace req-9a1   sandbox eos-abc   wall — (in flight)   1 span open
 
   +00.000  exec_command ws-7                                1020ms  ✓
   +00.020   └ namespace.exec.shell  ns-42  [async]          running  (live, from registry)
-```
-
-```console
-$ sandbox-cli observability trace --sandbox-id eos-abc --id sq-22     # background flow
-trace sq-22   sandbox eos-abc   wall 0.83s   trigger=autosquash
-
-  +00.000  layerstack.squash                                 830ms  ✓
-  +00.005   • squash.planned   layers=5  est_reclaim=12.0MB
-  +00.010   └ squash.project_checkpoint                      810ms  ✓
-  +00.825   • squash.completed 5→1 layers  reclaimed=11.8MB → r9
 ```
 
 ```console
@@ -642,42 +553,7 @@ $ sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms
 error: window_ms exceeds max (600000)
 ```
 
-### 4.5 `layerstack` — inventory / per-session / time series
-
-```console
-$ sandbox-cli observability layerstack --sandbox-id eos-abc        # stack inventory
-stack r6   5 layers (4 needed, 1 squashable)   2.55MB   2 leases
-
-  layer        bytes    leased   booked by    status
-  l0 (base)    1.80MB     0       l2, l3
-  l1           480KB      0       l2, l3
-  l2            80KB      1       l3
-  l3           156KB      1       —
-  l4            40KB      0       —            squashable
-```
-
-```console
-$ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
-workspace ws-7   head l3   mounts l0..l3 (4 layers)   upper 156KB   workdir 8KB
-
-  layer        bytes    shared with
-  l0 (base)    1.80MB   ws-9
-  l1           480KB    ws-9
-  l2            80KB    ws-9
-  l3           156KB    — (only ws-7)
-  upper        156KB    private
-```
-
-```console
-$ sandbox-cli observability layerstack --sandbox-id eos-abc --window-ms 60000      # presence ⇒ time series
-scope stack   window 60s   (Δ computed at read)
-
-  t(+s)   layers   Δlayers   unique_bytes   Δbytes     squashable   leases
-  00.0      5         –         2.55MB         –           1          2
-  60.0      6        +1         2.88MB      +330KB         2          2
-```
-
-### 4.6 `raw` — none / --kind / --trace / --since-ms / combined
+### 4.5 `raw` — none / --kind / --trace / --since-ms / combined
 
 ```console
 $ sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3
@@ -708,7 +584,6 @@ $ sandbox-cli observability raw --sandbox-id eos-abc --trace nope
 | `trace` | `--id {id\|last\|unknown}` | 4 |
 | `events` | `--name`?, `--since-ms`? | 4 |
 | `cgroup` | `--scope`?, `--window-ms`? (+cap error) | 3 |
-| `layerstack` | `--workspace` \| `--window-ms` \| none | 3 |
 | `raw` | `--kind`?, `--trace`?, `--since-ms`? | 4 |
 | global | `help`, `help <view>`, missing/unknown | 4 |
 
@@ -721,12 +596,8 @@ $ sandbox-cli observability raw --sandbox-id eos-abc --trace nope
   spellings in early `README.md` §7 prose (`--window`, `--since`) defer to this
   file.
 - **`get_observability` params** map 1:1 from flags: `view` = subcommand name,
-  `trace` ⇄ `--id`/`--trace`, `name`, `scope`, `workspace`, `window_ms`,
-  `since_ms`, `kind`. `--sandbox-id` is CLI routing, not an op param.
-- **No `ArgKind::Bool`**: layerstack mode is inferred from `--workspace` /
-  `--window-ms` presence (precedence: `--window-ms` ⇒ series; else `--workspace`
-  ⇒ session; else inventory). Adding `Bool` for an explicit `--samples` flag is a
-  deliberate non-goal here.
+  `trace` ⇄ `--id`/`--trace`, `name`, `scope`, `window_ms`, `since_ms`, `kind`.
+  `--sandbox-id` is CLI routing, not an op param.
 - **Testing**: add catalog/help golden tests mirroring `gateway_cli.rs`
   (`Family\n  Observability`, each operation page) and a per-view request-builder
   test asserting flags map to the right `get_observability` params.

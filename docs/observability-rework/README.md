@@ -266,41 +266,7 @@ sandbox eos-abc   state ready        (state · workspaces · in-flight from live
     ws-7      cpu  4.1s   mem 18MB        disk 1.2MB (320 files)
 ```
 
-### 4.3 Case C — squash / autosquash (background trace, no request)
-
-Squash has no request driving it, so it **mints a fresh `trace` id** at its root
-span (there is no `request_id` to reuse) and tags it with `trigger`. A future
-**autosquash policy** is the *same shape* with `trigger:"autosquash"` — no new
-machinery. (`span` ids are still process-local; the daemon process emits `d-*`.)
-
-```
-sq-22  layerstack.squash  trigger=autosquash         [background root, no parent]
- • squash.planned     layers=5 est_reclaim=12MB
- └ squash.project_checkpoint
- • squash.completed   5→1 layers  reclaimed=11.8MB  revision=r9
-```
-
-**Raw:**
-
-```json
-{"ts":1719600000005,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","parent":"d-40","name":"squash.planned","attrs":{"layers":5,"est_reclaim_bytes":12582912}}
-{"ts":1719600000820,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"d-41","parent":"d-40","name":"squash.project_checkpoint","dur_ms":810.0,"status":"completed"}
-{"ts":1719600000825,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","parent":"d-40","name":"squash.completed","attrs":{"from_layers":5,"to_layers":1,"reclaimed_bytes":12373196,"revision":"r9"}}
-{"ts":1719600000830,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"d-40","name":"layerstack.squash","dur_ms":830.0,"status":"completed","attrs":{"trigger":"autosquash"}}
-```
-
-**Rendered — `sandbox-cli observability trace --sandbox-id eos-abc --id sq-22`:**
-
-```
-trace sq-22   sandbox eos-abc   wall 0.83s   trigger=autosquash
-
-  +00.000  layerstack.squash                                  830ms  ✓
-  +00.005   • squash.planned   layers=5  est_reclaim=12.0MB
-  +00.010   └ squash.project_checkpoint                       810ms  ✓
-  +00.825   • squash.completed 5→1 layers  reclaimed=11.8MB → r9
-```
-
-### 4.4 Case D — resource samples + deltas
+### 4.3 Case C — resource samples + deltas
 
 Periodic `sample` lines; the reader computes deltas at read time (none stored).
 
@@ -336,7 +302,6 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
                       ExecutionObserver::on_terminal  → write the one span record (watcher thread)
  layerstack facts  →  acquire_snapshot_with_lease → event lease.acquired
                       publish_changes            → event layerstack.publish | publish_rejected
-                      squash                     → fresh-trace root span + squash.planned/completed
  cgroup/disk       →  daemon collect() → obs.sample(scope, metrics)   (readers moved into the crate)
 ```
 
@@ -530,8 +495,6 @@ trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
   +04.295            • lease.released r6
 ```
 
-(Background flows render the same way: `--id sq-22` → the Case C squash tree.)
-
 ### 7.3 `events` — flat domain-fact stream (by name / time)
 
 Unlike `trace` (one flow as a tree), `events` is a **flat, cross-trace** stream —
@@ -647,14 +610,13 @@ layer-projection domain concept, not timing.
    map for the async exec span; the one-shot finalize closure captures the
    `TraceContext`. This in-process threading is what makes **Case A's async tail**
    (`d-5`, `d-6`, `publish`/`lease`) correlate in Phase A.
-4. **Layerstack events** (lease / publish / squash); squash mints a fresh
-   background `trace` id at its root span.
+4. **Layerstack events** (lease / publish).
 5. **Removal checklist** (§8) — the scoped greps gate the change.
 6. **Phase B (follow-up):** thread `trace`/`parent` through
    `NamespaceRunnerRequest` (and optionally the daemon protocol) so the forked
    namespace-process (Case A's `np-0`) and gateway-initiated requests stitch into
-   one cross-process tree; the watcher already carries the handle. Autosquash
-   reuses the squash root-span shape. **No schema change between phases** — the
+   one cross-process tree; the watcher already carries the handle. **No schema
+   change between phases** — the
    `trace`/`parent`/`span` fields exist from Phase A; Phase B only populates them
    across the fork.
 
@@ -670,9 +632,8 @@ layer-projection domain concept, not timing.
   marker and the reader spans both files.
 - **Integration:** an `exec_command` reproduces Case A's shape (one record per
   span, `namespace.exec.shell` written on terminal under `req-7f3`, finalize
-  `destroy` span + `publish`/`lease` events share the trace); a `squash`
-  reproduces Case C; the `snapshot` view reflects live-registry in-flight (Case B)
-  with **no** log dependency.
+  `destroy` span + `publish`/`lease` events share the trace); the `snapshot`
+  view reflects live-registry in-flight (Case B) with **no** log dependency.
 - **Fetch:** `get_observability` returns each `view`; `trace` the waterfall,
   `events` the flat stream, `cgroup` the series with deltas, `snapshot` from the
   live registry, `raw` the filtered lines — each selected by the matching

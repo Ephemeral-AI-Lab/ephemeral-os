@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use sandbox_protocol::{CliOperationExecutionSpace, CliOperationScope, Request};
+use sandbox_protocol::CliOperationExecutionSpace;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService, ExecCommandInput};
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
@@ -15,7 +15,6 @@ use sandbox_runtime_workspace::{
     CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceError,
     WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
-use serde_json::json;
 
 fn workspace_session() -> Arc<WorkspaceSessionService> {
     Arc::new(WorkspaceSessionService::new(noop_workspace_runtime()))
@@ -163,7 +162,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "workspace_session", "layerstack"]
+        ["command", "workspace_session"]
     );
     assert_eq!(
         names,
@@ -173,7 +172,6 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             "read_command_lines",
             "create_workspace_session",
             "destroy_workspace_session",
-            "squash"
         ]
     );
     assert!(catalog.operations.iter().all(|spec| spec.cli.is_some()));
@@ -229,10 +227,6 @@ fn runtime_known_operation_name_uses_registered_operation_entries() {
     assert_eq!(
         sandbox_runtime::known_operation_name("exec_command"),
         Some("exec_command")
-    );
-    assert_eq!(
-        sandbox_runtime::known_operation_name("squash"),
-        Some("squash")
     );
     assert_eq!(
         sandbox_runtime::known_operation_name("create_workspace_session"),
@@ -301,37 +295,6 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
 
     let services = include_str!("../src/services.rs");
     assert!(services.contains("pub workspace_session: Arc<WorkspaceSessionService>"));
-}
-
-#[test]
-fn squash_dispatch_projects_stable_no_op_json(
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let workspace = workspace_session();
-    let operations = SandboxRuntimeOperations::new(
-        Arc::new(CommandOperationService::new(
-            Arc::clone(&workspace),
-            CommandConfig::default(),
-        )),
-        workspace,
-        layerstack_service()?,
-    );
-
-    let response = sandbox_runtime::dispatch_operation(
-        &operations,
-        &Request::new(
-            "squash",
-            "req-squash",
-            CliOperationScope::system(),
-            json!({}),
-        ),
-    )
-    .into_json_value();
-
-    assert_eq!(response["squashed"], false);
-    assert!(response["revision"].is_null(), "{response}");
-    assert_eq!(response["layer_paths"], json!([]));
-    assert!(response.get("lease_release_error").is_some(), "{response}");
-    Ok(())
 }
 
 fn rust_sources(relative_root: &str) -> Vec<(PathBuf, String)> {

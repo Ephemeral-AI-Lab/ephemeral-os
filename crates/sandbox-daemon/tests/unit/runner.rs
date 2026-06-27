@@ -4,7 +4,7 @@ use std::os::unix::net::UnixStream;
 
 use anyhow::{bail, Context, Result};
 
-use crate::runner_cli::{mount_overlay_result, open_fd_for_write, RunnerCliConfig};
+use crate::runner_cli::{mount_overlay::mount_overlay_result, open_fd_for_write, RunnerCliConfig};
 
 #[test]
 fn runner_cli_accepts_explicit_request_and_result_fds() -> Result<()> {

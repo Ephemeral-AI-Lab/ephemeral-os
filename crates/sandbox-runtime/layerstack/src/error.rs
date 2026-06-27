@@ -21,9 +21,6 @@ pub enum LayerStackError {
     #[error("layer-stack lock poisoned: {0}")]
     LockPoisoned(&'static str),
 
-    #[error("invalid squash plan: {0}")]
-    InvalidSquashPlan(String),
-
     #[error("layer-stack publish rejected: {0:?}")]
     PublishRejected(Box<PublishReject>),
 

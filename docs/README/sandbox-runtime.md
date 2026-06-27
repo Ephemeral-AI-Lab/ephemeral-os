@@ -78,8 +78,8 @@ remounts through narrow command and workspace-session ports.
 - `sandbox-runtime-namespace-process` owns the namespace holder and runner
   bodies, runner protocol DTOs, setns command execution, and in-namespace
   overlay/DNS helpers.
-- `sandbox-runtime-layerstack` owns snapshot leases, publish, compaction,
-  layer storage behavior, manifest schema, and CAS fixtures.
+- `sandbox-runtime-layerstack` owns snapshot leases, publish, layer storage
+  behavior, manifest schema, and CAS fixtures.
 - `sandbox-runtime-overlay` owns low-level overlay mount, move, and unmount
   primitives shared by workspace and namespace process code.
 - `sandbox-config` owns sandbox YAML loading, merging, validation, and typed
