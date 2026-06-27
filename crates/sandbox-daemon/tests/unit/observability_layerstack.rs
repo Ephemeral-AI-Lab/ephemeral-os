@@ -10,7 +10,6 @@ use serde_json::json;
 use crate::observability::layerstack::{
     layerstack_view_value, stack_summary_value, workspace_layerstack_value,
 };
-use crate::observability::view::resource_series_for_scope;
 
 fn workspace(id: &str, layer_ids: &[&str]) -> RuntimeWorkspaceSnapshot {
     RuntimeWorkspaceSnapshot {
@@ -133,26 +132,6 @@ fn stack_summary_reports_layer_count_bytes_and_leases() {
         summary,
         json!({ "layer_count": 3, "layers_bytes": 244, "active_leases": 2 })
     );
-}
-
-#[test]
-fn resource_series_selects_scope_from_snapshot() {
-    let snapshot = json!({
-        "resources": { "latest": { "scope": "sandbox" }, "history": [] },
-        "workspaces": [
-            { "workspace_id": "ws-7", "resources": { "latest": { "scope": "ws-7" }, "history": [] } },
-        ],
-    });
-
-    assert_eq!(
-        resource_series_for_scope(&snapshot, "sandbox"),
-        json!({ "latest": { "scope": "sandbox" }, "history": [] })
-    );
-    assert_eq!(
-        resource_series_for_scope(&snapshot, "ws-7"),
-        json!({ "latest": { "scope": "ws-7" }, "history": [] })
-    );
-    assert_eq!(resource_series_for_scope(&snapshot, "missing"), json!(null));
 }
 
 #[test]

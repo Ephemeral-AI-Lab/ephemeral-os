@@ -2,6 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::observability::DaemonObservability;
+use sandbox_config::configs::observability::ObservabilityConfig;
 pub(crate) use sandbox_protocol::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
 use sandbox_runtime::{SandboxRuntimeConfig, SandboxRuntimeOperations};
 use serde_json::{json, Value};
@@ -26,6 +27,9 @@ pub struct ServerConfig {
     /// when cgroup v2 is unavailable; the sandbox-wide resource sample is read
     /// here and degrades to unavailable when absent.
     pub cgroup_root: Option<PathBuf>,
+    /// Observability emit gate + rotation policy (`observability` config
+    /// section); the emit gate maps into the leaf `ObserverConfig`.
+    pub observability: ObservabilityConfig,
 }
 
 /// The running sandbox daemon: request dispatch state and shutdown token.
@@ -59,7 +63,7 @@ impl SandboxDaemonServer {
         let config = self.config.clone();
         let operations = Arc::clone(&self.operations);
         let handle = tokio::task::spawn_blocking(move || {
-            let _ = observability.collect(&config, &operations);
+            observability.collect(&config, &operations);
         });
         drop(handle);
     }

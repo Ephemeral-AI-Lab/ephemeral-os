@@ -1,26 +1,29 @@
+//! Leaf collectors: the cgroup v2 reader and the budgeted upperdir disk walk.
+
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::observability::cgroup::CgroupSample;
+use sandbox_observability::collect::cgroup::CgroupSample;
+use sandbox_observability::collect::disk::sample_upperdir;
 
-fn cgroup_fixture(label: &str) -> PathBuf {
+fn fixture(label: &str) -> PathBuf {
     static NEXT: AtomicU64 = AtomicU64::new(0);
     let dir = std::env::temp_dir().join(format!(
-        "sandbox-daemon-cgroup-{label}-{}-{}",
+        "sandbox-obs-collect-{label}-{}-{}",
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
-    std::fs::create_dir_all(&dir).expect("create cgroup fixture dir");
+    std::fs::create_dir_all(&dir).expect("create fixture dir");
     dir
 }
 
 fn write_file(dir: &Path, name: &str, contents: &str) {
-    std::fs::write(dir.join(name), contents).expect("write cgroup fixture file");
+    std::fs::write(dir.join(name), contents).expect("write fixture file");
 }
 
 #[test]
-fn read_parses_cpu_and_memory_counters_with_a_bounded_max() {
-    let dir = cgroup_fixture("counters");
+fn cgroup_read_parses_cpu_and_memory_counters_with_a_bounded_max() {
+    let dir = fixture("counters");
     write_file(
         &dir,
         "cpu.stat",
@@ -44,8 +47,8 @@ fn read_parses_cpu_and_memory_counters_with_a_bounded_max() {
 }
 
 #[test]
-fn read_treats_memory_max_literal_as_unlimited() {
-    let dir = cgroup_fixture("unlimited");
+fn cgroup_read_treats_memory_max_literal_as_unlimited() {
+    let dir = fixture("unlimited");
     write_file(&dir, "cpu.stat", "usage_usec 0\n");
     write_file(&dir, "memory.current", "0\n");
     write_file(&dir, "memory.max", "max\n");
@@ -58,8 +61,8 @@ fn read_treats_memory_max_literal_as_unlimited() {
 }
 
 #[test]
-fn read_degrades_when_a_required_controller_file_is_missing() {
-    let dir = cgroup_fixture("missing-memory");
+fn cgroup_read_degrades_when_a_required_controller_file_is_missing() {
+    let dir = fixture("missing-memory");
     write_file(&dir, "cpu.stat", "usage_usec 10\n");
 
     let sample = CgroupSample::read(&dir);
@@ -73,12 +76,15 @@ fn read_degrades_when_a_required_controller_file_is_missing() {
     let error = sample
         .cgroup_error
         .expect("missing controller file yields an error");
-    assert!(error.contains("memory.current"), "unexpected error {error:?}");
+    assert!(
+        error.contains("memory.current"),
+        "unexpected error {error:?}"
+    );
 }
 
 #[test]
-fn read_degrades_when_cpu_stat_lacks_usage_usec() {
-    let dir = cgroup_fixture("no-usage");
+fn cgroup_read_degrades_when_cpu_stat_lacks_usage_usec() {
+    let dir = fixture("no-usage");
     write_file(&dir, "cpu.stat", "nr_periods 0\n");
     write_file(&dir, "memory.current", "0\n");
     write_file(&dir, "memory.max", "max\n");
@@ -90,4 +96,21 @@ fn read_degrades_when_cpu_stat_lacks_usage_usec() {
         .cgroup_error
         .expect("missing usage_usec yields an error");
     assert!(error.contains("usage_usec"), "unexpected error {error:?}");
+}
+
+#[test]
+fn disk_sample_totals_bytes_and_counts() {
+    let dir = fixture("disk");
+    write_file(&dir, "one.txt", "abc");
+    write_file(&dir, "two.txt", "de");
+    std::fs::create_dir_all(dir.join("nested")).expect("nested dir");
+    write_file(&dir.join("nested"), "three.txt", "f");
+
+    let sample = sample_upperdir(&dir);
+
+    assert_eq!(sample.upperdir_bytes, Some(6), "3 + 2 + 1 bytes");
+    assert_eq!(sample.file_count, Some(3));
+    assert_eq!(sample.dir_count, Some(2), "root + nested");
+    assert_eq!(sample.truncated, Some(false));
+    assert_eq!(sample.read_error_count, Some(0));
 }

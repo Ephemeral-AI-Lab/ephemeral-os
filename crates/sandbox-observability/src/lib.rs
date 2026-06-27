@@ -1,19 +1,33 @@
-mod collect;
-mod paths;
-mod records;
-mod samples;
-mod store;
+//! Leaf observability crate: one NDJSON record model (`Record::{Span, Event,
+//! Sample}`), a single-write `Sink`, a folding `Reader`, and the `Observer` emit
+//! API. No storage engine, no runtime/daemon/config dependency — `serde`,
+//! `serde_json`, and `thiserror` only.
+
+pub mod collect;
+pub mod paths;
+pub mod record;
+
+mod observer;
+mod reader;
+mod sink;
 
 pub use collect::{sample_layerstack, LayerBytes, LayerStackBytes};
+pub use observer::{
+    NoopHook, Observer, ObserverConfig, SpanGuard, SpanKeyAttrs, SpanRegistry, TerminalHook,
+    TraceContext,
+};
 pub use paths::{ObservabilityPathError, ObservabilityPaths};
-pub use records::{
-    NamespaceExecutionSnapshotRecord, RecordValidationError, ResourceSampleRecord,
-    SandboxSnapshotRecord, WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH,
-    MAX_KIND_LENGTH, MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
-};
-pub use samples::{SampleReader, SampleSink};
-pub use store::{
-    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityResourceSampleRow,
-    ObservabilitySandboxSnapshotRow, ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows,
-    ObservabilityStore, ObservabilityWorkspaceSnapshotRow, StoreError,
-};
+pub use reader::{EventNode, RawFilter, Reader, SampleDelta, SpanNode};
+pub use record::{Attrs, Event, Record, Sample, Span, SpanStatus, MAX_LINE_BYTES};
+pub use sink::Sink;
+
+/// Current unix time in milliseconds — the single clock the emit/read sides
+/// self-stamp from; no caller threads a timestamp.
+pub(crate) fn unix_now_ms() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
+}

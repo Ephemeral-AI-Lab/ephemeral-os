@@ -5,7 +5,14 @@ fn observability_leaf_excludes_runtime_and_daemon_dependencies() {
     )
     .expect("read observability manifest");
     let dependencies = manifest_section(&manifest, "[dependencies]");
-    for forbidden in ["sandbox-runtime", "sandbox-daemon", "sandbox-manager"] {
+    for forbidden in [
+        "rusqlite",
+        "sandbox-runtime",
+        "sandbox-daemon",
+        "sandbox-manager",
+        "sandbox-config",
+        "sandbox-protocol",
+    ] {
         assert!(
             !dependencies.contains(forbidden),
             "observability leaf crate must not depend on {forbidden}"

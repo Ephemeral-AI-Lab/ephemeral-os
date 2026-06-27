@@ -1,8 +1,7 @@
-//! Live `get_observability` view router. Serves runtime-derived and live-state
-//! views without reading the NDJSON log; the SQLite snapshot path stays on its
-//! own private op.
+//! Live `get_observability` view router. Serves every view from live runtime
+//! state plus the leaf `Reader` over the one NDJSON log — no storage engine.
 
-use sandbox_observability::{sample_layerstack, ObservabilitySnapshotReadOptions};
+use sandbox_observability::sample_layerstack;
 use sandbox_protocol::{error_kind, Request, Response};
 use sandbox_runtime::SandboxRuntimeOperations;
 use serde_json::{json, Value};
@@ -64,10 +63,9 @@ fn layerstack_view_response(
     if let (Some(observability), Some(window_ms), Value::Object(object)) =
         (observability, window_ms, &mut view)
     {
-        let since = super::unix_ms().saturating_sub(i64::try_from(window_ms).unwrap_or(i64::MAX));
         object.insert(
             "trend".to_owned(),
-            Value::Array(observability.stack_trend(since)),
+            Value::Array(observability.stack_trend(window_ms)),
         );
     }
     Response::ok(view)
@@ -79,15 +77,8 @@ fn workspace_view_response(
     workspace: &str,
 ) -> Response {
     let snapshot = operations.observability_snapshot();
-    let upper_bytes = observability
-        .and_then(|observability| {
-            observability
-                .read_snapshot_value(&ObservabilitySnapshotReadOptions {
-                    resource_window_ms: None,
-                })
-                .ok()
-        })
-        .and_then(|live| workspace_upper_bytes(&live, workspace));
+    let upper_bytes =
+        observability.and_then(|observability| observability.latest_upper_bytes(workspace));
     match workspace_layerstack_value(&snapshot.workspaces, workspace, upper_bytes) {
         Some(value) => Response::ok(value),
         None => Response::fault(
@@ -97,27 +88,17 @@ fn workspace_view_response(
     }
 }
 
-fn workspace_upper_bytes(live: &Value, workspace: &str) -> Option<u64> {
-    live.get("workspaces")?
-        .as_array()?
-        .iter()
-        .find(|entry| entry.get("workspace_id").and_then(Value::as_str) == Some(workspace))?
-        .get("resources")?
-        .get("latest")?
-        .get("disk")?
-        .get("upperdir_bytes")?
-        .as_u64()
-}
-
-fn snapshot_view_response(
+/// The live `snapshot` view. Also serves the legacy `get_observability_snapshot`
+/// op as a thin no-SQLite alias (the request carries no view-specific args).
+pub(crate) fn snapshot_view_response(
     operations: &SandboxRuntimeOperations,
     observability: Option<&DaemonObservability>,
-    request: &Request,
+    _request: &Request,
 ) -> Response {
-    let mut snapshot = match live_snapshot(observability, request) {
-        Ok(snapshot) => snapshot,
-        Err(response) => return response,
+    let Some(observability) = observability else {
+        return observability_unconfigured();
     };
+    let mut snapshot = observability.snapshot_value(operations.observability_snapshot());
     if let (Ok(observation), Value::Object(object)) =
         (operations.observe_layerstack(), &mut snapshot)
     {
@@ -138,44 +119,18 @@ fn cgroup_view_response(
         Ok(scope) => scope.unwrap_or_else(|| "sandbox".to_owned()),
         Err(response) => return response,
     };
-    let snapshot = match live_snapshot(observability, request) {
-        Ok(snapshot) => snapshot,
+    let window_ms = match resource_window_ms(request) {
+        Ok(window_ms) => window_ms.unwrap_or(MAX_RESOURCE_WINDOW_MS),
         Err(response) => return response,
+    };
+    let Some(observability) = observability else {
+        return observability_unconfigured();
     };
     Response::ok(json!({
         "view": "cgroup",
         "scope": scope,
-        "series": resource_series_for_scope(&snapshot, &scope),
+        "series": observability.cgroup_series(&scope, window_ms),
     }))
-}
-
-/// Read the live snapshot value with the request's bounded resource window. The
-/// `snapshot` and `cgroup` views differ only in how they reshape the result.
-fn live_snapshot(
-    observability: Option<&DaemonObservability>,
-    request: &Request,
-) -> Result<Value, Response> {
-    let observability = observability.ok_or_else(observability_unconfigured)?;
-    let resource_window_ms = resource_window_ms(request)?;
-    observability.read_snapshot_value(&ObservabilitySnapshotReadOptions { resource_window_ms })
-}
-
-/// Pick the resource bundle (`{latest, history}`) for one scope out of a live
-/// snapshot value: the sandbox root, or a workspace by id.
-pub(crate) fn resource_series_for_scope(snapshot: &Value, scope: &str) -> Value {
-    if scope == "sandbox" {
-        return snapshot.get("resources").cloned().unwrap_or(Value::Null);
-    }
-    snapshot
-        .get("workspaces")
-        .and_then(Value::as_array)
-        .and_then(|workspaces| {
-            workspaces.iter().find(|workspace| {
-                workspace.get("workspace_id").and_then(Value::as_str) == Some(scope)
-            })
-        })
-        .and_then(|workspace| workspace.get("resources").cloned())
-        .unwrap_or(Value::Null)
 }
 
 fn resource_window_ms(request: &Request) -> Result<Option<u64>, Response> {

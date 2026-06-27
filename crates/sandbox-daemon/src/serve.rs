@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 use anyhow::{anyhow, Context, Result};
 use sandbox_config::configs::{
     daemon::{DaemonConfig, DaemonServerConfig},
+    observability::ObservabilityConfig,
     runtime::RuntimeConfig,
 };
 
@@ -25,6 +26,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     let config_path = daemon_config_path_arg(&args)?;
     let runtime_config = load_runtime_config(&config_path)?;
     let daemon_config = &runtime_config.daemon;
+    let observability_config = runtime_config.observability.clone();
     let config = DaemonCliConfig::parse(args, &daemon_config.server, config_path)?;
     if config.spawn {
         return spawn_daemon(&config);
@@ -41,6 +43,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         auth_token: config.auth_token,
         sandbox_id: config.sandbox_id,
         cgroup_root: cgroup_root.clone(),
+        observability: observability_config,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(
@@ -63,6 +66,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
 struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
     runtime: RuntimeConfig,
+    observability: ObservabilityConfig,
 }
 
 fn build_runtime_config(
@@ -106,7 +110,14 @@ fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
         .section::<RuntimeConfig>("runtime")
         .context("deserialize runtime config section")?;
     runtime.validate().context("validate runtime config")?;
-    Ok(DaemonRuntimeConfig { daemon, runtime })
+    let observability = doc
+        .section::<ObservabilityConfig>("observability")
+        .unwrap_or_default();
+    Ok(DaemonRuntimeConfig {
+        daemon,
+        runtime,
+        observability,
+    })
 }
 
 fn daemon_worker_threads(max_worker_threads: usize) -> usize {

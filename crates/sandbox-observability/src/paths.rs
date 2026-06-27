@@ -8,12 +8,15 @@ pub enum ObservabilityPathError {
     MissingDaemonRuntimeDir { socket_path: PathBuf },
 }
 
+/// The one append-only log per sandbox, plus its single rotated sibling. Both
+/// live under `<daemon-runtime-dir>/observability`; the `sandbox` id is encoded
+/// by the path, so no record carries it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ObservabilityPaths {
     daemon_runtime_dir: PathBuf,
     observability_dir: PathBuf,
-    database_path: PathBuf,
-    samples_log_path: PathBuf,
+    log_path: PathBuf,
+    rotated_log_path: PathBuf,
 }
 
 impl ObservabilityPaths {
@@ -27,14 +30,14 @@ impl ObservabilityPaths {
             })?
             .to_path_buf();
         let observability_dir = daemon_runtime_dir.join("observability");
-        let database_path = observability_dir.join("observability.sqlite");
-        let samples_log_path = observability_dir.join("samples.ndjson");
+        let log_path = observability_dir.join("observability.ndjson");
+        let rotated_log_path = observability_dir.join("observability.ndjson.1");
 
         Ok(Self {
             daemon_runtime_dir,
             observability_dir,
-            database_path,
-            samples_log_path,
+            log_path,
+            rotated_log_path,
         })
     }
 
@@ -46,11 +49,13 @@ impl ObservabilityPaths {
         &self.observability_dir
     }
 
-    pub fn database_path(&self) -> &Path {
-        &self.database_path
+    /// The primary append-only log: `observability/observability.ndjson`.
+    pub fn log_path(&self) -> &Path {
+        &self.log_path
     }
 
-    pub fn samples_log_path(&self) -> &Path {
-        &self.samples_log_path
+    /// The single rotated log: `observability/observability.ndjson.1`.
+    pub fn rotated_log_path(&self) -> &Path {
+        &self.rotated_log_path
     }
 }

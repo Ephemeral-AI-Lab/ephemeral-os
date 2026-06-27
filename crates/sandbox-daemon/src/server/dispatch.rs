@@ -104,17 +104,15 @@ impl SandboxDaemonServer {
     }
 
     async fn dispatch_private_observability_snapshot(&self, request: Request) -> Value {
-        let Some(observability) = self.observability.clone() else {
-            return super::error_response(
-                error_kind::INTERNAL_ERROR,
-                "daemon observability is not configured",
-                serde_json::json!({}),
-            );
-        };
+        let operations = Arc::clone(&self.operations);
+        let observability = self.observability.clone();
         let task = tokio::task::spawn_blocking(move || {
-            observability
-                .observability_snapshot_response(&request)
-                .into_json_value()
+            crate::observability::snapshot_view_response(
+                &operations,
+                observability.as_deref(),
+                &request,
+            )
+            .into_json_value()
         });
         match task.await {
             Ok(response) => response,

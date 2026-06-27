@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use sandbox_observability::ObservabilityPaths;
 
 #[test]
-fn derives_observability_database_from_daemon_socket_path() -> Result<(), Box<dyn Error>> {
+fn derives_one_log_and_its_rotated_sibling_from_daemon_socket_path() -> Result<(), Box<dyn Error>> {
     let daemon_runtime_dir = PathBuf::from("/eos/runtime/daemon");
     let socket_path = daemon_runtime_dir.join("runtime.sock");
 
@@ -16,16 +16,16 @@ fn derives_observability_database_from_daemon_socket_path() -> Result<(), Box<dy
         daemon_runtime_dir.join("observability")
     );
     assert_eq!(
-        paths.database_path(),
+        paths.log_path(),
         daemon_runtime_dir
             .join("observability")
-            .join("observability.sqlite")
+            .join("observability.ndjson")
     );
     assert_eq!(
-        paths.samples_log_path(),
+        paths.rotated_log_path(),
         daemon_runtime_dir
             .join("observability")
-            .join("samples.ndjson")
+            .join("observability.ndjson.1")
     );
 
     Ok(())

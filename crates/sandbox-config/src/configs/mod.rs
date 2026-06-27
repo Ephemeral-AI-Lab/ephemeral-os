@@ -8,6 +8,8 @@ pub mod gateway;
 
 pub mod manager;
 
+pub mod observability;
+
 pub mod validate;
 
 pub mod runner;

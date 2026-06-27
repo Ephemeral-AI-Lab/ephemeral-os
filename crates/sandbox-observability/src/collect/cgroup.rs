@@ -1,18 +1,24 @@
+//! Pure cgroup v2 reader: `&Path → CgroupSample`. A leaf collector — `std` only,
+//! no runtime/daemon dependency. The daemon packs the result into `Sample.metrics`.
+
 use std::path::Path;
 
+/// A cgroup v2 accounting reading, or an unavailable marker carrying the path and
+/// the first failure reason.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub(crate) struct CgroupSample {
-    pub(crate) cgroup_path: Option<String>,
-    pub(crate) cgroup_available: bool,
-    pub(crate) cgroup_error: Option<String>,
-    pub(crate) cpu_usage_usec: Option<i64>,
-    pub(crate) memory_current_bytes: Option<i64>,
-    pub(crate) memory_max_bytes: Option<i64>,
-    pub(crate) memory_max_unlimited: Option<bool>,
+pub struct CgroupSample {
+    pub cgroup_path: Option<String>,
+    pub cgroup_available: bool,
+    pub cgroup_error: Option<String>,
+    pub cpu_usage_usec: Option<i64>,
+    pub memory_current_bytes: Option<i64>,
+    pub memory_max_bytes: Option<i64>,
+    pub memory_max_unlimited: Option<bool>,
 }
 
 impl CgroupSample {
-    pub(crate) fn unavailable(message: impl Into<String>) -> Self {
+    #[must_use]
+    pub fn unavailable(message: impl Into<String>) -> Self {
         Self {
             cgroup_available: false,
             cgroup_error: Some(message.into()),
@@ -23,7 +29,8 @@ impl CgroupSample {
     /// Sample cgroup v2 accounting from `cgroup_dir`'s controller files.
     /// Best-effort: any missing/unreadable required file degrades to an
     /// unavailable sample carrying the path and the first failure reason.
-    pub(crate) fn read(cgroup_dir: &Path) -> Self {
+    #[must_use]
+    pub fn read(cgroup_dir: &Path) -> Self {
         let path_text = cgroup_dir.to_string_lossy().into_owned();
         let sample = || -> Result<Self, String> {
             let cpu_usage_usec = read_cpu_usage_usec(cgroup_dir)?;
