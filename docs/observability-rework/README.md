@@ -181,7 +181,7 @@ req-7f3   command.exec  (one-shot)
  │       ├─ workspace_session.create
  │       │   • lease.acquired r5
  │       │   └─ namespace.exec.mount_overlay   (sync mount guard)
- │       └─ namespace.exec.shell               [async] ── outlives the call ──┐
+ │       └─ namespace.exec.run_shell           [async] ── outlives the call ──┐
  │           └─ namespace.runner.spawn_child  (namespace-process · Phase B)   │
  └─ ── watcher thread, after return ──                                        │
      ├─ workspace_session.capture_changes     ◄──────────────────── child exits
@@ -197,10 +197,10 @@ completion):**
 {"ts":1719500000009,"kind":"event","trace":"req-7f3","parent":"d-2","name":"lease.acquired","attrs":{"revision":"r5"}}
 {"ts":1719500000040,"kind":"span","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed"}
 {"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed"}
-{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{"exec_id":"ns-9"}}
+{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{}}
 {"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
-{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","attrs":{"exec_id":"ns-9","async":true,"exit_code":0}}
+{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.run_shell","dur_ms":4231.0,"status":"completed","attrs":{"exit_code":0}}
 {"ts":1719500004286,"kind":"span","trace":"req-7f3","span":"d-6","parent":"d-1","name":"workspace_session.capture_changes","dur_ms":11.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500004299,"kind":"span","trace":"req-7f3","span":"d-7","parent":"d-1","name":"layerstack.publish","dur_ms":12.0,"status":"completed","attrs":{"base":"r5","revision":"r6","layers_added":1,"bytes":40960,"no_op":false}}
 {"ts":1719500004320,"kind":"event","trace":"req-7f3","parent":"d-8","name":"lease.released","attrs":{"revision":"r5"}}
@@ -227,7 +227,7 @@ trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
   +00.003      ├ workspace_session.create                    39ms  ✓
   +00.009      │   • lease.acquired r5
   +00.013      │   └ namespace.exec.mount_overlay            27ms  ✓
-  +00.042      ├ namespace.exec.shell           [async]    4231ms  ✓ exit0   ← outlives call
+  +00.042      ├ namespace.exec.run_shell       [async]    4231ms  ✓ exit0   ← outlives call
   +00.055      │   └ namespace.runner.spawn_child            6ms  ✓   [Phase B: cross-process]
   +04.275      ├ workspace_session.capture_changes           11ms  ✓
   +04.287      ├ layerstack.publish r5→r6 +1 layer 40KB      12ms  ✓
@@ -256,7 +256,7 @@ completes).
 {"ts":1719500101021,"kind":"span","trace":"req-9a1","span":"d-0","name":"daemon.dispatch","dur_ms":1021.0,"status":"completed","attrs":{"op":"exec_command"}}
 ```
 
-The async `namespace.exec.shell` (`ns-42`) is still running, so it has **no line
+The async `namespace.exec.run_shell` (`ns-42`) is still running, so it has **no line
 yet**. The in-flight row comes from `observability_snapshot()`.
 
 **Rendered — `sandbox-cli observability snapshot --sandbox-id eos-abc`:**
@@ -268,7 +268,7 @@ sandbox eos-abc   state ready        (state · workspaces · in-flight from live
     ws-7   active    profile=default   layers=4
 
   in-flight executions            (from runtime registry, not the log)
-    ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
+    ns-42  namespace.exec.run_shell   trace req-9a1   running 7.3s   ws-7
 
   resources (latest)             (latest sample per scope, from the log)
     sandbox   cpu 12.3s   mem 41MB / 256MB
@@ -307,7 +307,7 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 ```
  sync scope        →  obs.scope("workspace_session.create", |s| { … })  (RAII guard; Error on Err only if status is still Completed)
  sync ns mount     →  let _s = obs.span("namespace.exec.mount_overlay");  (mount_overlay is .wait()ed → sync guard)
- async ns exec     →  caller: SpanRegistry::launch (ctx, "namespace.exec.<kind>") at launch
+ async ns exec     →  caller: SpanRegistry::launch (ctx, "namespace.exec.run_shell") at launch
                       TerminalHook::on_terminal  → write the one span record at child-exit (watcher thread)
  layerstack facts  →  acquire_snapshot_with_lease → event lease.acquired / lease.released
                       publish_changes            → span layerstack.publish (status=error + reason on conflict)
@@ -327,15 +327,14 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
   is wired as `NoopObserver` (`operation/src/command/service/core.rs:34`). Replace it
   with the generic `TerminalHook<NamespaceExecutionId>` hook (`crate-core-impl.md`
   §3.4); the recording impl **is** the generic `SpanRegistry<NamespaceExecutionId>`
-  itself, via a blanket `impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K>` (§6) —
-  no bespoke namespace-exec adapter type; the one domain attr `exec_id` is folded by
-  `NamespaceExecutionId`'s own `SpanKeyAttrs` impl (a specific hook impl would overlap the
-  blanket one, E0119). Because the engine hands the
-  terminal edge **only** the exec id, the **caller** `SpanRegistry::launch`es
-  `(ctx, "namespace.exec.<kind>")` at launch (`engine.rs` shell, where kind + ctx are
+  itself, via a blanket `impl<K> TerminalHook<K> for SpanRegistry<K>` (§6) — no bespoke
+  namespace-exec adapter type and no per-key trait; the blanket impl folds the one generic
+  terminal datum (`exit_code`), and the exec span needs no domain attr. Because the engine
+  hands the terminal edge **only** the exec id, the **caller** `SpanRegistry::launch`es
+  `(ctx, "namespace.exec.run_shell")` at launch (`engine.rs` shell, where ctx is
   in scope), parking an open span; `on_terminal` (watcher thread, called right after
   child-exit and **before** teardown) pops it and writes the single span record via
-  `record`. There is no `on_running` and no timestamp — one record, recorded at the
+  `finish`. There is no `on_running` and no timestamp — one record, recorded at the
   completion call. (The overlay mount is `.wait()`ed, so it is a **sync** `SpanGuard`,
   not a parked async span — C1.)
 - The one-shot finalize (`exec_command.rs:181`) runs inside that watcher but
@@ -358,7 +357,7 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 | `src/store.rs` | **Delete+replace** | `rusqlite` store → `Sink` (append `O_APPEND` writer, one write/line) |
 | `src/store/schema.rs` | **Delete** | 8 migrations gone |
 | `src/store/{read,rows}.rs` | **Delete+replace** | SQL queries → `Reader` + history views |
-| `src/lib.rs` | **Rewrite** | export `Observer`, `SpanGuard`, `SpanRegistry`, `TerminalHook`/`NoopHook`/`SpanKeyAttrs`, `TraceContext`, `Reader`, record + view types |
+| `src/lib.rs` | **Rewrite** | export `Observer`, `SpanGuard`, `SpanRegistry`, `TerminalHook`/`NoopHook`, `TraceContext`, `Reader`, record + view types |
 | `Cargo.toml` | **Edit** | drop `rusqlite`; add `serde`/`serde_json` |
 
 ```
@@ -410,12 +409,11 @@ impl<K: Eq + Hash> SpanRegistry<K> {
             name: &'static str) -> TraceContext;                           //   returns child ctx (parent = new span id)
     fn launch<T, E>(&self, id: K, ctx: Option<TraceContext>,               // open → run f → cancel on Err
                     name: &'static str, f: impl FnOnce(Option<TraceContext>) -> Result<T, E>) -> Result<T, E>;
-    fn record(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>); // pop + write one record (self-stamps end)
+    fn finish(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>); // pop + write one record (self-stamps end)
     fn cancel(&self, id: &K);                                              // pop without writing
 }
 trait TerminalHook<K> { fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>); }
-trait SpanKeyAttrs { fn write_attrs(&self, attrs: &mut Attrs); }   // a span key folds its own domain attrs (e.g. exec_id)
-impl<K: Eq + Hash + SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> { /* folds async:true + exit_code + id.write_attrs, then record */ }
+impl<K: Eq + Hash + Send + Sync> TerminalHook<K> for SpanRegistry<K> { /* folds exit_code (when Some), then record */ }
 ```
 
 `TraceContext = { trace, parent }` — the two ids needed to cross a thread or
@@ -428,10 +426,9 @@ drop, same thread) and the parked async span in `SpanRegistry<K>` (completed by 
 id-only callback on another thread) are a *real* split — drop-on-same-thread vs.
 complete-by-key-from-another — but each writes exactly one record. There is **no**
 standalone async-span handle: the only async shape is the parked one, so the registry
-owns the open span as plain data and `record` writes it (self-stamping the end). A
+owns the open span as plain data and `finish` writes it (self-stamping the end). A
 new async source is a new `K` + its own `SpanRegistry<K>` (wired as the engine's
-`TerminalHook<K>` by the blanket impl) + a `SpanKeyAttrs` impl on `K` (empty if it has no
-domain attr), not new map/lock code. The engine-facing hook `TerminalHook<K>`
+`TerminalHook<K>` by the blanket impl), not new map/lock code. The engine-facing hook `TerminalHook<K>`
 carries only the terminal edge (`on_terminal`) — one-record-at-completion needs no
 `on_running`, and no timestamp (the span is recorded at the completion call).
 Thread-local context is scoped state, not an ambient global: `SpanGuard`/`with_context`
@@ -507,7 +504,7 @@ sandbox eos-abc   state ready
     ws-7   active    profile=default   layers=4
 
   in-flight executions            (from runtime registry, not the log)
-    ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
+    ns-42  namespace.exec.run_shell   trace req-9a1   running 7.3s   ws-7
 
   resources (latest)
     sandbox   cpu 12.3s   mem 41MB / 256MB
@@ -532,7 +529,7 @@ trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
   +00.003      ├ workspace_session.create                    39ms  ✓
   +00.009      │   • lease.acquired r5
   +00.013      │   └ namespace.exec.mount_overlay            27ms  ✓
-  +00.042      ├ namespace.exec.shell           [async]    4231ms  ✓ exit0   ← outlives call
+  +00.042      ├ namespace.exec.run_shell       [async]    4231ms  ✓ exit0   ← outlives call
   +00.055      │   └ namespace.runner.spawn_child            6ms  ✓   [Phase B: cross-process]
   +04.275      ├ workspace_session.capture_changes           11ms  ✓
   +04.287      ├ layerstack.publish r5→r6 +1 layer 40KB      12ms  ✓
@@ -591,10 +588,10 @@ Returns the matching log lines verbatim (newline-delimited), for grep/jq.
 $ sandbox-cli observability raw --sandbox-id eos-abc --trace req-7f3 --kind span
 {"ts":1719500000040,"kind":"span","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed"}
 {"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed"}
-{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{"exec_id":"ns-9"}}
+{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{}}
 {"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
-{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","attrs":{"exec_id":"ns-9","async":true,"exit_code":0}}
+{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.run_shell","dur_ms":4231.0,"status":"completed","attrs":{"exit_code":0}}
 {"ts":1719500004286,"kind":"span","trace":"req-7f3","span":"d-6","parent":"d-1","name":"workspace_session.capture_changes","dur_ms":11.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500004299,"kind":"span","trace":"req-7f3","span":"d-7","parent":"d-1","name":"layerstack.publish","dur_ms":12.0,"status":"completed","attrs":{"base":"r5","revision":"r6","layers_added":1,"bytes":40960,"no_op":false}}
 {"ts":1719500004325,"kind":"span","trace":"req-7f3","span":"d-8","parent":"d-1","name":"workspace_session.destroy","dur_ms":25.0,"status":"completed","attrs":{"one_shot":true}}
@@ -654,12 +651,12 @@ layer-projection domain concept, not timing.
    append + rotation), `Observer`/`SpanGuard`/`SpanRegistry`/`TerminalHook`/`TraceContext`,
    `Reader`/history views, `paths.rs` retarget, move `collect/{cgroup,disk}`.
    Standalone, unit-tested; nothing consumes it yet.
-2. **Daemon swap** — build `Observer`; `NoopObserver` → wire `SpanRegistry<exec_id>` as the engine's `TerminalHook`;
+2. **Daemon swap** — build `Observer`; `NoopObserver` → wire `SpanRegistry<NamespaceExecutionId>` as the engine's `TerminalHook`;
    `collect()` → emit `obs.sample`; serve the `snapshot` view from the live
    `observability_snapshot()`; generalize the RPC op + CLI.
 3. **Replace the ~56 in-sandbox timing sites** with span guards / events, and
    **thread the trace id** (= `Request.request_id`): thread-local set at
-   `dispatch_request`; the `SpanRegistry<exec_id>` wired as the engine's `TerminalHook`
+   `dispatch_request`; the `SpanRegistry<NamespaceExecutionId>` wired as the engine's `TerminalHook`
    for the async exec span; the one-shot finalize closure captures the
    `TraceContext`. This in-process threading is what makes **Case A's async tail**
    (`d-5`, `d-6`/`d-7`/`d-8`, `lease.released`) correlate in Phase A.
@@ -685,7 +682,7 @@ layer-projection domain concept, not timing.
   the log, and the reader spans both files; empty trace output says "unknown trace,
   or rotated out."
 - **Integration:** an `exec_command` reproduces Case A's shape (one record per
-  span, `namespace.exec.shell` written on terminal under `req-7f3`, finalize
+  span, `namespace.exec.run_shell` written on terminal under `req-7f3`, finalize
   `capture_changes` + `layerstack.publish` + `destroy` span + `lease.released`
   event share the trace); the `snapshot`
   view reflects live-registry in-flight (Case B) with **no** log dependency.

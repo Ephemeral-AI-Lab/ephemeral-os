@@ -340,8 +340,9 @@ impl<K: Eq + Hash> SpanRegistry<K> {
     }
 
     /// Pop the parked span and write one completed async `Span` (`dur_ms = now -
-    /// start`). No-op if `id` was never parked.
-    pub fn record(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>) {
+    /// start`). No-op if `id` was never parked. Named `finish` (not `record`) to
+    /// avoid colliding with the `record` module / `Record` type.
+    pub fn finish(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>) {
         let Some(open) = lock(&self.open).remove(id) else {
             return;
         };
@@ -407,7 +408,7 @@ impl<K: Eq + Hash + Send> TerminalHook<K> for SpanRegistry<K> {
         if let Some(exit_code) = exit_code {
             attrs.insert("exit_code".to_owned(), Value::from(exit_code));
         }
-        self.record(id, status, Value::Object(attrs));
+        self.finish(id, status, Value::Object(attrs));
     }
 }
 

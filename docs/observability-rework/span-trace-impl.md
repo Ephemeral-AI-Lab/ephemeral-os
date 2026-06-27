@@ -57,14 +57,13 @@ operation. Set it as the first thing inside the closure, where `request` is move
 ```rust
 let task = tokio::task::spawn_blocking(move || {
     let ctx = TraceContext { trace: Arc::from(request.request_id.as_str()), parent: None };
-    let response = observer.with_context(ctx, || {
+    observer.with_context(ctx, || {
         let dispatch = observer.span("daemon.dispatch");   // root span (d-0)
         dispatch.attr("op", request.op.clone());           // attrs via the guard (crate-core §3.4)
-        let response = sandbox_runtime::dispatch_operation(&operations, &request);
-        if response.is_fault() { dispatch.status(SpanStatus::Error); }  // root reflects a fault Response (M2)
-        response
-    });                                                    // `dispatch` drops here → writes d-0, still in ctx
-    response.into_json_value()
+        let json = sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
+        if json.get("error").is_some() { dispatch.status(SpanStatus::Error); }  // fault Response ⇒ root error (M2)
+        json
+    })                                                     // `dispatch` drops here → writes d-0, still in ctx
 });
 ```
 
@@ -76,12 +75,14 @@ could not record `op`, which is why the sync guard carries attrs (`crate-core-im
 §3.4 / C1).
 
 The `daemon.dispatch` guard **cannot** use the `obs.scope` combinator (M2) — dispatch
-returns a `Response`, not a `Result` — so it inspects the returned `Response` once and
-calls `.status(SpanStatus::Error)` on a fault, via a one-line `Response::is_fault()`
-(`self.value.get("error").is_some()` on the `Response` value wrapper). Without this the
-root renders a green ✓ on every rejected op (active-command rejection, invalid-arg exec,
-command-not-found), and for a synchronous rejection the root is often the *only* span on
-the trace (M2).
+returns a `Response`, not a `Result` — so it converts the response to JSON (which the
+closure already does via `into_json_value()`) and calls `.status(SpanStatus::Error)` when
+that JSON carries an `error` key (`json.get("error").is_some()` — a fault `Response`
+serializes to `{"error":{…}}`). **No new `Response` method is added** — the daemon already
+owns the JSON it returns, so the fault check reuses it rather than adding a protocol
+accessor. Without this the root renders a green ✓ on every rejected op (active-command
+rejection, invalid-arg exec, command-not-found), and for a synchronous rejection the root
+is often the *only* span on the trace (M2).
 
 **Dispatch duration for poll-loop ops (m13).** A `daemon.dispatch op=write_command_stdin`
 (or `read_command_output`) span measures the `yield_time_ms` poll window, **not** the
@@ -177,7 +178,7 @@ let (result, status, exit_code) = match wait_result {
     }
     Err(error) => { terminal_hook.on_terminal(&id, SpanStatus::Error, None); (Err(error), NamespaceExecutionTerminalStatus::Error, None) }
 };
-registry.complete(&id, status, exit_code);    // ExecutionRegistry live state — NOT the span store's `record` (C2)
+registry.complete(&id, status, exit_code);    // ExecutionRegistry live state — NOT the span store's `finish` (C2)
 promise.resolve(result);
 ```
 
@@ -188,24 +189,24 @@ promise.resolve(result);
 With the blanket `impl<K> TerminalHook<K> for SpanRegistry<K>` (`crate-core-impl.md` §3.4),
 the `SpanRegistry<NamespaceExecutionId>` **is** the engine's terminal hook — no per-source
 adapter type and no per-key trait. The blanket impl folds the one generic terminal datum
-(`exit_code`, when present) into the parked span at `on_terminal`, which calls `record`:
+(`exit_code`, when present) into the parked span at `on_terminal`, which calls `finish`:
 
 ```rust
 impl<K: Eq + Hash + Send + Sync> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
         let mut attrs = Attrs::new();
         if let Some(code) = exit_code { attrs.insert("exit_code".into(), code.into()); }
-        self.record(id, status, attrs);   // pop + self-stamp end + write the one Span
+        self.finish(id, status, attrs);   // pop + self-stamp end + write the one Span
     }
 }
 ```
 
 The caller drives the registry directly — `exec_spans.launch(id, ctx, name, |child_ctx| …)`
-at launch (M3), `on_terminal` → `record` at child-exit. No bespoke map, lock, per-key trait,
+at launch (M3), `on_terminal` → `finish` at child-exit. No bespoke map, lock, per-key trait,
 or `remove`-then-`end` dance: it is all in `SpanRegistry`, so the next async source
 (background compaction, GC, prefetch) reuses the same primitive with a different `K` and the
 **same** blanket hook — the extensibility the rework is built for (`crate-core-impl.md`
-§3.4/§3.6). A source that needs a domain attr on its span folds it at its own `record` call;
+§3.4/§3.6). A source that needs a domain attr on its span folds it at its own `finish` call;
 the namespace exec span needs none — `exec_id` was dropped as unread (the live id comes from
 the engine registry, not the span), so the span carries only `exit_code` + `status`.
 
@@ -233,7 +234,7 @@ the service calls `launch`.
   exists at launch because the id is minted there, not at completion
   (`removal-and-phaseb-impl.md` §B.2).
 - **Record / write.** `on_terminal` (watcher thread, right after child-exit) calls
-  `exec_spans.record(id, …)`, which pops the parked span and writes the **one** span record
+  `exec_spans.finish(id, …)`, which pops the parked span and writes the **one** span record
   — on whichever thread finishes the work (`README.md` §3.1), self-stamping the end. If a
   watcher dies before `on_terminal`, the registry's shutdown sweep emits the span as
   `cancelled` at process teardown (`crate-core-impl.md` §3.4) — a backstop, not a
@@ -406,7 +407,7 @@ threading deferred to Phase B (`removal-and-phaseb-impl.md`).
    `observer` → `terminal_hook`, drop `on_running`, record at child-exit before finalize);
    the `SpanRegistry` itself is the hook via the blanket impl (m1, replacing `NoopHook`);
    the shell launch uses `SpanRegistry::launch` (M3, folding register+cancel); `on_terminal`
-   → `record` writes the span. `mount_overlay` is no longer launched here — it is a sync
+   → `finish` writes the span. `mount_overlay` is no longer launched here — it is a sync
    guard (step 3).
 3. **Sync seams** (§5) — the guard set in the §5 table (incl. the sync `mount_overlay`),
    with `.attr()`/`.status()`; fallible seams via `obs.scope` (M2).

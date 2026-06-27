@@ -145,17 +145,17 @@ fn terminal_from_another_thread_records() {
 }
 
 #[test]
-fn record_and_cancel_on_never_parked_id_noop() {
+fn finish_and_cancel_on_never_parked_id_noop() {
     let path = temp_log("never-parked");
     let registry = SpanRegistry::<FakeId>::new(observer(&path));
-    registry.record(
+    registry.finish(
         &FakeId("ghost".to_owned()),
         SpanStatus::Completed,
         json!({}),
     );
     assert!(
         spans(&path).is_empty(),
-        "record on a never-parked id writes nothing"
+        "finish on a never-parked id writes nothing"
     );
 }
 

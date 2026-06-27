@@ -26,7 +26,7 @@ After this slice:
   `attrs.op`.
 - Fault `Response`s mark `daemon.dispatch` as `error`.
 - Runtime crates may depend on the `sandbox-observability` leaf crate.
-- `namespace.exec.shell` is an async span parked at launch and recorded at
+- `namespace.exec.run_shell` is an async span parked at launch and recorded at
   child-exit, before one-shot teardown/finalize.
 - The minimum sync span set is `command.exec`, `workspace_session.create`,
   `namespace.exec.mount_overlay`, `workspace_session.capture_changes`,
@@ -108,7 +108,6 @@ or existing seam was missed.
 | `crates/sandbox-runtime/namespace-execution/Cargo.toml` | 1 | add obs dependency |
 | `crates/sandbox-runtime/workspace/Cargo.toml` | 1 | add obs dependency |
 | `crates/sandbox-runtime/layerstack/Cargo.toml` | 1 | add obs dependency |
-| `crates/sandbox-protocol/src/response.rs` | 3-8 | `Response::is_fault()` |
 | `crates/sandbox-daemon/src/server/dispatch.rs` | 25-45 | root span, context, status |
 | `crates/sandbox-daemon/src/observability/service.rs` | 3-10 | observer accessor |
 | `crates/sandbox-runtime/operation/src/services.rs` | 20-35 | observer threaded through builder |
@@ -127,7 +126,7 @@ or existing seam was missed.
 | `crates/sandbox-runtime/layerstack/src/stack/lease/cleanup.rs` | 10-20 | lease released event |
 | `crates/sandbox-runtime/layerstack/src/stack/ops/publish.rs` | 25-45 | publish attrs/status |
 | `crates/sandbox-observability/src/record.rs` | 5-15 | final name constants |
-| `crates/sandbox-observability/src/observer.rs` | 20-40 | `SpanKeyAttrs`, terminal attrs |
+| `crates/sandbox-observability/src/observer.rs` | 20-40 | blanket `TerminalHook` impl (folds `exit_code`) |
 | `crates/sandbox-observability/src/lib.rs` | 2-8 | export new leaf items |
 
 ## 4. Name vocabulary shape
@@ -140,7 +139,7 @@ pub const COMMAND_EXEC: &str = "command.exec";
 pub const WORKSPACE_SESSION_CREATE: &str = "workspace_session.create";
 pub const WORKSPACE_SESSION_CAPTURE_CHANGES: &str = "workspace_session.capture_changes";
 pub const WORKSPACE_SESSION_DESTROY: &str = "workspace_session.destroy";
-pub const NAMESPACE_EXEC_SHELL: &str = "namespace.exec.shell";
+pub const NAMESPACE_EXEC_RUN_SHELL: &str = "namespace.exec.run_shell";
 pub const NAMESPACE_EXEC_MOUNT_OVERLAY: &str = "namespace.exec.mount_overlay";
 pub const LAYERSTACK_PUBLISH: &str = "layerstack.publish";
 
@@ -179,17 +178,8 @@ Rules:
 
 ## 6. Dispatch root shape
 
-Add this protocol helper:
-
-```rust
-impl Response {
-    pub fn is_fault(&self) -> bool {
-        self.value.get("error").is_some()
-    }
-}
-```
-
-Expected normal dispatch body shape:
+The fault check reuses the JSON the daemon already produces (`into_json_value()`) — no new
+`Response` method. Expected normal dispatch body shape:
 
 ```rust
 let operations = Arc::clone(&self.operations);
@@ -202,13 +192,12 @@ let task = tokio::task::spawn_blocking(move || {
     observer.with_context(ctx, || {
         let dispatch = observer.span(names::DAEMON_DISPATCH);
         dispatch.attr("op", request.op.clone());
-        let response = sandbox_runtime::dispatch_operation(&operations, &request);
-        if response.is_fault() {
+        let json = sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
+        if json.get("error").is_some() {
             dispatch.status(SpanStatus::Error);
         }
-        response
+        json
     })
-    .into_json_value()
 });
 ```
 
@@ -345,38 +334,24 @@ resolve promise
 ```
 
 Finalize failures affect the live execution status, not the already-recorded
-`namespace.exec.shell` span.
+`namespace.exec.run_shell` span.
 
 ## 11. Async shell span shape
 
-`SpanRegistry<NamespaceExecutionId>` is the terminal hook.
+`SpanRegistry<NamespaceExecutionId>` is the terminal hook, via the blanket impl — no
+per-key trait and no domain attr (the live exec id comes from the engine registry, not the
+span).
 
 Expected leaf API support:
 
 ```rust
-pub trait SpanKeyAttrs {
-    fn write_attrs(&self, attrs: &mut Attrs);
-}
-
-impl<K: Eq + Hash + SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> {
+impl<K: Eq + Hash + Send + Sync> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
         let mut attrs = Attrs::new();
-        attrs.insert("async".into(), true.into());
         if let Some(code) = exit_code {
             attrs.insert("exit_code".into(), code.into());
         }
-        id.write_attrs(&mut attrs);
-        self.record(id, status, attrs);
-    }
-}
-```
-
-Expected namespace id attrs:
-
-```rust
-impl SpanKeyAttrs for NamespaceExecutionId {
-    fn write_attrs(&self, attrs: &mut Attrs) {
-        attrs.insert("exec_id".into(), self.0.clone().into());
+        self.finish(id, status, attrs);
     }
 }
 ```
@@ -387,7 +362,7 @@ Expected launch site shape:
 self.exec_spans.launch(
     id.clone(),
     self.obs.context(),
-    names::NAMESPACE_EXEC_SHELL,
+    names::NAMESPACE_EXEC_RUN_SHELL,
     |_child_ctx| {
         self.engine().run_shell_interactive(
             exec_command,
@@ -511,7 +486,7 @@ daemon.dispatch op=exec_command
     workspace_session.create
       lease.acquired
       namespace.exec.mount_overlay
-    namespace.exec.shell async=true exec_id=... exit_code=...
+    namespace.exec.run_shell exit_code=...
     workspace_session.capture_changes
     layerstack.publish
     workspace_session.destroy
@@ -520,7 +495,7 @@ daemon.dispatch op=exec_command
 
 Record timing rules:
 
-- `namespace.exec.shell` completes at child-exit.
+- `namespace.exec.run_shell` completes at child-exit.
 - The shell span is written before capture/publish/destroy finalize spans.
 - The shell span and finalize spans are siblings under `command.exec`.
 - `lease.acquired` is under `workspace_session.create`.
@@ -536,7 +511,7 @@ An `exec_command` with an existing session should produce:
 ```text
 daemon.dispatch op=exec_command
   command.exec one_shot=false
-    namespace.exec.shell async=true exec_id=... exit_code=...
+    namespace.exec.run_shell exit_code=...
 ```
 
 It should not include:
@@ -591,7 +566,7 @@ raw --kind span --name layerstack.publish
 
 Live in-flight command:
 
-- No completed `namespace.exec.shell` record is written yet.
+- No completed `namespace.exec.run_shell` record is written yet.
 - Snapshot/live view reads the active command from the runtime registry.
 - The log is not used to reconstruct running state.
 
@@ -642,7 +617,7 @@ Expected focused tests:
 - Fault response: invalid or rejected request marks `daemon.dispatch` as
   `error`.
 - Launch failure: shell launch failure before watcher creation writes no
-  `namespace.exec.shell` span.
+  `namespace.exec.run_shell` span.
 - Live in-flight: persistent command has no shell span record until terminal,
   while snapshot shows active execution.
 - Events view: `lease.acquired` and `lease.released` are returned by raw event

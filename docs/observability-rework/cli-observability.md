@@ -526,7 +526,7 @@ sandbox eos-abc   state ready
     ws-9   active   profile=default   mounts 3   upper  88KB
 
   in-flight executions            (from runtime registry, not the log)
-    ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
+    ns-42  namespace.exec.run_shell   trace req-9a1   running 7.3s   ws-7
 
   resources (latest)
     sandbox   cpu 12.3s   mem 41MB / 256MB
@@ -544,7 +544,7 @@ trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
   +00.003      ├ workspace_session.create                    39ms  ✓
   +00.009      │   • lease.acquired r5
   +00.013      │   └ namespace.exec.mount_overlay            27ms  ✓
-  +00.042      ├ namespace.exec.shell           [async]    4231ms  ✓ exit0   ← outlives call
+  +00.042      ├ namespace.exec.run_shell       [async]    4231ms  ✓ exit0   ← outlives call
   +00.055      │   └ namespace.runner.spawn_child            6ms  ✓   [Phase B: cross-process]
   +04.275      ├ workspace_session.capture_changes           11ms  ✓
   +04.287      ├ layerstack.publish r5→r6 +1 layer 40KB      12ms  ✓
@@ -558,7 +558,7 @@ trace req-9a1   sandbox eos-abc   wall — (in flight)   1 span open
 
   +00.000  daemon.dispatch op=exec_command                 1021ms  ✓
   +00.001   └ command.exec ws-7                            1020ms  ✓
-  +00.020      └ namespace.exec.shell  ns-42  [async]      running  (live, from registry)
+  +00.020      └ namespace.exec.run_shell  ns-42  [async]  running  (live, from registry)
 ```
 
 ```console
@@ -635,10 +635,10 @@ error: window_ms exceeds max (600000)
 $ sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3
 {"ts":1719500000040,"kind":"span","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed"}
 {"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed"}
-{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{"exec_id":"ns-9"}}
+{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{}}
 {"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
-{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","attrs":{"exec_id":"ns-9","async":true,"exit_code":0}}
+{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.run_shell","dur_ms":4231.0,"status":"completed","attrs":{"exit_code":0}}
 {"ts":1719500004286,"kind":"span","trace":"req-7f3","span":"d-6","parent":"d-1","name":"workspace_session.capture_changes","dur_ms":11.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500004299,"kind":"span","trace":"req-7f3","span":"d-7","parent":"d-1","name":"layerstack.publish","dur_ms":12.0,"status":"completed","attrs":{"base":"r5","revision":"r6","layers_added":1,"bytes":40960,"no_op":false}}
 {"ts":1719500004325,"kind":"span","trace":"req-7f3","span":"d-8","parent":"d-1","name":"workspace_session.destroy","dur_ms":25.0,"status":"completed","attrs":{"one_shot":true}}
