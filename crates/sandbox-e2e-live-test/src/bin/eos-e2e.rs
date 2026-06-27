@@ -404,9 +404,9 @@ fn poll_observability(
                     report::observability_node_from_tree(&sandbox_id, node);
                 if node_dto
                     .resources
-                    .latest
-                    .as_ref()
-                    .and_then(|sample| sample.cgroup.get("available"))
+                    .get("latest")
+                    .and_then(|latest| latest.get("cgroup"))
+                    .and_then(|cgroup| cgroup.get("available"))
                     .and_then(Value::as_bool)
                     == Some(true)
                 {

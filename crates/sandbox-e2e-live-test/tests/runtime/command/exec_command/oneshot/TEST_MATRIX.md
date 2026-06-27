@@ -67,7 +67,7 @@ Expected run artifacts per sandbox:
 | --- | --- |
 | `reports/<sandbox_id>/exchange.jsonl` | `argv`, command `response`, process `exit_code`, captured streams, and `latency_ms`. |
 | `reports/<sandbox_id>/result.json` | Test name, sandbox id, pass/fail status, test duration, assertion counts. |
-| `reports/<sandbox_id>/observability.json` | `p1.available`, cgroup CPU/memory counters or unavailable reason, poll metadata, recent traces. |
+| `reports/<sandbox_id>/observability.json` | `p1.available`, cgroup CPU/memory counters or unavailable reason, poll metadata, verbatim `resources` block. |
 
 Artifact extraction:
 
@@ -78,6 +78,6 @@ SANDBOX_ID=<sandbox-id>
 jq -c 'select(has("argv")) | {argv, exit_code, latency_ms, status: .response.status, command_exit_code: .response.exit_code, wall_time_seconds: .response.wall_time_seconds, command_total_time_seconds: .response.command_total_time_seconds}' \
   "$RUN_ROOT/reports/$SANDBOX_ID/exchange.jsonl"
 
-jq '{sandbox_id, poll_meta, p1, latest_cgroup: .node.resources.latest.cgroup, recent_traces: .node.recent_traces}' \
+jq '{sandbox_id, poll_meta, p1, latest_cgroup: .node.resources.latest.cgroup}' \
   "$RUN_ROOT/reports/$SANDBOX_ID/observability.json"
 ```

@@ -1,13 +1,13 @@
 //! Offline unit coverage for the Phase 4 Stage 1 observability node projection.
 //! Feeds synthetic `get_observability_tree` nodes through
-//! `report::observability_node_from_tree` and asserts the P1 verdict, warning
-//! strings, and bounds. Pure: no Docker, no gateway, no run artifacts.
+//! `report::observability_node_from_tree` and asserts the P1 verdict and warning
+//! strings. Pure: no Docker, no gateway, no run artifacts.
 
 use sandbox_e2e_live_test::report::{
     observability_node_from_tree, ObsPollMeta, ObsSourceCall, ObservabilitySnapshot,
     OBSERVABILITY_SCHEMA_VERSION,
 };
-use serde_json::json;
+use serde_json::{json, Value};
 
 #[test]
 fn p1_is_unavailable_when_cgroup_reports_unavailable() {
@@ -174,19 +174,7 @@ fn unavailable_node_records_a_warning() {
 }
 
 #[test]
-fn recent_traces_and_history_are_capped_with_warnings() {
-    let traces: Vec<_> = (0..120)
-        .map(|index| {
-            json!({
-                "trace_id": format!("trace-{index}"),
-                "kind": "request",
-                "operation": "create_sandbox",
-                "status": "ok",
-                "duration_ms": 3_i64,
-                "error_kind": null
-            })
-        })
-        .collect();
+fn resources_block_is_carried_through_verbatim_and_workspaces_counted() {
     let history: Vec<_> = (0..70)
         .map(|index| {
             json!({
@@ -200,38 +188,20 @@ fn recent_traces_and_history_are_capped_with_warnings() {
         "sandbox_id": "sb-6",
         "availability": "available",
         "resources": { "latest": null, "history": history },
-        "workspaces": [{}, {}],
-        "recent_traces": traces
+        "workspaces": [{}, {}]
     });
 
-    let (projected, _p1, warnings) = observability_node_from_tree("sb-6", &node);
+    let (projected, _p1, _warnings) = observability_node_from_tree("sb-6", &node);
 
-    assert_eq!(
-        projected.recent_traces.len(),
-        50,
-        "recent traces capped at 50"
-    );
-    assert_eq!(
-        projected.resources.history.len(),
-        50,
-        "history capped at 50"
-    );
     assert_eq!(projected.workspace_count, 2);
     assert_eq!(
-        projected.recent_traces[0].operation.as_deref(),
-        Some("create_sandbox")
-    );
-    assert!(
-        warnings
-            .iter()
-            .any(|warning| warning.starts_with("recent_traces truncated for sb-6")),
-        "expected a recent-traces truncation warning, got {warnings:?}"
-    );
-    assert!(
-        warnings
-            .iter()
-            .any(|warning| warning.starts_with("resource history truncated for sb-6")),
-        "expected a history truncation warning, got {warnings:?}"
+        projected
+            .resources
+            .get("history")
+            .and_then(Value::as_array)
+            .map(Vec::len),
+        Some(70),
+        "resources block is carried through verbatim — no history cap"
     );
 }
 

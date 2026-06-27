@@ -18,12 +18,6 @@ pub const SUMMARY_SCHEMA_VERSION: u32 = 1;
 /// `summary.observability` roll-up (§4).
 pub const OBSERVABILITY_SCHEMA_VERSION: u32 = 1;
 
-/// Per-snapshot cap on projected `recent_traces`; extra rows are dropped and a
-/// warning is recorded (§4.1).
-const RECENT_TRACE_CAP: usize = 50;
-/// Per-snapshot cap on projected `resources.history`; same treatment (§4.1).
-const RESOURCE_HISTORY_CAP: usize = 50;
-
 const RUN_MANIFEST_FILE: &str = "run-manifest.json";
 const SUMMARY_FILE: &str = "summary.json";
 
@@ -316,45 +310,16 @@ pub struct ObsPollMeta {
 }
 
 /// Bounded projection of one public observability-tree node. Drops the full
-/// `workspaces[]`/`daemon` bodies, keeping only `workspace_count` and the
-/// trace/resource summaries (§4.1).
+/// `workspaces[]`/`daemon` bodies, keeping `workspace_count` and the verbatim
+/// `resources` block (the P1 carrier), already bounded by `resource_window_ms`.
 #[derive(Serialize)]
 pub struct ObsNode {
     pub lifecycle_state: Option<String>,
     pub availability: Option<String>,
     pub sampled_at_unix_ms: Option<i64>,
     pub errors: Vec<Value>,
-    pub resources: ObsResources,
-    pub recent_traces: Vec<ObsRecentTrace>,
+    pub resources: Value,
     pub workspace_count: usize,
-}
-
-/// Latest plus bounded history of projected resource samples (§4.2).
-#[derive(Serialize)]
-pub struct ObsResources {
-    pub latest: Option<ObsResourceSample>,
-    pub history: Vec<ObsResourceSample>,
-}
-
-/// One projected resource sample: its timestamp, the verbatim `cgroup` object
-/// (the P1 carrier), and an opaque `disk` pass-through (§4.2).
-#[derive(Serialize)]
-pub struct ObsResourceSample {
-    pub sampled_at_unix_ms: Option<i64>,
-    pub cgroup: Value,
-    pub disk: Value,
-}
-
-/// Projected recent-trace summary: operation, status, and the duration signal
-/// (§4.3). Identity/timestamp/message fields are dropped.
-#[derive(Serialize)]
-pub struct ObsRecentTrace {
-    pub trace_id: Option<String>,
-    pub kind: Option<String>,
-    pub operation: Option<String>,
-    pub status: Option<String>,
-    pub duration_ms: Option<i64>,
-    pub error_kind: Option<String>,
 }
 
 /// P1 cgroup detection over `node.resources.latest` (§5). Absence lowers
@@ -390,9 +355,10 @@ pub fn write_observability(run_root: &Path, snapshot: &ObservabilitySnapshot) ->
     write_json_pretty(&report_dir.join("observability.json"), snapshot)
 }
 
-/// Project one `sandboxes[i]` node into its bounded [`ObsNode`], [`P1`] block,
-/// and the warnings observed (§4.2/§4.3/§5). Pure over `(sandbox_id, node)`; the
-/// caller keys the snapshot and adds source-call/poll metadata.
+/// Project one `sandboxes[i]` node into its [`ObsNode`], [`P1`] block, and the
+/// warnings observed (§4.2/§5). Pure over `(sandbox_id, node)`; the caller keys
+/// the snapshot and adds source-call/poll metadata. The `resources` block is
+/// carried through verbatim — already bounded by the request `resource_window_ms`.
 #[must_use]
 pub fn observability_node_from_tree(sandbox_id: &str, node: &Value) -> (ObsNode, P1, Vec<String>) {
     let mut warnings = Vec::new();
@@ -410,14 +376,13 @@ pub fn observability_node_from_tree(sandbox_id: &str, node: &Value) -> (ObsNode,
         .and_then(Value::as_array)
         .cloned()
         .unwrap_or_default();
-    let resources = project_resources(sandbox_id, node.get("resources"), &mut warnings);
-    let recent_traces = project_recent_traces(sandbox_id, node.get("recent_traces"), &mut warnings);
+    let resources = node.get("resources").cloned().unwrap_or(Value::Null);
     let workspace_count = node
         .get("workspaces")
         .and_then(Value::as_array)
         .map_or(0, Vec::len);
 
-    let (p1, p1_warning) = project_p1(sandbox_id, resources.latest.as_ref());
+    let (p1, p1_warning) = project_p1(sandbox_id, resources.get("latest"));
     if let Some(warning) = p1_warning {
         warnings.push(warning);
     }
@@ -431,83 +396,12 @@ pub fn observability_node_from_tree(sandbox_id: &str, node: &Value) -> (ObsNode,
         sampled_at_unix_ms: node.get("sampled_at_unix_ms").and_then(Value::as_i64),
         errors,
         resources,
-        recent_traces,
         workspace_count,
     };
     (obs_node, p1, warnings)
 }
 
-fn project_resources(
-    sandbox_id: &str,
-    resources: Option<&Value>,
-    warnings: &mut Vec<String>,
-) -> ObsResources {
-    let latest = resources
-        .and_then(|value| value.get("latest"))
-        .and_then(project_resource_sample);
-    let mut history = Vec::new();
-    if let Some(samples) = resources
-        .and_then(|value| value.get("history"))
-        .and_then(Value::as_array)
-    {
-        if samples.len() > RESOURCE_HISTORY_CAP {
-            warnings.push(format!(
-                "resource history truncated for {sandbox_id}: kept {RESOURCE_HISTORY_CAP} of {}",
-                samples.len()
-            ));
-        }
-        history.extend(
-            samples
-                .iter()
-                .take(RESOURCE_HISTORY_CAP)
-                .filter_map(project_resource_sample),
-        );
-    }
-    ObsResources { latest, history }
-}
-
-fn project_resource_sample(value: &Value) -> Option<ObsResourceSample> {
-    let sample = value.as_object()?;
-    Some(ObsResourceSample {
-        sampled_at_unix_ms: sample.get("sampled_at_unix_ms").and_then(Value::as_i64),
-        cgroup: sample.get("cgroup").cloned().unwrap_or(Value::Null),
-        disk: sample.get("disk").cloned().unwrap_or(Value::Null),
-    })
-}
-
-fn project_recent_traces(
-    sandbox_id: &str,
-    traces: Option<&Value>,
-    warnings: &mut Vec<String>,
-) -> Vec<ObsRecentTrace> {
-    let Some(rows) = traces.and_then(Value::as_array) else {
-        return Vec::new();
-    };
-    if rows.len() > RECENT_TRACE_CAP {
-        warnings.push(format!(
-            "recent_traces truncated for {sandbox_id}: kept {RECENT_TRACE_CAP} of {}",
-            rows.len()
-        ));
-    }
-    rows.iter()
-        .take(RECENT_TRACE_CAP)
-        .map(project_recent_trace)
-        .collect()
-}
-
-fn project_recent_trace(value: &Value) -> ObsRecentTrace {
-    let field = |key: &str| value.get(key).and_then(Value::as_str).map(str::to_owned);
-    ObsRecentTrace {
-        trace_id: field("trace_id"),
-        kind: field("kind"),
-        operation: field("operation"),
-        status: field("status"),
-        duration_ms: value.get("duration_ms").and_then(Value::as_i64),
-        error_kind: field("error_kind"),
-    }
-}
-
-fn project_p1(sandbox_id: &str, latest: Option<&ObsResourceSample>) -> (P1, Option<String>) {
+fn project_p1(sandbox_id: &str, latest: Option<&Value>) -> (P1, Option<String>) {
     let unavailable = |reason: String, detail: &str| {
         (
             P1 {
@@ -522,10 +416,12 @@ fn project_p1(sandbox_id: &str, latest: Option<&ObsResourceSample>) -> (P1, Opti
         )
     };
 
-    let Some(sample) = latest else {
+    let Some(sample) = latest.filter(|value| !value.is_null()) else {
         return unavailable("no resource sample".to_owned(), "no resource sample");
     };
-    let cgroup = &sample.cgroup;
+    let Some(cgroup) = sample.get("cgroup") else {
+        return unavailable("cgroup unavailable".to_owned(), "cgroup unavailable");
+    };
     if cgroup.get("available").and_then(Value::as_bool) != Some(true) {
         let reason = match cgroup.get("error").and_then(Value::as_str) {
             Some(error) => format!("cgroup unavailable: {error}"),

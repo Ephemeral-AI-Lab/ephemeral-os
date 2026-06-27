@@ -214,7 +214,7 @@ SANDBOX_ID=<sandbox-id>
 jq -c 'select(has("argv")) | {argv, exit_code, latency_ms, status: .response.status, command_exit_code: .response.exit_code, wall_time_seconds: .response.wall_time_seconds, command_total_time_seconds: .response.command_total_time_seconds}' \
   "$RUN_ROOT/reports/$SANDBOX_ID/exchange.jsonl"
 
-jq '{sandbox_id, poll_meta, p1, latest_cgroup: .node.resources.latest.cgroup, recent_traces: .node.recent_traces}' \
+jq '{sandbox_id, poll_meta, p1, latest_cgroup: .node.resources.latest.cgroup}' \
   "$RUN_ROOT/reports/$SANDBOX_ID/observability.json"
 ```
 
