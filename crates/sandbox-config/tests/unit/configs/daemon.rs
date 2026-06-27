@@ -20,10 +20,6 @@ fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
     cfg.server.max_worker_threads = 0;
     assert_invalid(cfg, "daemon.server.max_worker_threads");
-
-    let mut cfg = prd_config();
-    cfg.commands.scratch_root = std::path::PathBuf::from("/");
-    assert_invalid(cfg, "daemon.commands.scratch_root");
 }
 
 fn prd_config() -> DaemonConfig {

@@ -1,26 +1,12 @@
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
-
 use crate::isolated_setup::VethAllocation;
-use crate::model::NetworkProfile;
+use crate::model::{NetworkProfile, WorkspaceSessionId};
 use crate::overlay::dirs::OverlayDirs;
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkspaceProfileId(pub String);
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceProfileSnapshot {
-    pub lease_id: String,
-    pub manifest_version: i64,
-    pub manifest_root_hash: String,
-    pub base_manifest: sandbox_runtime_layerstack::Manifest,
-    pub layer_paths: Vec<PathBuf>,
-}
 
 #[derive(Debug, Clone)]
 pub struct WorkspaceProfileHandle {
-    pub workspace_id: WorkspaceProfileId,
+    pub workspace_id: WorkspaceSessionId,
     pub profile: NetworkProfile,
     pub lease_id: String,
     pub manifest_version: i64,

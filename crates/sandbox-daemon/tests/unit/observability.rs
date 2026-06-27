@@ -824,7 +824,7 @@ fn runtime_config(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeConf
                 rfc1918_egress: sandbox_runtime::Rfc1918Egress::Allow,
             },
         },
-        command: sandbox_runtime::CommandRuntimeConfig {
+        namespace_execution: sandbox_runtime::NamespaceExecutionRuntimeConfig {
             scratch_root: root.join("command-scratch"),
         },
     })

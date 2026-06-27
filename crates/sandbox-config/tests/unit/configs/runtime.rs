@@ -1,6 +1,15 @@
 #[test]
 fn config_prd_runtime_section_deserializes_and_validates() {
-    prd_config().validate().expect("prd runtime config is valid");
+    let config = prd_config();
+    config.validate().expect("prd runtime config is valid");
+    assert_eq!(
+        config.workspace.scratch_root,
+        std::path::PathBuf::from("/eos/workspace")
+    );
+    assert_eq!(
+        config.namespace_execution.scratch_root,
+        std::path::PathBuf::from("/eos/namespace_execution")
+    );
 }
 
 #[test]
@@ -30,6 +39,10 @@ fn config_validation_rejects_invalid_runtime_workspace_values() {
     let mut cfg = prd_config();
     cfg.workspace.exit_grace_s = -0.1;
     assert_invalid(cfg, "runtime.workspace.exit_grace_s");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.scratch_root = std::path::PathBuf::from("/");
+    assert_invalid(cfg, "runtime.namespace_execution.scratch_root");
 }
 
 fn prd_config() -> RuntimeConfig {

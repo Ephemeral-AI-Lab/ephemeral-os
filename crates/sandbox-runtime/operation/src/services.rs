@@ -58,7 +58,7 @@ impl SandboxRuntimeOperations {
         let command = Arc::new(CommandOperationService::new(
             Arc::clone(&workspace_session),
             crate::command::CommandConfig {
-                scratch_root: config.command.scratch_root,
+                scratch_root: config.namespace_execution.scratch_root,
             },
         ));
         Self::new(command, workspace_session, layerstack)
@@ -79,7 +79,7 @@ impl SandboxRuntimeOperations {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SandboxRuntimeConfig {
     pub workspace: WorkspaceRuntimeConfig,
-    pub command: CommandRuntimeConfig,
+    pub namespace_execution: NamespaceExecutionRuntimeConfig,
     pub cgroup_root: Option<std::path::PathBuf>,
 }
 
@@ -92,7 +92,7 @@ pub struct WorkspaceRuntimeConfig {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CommandRuntimeConfig {
+pub struct NamespaceExecutionRuntimeConfig {
     pub scratch_root: std::path::PathBuf,
 }
 

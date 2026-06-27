@@ -13,21 +13,6 @@ use crate::configs::validate::{require_absolute, require_usize_at_least, ConfigF
 #[serde(deny_unknown_fields)]
 pub struct DaemonConfig {
     pub server: DaemonServerConfig,
-    pub commands: CommandConfig,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct CommandConfig {
-    pub scratch_root: PathBuf,
-}
-
-impl Default for CommandConfig {
-    fn default() -> Self {
-        Self {
-            scratch_root: PathBuf::from("/eos/scratch/commands"),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -51,29 +36,6 @@ impl DaemonConfig {
             1,
             "daemon.server.max_worker_threads",
         )?;
-        require_absolute(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
-        reject_dangerous_root(&self.commands.scratch_root, "daemon.commands.scratch_root")?;
         Ok(())
     }
-}
-
-fn reject_dangerous_root(
-    path: &std::path::Path,
-    field: &'static str,
-) -> Result<(), ConfigFieldError> {
-    if is_filesystem_root(path) {
-        return Err(ConfigFieldError::new(
-            field,
-            "must not be the filesystem root",
-        ));
-    }
-    Ok(())
-}
-
-fn is_filesystem_root(path: &std::path::Path) -> bool {
-    path.parent().is_none()
-        || path
-            .canonicalize()
-            .ok()
-            .is_some_and(|canonical| canonical.parent().is_none())
 }

@@ -22,9 +22,9 @@ fn load_path_reads_committed_baseline() {
 fn merge_recurses_objects_replaces_scalars_and_replaces_arrays() {
     let mut baseline = parse_doc(
         r#"
-daemon:
-  commands:
-    scratch_root: /eos/scratch/commands
+runtime:
+  namespace_execution:
+    scratch_root: /eos/namespace_execution
 runner:
   mount_mask:
     hidden_paths: [/eos, /tmp/eos]
@@ -32,9 +32,9 @@ runner:
     );
     let override_doc = parse_doc(
         r#"
-daemon:
-  commands:
-    scratch_root: /tmp/eos/commands
+runtime:
+  namespace_execution:
+    scratch_root: /tmp/eos/namespace_execution
 runner:
   mount_mask:
     hidden_paths: [/eos]
@@ -43,15 +43,15 @@ runner:
 
     baseline.merge(override_doc).expect("merge succeeds");
 
-    let daemon = baseline
-        .section::<Value>("daemon")
-        .expect("daemon section deserializes");
+    let runtime = baseline
+        .section::<Value>("runtime")
+        .expect("runtime section deserializes");
     let runner = baseline
         .section::<Value>("runner")
         .expect("runner section deserializes");
     assert_eq!(
-        daemon["commands"]["scratch_root"],
-        Value::String("/tmp/eos/commands".to_owned())
+        runtime["namespace_execution"]["scratch_root"],
+        Value::String("/tmp/eos/namespace_execution".to_owned())
     );
     assert_eq!(
         runner["mount_mask"]["hidden_paths"],

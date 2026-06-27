@@ -135,10 +135,10 @@ machinery. **Per-session private bytes stay the existing `scope:"<ws>"` disk
 sample** (upperdir; add workdir if wanted) — that's where the per-workspace
 numbers live, with no double-counting of shared layers.
 
-**Rendered — `observability --samples stack` (main spec §7.3):**
+**Rendered — `observability layerstack --samples` (main spec §7.5):**
 
 ```console
-$ sandbox-cli eos-abc observability --samples stack --window 60000
+$ sandbox-cli observability layerstack --sandbox-id eos-abc --samples --window 60000
 scope stack   window 60s   (Δ computed at read)
 
   t(+s)   layers   Δlayers   unique_bytes   Δbytes     pinned   leases
@@ -146,7 +146,7 @@ scope stack   window 60s   (Δ computed at read)
   60.0      5        +1         2.88MB      +480KB        4        2
 ```
 
-### 4.2 On-demand per-layer detail — `--layers`
+### 4.2 On-demand per-layer detail — `layerstack`
 
 Per-layer breakdown is high-cardinality, so it is **not** logged periodically — it
 is served fresh on request, joining the disk reader (sizes), `manifest.json`
@@ -157,7 +157,7 @@ Two modes — stack-wide inventory, and one session's view.
 **Stack-wide inventory** (the shared store):
 
 ```console
-$ sandbox-cli eos-abc observability --layers
+$ sandbox-cli observability layerstack --sandbox-id eos-abc
 stack r6   4 layers   2.40MB unique   2 active leases
 
   layer        bytes      refcount   since
@@ -171,12 +171,12 @@ stack r6   4 layers   2.40MB unique   2 active leases
 the unique per-layer size (cache §6). There is **no owner column** — owners aren't
 stored, only the count.
 
-**Per session** (`view:"layers"`, `scope:"ws-7"`): the layers *this* session's
-lease references (shared, with stack-wide refcount) plus its **private**
+**Per session** (`view:"layerstack"`, `workspace:"ws-7"`): the layers *this*
+session's lease references (shared, with stack-wide refcount) plus its **private**
 upper/workdir:
 
 ```console
-$ sandbox-cli eos-abc observability --layers ws-7
+$ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
 workspace ws-7   lease over r5   3 lower layers (shared)   upper 156KB   workdir 8KB
 
   lower (shared — bytes belong to the stack)
@@ -208,7 +208,7 @@ session-local (leased lower count + private upper bytes). Both come from the liv
 registry + disk reader:
 
 ```console
-$ sandbox-cli eos-abc observability
+$ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
   stack   r6   4 layers   3 pinned / 1 reclaimable   2.40MB unique   2 leases
@@ -281,8 +281,9 @@ Slots into the main spec's phases; nothing here blocks Phase A.
    (layerstack change; one number alongside the existing digest).
 3. **Daemon merge** — `collect()` emits the `stack:<ws>` sample (reader + registry
    pins); extend `cgroup.rs` with `io.stat`.
-4. **Views** — add `view:"layers"` to `get_observability` + the `--layers` CLI
-   render; add pinned counts to the snapshot view rows.
+4. **Views** — add `view:"layerstack"` to `get_observability` + the
+   `observability layerstack` CLI subcommand (`--workspace`, `--samples`); add
+   pinned counts to the snapshot view rows; surface `io.stat` under `cgroup`.
 
 No record-kind change, no schema break, no new leaf dependency.
 

@@ -23,7 +23,7 @@ pub use namespace_execution::{
 };
 pub use observability::{RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot};
 pub use services::{
-    CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
+    NamespaceExecutionRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 pub use workspace_crate::{NetworkProfile, WorkspaceSessionId};

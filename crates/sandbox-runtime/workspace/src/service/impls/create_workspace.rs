@@ -1,8 +1,6 @@
 use crate::error::WorkspaceError;
-use crate::model::{CreateWorkspaceRequest, WorkspaceHandle};
-use crate::service::support::{
-    ensure_absolute, profile_snapshot_from_layerstack, workspace_error_from_profile_error,
-};
+use crate::model::{CreateWorkspaceRequest, LayerStackSnapshotRef, WorkspaceHandle};
+use crate::service::support::{ensure_absolute, workspace_error_from_profile_error};
 use crate::service::WorkspaceRuntimeService;
 use crate::timing;
 
@@ -37,7 +35,7 @@ impl WorkspaceRuntimeService {
             snapshot_started,
         );
         let lease_id = snapshot.lease_id.clone();
-        let profile_snapshot = profile_snapshot_from_layerstack(snapshot);
+        let profile_snapshot = LayerStackSnapshotRef::from(snapshot);
         let enter_started = std::time::Instant::now();
         let profile_handle = match state
             .manager

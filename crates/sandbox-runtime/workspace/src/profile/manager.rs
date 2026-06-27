@@ -10,10 +10,9 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::isolated_setup::IsolatedNetwork;
+use crate::model::WorkspaceSessionId;
 use crate::namespace::NamespaceRuntime;
-pub use crate::profile::{
-    WorkspaceProfileFds, WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileSnapshot,
-};
+pub use crate::profile::{WorkspaceProfileFds, WorkspaceProfileHandle};
 
 pub use crate::lifecycle::ExitOutcome;
 
@@ -76,7 +75,7 @@ pub struct WorkspaceProfileManager {
     pub(crate) runtime: NamespaceRuntime,
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
-    pub(crate) handles: HashMap<WorkspaceProfileId, WorkspaceProfileHandle>,
+    pub(crate) handles: HashMap<WorkspaceSessionId, WorkspaceProfileHandle>,
 }
 
 impl WorkspaceProfileManager {
@@ -107,8 +106,8 @@ impl WorkspaceProfileManager {
         }
     }
 
-    pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceProfileId) -> PathBuf {
-        self.scratch_root.join("sessions").join(&workspace_id.0)
+    pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceSessionId) -> PathBuf {
+        self.scratch_root.join(&workspace_id.0)
     }
 }
 

@@ -4,16 +4,15 @@ daemon:
     pid_path: /eos/runtime/daemon/runtime.pid
     max_worker_threads: 4
 
-  commands:
-    scratch_root: /eos/scratch/commands
-
 runtime:
   workspace:
     layer_stack_root: /eos/layer-stack
-    scratch_root: /eos/scratch/workspace
+    scratch_root: /eos/workspace
     setup_timeout_s: 30
     exit_grace_s: 0.25
     rfc1918_egress: allow
+  namespace_execution:
+    scratch_root: /eos/namespace_execution
 
 runner:
   mount_mask:

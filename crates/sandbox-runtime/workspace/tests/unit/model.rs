@@ -10,9 +10,7 @@ use sandbox_runtime_workspace::model::{
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
-use sandbox_runtime_workspace::profile::{
-    WorkspaceProfileFds, WorkspaceProfileHandle, WorkspaceProfileId,
-};
+use sandbox_runtime_workspace::profile::{WorkspaceProfileFds, WorkspaceProfileHandle};
 
 fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     sandbox_runtime_layerstack::Manifest::new(
@@ -26,9 +24,9 @@ fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     .expect("test manifest is valid")
 }
 
-fn workspace_mode_handle() -> WorkspaceProfileHandle {
+fn workspace_profile_handle() -> WorkspaceProfileHandle {
     WorkspaceProfileHandle {
-        workspace_id: WorkspaceProfileId("namespace-handle".to_owned()),
+        workspace_id: WorkspaceSessionId("namespace-handle".to_owned()),
         profile: NetworkProfile::Isolated,
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
@@ -93,15 +91,15 @@ fn assert_handle_projection(public: &WorkspaceHandle) {
 }
 
 #[test]
-fn converts_workspace_mode_handle_to_public_handle() {
-    let handle = workspace_mode_handle();
+fn converts_workspace_profile_handle_to_public_handle() {
+    let handle = workspace_profile_handle();
 
     assert_handle_projection(&WorkspaceHandle::from(&handle));
 }
 
 #[test]
 fn public_handle_debug_does_not_expose_internal_storage_or_namespace_fields() {
-    let public = WorkspaceHandle::from(&workspace_mode_handle());
+    let public = WorkspaceHandle::from(&workspace_profile_handle());
     let debug = format!("{public:?}");
 
     assert_no_internal_fields(&debug);
@@ -115,7 +113,7 @@ fn public_handle_debug_does_not_expose_internal_storage_or_namespace_fields() {
 
 #[test]
 fn public_handle_debug_marks_launch_available_without_exposing_internals() {
-    let public = WorkspaceHandle::from(&workspace_mode_handle());
+    let public = WorkspaceHandle::from(&workspace_profile_handle());
     let debug = format!("{public:?}");
 
     assert!(debug.contains("launch"));
@@ -181,11 +179,11 @@ fn workspace_entry_converts_to_namespace_target() {
 
 #[test]
 fn entry_rejects_incomplete_holder_launch() {
-    let mut missing_mount = workspace_mode_handle();
+    let mut missing_mount = workspace_profile_handle();
     missing_mount.profile = NetworkProfile::Shared;
     missing_mount.ns_fds.mnt = None;
 
-    let mut missing_net = workspace_mode_handle();
+    let mut missing_net = workspace_profile_handle();
     missing_net.ns_fds.net = None;
 
     for handle in [missing_mount, missing_net] {

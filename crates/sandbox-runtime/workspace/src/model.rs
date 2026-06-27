@@ -173,7 +173,7 @@ impl WorkspaceHandle {
                 snapshot.layer_paths.clone(),
                 upperdir,
                 workdir,
-                Some(WorkspaceLaunchFds {
+                Some(WorkspaceProfileFds {
                     user: Some(10),
                     mnt: Some(11),
                     pid: Some(12),
@@ -243,7 +243,7 @@ fn launch_context_for_test(
     layer_paths: Vec<PathBuf>,
     upperdir: PathBuf,
     workdir: PathBuf,
-    holder_fds: Option<WorkspaceLaunchFds>,
+    holder_fds: Option<WorkspaceProfileFds>,
 ) -> WorkspaceLaunchContext {
     WorkspaceLaunchContext {
         profile,
@@ -262,7 +262,7 @@ struct WorkspaceLaunchContext {
     layer_paths: Vec<PathBuf>,
     upperdir: PathBuf,
     workdir: PathBuf,
-    holder_fds: Option<WorkspaceLaunchFds>,
+    holder_fds: Option<WorkspaceProfileFds>,
 }
 
 impl WorkspaceLaunchContext {
@@ -383,14 +383,6 @@ impl fmt::Display for WorkspaceEntryError {
 
 impl std::error::Error for WorkspaceEntryError {}
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-struct WorkspaceLaunchFds {
-    user: Option<i32>,
-    mnt: Option<i32>,
-    pid: Option<i32>,
-    net: Option<i32>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
     pub profile: NetworkProfile,
@@ -472,7 +464,7 @@ pub struct DestroyWorkspaceResult {
 impl From<&WorkspaceProfileHandle> for WorkspaceHandle {
     fn from(handle: &WorkspaceProfileHandle) -> Self {
         Self {
-            id: WorkspaceSessionId(handle.workspace_id.0.clone()),
+            id: handle.workspace_id.clone(),
             workspace_root: PathBuf::from(&handle.workspace_root),
             profile: handle.profile,
             base_revision: BaseRevision {
@@ -493,20 +485,8 @@ impl From<&WorkspaceProfileHandle> for WorkspaceHandle {
                 layer_paths: handle.layer_paths.clone(),
                 upperdir: handle.dirs.upperdir.clone(),
                 workdir: handle.dirs.workdir.clone(),
-                holder_fds: holder_fds_from_mode(handle.ns_fds),
+                holder_fds: (!handle.ns_fds.is_empty()).then_some(handle.ns_fds),
             }),
         }
     }
-}
-
-fn holder_fds_from_mode(ns_fds: WorkspaceProfileFds) -> Option<WorkspaceLaunchFds> {
-    if ns_fds.is_empty() {
-        return None;
-    }
-    Some(WorkspaceLaunchFds {
-        user: ns_fds.user,
-        mnt: ns_fds.mnt,
-        pid: ns_fds.pid,
-        net: ns_fds.net,
-    })
 }

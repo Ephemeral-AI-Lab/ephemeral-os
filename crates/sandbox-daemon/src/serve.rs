@@ -89,8 +89,8 @@ fn build_runtime_config(
                 },
             },
         },
-        command: sandbox_runtime::CommandRuntimeConfig {
-            scratch_root: config.daemon.commands.scratch_root.clone(),
+        namespace_execution: sandbox_runtime::NamespaceExecutionRuntimeConfig {
+            scratch_root: config.runtime.namespace_execution.scratch_root.clone(),
         },
     }
 }

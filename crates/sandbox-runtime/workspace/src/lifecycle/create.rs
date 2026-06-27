@@ -2,14 +2,11 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
-use crate::model::NetworkProfile;
+use crate::model::{LayerStackSnapshotRef, NetworkProfile, WorkspaceSessionId};
 use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
 use crate::profile::manager::WorkspaceProfileError;
-use crate::profile::{
-    validate_workspace_root, WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileManager,
-    WorkspaceProfileSnapshot,
-};
+use crate::profile::{validate_workspace_root, WorkspaceProfileHandle, WorkspaceProfileManager};
 
 impl WorkspaceProfileManager {
     pub(crate) fn initialize_handle(
@@ -79,12 +76,12 @@ impl WorkspaceProfileManager {
 
     pub fn enter_with_profile(
         &mut self,
-        snapshot: WorkspaceProfileSnapshot,
+        snapshot: LayerStackSnapshotRef,
         profile: NetworkProfile,
     ) -> Result<WorkspaceProfileHandle, WorkspaceProfileError> {
         let workspace_root = self.validated_workspace_root()?;
 
-        let workspace_id = WorkspaceProfileId(next_handle_id());
+        let workspace_id = WorkspaceSessionId(next_handle_id());
         let dirs =
             create_overlay_dirs(self.workspace_session_root(&workspace_id)).map_err(|err| {
                 WorkspaceProfileError::SetupFailed {
@@ -96,10 +93,10 @@ impl WorkspaceProfileManager {
         let mut handle = WorkspaceProfileHandle {
             workspace_id: workspace_id.clone(),
             profile,
-            lease_id: snapshot.lease_id,
+            lease_id: snapshot.lease_id.0,
             manifest_version: snapshot.manifest_version,
-            manifest_root_hash: snapshot.manifest_root_hash,
-            base_manifest: snapshot.base_manifest,
+            manifest_root_hash: snapshot.root_hash,
+            base_manifest: snapshot.manifest,
             workspace_root,
             dirs,
             layer_paths: snapshot.layer_paths,

@@ -208,7 +208,7 @@ its record lands at ~4.27 s, and the `destroy` span `d-6` is appended **last**
 (at 4.30 s) even though its child events (`publish` 4.29 s, `lease.released`
 4.295 s) were appended before it — all under `req-7f3`.
 
-**Rendered — `sandbox-cli eos-abc observability --trace req-7f3`:**
+**Rendered — `sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3`:**
 
 ```
 trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
@@ -250,7 +250,7 @@ completes).
 The async `namespace.exec.shell` (`ns-42`) is still running, so it has **no line
 yet**. The in-flight row comes from `observability_snapshot()`.
 
-**Rendered — `sandbox-cli eos-abc observability` (snapshot view):**
+**Rendered — `sandbox-cli observability snapshot --sandbox-id eos-abc`:**
 
 ```
 sandbox eos-abc   state ready        (state · workspaces · in-flight from live runtime registry)
@@ -289,7 +289,7 @@ sq-22  layerstack.squash  trigger=autosquash         [background root, no parent
 {"ts":1719600000830,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"d-40","name":"layerstack.squash","dur_ms":830.0,"status":"completed","attrs":{"trigger":"autosquash"}}
 ```
 
-**Rendered — `sandbox-cli eos-abc observability --trace sq-22`:**
+**Rendered — `sandbox-cli observability trace --sandbox-id eos-abc --id sq-22`:**
 
 ```
 trace sq-22   sandbox eos-abc   wall 0.83s   trigger=autosquash
@@ -312,7 +312,7 @@ Periodic `sample` lines; the reader computes deltas at read time (none stored).
 {"ts":1719500020000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"ws-1","cpu_usec":4250000,"mem_cur":20500000,"disk_bytes":1320000,"files":340}
 ```
 
-**Rendered — `sandbox-cli eos-abc observability --samples ws-1 --window 60000`:**
+**Rendered — `sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window 60000`:**
 
 ```
 scope ws-1   window 60s   (Δ computed at read)
@@ -435,8 +435,11 @@ fail the operation it observes — over-long attrs truncate, errors are swallowe
 - `trace(id)` — the waterfall: filter by `trace`, build the tree by `parent`,
   order siblings by start (`ts - dur_ms`), offset each node by
   `(ts - dur_ms) - trace_start`. Events render at their `ts` under `parent`.
+- `events(name?, since?)` — the flat, cross-trace fold: filter `kind:"event"` by
+  `name`/`ts`, sorted by `ts` (the `events` view).
 - `samples(scope, window)` — filter by `scope` and `ts ≥ now - window`, sort by
-  `ts`, compute pairwise deltas between adjacent samples per scope.
+  `ts`, compute pairwise deltas between adjacent samples per scope. Backs both
+  `cgroup` (`scope` = `sandbox`/`<ws>`) and `layerstack` (`scope` = `stack`).
 - `raw(filter)` — single forward scan, filter-while-reading (`kind`, `since_ms`,
   `trace`).
 
@@ -452,27 +455,41 @@ runtime emit into it.
 
 ---
 
-## 7. Fetch — one generalized op + CLI reference
+## 7. Fetch — one op, explicit subcommands
 
 The current single op `get_observability_snapshot`
-(`sandbox-daemon/src/server/dispatch.rs:9`, handler `:87`) is **generalized**:
+(`sandbox-daemon/src/server/dispatch.rs:9`, handler `:87`) is **generalized** into
+one op whose `view` picks **what you're checking against** — so the command always
+names its target (trace vs event vs cgroup vs layerstack), never an overloaded
+flag:
 
 ```
 op: "get_observability"
-params: { view:"snapshot"|"trace"|"samples"|"raw" (default "snapshot"),
-          trace?, scope?, since_ms?, window_ms? (≤600_000), kind? }
+params: { view:"snapshot"|"trace"|"events"|"cgroup"|"layerstack"|"raw",
+          trace?, name?, scope?, workspace?, samples?,
+          since_ms?, window_ms? (≤600_000), kind? }
 → JSON of the view
 ```
 
-Every command is `sandbox-cli <sandbox-id> observability [flags]`. `snapshot` is
-served from the live runtime snapshot; `trace`/`samples`/`raw` are folded from the
-log (a forward scan of up to two files, bounded by the size cap). **Pull is
-one-shot** — `--follow` is out of scope; re-poll for a running command.
+Every command is **`sandbox-cli observability <view> --sandbox-id <id> [flags]`**.
+`--sandbox-id` selects the target daemon (no longer a positional). `snapshot` is
+served from the live runtime snapshot; the rest are folded from the log (a forward
+scan of up to two files, bounded by the size cap). **Pull is one-shot** —
+`--follow` is out of scope; re-poll for a running command.
 
-### 7.1 `observability` — snapshot (default; live registry)
+| `<view>` | Checks against | Source |
+|---|---|---|
+| `snapshot` (default) | live state: workspaces, in-flight, latest resources | runtime registry |
+| `trace` | one flow as a span waterfall (events attached inline) | log |
+| `events` | a flat, cross-trace stream of domain facts, by name/time | log |
+| `cgroup` | resource series for a scope: cpu/mem/io **+ disk** | log |
+| `layerstack` | layer inventory + refcounts + stack series (see side spec) | registry + disk/log |
+| `raw` | matching NDJSON lines, for grep/jq | log |
+
+### 7.1 `snapshot` — live current state (default; runtime registry)
 
 ```console
-$ sandbox-cli eos-abc observability
+$ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
   workspaces
@@ -486,18 +503,17 @@ sandbox eos-abc   state ready
     ws-7      cpu  4.1s   mem 18MB        disk 1.2MB (320 files)
 ```
 
-### 7.2 `observability --trace <id>` — waterfall (log fold)
+### 7.2 `trace` — one flow as a span waterfall (spans + attached events)
 
-The `<id>` is the request's `request_id`. Two ways to get it: a flow-starting
-command **echoes it on stderr**, and `--trace last` resolves the most recent root
-trace in the log.
+`--id` is the request's `request_id`; a flow-starting command **echoes it on
+stderr**, and `--id last` resolves the most recent root trace.
 
 ```console
-$ sandbox-cli eos-abc exec "cargo build"
+$ sandbox-cli exec --sandbox-id eos-abc "cargo build"
 # trace: req-7f3
 ... command output ...
 
-$ sandbox-cli eos-abc observability --trace req-7f3      # or: --trace last
+$ sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3   # or: --id last
 trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
 
   +00.000  daemon.dispatch op=exec_command                 1051ms  ✓
@@ -514,14 +530,30 @@ trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
   +04.295            • lease.released r6
 ```
 
-(Background flows render the same way: `--trace sq-22` → the Case C squash tree.)
+(Background flows render the same way: `--id sq-22` → the Case C squash tree.)
 
-### 7.3 `observability --samples <scope> --window <ms>` — series + deltas
+### 7.3 `events` — flat domain-fact stream (by name / time)
 
-`<scope>` is `sandbox`, a workspace id, or `stack` (layerstack side spec).
+Unlike `trace` (one flow as a tree), `events` is a **flat, cross-trace** stream —
+for "show me every publish" or "all errors." Filter with `--name` and `--since`.
 
 ```console
-$ sandbox-cli eos-abc observability --samples ws-1 --window 60000
+$ sandbox-cli observability events --sandbox-id eos-abc --name layerstack.publish
+events  sandbox eos-abc   name=layerstack.publish   2 matched
+
+  ts        trace     parent  attrs
+  +04.290   req-7f3   d-6     base=r5 revision=r6 layers_added=2 bytes=40960
+  +18.118   req-9c2   d-31    base=r6 revision=r7 layers_added=1 bytes=8192
+```
+
+### 7.4 `cgroup` — resource series for a scope (cpu/mem/io + disk)
+
+`--scope` is `sandbox` (default) or a workspace id. Returns the per-scope `sample`
+series: cgroup counters (cpu/mem/io, from `/sys/fs/cgroup`) **and** the disk
+sample (upperdir bytes/files) carried in the same record; deltas at read.
+
+```console
+$ sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window 60000
 scope ws-1   window 60s   (Δ computed at read)
 
   t(+s)   cpu_total   Δcpu      mem_cur    disk        Δdisk
@@ -530,24 +562,35 @@ scope ws-1   window 60s   (Δ computed at read)
   20.0     4.25s     +0.15s     20.5MB     1.32MB        +0
 ```
 
-### 7.4 `observability --raw [--kind <k>] [--trace <id>] [--since <ms>]` — filtered lines
+### 7.5 `layerstack` — layer inventory + stack stats
 
-Returns the matching NDJSON lines verbatim (newline-delimited), for grep/jq.
+Layer inventory, refcounts, and the stack time-series. Full examples in
+`layerstack-observability.md` §4; the shapes:
 
 ```console
-$ sandbox-cli eos-abc observability --raw --trace req-7f3 --kind span
+$ sandbox-cli observability layerstack --sandbox-id eos-abc                  # stack inventory + refcounts
+$ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7 # one session's lowers + private upper
+$ sandbox-cli observability layerstack --sandbox-id eos-abc --samples --window 60000   # stack time-series
+```
+
+### 7.6 `raw` — filtered NDJSON lines
+
+Returns the matching log lines verbatim (newline-delimited), for grep/jq.
+
+```console
+$ sandbox-cli observability raw --sandbox-id eos-abc --trace req-7f3 --kind span
 {"ts":1719500000012,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-3","parent":"d-2","name":"workspace.create","dur_ms":8.0,"status":"completed"}
 {"ts":1719500001050,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-1","parent":"d-0","name":"exec_command","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
 {"ts":1719500004273,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","exit_code":0,"attrs":{"exec_id":"ns-9","async":true}}
 ```
 
-### 7.5 Empty / error states
+### 7.7 Empty / error states
 
 ```console
-$ sandbox-cli eos-abc observability --trace nope
+$ sandbox-cli observability trace --sandbox-id eos-abc --id nope
 trace nope   sandbox eos-abc   (no records — unknown trace, or rotated out)
 
-$ sandbox-cli eos-abc observability --samples ws-1 --window 999999999
+$ sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window 999999999
 error: window_ms exceeds max (600000)
 ```
 
@@ -630,8 +673,10 @@ layer-projection domain concept, not timing.
   `destroy` span + `publish`/`lease` events share the trace); a `squash`
   reproduces Case C; the `snapshot` view reflects live-registry in-flight (Case B)
   with **no** log dependency.
-- **Fetch:** `get_observability` returns each view; `--trace` the waterfall;
-  `--samples` the series with deltas; `snapshot` from the live registry.
+- **Fetch:** `get_observability` returns each `view`; `trace` the waterfall,
+  `events` the flat stream, `cgroup` the series with deltas, `snapshot` from the
+  live registry, `raw` the filtered lines — each selected by the matching
+  `observability <view> --sandbox-id …` subcommand.
 - **Gates:** the scoped removal greps return nothing (`timing::` empty in
   `sandbox-runtime` + `sandbox-daemon`; `rusqlite` empty; `runtime_timing_env`
   empty); `cargo build`, `cargo test`, `cargo clippy --all-targets` clean.

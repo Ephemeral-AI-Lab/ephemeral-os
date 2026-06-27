@@ -8,7 +8,7 @@ use sandbox_runtime::command::{CommandConfig, CommandOperationService, ExecComma
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::{
-    CommandRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
+    NamespaceExecutionRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 use sandbox_runtime_workspace::{
@@ -130,7 +130,7 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
                 rfc1918_egress: Rfc1918Egress::Allow,
             },
         },
-        command: CommandRuntimeConfig {
+        namespace_execution: NamespaceExecutionRuntimeConfig {
             scratch_root: command_scratch_root,
         },
         cgroup_root: None,

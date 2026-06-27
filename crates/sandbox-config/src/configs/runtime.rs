@@ -15,6 +15,7 @@ use crate::configs::validate::{
 #[serde(deny_unknown_fields)]
 pub struct RuntimeConfig {
     pub workspace: WorkspaceConfig,
+    pub namespace_execution: NamespaceExecutionConfig,
 }
 
 impl RuntimeConfig {
@@ -23,7 +24,8 @@ impl RuntimeConfig {
     /// # Errors
     /// Returns an error when a field violates runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        self.workspace.validate()
+        self.workspace.validate()?;
+        self.namespace_execution.validate()
     }
 }
 
@@ -41,7 +43,7 @@ impl Default for WorkspaceConfig {
     fn default() -> Self {
         Self {
             layer_stack_root: PathBuf::from("/eos/layer-stack"),
-            scratch_root: PathBuf::from("/eos/scratch/workspace"),
+            scratch_root: PathBuf::from("/eos/workspace"),
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
@@ -65,6 +67,38 @@ impl WorkspaceConfig {
         require_f64_at_least(self.exit_grace_s, 0.0, "runtime.workspace.exit_grace_s")?;
         reject_dangerous_root(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
         reject_dangerous_root(&self.scratch_root, "runtime.workspace.scratch_root")?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NamespaceExecutionConfig {
+    pub scratch_root: PathBuf,
+}
+
+impl Default for NamespaceExecutionConfig {
+    fn default() -> Self {
+        Self {
+            scratch_root: PathBuf::from("/eos/namespace_execution"),
+        }
+    }
+}
+
+impl NamespaceExecutionConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates namespace-execution runtime policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        require_absolute(
+            &self.scratch_root,
+            "runtime.namespace_execution.scratch_root",
+        )?;
+        reject_dangerous_root(
+            &self.scratch_root,
+            "runtime.namespace_execution.scratch_root",
+        )?;
         Ok(())
     }
 }

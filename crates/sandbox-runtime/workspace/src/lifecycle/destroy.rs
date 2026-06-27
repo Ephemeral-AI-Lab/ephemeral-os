@@ -4,17 +4,17 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
-use crate::model::NetworkProfile;
+use crate::model::{NetworkProfile, WorkspaceSessionId};
 use crate::namespace::HolderKillReport;
 use crate::overlay::tree::TreeResourceStats;
 use crate::profile::manager::WorkspaceProfileError;
-use crate::profile::{WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileManager};
+use crate::profile::{WorkspaceProfileHandle, WorkspaceProfileManager};
 
 use super::{monotonic_seconds, record_phase_ms};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
-    pub workspace_id: WorkspaceProfileId,
+    pub workspace_id: WorkspaceSessionId,
     pub lease_id: String,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
@@ -90,7 +90,7 @@ impl WorkspaceProfileManager {
 
     pub fn exit(
         &mut self,
-        workspace_id: &WorkspaceProfileId,
+        workspace_id: &WorkspaceSessionId,
         grace_s: Option<f64>,
     ) -> Result<ExitOutcome, WorkspaceProfileError> {
         let Some(handle) = self.handles.remove(workspace_id) else {

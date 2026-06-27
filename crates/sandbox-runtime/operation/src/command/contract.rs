@@ -13,7 +13,7 @@ pub struct CommandConfig {
 impl Default for CommandConfig {
     fn default() -> Self {
         Self {
-            scratch_root: PathBuf::from("/eos/scratch/commands"),
+            scratch_root: PathBuf::from("/eos/namespace_execution"),
         }
     }
 }
