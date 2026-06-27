@@ -15,7 +15,6 @@ members = [
     "crates/sandbox-runtime/overlay",
     "crates/sandbox-provider-docker",
     "xtask",
-    "crates/sandbox-e2e-live-test",
 ]
 
 [workspace.package]

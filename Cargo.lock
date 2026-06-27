@@ -1460,18 +1460,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandbox-e2e-live-test"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "serde",
- "serde_json",
- "sha2",
- "time",
-]
-
-[[package]]
 name = "sandbox-gateway"
 version = "0.1.0"
 dependencies = [
