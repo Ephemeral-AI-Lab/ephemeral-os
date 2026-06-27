@@ -221,6 +221,23 @@ pub(crate) fn write_layer_digest(
     write_atomic(layer_digest_path(storage_root, layer_id), digest.as_bytes())
 }
 
+pub(crate) fn layer_bytes_path(storage_root: &Path, layer_id: &str) -> PathBuf {
+    storage_root
+        .join(LAYER_METADATA_DIR)
+        .join(format!("{layer_id}.bytes"))
+}
+
+pub(crate) fn write_layer_bytes(
+    storage_root: &Path,
+    layer_id: &str,
+    bytes: u64,
+) -> Result<(), LayerStackError> {
+    write_atomic(
+        layer_bytes_path(storage_root, layer_id),
+        bytes.to_string().as_bytes(),
+    )
+}
+
 pub(crate) fn validate_layer_ref(layer: &LayerRef) -> Result<(), LayerStackError> {
     if layer.layer_id.is_empty() {
         return Err(LayerStackError::Manifest(

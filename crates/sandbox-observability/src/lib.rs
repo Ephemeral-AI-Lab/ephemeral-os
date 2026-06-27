@@ -1,7 +1,9 @@
+mod collect;
 mod paths;
 mod records;
 mod store;
 
+pub use collect::{sample_layerstack, LayerBytes, LayerStackBytes};
 pub use paths::{ObservabilityPathError, ObservabilityPaths};
 pub use records::{
     NamespaceExecutionSnapshotRecord, RecordValidationError, ResourceSampleRecord,

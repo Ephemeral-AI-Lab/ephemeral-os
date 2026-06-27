@@ -3,7 +3,7 @@ use std::io::ErrorKind;
 use crate::error::LayerStackError;
 use crate::fs::{
     allocate_layer_dirs, fsync_dir, fsync_tree_files, layer_digest_path, remove_path,
-    write_layer_digest, write_manifest,
+    write_layer_bytes, write_layer_digest, write_manifest,
 };
 use crate::model::{try_layer_digest, LayerChange, LayerRef, Manifest};
 use crate::stack::layer::write_layer_changes;
@@ -109,6 +109,11 @@ impl LayerStack {
             let _ = std::fs::remove_file(layer_digest_path(&self.storage_root, &layer_id));
             return Err(err);
         }
+        let _ = write_layer_bytes(
+            &self.storage_root,
+            &layer_id,
+            published_layer_bytes(changes),
+        );
         Ok(PublishLayerOutcome {
             manifest,
             created: true,
@@ -143,6 +148,19 @@ impl LayerStack {
             Err(err) => Err(err.into()),
         }
     }
+}
+
+fn published_layer_bytes(changes: &[LayerChange]) -> u64 {
+    changes
+        .iter()
+        .map(|change| match change {
+            LayerChange::Write { content, .. } => u64::try_from(content.len()).unwrap_or(u64::MAX),
+            LayerChange::WriteFile { size, .. } => *size,
+            LayerChange::Delete { .. }
+            | LayerChange::Symlink { .. }
+            | LayerChange::OpaqueDir { .. } => 0,
+        })
+        .fold(0_u64, u64::saturating_add)
 }
 
 pub(in crate::stack) struct PublishLayerOutcome {
