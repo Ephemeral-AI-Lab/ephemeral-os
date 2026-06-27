@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use crate::isolated_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 #[cfg(target_os = "linux")]
 use crate::model::WorkspaceHandle;
-use crate::profile::WorkspaceModeError;
-use crate::profile::WorkspaceModeHandle;
+use crate::profile::WorkspaceProfileError;
+use crate::profile::WorkspaceProfileHandle;
 #[cfg(target_os = "linux")]
 use sandbox_runtime_namespace_execution::NamespaceTarget;
 
@@ -20,9 +20,9 @@ use super::NamespaceRuntime;
 impl NamespaceRuntime {
     pub(crate) fn mount_overlay(
         &self,
-        handle: &WorkspaceModeHandle,
+        handle: &WorkspaceProfileHandle,
         layer_paths: &[PathBuf],
-    ) -> Result<(), WorkspaceModeError> {
+    ) -> Result<(), WorkspaceProfileError> {
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (&self.engine, handle, layer_paths);
@@ -37,9 +37,9 @@ impl NamespaceRuntime {
     #[cfg(target_os = "linux")]
     pub(crate) fn mount_overlay_via_engine(
         &self,
-        handle: &WorkspaceModeHandle,
+        handle: &WorkspaceProfileHandle,
         layer_paths: &[PathBuf],
-    ) -> Result<(), WorkspaceModeError> {
+    ) -> Result<(), WorkspaceProfileError> {
         let mut entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
         entry.layer_paths = layer_paths.to_vec();
         let id = self.engine.allocate_id();
@@ -52,9 +52,9 @@ impl NamespaceRuntime {
 
     pub(crate) fn signal_net_ready(
         &self,
-        handle: &WorkspaceModeHandle,
+        handle: &WorkspaceProfileHandle,
         setup_timeout_s: f64,
-    ) -> Result<(), WorkspaceModeError> {
+    ) -> Result<(), WorkspaceProfileError> {
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (handle, setup_timeout_s);

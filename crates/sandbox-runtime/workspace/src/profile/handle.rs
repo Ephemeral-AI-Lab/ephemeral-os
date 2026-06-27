@@ -7,10 +7,10 @@ use crate::model::NetworkProfile;
 use crate::overlay::dirs::OverlayDirs;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct WorkspaceModeId(pub String);
+pub struct WorkspaceProfileId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkspaceModeSnapshot {
+pub struct WorkspaceProfileSnapshot {
     pub lease_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,
@@ -19,8 +19,8 @@ pub struct WorkspaceModeSnapshot {
 }
 
 #[derive(Debug, Clone)]
-pub struct WorkspaceModeHandle {
-    pub workspace_id: WorkspaceModeId,
+pub struct WorkspaceProfileHandle {
+    pub workspace_id: WorkspaceProfileId,
     pub profile: NetworkProfile,
     pub lease_id: String,
     pub manifest_version: i64,
@@ -29,7 +29,7 @@ pub struct WorkspaceModeHandle {
     pub workspace_root: String,
     pub dirs: OverlayDirs,
     pub layer_paths: Vec<PathBuf>,
-    pub ns_fds: WorkspaceModeFds,
+    pub ns_fds: WorkspaceProfileFds,
     pub holder_pid: i32,
     pub readiness_fd: i32,
     pub control_fd: i32,
@@ -39,14 +39,14 @@ pub struct WorkspaceModeHandle {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct WorkspaceModeFds {
+pub struct WorkspaceProfileFds {
     pub user: Option<i32>,
     pub mnt: Option<i32>,
     pub pid: Option<i32>,
     pub net: Option<i32>,
 }
 
-impl WorkspaceModeFds {
+impl WorkspaceProfileFds {
     pub(crate) fn len(self) -> usize {
         self.values().count()
     }

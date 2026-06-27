@@ -125,8 +125,6 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
             layer_stack_root: layer_stack_root.clone(),
             scratch_root,
             caps: WorkspaceResourceCaps {
-                upperdir_bytes: 1024 * 1024,
-                memavail_fraction: 0.5,
                 setup_timeout_s: 1.0,
                 exit_grace_s: 0.1,
                 rfc1918_egress: Rfc1918Egress::Allow,

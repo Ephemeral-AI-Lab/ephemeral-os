@@ -27,23 +27,23 @@ const CREATE_SPEC: CliOperationSpec = CliOperationSpec {
     args: CREATE_ARGS,
     cli: Some(CliSpec {
         path: &["runtime", "create_workspace_session"],
-        usage: "sandbox-cli runtime create_workspace_session [--profile PROFILE]",
+        usage: "sandbox-cli runtime create_workspace_session [--network-profile PROFILE]",
         examples: &[
             "sandbox-cli runtime create_workspace_session",
-            "sandbox-cli runtime create_workspace_session --profile shared",
-            "sandbox-cli runtime create_workspace_session --profile isolated",
+            "sandbox-cli runtime create_workspace_session --network-profile shared",
+            "sandbox-cli runtime create_workspace_session --network-profile isolated",
         ],
     }),
     related: &["destroy_workspace_session", "exec_command"],
 };
 
 const CREATE_ARGS: &[ArgSpec] = &[ArgSpec::optional(
-    "profile",
+    "network_profile",
     ArgKind::String,
     "Network profile: 'shared' joins the host network namespace (still isolated in mount/pid/user) or 'isolated' uses a dedicated network namespace. Defaults to 'shared' when omitted.",
     None,
     Some(ArgCliSpec {
-        flag: Some("--profile"),
+        flag: Some("--network-profile"),
         positional: None,
     }),
 )];
@@ -136,7 +136,7 @@ fn dispatch_destroy_workspace_session(
 }
 
 fn parse_workspace_profile(request: &Request) -> Result<NetworkProfile, Response> {
-    match request.optional_string("profile")? {
+    match request.optional_string("network_profile")? {
         None => Ok(NetworkProfile::Shared),
         Some(profile) if profile == NetworkProfile::Shared.as_str() => Ok(NetworkProfile::Shared),
         Some(profile) if profile == NetworkProfile::Isolated.as_str() => {
@@ -196,7 +196,7 @@ fn active_command_rejection(
 fn create_workspace_session_value(handler: WorkspaceSessionHandler) -> Value {
     json!({
         "workspace_session_id": handler.workspace_session_id.0,
-        "profile": handler.handle.profile.as_str(),
+        "network_profile": handler.handle.profile.as_str(),
     })
 }
 

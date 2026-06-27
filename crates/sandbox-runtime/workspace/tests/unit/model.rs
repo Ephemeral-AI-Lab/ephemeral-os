@@ -10,7 +10,9 @@ use sandbox_runtime_workspace::model::{
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
-use sandbox_runtime_workspace::profile::{WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId};
+use sandbox_runtime_workspace::profile::{
+    WorkspaceProfileFds, WorkspaceProfileHandle, WorkspaceProfileId,
+};
 
 fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     sandbox_runtime_layerstack::Manifest::new(
@@ -24,9 +26,9 @@ fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     .expect("test manifest is valid")
 }
 
-fn workspace_mode_handle() -> WorkspaceModeHandle {
-    WorkspaceModeHandle {
-        workspace_id: WorkspaceModeId("namespace-handle".to_owned()),
+fn workspace_mode_handle() -> WorkspaceProfileHandle {
+    WorkspaceProfileHandle {
+        workspace_id: WorkspaceProfileId("namespace-handle".to_owned()),
         profile: NetworkProfile::Isolated,
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
@@ -39,7 +41,7 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
             workdir: "/tmp/eos/work".into(),
         },
         layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
-        ns_fds: WorkspaceModeFds {
+        ns_fds: WorkspaceProfileFds {
             user: Some(10),
             mnt: Some(11),
             pid: Some(12),

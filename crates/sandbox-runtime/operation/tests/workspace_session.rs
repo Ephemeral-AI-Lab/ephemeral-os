@@ -249,7 +249,7 @@ fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal
         response,
         json!({
             "workspace_session_id": "workspace-1",
-            "profile": "shared",
+            "network_profile": "shared",
         })
     );
     assert_eq!(
@@ -274,7 +274,10 @@ fn workspace_session_create_operation_accepts_isolated_profile(
 
     let response = sandbox_runtime::dispatch_operation(
         &operations,
-        &runtime_request("create_workspace_session", json!({ "profile": "isolated" })),
+        &runtime_request(
+            "create_workspace_session",
+            json!({ "network_profile": "isolated" }),
+        ),
     )
     .into_json_value();
 
@@ -282,7 +285,7 @@ fn workspace_session_create_operation_accepts_isolated_profile(
         response,
         json!({
             "workspace_session_id": "workspace-1",
-            "profile": "isolated",
+            "network_profile": "isolated",
         })
     );
     assert_eq!(
@@ -298,9 +301,9 @@ fn workspace_session_create_operation_accepts_isolated_profile(
 fn workspace_session_create_operation_rejects_invalid_profiles(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     for args in [
-        json!({ "profile": "unknown" }),
-        json!({ "profile": "" }),
-        json!({ "profile": 7 }),
+        json!({ "network_profile": "unknown" }),
+        json!({ "network_profile": "" }),
+        json!({ "network_profile": 7 }),
     ] {
         let fake = Arc::new(FakeWorkspaceService::new());
         let operations = operations_with_fake(&fake)?;

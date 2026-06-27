@@ -6,7 +6,7 @@ use serde_json::json;
 use sandbox_runtime_workspace::model::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, NetworkProfile,
 };
-use sandbox_runtime_workspace::profile::{ResourceCaps, WorkspaceModeManager};
+use sandbox_runtime_workspace::profile::{ResourceCaps, WorkspaceProfileManager};
 use sandbox_runtime_workspace::WorkspaceRuntimeService;
 
 #[test]
@@ -98,7 +98,7 @@ impl Fixture {
 
     fn service(&self) -> WorkspaceRuntimeService {
         WorkspaceRuntimeService::new(
-            WorkspaceModeManager::new(
+            WorkspaceProfileManager::new(
                 self.workspace_root.to_string_lossy().into_owned(),
                 ResourceCaps::default(),
                 self.scratch_root.clone(),

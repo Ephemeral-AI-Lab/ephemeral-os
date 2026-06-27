@@ -207,15 +207,15 @@ fn create_workspace_session_maps_no_profile_to_empty_args() -> TestResult {
 }
 
 #[test]
-fn create_workspace_session_maps_profile_flag() -> TestResult {
+fn create_workspace_session_maps_network_profile_flag() -> TestResult {
     let request = build_runtime_operation_request(
         "create_workspace_session",
         Some("sbox-1"),
-        &["--profile", "isolated"],
+        &["--network-profile", "isolated"],
     )?;
 
     assert_eq!(request.op, "create_workspace_session");
-    assert_eq!(request.args, json!({ "profile": "isolated" }));
+    assert_eq!(request.args, json!({ "network_profile": "isolated" }));
     Ok(())
 }
 

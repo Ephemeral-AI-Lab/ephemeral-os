@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
 use crate::observability::RuntimeObservabilitySnapshot;
-use crate::workspace_crate::{profile::WorkspaceModeManager, WorkspaceRuntimeService};
+use crate::workspace_crate::{profile::WorkspaceProfileManager, WorkspaceRuntimeService};
 use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Clone)]
@@ -31,7 +31,7 @@ impl SandboxRuntimeOperations {
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
-            WorkspaceModeManager::new(
+            WorkspaceProfileManager::new(
                 config
                     .workspace
                     .workspace_root
@@ -98,8 +98,6 @@ pub struct CommandRuntimeConfig {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspaceResourceCaps {
-    pub upperdir_bytes: u64,
-    pub memavail_fraction: f64,
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
@@ -114,8 +112,6 @@ pub enum Rfc1918Egress {
 impl From<WorkspaceResourceCaps> for crate::workspace_crate::profile::ResourceCaps {
     fn from(caps: WorkspaceResourceCaps) -> Self {
         Self {
-            upperdir_bytes: caps.upperdir_bytes,
-            memavail_fraction: caps.memavail_fraction,
             setup_timeout_s: caps.setup_timeout_s,
             exit_grace_s: caps.exit_grace_s,
             rfc1918_egress: match caps.rfc1918_egress {

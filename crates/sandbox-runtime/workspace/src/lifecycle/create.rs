@@ -5,17 +5,17 @@ use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
 use crate::model::NetworkProfile;
 use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
-use crate::profile::manager::WorkspaceModeError;
+use crate::profile::manager::WorkspaceProfileError;
 use crate::profile::{
-    validate_workspace_root, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager,
-    WorkspaceModeSnapshot,
+    validate_workspace_root, WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileManager,
+    WorkspaceProfileSnapshot,
 };
 
-impl WorkspaceModeManager {
+impl WorkspaceProfileManager {
     pub(crate) fn initialize_handle(
         &mut self,
-        handle: &mut WorkspaceModeHandle,
-    ) -> Result<HashMap<String, f64>, WorkspaceModeError> {
+        handle: &mut WorkspaceProfileHandle,
+    ) -> Result<HashMap<String, f64>, WorkspaceProfileError> {
         let layer_paths = handle.layer_paths.clone();
         let namespace_plan = match handle.profile {
             NetworkProfile::Shared => NamespacePlan::shared_network(),
@@ -50,15 +50,15 @@ impl WorkspaceModeManager {
         Ok(phases_ms)
     }
 
-    pub(crate) fn rollback_partial(&mut self, handle: &WorkspaceModeHandle) {
+    pub(crate) fn rollback_partial(&mut self, handle: &WorkspaceProfileHandle) {
         let _ = self.teardown_handle(handle, 1.0);
     }
 
     fn setup_isolated_network_after_namespace(
         &mut self,
-        handle: &mut WorkspaceModeHandle,
+        handle: &mut WorkspaceProfileHandle,
         phases_ms: &mut HashMap<String, f64>,
-    ) -> Result<(), WorkspaceModeError> {
+    ) -> Result<(), WorkspaceProfileError> {
         let phase_start = Instant::now();
         self.network.initialize()?;
         let veth = self
@@ -71,29 +71,29 @@ impl WorkspaceModeManager {
 
     fn setup_isolated_network_after_mount(
         &mut self,
-        handle: &WorkspaceModeHandle,
-    ) -> Result<(), WorkspaceModeError> {
+        handle: &WorkspaceProfileHandle,
+    ) -> Result<(), WorkspaceProfileError> {
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)
     }
 
     pub fn enter_with_profile(
         &mut self,
-        snapshot: WorkspaceModeSnapshot,
+        snapshot: WorkspaceProfileSnapshot,
         profile: NetworkProfile,
-    ) -> Result<WorkspaceModeHandle, WorkspaceModeError> {
+    ) -> Result<WorkspaceProfileHandle, WorkspaceProfileError> {
         let workspace_root = self.validated_workspace_root()?;
 
-        let workspace_id = WorkspaceModeId(next_handle_id());
+        let workspace_id = WorkspaceProfileId(next_handle_id());
         let dirs =
             create_overlay_dirs(self.workspace_session_root(&workspace_id)).map_err(|err| {
-                WorkspaceModeError::SetupFailed {
+                WorkspaceProfileError::SetupFailed {
                     step: format!("create overlay scratch: {err}"),
                 }
             })?;
 
         let now = monotonic_seconds();
-        let mut handle = WorkspaceModeHandle {
+        let mut handle = WorkspaceProfileHandle {
             workspace_id: workspace_id.clone(),
             profile,
             lease_id: snapshot.lease_id,
@@ -126,7 +126,7 @@ impl WorkspaceModeManager {
         Ok(handle)
     }
 
-    pub(crate) fn validated_workspace_root(&self) -> Result<String, WorkspaceModeError> {
+    pub(crate) fn validated_workspace_root(&self) -> Result<String, WorkspaceProfileError> {
         let workspace_root = self.workspace_root.trim();
         validate_workspace_root(workspace_root)?;
         Ok(workspace_root.to_owned())

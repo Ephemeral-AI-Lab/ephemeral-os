@@ -6,8 +6,10 @@
 pub mod handle;
 pub mod manager;
 
-pub use handle::{WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot};
+pub use handle::{
+    WorkspaceProfileFds, WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileSnapshot,
+};
 pub(crate) use manager::validate_workspace_root;
 pub use manager::{
-    ExitOutcome, ResourceCaps, Rfc1918Egress, WorkspaceModeError, WorkspaceModeManager,
+    ExitOutcome, ResourceCaps, Rfc1918Egress, WorkspaceProfileError, WorkspaceProfileManager,
 };

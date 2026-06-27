@@ -77,8 +77,6 @@ fn build_runtime_config(
             layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
             scratch_root: config.runtime.workspace.scratch_root.clone(),
             caps: sandbox_runtime::WorkspaceResourceCaps {
-                upperdir_bytes: config.runtime.workspace.upperdir_bytes,
-                memavail_fraction: config.runtime.workspace.memavail_fraction,
                 setup_timeout_s: config.runtime.workspace.setup_timeout_s,
                 exit_grace_s: config.runtime.workspace.exit_grace_s,
                 rfc1918_egress: match config.runtime.workspace.rfc1918_egress {

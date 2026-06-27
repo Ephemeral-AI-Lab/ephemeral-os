@@ -22,18 +22,6 @@ fn config_prd_runner_mount_mask_leaves_proc_visible() {
 #[test]
 fn config_validation_rejects_invalid_runner_values() {
     let mut cfg = prd_config();
-    cfg.child_wait_poll_ms = 0;
-    assert_invalid(cfg, "runner.child_wait_poll_ms");
-
-    let mut cfg = prd_config();
-    cfg.env.inherit_keys.push(String::new());
-    assert_invalid(cfg, "runner.env.inherit_keys");
-
-    let mut cfg = prd_config();
-    cfg.env.default_path.clear();
-    assert_invalid(cfg, "runner.env.default_path");
-
-    let mut cfg = prd_config();
     cfg.mount_mask.hidden_paths.clear();
     assert_invalid(cfg, "runner.mount_mask.hidden_paths");
 

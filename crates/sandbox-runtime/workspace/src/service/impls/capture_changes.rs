@@ -4,7 +4,7 @@ use crate::error::WorkspaceError;
 use crate::model::{
     CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind, WorkspaceHandle,
 };
-use crate::service::support::active_mode_id;
+use crate::service::support::active_profile_id;
 use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
@@ -19,13 +19,13 @@ impl WorkspaceRuntimeService {
 
         let upperdir = {
             let state = self.lock_state()?;
-            let mode_id = active_mode_id(&state, handle)?;
-            let mode_handle = state
+            let profile_id = active_profile_id(&state, handle)?;
+            let profile_handle = state
                 .manager
                 .handles
-                .get(&mode_id)
+                .get(&profile_id)
                 .ok_or(WorkspaceError::NotOpen)?;
-            mode_handle.dirs.upperdir.clone()
+            profile_handle.dirs.upperdir.clone()
         };
         let captured = crate::overlay::capture::capture_upperdir(&upperdir).map_err(|error| {
             WorkspaceError::Capture {

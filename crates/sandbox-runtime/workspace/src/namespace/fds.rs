@@ -13,7 +13,7 @@ use std::thread;
 #[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
-use crate::profile::{WorkspaceModeError, WorkspaceModeFds};
+use crate::profile::{WorkspaceProfileError, WorkspaceProfileFds};
 #[cfg(target_os = "linux")]
 use nix::errno::Errno;
 #[cfg(target_os = "linux")]
@@ -32,18 +32,18 @@ impl NamespaceRuntime {
         &self,
         holder_pid: i32,
         plan: NamespacePlan,
-    ) -> Result<WorkspaceModeFds, WorkspaceModeError> {
+    ) -> Result<WorkspaceProfileFds, WorkspaceProfileError> {
         if holder_pid <= 0 {
-            return Ok(WorkspaceModeFds::default());
+            return Ok(WorkspaceProfileFds::default());
         }
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (holder_pid, plan);
-            Ok(WorkspaceModeFds::default())
+            Ok(WorkspaceProfileFds::default())
         }
         #[cfg(target_os = "linux")]
         {
-            let mut fds = WorkspaceModeFds::default();
+            let mut fds = WorkspaceProfileFds::default();
             for &fd in plan.fds() {
                 set_fd(&mut fds, fd, open_inheritable_fd(fd.proc_path(holder_pid))?);
             }
@@ -53,14 +53,14 @@ impl NamespaceRuntime {
 }
 
 #[cfg(target_os = "linux")]
-fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, WorkspaceModeError> {
+fn open_inheritable_fd(path: impl AsRef<std::path::Path>) -> Result<File, WorkspaceProfileError> {
     let file = File::open(path.as_ref()).map_err(setup_error)?;
     clear_cloexec(file.as_raw_fd())?;
     Ok(file)
 }
 
 #[cfg(target_os = "linux")]
-fn set_fd(fds: &mut WorkspaceModeFds, fd: NamespaceFd, file: File) {
+fn set_fd(fds: &mut WorkspaceProfileFds, fd: NamespaceFd, file: File) {
     let raw_fd = file.into_raw_fd();
     match fd {
         NamespaceFd::User => fds.user = Some(raw_fd),
@@ -71,13 +71,13 @@ fn set_fd(fds: &mut WorkspaceModeFds, fd: NamespaceFd, file: File) {
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn clear_cloexec(fd: RawFd) -> Result<(), WorkspaceModeError> {
+pub(super) fn clear_cloexec(fd: RawFd) -> Result<(), WorkspaceProfileError> {
     fcntl(fd, FcntlArg::F_SETFD(FdFlag::empty())).map_err(setup_error)?;
     Ok(())
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn set_nonblocking(fd: RawFd) -> Result<(), WorkspaceModeError> {
+pub(super) fn set_nonblocking(fd: RawFd) -> Result<(), WorkspaceProfileError> {
     let flags = fcntl(fd, FcntlArg::F_GETFL).map_err(setup_error)?;
     fcntl(
         fd,
@@ -92,12 +92,12 @@ pub(super) fn expect_line(
     fd: RawFd,
     prefix: &[u8],
     timeout_s: f64,
-) -> Result<(), WorkspaceModeError> {
+) -> Result<(), WorkspaceProfileError> {
     let deadline = Instant::now() + Duration::from_secs_f64(timeout_s.max(0.0));
     let mut buf = Vec::new();
     loop {
         if Instant::now() >= deadline {
-            return Err(WorkspaceModeError::SetupFailed {
+            return Err(WorkspaceProfileError::SetupFailed {
                 step: format!(
                     "ns_holder did not signal {}",
                     String::from_utf8_lossy(prefix)
@@ -107,7 +107,7 @@ pub(super) fn expect_line(
         let mut chunk = [0_u8; 64];
         match read(fd, &mut chunk) {
             Ok(0) => {
-                return Err(WorkspaceModeError::SetupFailed {
+                return Err(WorkspaceProfileError::SetupFailed {
                     step: "ns_holder closed pipe before signaling".to_owned(),
                 });
             }
@@ -117,7 +117,7 @@ pub(super) fn expect_line(
                     if buf.starts_with(prefix) {
                         return Ok(());
                     }
-                    return Err(WorkspaceModeError::SetupFailed {
+                    return Err(WorkspaceProfileError::SetupFailed {
                         step: format!("unexpected ns_holder signal: {buf:?}"),
                     });
                 }
@@ -130,7 +130,7 @@ pub(super) fn expect_line(
 }
 
 #[cfg(target_os = "linux")]
-pub(super) fn write_all_fd(fd: RawFd, bytes: &[u8]) -> Result<(), WorkspaceModeError> {
+pub(super) fn write_all_fd(fd: RawFd, bytes: &[u8]) -> Result<(), WorkspaceProfileError> {
     let mut file = OpenOptions::new()
         .write(true)
         .open(format!("/proc/self/fd/{fd}"))

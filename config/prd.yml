@@ -1,5 +1,3 @@
-version: 1
-
 daemon:
   server:
     socket_path: /eos/runtime/daemon/runtime.sock
@@ -13,37 +11,14 @@ runtime:
   workspace:
     layer_stack_root: /eos/layer-stack
     scratch_root: /eos/scratch/workspace
-    # Disk budget concept for writable overlay upperdirs; workspace admission no
-    # longer treats this as a RAM reservation.
-    upperdir_bytes: 1073741824
-    # Deprecated compatibility field. Actual memory is monitored from cgroup
-    # memory.current instead of pre-admitted from /proc/meminfo.
-    memavail_fraction: 0.5
     setup_timeout_s: 30
     exit_grace_s: 0.25
     rfc1918_egress: allow
 
 runner:
-  child_wait_poll_ms: 5
   mount_mask:
     hidden_paths:
       - /eos
-  env:
-    inherit_keys: [PATH, HOME, USER, LANG, LC_ALL, TERM, TZ]
-    restricted_keys:
-      - LD_PRELOAD
-      - LD_LIBRARY_PATH
-      - LD_AUDIT
-      - DYLD_INSERT_LIBRARIES
-      - DYLD_LIBRARY_PATH
-      - PATH
-      - PYTHONPATH
-      - BASH_ENV
-      - ENV
-    default_path: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    testbed_path_prefix:
-      - /opt/miniconda3/envs/testbed/bin
-      - /opt/miniconda3/bin
 
 # Optional. Read only by `sandbox-gateway --backend docker`; the daemon ignores
 # this root section. Host paths resolve against the gateway's working directory.
@@ -54,15 +29,3 @@ manager:
     daemon_binary_path: dist/sandbox-daemon-linux-arm64
     # Daemon config YAML uploaded into each container.
     daemon_config_yaml_path: config/prd.yml
-    container_daemon_binary_path: /eos/bin/sandbox-daemon
-    container_daemon_config_yaml_path: /eos/config/daemon.yml
-    container_workspace_root: /workspace
-    # Set when only a linux/amd64 daemon is packaged on an arm64 host.
-    # platform: linux/amd64
-    privileged: true
-    daemon_port: 7000
-    gateway_instance_id: eos-gateway
-    max_active_sandboxes: 64
-    max_concurrent_creates: 4
-    max_concurrent_destroys: 4
-    readiness_timeout_ms: 15000

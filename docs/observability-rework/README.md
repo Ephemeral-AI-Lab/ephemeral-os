@@ -4,14 +4,30 @@ Status: ready-to-implement.
 
 Collapse all observability into **one dependency-light crate**
 (`sandbox-observability`) backed by an **append-only NDJSON event stream**,
-replacing both the SQLite snapshot store and the six scattered `timing.rs`
-modules. One model — `span` / `event` / `sample` — owns spans, traces, events,
-and resource metrics; the runtime emits into it directly; a developer fetches it
-with one command.
+replacing both the SQLite snapshot store and the scattered `timing.rs` modules.
+One model — `span` / `event` / `sample` — owns spans, traces, events, and
+resource metrics; the runtime emits into it directly; a developer fetches it with
+one command.
+
+Two facts shape the whole design:
+
+- **A span is one record, written when it completes.** It carries `ts`
+  (completion) + `dur_ms`, so the full waterfall is reconstructable from a single
+  line. There is no start/end pair to reconcile.
+- **Current state is not read from the log.** "What workspaces exist / what's in
+  flight right now" already lives in the runtime's in-memory
+  `observability_snapshot()`. The snapshot view reads *that*; the NDJSON log is
+  the **historical** record (completed spans, events, samples). This is why we can
+  drop SQLite without re-adding a queryable store.
 
 This spec is **example-driven**: §4 shows the literal bytes that land in the log
 and the rendered views, for real scenarios. The rest is structure around those
 examples.
+
+> **Companion:** `layerstack-observability.md` extends this spec with a third
+> `collect/` reader (layer count / per-layer bytes from disk), pinned-layer
+> counts from the runtime registry, and a cgroup `io.stat` field — additive, no
+> record-kind or schema change.
 
 ---
 
@@ -20,119 +36,130 @@ examples.
 | Today | After |
 |---|---|
 | `sandbox-observability` = SQLite store of 4 snapshot tables, `rusqlite` | same crate, an append-only NDJSON stream, `serde_json` only |
-| `sandbox-daemon/src/observability` = a *second* "observability" (collect + RPC) | thin caller; cgroup/disk readers fold into the crate |
-| 6 × `timing.rs`, ~38 `timing::duration` sites, `EOS_*_TIMING*` files | one `Observer` API; the dotted labels become span `name`s |
-| no cross-process correlation, no fetch path | `trace` ids + one `get_observability` RPC + `sandbox-cli … observability` |
+| `sandbox-daemon/src/observability` = a *second* "observability" (collect + RPC + delta caches + reconcile) | thin caller; cgroup/disk readers fold into the crate; entity state + in-flight served straight from the live runtime snapshot |
+| 5 in-sandbox `timing.rs`, ~56 in-sandbox `timing::duration` sites, `EOS_*_TIMING` forwarded into the container | one `Observer` API; the dotted labels become span `name`s |
+| no cross-process correlation, no fetch path | `trace` ids (= `Request.request_id`) + one `get_observability` RPC + `sandbox-cli … observability` |
 
 Why a rewrite and not a patch: "one layer" + "drop SQLite" *forces* it — SQLite
 is precisely what keeps this crate out of the runtime today (there is a test
-whose only job is to keep it out). Remove SQLite and the crate becomes a leaf the
-runtime can emit into. The new internals are **less** code than the SQLite stack
-they replace.
+whose only job is to keep it out: `operation/tests/observability_snapshot.rs:91`
+asserts the runtime manifest contains neither `sandbox-observability` nor
+`rusqlite`). Remove SQLite and the crate becomes a leaf the runtime can emit
+into. The win is **dependency weight and one layer** — `rusqlite` + 8 migrations +
+the second daemon observability layer go away. It is *not* a net-LOC reduction:
+the new internals add a `Reader` + view folds, so expect comparable line count,
+fewer dependencies, and one home instead of two.
 
 ---
 
 ## 2. Architecture
 
-Everything is produced **in the sandbox**, written to **one file**, and pulled to
-the **host** over the daemon protocol.
+Spans/events/samples are produced **in the sandbox**, written to **one file**.
+Current state (sandbox/workspace/in-flight) is read live from the runtime. Both
+are pulled to the **host** over the daemon protocol.
 
 ```
                  IN SANDBOX (container)                                    HOST
  ┌──────────────────────────────────────────────────────────┐   ┌──────────────────────┐
  │ sandbox-daemon  (one process)                             │   │ sandbox-gateway CLI  │
- │                                                            │   │                      │
- │  runtime libs: operation / workspace / layerstack /        │   │                      │
+ │                                                            │   │  (host-side timing   │
+ │  runtime libs: operation / workspace / layerstack /        │   │   retained, separate)│
  │                namespace-execution                         │   │                      │
  │        │ obs.span(…)  obs.event(…)  obs.sample(…)           │   │                      │
  │        ▼                                                   │   │                      │
- │     Observer ──────► Sink (file, O_APPEND)                 │   │                      │
+ │     Observer ──────► Sink (file, O_APPEND, one write/line) │   │                      │
  │                          │                                 │   │                      │
  │                          ▼                                 │   │                      │
  │   <runtime_dir>/observability/observability.ndjson         │   │                      │
  │                          ▲              ▲                  │   │                      │
- │  namespace-process ──────┘ (forked,     │                  │   │                      │
- │     obs.span(…)            same file)    │ Reader           │   │                      │
+ │  namespace-process ──────┘ (forked,     │ Reader (history) │   │                      │
+ │     obs.span(…)            same file)    │                 │   │                      │
  │                                          │                 │   │                      │
+ │  runtime registry ── observability_snapshot() ─┐ (live)    │   │                      │
+ │                                                ▼           │   │                      │
  │  DaemonObservability ── get_observability RPC ◄────────────┼───┤ sandbox-cli <id>     │
  │                         └──── view JSON ───────────────────┼──►│   observability …    │
  └──────────────────────────────────────────────────────────┘   └──────────────────────┘
 ```
 
-- **Write:** every in-sandbox process appends atomic single-line records.
-- **Store:** one NDJSON file at `<daemon_runtime_dir>/observability/observability.ndjson`
-  (the path `paths.rs` derives today, retargeted from `.sqlite`).
-- **Read:** a `Reader` folds the stream into views; the daemon serves them over
-  the existing RPC seam; the CLI renders them.
+- **Write:** every in-sandbox process appends single-line records, each in one
+  `write()` syscall.
+- **Store (history):** one NDJSON file at
+  `<daemon_runtime_dir>/observability/observability.ndjson` (the path `paths.rs`
+  derives today, retargeted from `.sqlite`).
+- **Current state:** the runtime's in-memory `observability_snapshot()` (sandbox
+  state, workspaces, in-flight executions) — not the log, not a store.
+- **Read:** a `Reader` folds the log into the trace / samples / raw views; the
+  daemon serves the snapshot view from the live snapshot; the CLI renders both.
+- **Host-side gateway/CLI timing is out of scope** and retained — the in-sandbox
+  `Sink` isn't reachable from the host process (§8.1).
 
 ---
 
 ## 3. The record model
 
-One JSON object per line. Three `kind`s. Shared envelope: `ts` (unix ms),
-`kind`, `sandbox`, `component`, `pid`.
+One JSON object per line. Three `kind`s. Shared envelope: `ts` (unix ms,
+occurrence/completion time of *this record*), `kind`, `sandbox`, `component`,
+`pid`, `trace`. Append order ≈ `ts` order; the reader sorts by `ts` and resolves
+`span`/`parent` by id, so it never depends on append order.
 
-### 3.1 `span` — a timed unit of work, emitted as **two** records
+### 3.1 `span` — a completed unit of work, **one** record
 
 ```json
-{"ts":..,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime",
- "trace":"req-7f3","span":"s-05","parent":"s-01","name":"namespace.exec.shell",
- "attrs":{"exec_id":"ns-9","async":true}}
-{"ts":..,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime",
- "trace":"req-7f3","span":"s-05","dur_ms":4231.0,"status":"completed","exit_code":0}
+{"ts":1719500004273,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","exit_code":0,"attrs":{"exec_id":"ns-9","async":true}}
 ```
 
-`ev` = `start|end`; `trace` groups one flow; `span` pairs start↔end; `parent`
-builds the tree; `dur_ms`/`status`/`exit_code` land on `end`.
+`ts` = completion time; `dur_ms` = wall duration (so **start = `ts - dur_ms`**);
+`trace` groups one flow; `span` = a **process-unique** id (`<proc>-<seq>`, see
+below); `parent` builds the tree; `status`/`exit_code`/`attrs` describe the
+outcome.
 
-**Why two records, not a drop-guard.** The work is asynchronous: the call
-returns long before the work finishes.
+**Span id uniqueness.** Multiple processes append to one file under one `trace`
+(Case A: the daemon process and the forked namespace-process). Per-process
+counters would collide, so a span id is `<proc>-<seq>` where `<proc>` is a token
+assigned once per process (pid- or random-derived). Examples below use `d-*` for
+the daemon/runtime process and `np-*` for the namespace-process.
 
-```
- wall: 0ms        ~1051ms                                        ~4273ms
-        │            │                                              │
-caller  ├─ exec_command span ─────────────────────────────────────┤
-        │  s-01.start                                  s-01.end ───┘  (returns at yield)
-        │
-child   ├─ namespace.exec.shell span ─────────────────────────────┼──── on_terminal
-        │  s-05.start (on_running)                       s-05.end ─┘   (watcher thread)
-        │                                                          │
-                        the span OUTLIVES the call ────────────────┘  → start/end pair
-```
+**Why one record (not start+end).** The async work outlives the call (Case A: the
+shell exec returns at ~1.05 s, the span closes at ~4.27 s on the watcher thread).
+We still write **one** record — at completion, on whichever thread finishes the
+work — and `ts`/`dur_ms` reconstruct the bar. This halves write volume on hot
+paths, removes the start↔end pairing reducer, and removes the
+permanent-unpaired-start-after-crash failure mode.
 
-An **unpaired `start`** (start, no end yet) = *in flight right now*. That single
-fact replaces the SQLite `namespace_execution_snapshots` table and its
-replace/reconcile polling. A parent span may `end` before its children — normal
-for async; `parent` is a logical ancestor, not a lifetime scope.
+**What's in flight right now is NOT in the log.** A span has no record until it
+completes, so the log can't answer "what's running." It doesn't need to: the
+runtime already holds in-flight executions in memory
+(`observability_snapshot().active_namespace_executions`), and the snapshot view
+reads that directly (Case B). The log is purely historical.
 
 ### 3.2 `event` — a point-in-time domain fact, hung off a span
 
 ```json
-{"ts":..,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime",
- "trace":"req-7f3","parent":"s-07","name":"layerstack.publish",
- "attrs":{"base":"r5","revision":"r6","layers_added":2,"bytes":40960,"no_op":false}}
+{"ts":1719500004290,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"d-6","name":"layerstack.publish","attrs":{"base":"r5","revision":"r6","layers_added":2,"bytes":40960,"no_op":false}}
 ```
 
 Side-effects (publish, lease, state transition, error) — carry `trace`/`parent`
-so they attach to the originating flow even when emitted in the async tail.
+so they attach to the originating flow even when emitted in the async tail. An
+event's record can appear *before* its parent span's record (the parent completes
+last); the reader resolves `parent` by id.
 
 ### 3.3 `sample` — a periodic metric reading (cgroup + disk)
 
 ```json
-{"ts":..,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon",
- "scope":"ws-1","cpu_usec":12345,"mem_cur":1048576,"mem_max":2097152,
- "disk_bytes":40960,"files":12,"dirs":3,"symlinks":0,"truncated":false}
+{"ts":1719500000000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"ws-1","cpu_usec":12345,"mem_cur":1048576,"mem_max":2097152,"disk_bytes":40960,"files":12,"dirs":3,"symlinks":0,"truncated":false}
 ```
 
-`scope` = `"sandbox"` or a workspace id. **Deltas are not stored** — the reader
-computes them from adjacent samples (§4.4).
+`scope` = `"sandbox"` or a workspace id. Cumulative counters are stored raw;
+**deltas are not stored** — the reader computes them from adjacent samples (§4.4).
 
 ---
 
 ## 4. Example cases — the observability outputs
 
-Each case shows the **trace diagram**, the **raw NDJSON** (append order = time
-order), and the **rendered view** a developer sees.
+Each case shows the **trace diagram**, the **raw NDJSON** (append order = `ts`
+order), and the **rendered view** a developer sees. Span `ts` is completion time;
+the renderer plots each bar from `ts - dur_ms`.
 
 ### 4.1 Case A — one-shot `exec_command` (sync call + async tail + finalize-publish)
 
@@ -146,105 +173,108 @@ req-7f3   exec_command  (one-shot)
  ├─ daemon.dispatch ─────────────────────────── returns at yield (~1.05s)
  │   └─ exec_command
  │       ├─ workspace_session.create
- │       │   └─ workspace.create
- │       │       • lease.acquired r5
- │       │       └─ namespace.exec.mount_overlay   [async]
- │       └─ namespace.exec.shell                   [async] ── outlives the call ──┐
- │           └─ ns_runner.shell.spawn_child  (namespace-process)                  │
- └─ ── watcher thread, after return ──                                            │
-     • exec.terminal exit=0  ◄──────────────────────────────────────────── child exits
+ │       │   ├─ workspace.create
+ │       │   │   • lease.acquired r5
+ │       │   └─ namespace.exec.mount_overlay   [async]
+ │       └─ namespace.exec.shell               [async] ── outlives the call ──┐
+ │           └─ ns_runner.shell.spawn_child  (namespace-process · Phase B)    │
+ └─ ── watcher thread, after return ──                                        │
+     • exec.terminal exit=0  ◄────────────────────────────────────── child exits
      └─ workspace_session.destroy (one-shot)
          • layerstack.publish r5→r6  (+2 layers, 40KB)
          • lease.released r6
 ```
 
-**Raw `observability.ndjson` (in emission order):**
+**Raw `observability.ndjson` (append order = `ts` order; spans land at
+completion):**
 
 ```json
-{"ts":1719500000000,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-daemon","trace":"req-7f3","span":"s-00","name":"daemon.dispatch","attrs":{"op":"exec_command"}}
-{"ts":1719500000002,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-01","parent":"s-00","name":"exec_command","attrs":{"one_shot":true}}
-{"ts":1719500000003,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-02","parent":"s-01","name":"workspace_session.create"}
-{"ts":1719500000004,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-03","parent":"s-02","name":"workspace.create"}
-{"ts":1719500000009,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"s-03","name":"lease.acquired","attrs":{"revision":"r5","owner":"req-7f3"}}
-{"ts":1719500000012,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-03","dur_ms":8.0,"status":"completed"}
-{"ts":1719500000013,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-04","parent":"s-02","name":"namespace.exec.mount_overlay","attrs":{"exec_id":"ns-8","async":true}}
-{"ts":1719500000040,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-04","dur_ms":27.0,"status":"completed","exit_code":0}
-{"ts":1719500000041,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-02","dur_ms":38.0,"status":"completed"}
-{"ts":1719500000042,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-05","parent":"s-01","name":"namespace.exec.shell","attrs":{"exec_id":"ns-9","async":true}}
-{"ts":1719500000055,"kind":"span","ev":"start","sandbox":"eos-abc","component":"namespace-process","trace":"req-7f3","span":"s-06","parent":"s-05","name":"ns_runner.shell.spawn_child","attrs":{"exec_id":"ns-9"}}
-{"ts":1719500000061,"kind":"span","ev":"end","sandbox":"eos-abc","component":"namespace-process","trace":"req-7f3","span":"s-06","dur_ms":6.0,"status":"completed"}
-{"ts":1719500001050,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-01","dur_ms":1048.0,"status":"completed"}
-{"ts":1719500001051,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-daemon","trace":"req-7f3","span":"s-00","dur_ms":1051.0,"status":"completed"}
-{"ts":1719500004273,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-05","dur_ms":4231.0,"status":"completed","exit_code":0}
-{"ts":1719500004274,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"s-05","name":"exec.terminal","attrs":{"status":"completed","exit_code":0}}
-{"ts":1719500004275,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-07","parent":"s-05","name":"workspace_session.destroy","attrs":{"one_shot":true}}
-{"ts":1719500004290,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"s-07","name":"layerstack.publish","attrs":{"base":"r5","revision":"r6","layers_added":2,"bytes":40960,"no_op":false}}
-{"ts":1719500004295,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"s-07","name":"lease.released","attrs":{"revision":"r6"}}
-{"ts":1719500004300,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"s-07","dur_ms":25.0,"status":"completed"}
+{"ts":1719500000009,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"d-3","name":"lease.acquired","attrs":{"revision":"r5","owner":"req-7f3"}}
+{"ts":1719500000012,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-3","parent":"d-2","name":"workspace.create","dur_ms":8.0,"status":"completed"}
+{"ts":1719500000040,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed","exit_code":0,"attrs":{"exec_id":"ns-8","async":true}}
+{"ts":1719500000041,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":38.0,"status":"completed"}
+{"ts":1719500000061,"kind":"span","sandbox":"eos-abc","component":"namespace-process","trace":"req-7f3","span":"np-0","parent":"d-5","name":"ns_runner.shell.spawn_child","dur_ms":6.0,"status":"completed","attrs":{"exec_id":"ns-9"}}
+{"ts":1719500001050,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-1","parent":"d-0","name":"exec_command","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
+{"ts":1719500001051,"kind":"span","sandbox":"eos-abc","component":"sandbox-daemon","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
+{"ts":1719500004273,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","exit_code":0,"attrs":{"exec_id":"ns-9","async":true}}
+{"ts":1719500004274,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"d-5","name":"exec.terminal","attrs":{"status":"completed","exit_code":0}}
+{"ts":1719500004290,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"d-6","name":"layerstack.publish","attrs":{"base":"r5","revision":"r6","layers_added":2,"bytes":40960,"no_op":false}}
+{"ts":1719500004295,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","parent":"d-6","name":"lease.released","attrs":{"revision":"r6"}}
+{"ts":1719500004300,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-6","parent":"d-5","name":"workspace_session.destroy","dur_ms":25.0,"status":"completed","attrs":{"one_shot":true}}
 ```
 
-Note `s-01`/`s-00` close at ~1.05 s while `s-05` is still open; the publish/lease
-events arrive at ~4.29 s under the same `req-7f3`.
+Note `d-1`/`d-0` complete at ~1.05 s while `d-5` is still running (no record yet);
+its record lands at ~4.27 s, and the `destroy` span `d-6` is appended **last**
+(at 4.30 s) even though its child events (`publish` 4.29 s, `lease.released`
+4.295 s) were appended before it — all under `req-7f3`.
 
 **Rendered — `sandbox-cli eos-abc observability --trace req-7f3`:**
 
 ```
 trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
 
-  +00.000  daemon.dispatch op=exec_command                    1051ms  ✓
-  +00.002   └ exec_command one_shot                           1048ms  ✓
-  +00.003      ├ workspace_session.create                       38ms  ✓
-  +00.004      │   └ workspace.create                            8ms  ✓
-  +00.009      │      • lease.acquired r5
-  +00.013      ├ namespace.exec.mount_overlay   [async]         27ms  ✓ exit0
-  +00.042      └ namespace.exec.shell           [async]       4231ms  ✓ exit0   ← outlives call
-  +00.055         └ ns_runner.shell.spawn_child                 6ms  ✓
-  +04.274         • exec.terminal exit=0
-  +04.275         └ workspace_session.destroy one_shot          25ms  ✓
+  +00.000  daemon.dispatch op=exec_command                 1051ms  ✓
+  +00.002   └ exec_command one_shot                        1048ms  ✓
+  +00.003      ├ workspace_session.create                    38ms  ✓
+  +00.004      │   ├ workspace.create                         8ms  ✓
+  +00.009      │   │   • lease.acquired r5
+  +00.013      │   └ namespace.exec.mount_overlay [async]    27ms  ✓ exit0
+  +00.042      └ namespace.exec.shell           [async]    4231ms  ✓ exit0   ← outlives call
+  +00.055         ├ ns_runner.shell.spawn_child              6ms  ✓   [Phase B: cross-process]
+  +04.274         ├ • exec.terminal exit=0
+  +04.275         └ workspace_session.destroy one_shot       25ms  ✓
   +04.290            • layerstack.publish r5→r6  +2 layers 40KB
   +04.295            • lease.released r6
 ```
 
+**Phase split for this case.** Everything renders under `req-7f3` in **Phase A**
+*except* `np-0` — it is emitted by the forked namespace-process, and its
+`trace`/`parent` only cross the fork in **Phase B**. Until then `np-0` appears
+under its own trace. The async tail (`d-5`, `d-6`, and the `publish`/`lease`
+events) is in-process (the watcher runs in the daemon process), so it correlates
+in Phase A — this is the threading work §9.3 calls out.
+
 ### 4.2 Case B — persistent session + an in-flight snapshot
 
 A long-running command against an existing session. While it runs, the developer
-asks for the live snapshot — the command shows up as **in flight** (a `start`
-with no `end`), with no polling table behind it.
+asks for the live snapshot. The command shows up as **in flight** — sourced from
+the runtime registry, **not** from the log (the span has no record until it
+completes).
 
-**Raw (the relevant lines so far):**
+**Raw log so far** (only the completed span is present):
 
 ```json
-{"ts":1719500100000,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-9a1","span":"s-10","name":"exec_command","attrs":{"workspace_session":"ws-7","one_shot":false}}
-{"ts":1719500100020,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-9a1","span":"s-11","parent":"s-10","name":"namespace.exec.shell","attrs":{"exec_id":"ns-42","async":true}}
-{"ts":1719500101020,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-9a1","span":"s-10","dur_ms":1020.0,"status":"completed"}
+{"ts":1719500101020,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-9a1","span":"d-10","name":"exec_command","dur_ms":1020.0,"status":"completed","attrs":{"workspace_session":"ws-7","one_shot":false}}
 ```
 
-`s-11` has a `start` and no `end` → still running.
+The async `namespace.exec.shell` (`ns-42`) is still running, so it has **no line
+yet**. The in-flight row comes from `observability_snapshot()`.
 
 **Rendered — `sandbox-cli eos-abc observability` (snapshot view):**
 
 ```
-sandbox eos-abc   state ready
+sandbox eos-abc   state ready        (state · workspaces · in-flight from live runtime registry)
 
   workspaces
     ws-7   active    profile=default   layers=4
 
-  in-flight executions            (spans started, not ended)
+  in-flight executions            (from runtime registry, not the log)
     ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
 
-  resources (latest)
+  resources (latest)             (latest sample per scope, from the log)
     sandbox   cpu 12.3s   mem 41MB / 256MB
     ws-7      cpu  4.1s   mem 18MB        disk 1.2MB (320 files)
 ```
 
 ### 4.3 Case C — squash / autosquash (background trace, no request)
 
-Squash has no request driving it. It opens a root span with a fresh trace and a
-`trigger` attr; a future **autosquash policy** is the *same shape* with
-`trigger:"autosquash"` — no new machinery.
+Squash has no request driving it, so it **mints a fresh `trace` id** at its root
+span (there is no `request_id` to reuse) and tags it with `trigger`. A future
+**autosquash policy** is the *same shape* with `trigger:"autosquash"` — no new
+machinery. (`span` ids are still process-local; the daemon process emits `d-*`.)
 
 ```
-sq-22  layerstack.squash  trigger=autosquash         [async root, no parent]
+sq-22  layerstack.squash  trigger=autosquash         [background root, no parent]
  • squash.planned     layers=5 est_reclaim=12MB
  └ squash.project_checkpoint
  • squash.completed   5→1 layers  reclaimed=11.8MB  revision=r9
@@ -253,12 +283,10 @@ sq-22  layerstack.squash  trigger=autosquash         [async root, no parent]
 **Raw:**
 
 ```json
-{"ts":1719600000000,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"q-0","name":"layerstack.squash","attrs":{"trigger":"autosquash"}}
-{"ts":1719600000005,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","parent":"q-0","name":"squash.planned","attrs":{"layers":5,"est_reclaim_bytes":12582912}}
-{"ts":1719600000010,"kind":"span","ev":"start","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"q-1","parent":"q-0","name":"squash.project_checkpoint"}
-{"ts":1719600000820,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"q-1","dur_ms":810.0,"status":"completed"}
-{"ts":1719600000825,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","parent":"q-0","name":"squash.completed","attrs":{"from_layers":5,"to_layers":1,"reclaimed_bytes":12373196,"revision":"r9"}}
-{"ts":1719600000830,"kind":"span","ev":"end","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"q-0","dur_ms":830.0,"status":"completed"}
+{"ts":1719600000005,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","parent":"d-40","name":"squash.planned","attrs":{"layers":5,"est_reclaim_bytes":12582912}}
+{"ts":1719600000820,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"d-41","parent":"d-40","name":"squash.project_checkpoint","dur_ms":810.0,"status":"completed"}
+{"ts":1719600000825,"kind":"event","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","parent":"d-40","name":"squash.completed","attrs":{"from_layers":5,"to_layers":1,"reclaimed_bytes":12373196,"revision":"r9"}}
+{"ts":1719600000830,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"sq-22","span":"d-40","name":"layerstack.squash","dur_ms":830.0,"status":"completed","attrs":{"trigger":"autosquash"}}
 ```
 
 **Rendered — `sandbox-cli eos-abc observability --trace sq-22`:**
@@ -302,25 +330,40 @@ scope ws-1   window 60s   (Δ computed at read)
 Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 
 ```
- sync scope        →  let _s = obs.span("workspace.create.lock_state");   (RAII: start now, end on drop)
- async ns exec     →  ExecutionObserver::on_running  → obs.open(ctx, "namespace.exec.<kind>")
-                      ExecutionObserver::on_terminal → handle.end(status, exit_code)   (watcher thread)
+ sync scope        →  let _s = obs.span("workspace.create.lock_state");  (RAII: start now, one record on drop)
+ async ns exec     →  caller: register (ctx, "namespace.exec.<kind>") at launch
+                      ExecutionObserver::on_running   → stamp start
+                      ExecutionObserver::on_terminal  → write the one span record (watcher thread)
  layerstack facts  →  acquire_snapshot_with_lease → event lease.acquired
                       publish_changes            → event layerstack.publish | publish_rejected
-                      squash                     → root span + squash.planned/completed
+                      squash                     → fresh-trace root span + squash.planned/completed
  cgroup/disk       →  daemon collect() → obs.sample(scope, metrics)   (readers moved into the crate)
 ```
 
-- `ExecutionObserver` already exists (`namespace-execution/src/types.rs:19`,
-  `on_running`/`on_terminal`) wired as `NoopObserver`
+- **trace id = `Request.request_id`** (`sandbox-protocol/src/request.rs:11`),
+  required on every daemon request. Set a thread-local `TraceContext` at
+  `dispatch_request` (`sandbox-daemon/src/server/dispatch.rs:54`);
+  `dispatch_operation(&operations, &request)` runs the operation synchronously on
+  that thread, so in-daemon sync spans form the per-request tree via the
+  thread-local parent. **Do not** use the layerstack `owner_request_id`
+  (`layerstack/src/stack/mod.rs:75`) — it is validated and immediately discarded
+  (not stored in the lease record, never returned, only ever the literal
+  `"workspace-session"` in production), so it can correlate nothing.
+- `ExecutionObserver` (`namespace-execution/src/types.rs:19`,
+  `on_running`/`on_terminal`) is wired as `NoopObserver`
   (`operation/src/command/service/core.rs:34`). Replace it with
-  `ObsExecutionObserver`. The async span then spans exactly `on_running …
-  on_terminal` (`engine.rs:108`/`:138` → `:202`), closing on the watcher thread.
-- The one-shot finalize (`exec_command.rs:181`) runs inside that watcher and
-  carries the trace context, so its `destroy` span and `publish`/`lease` events
-  land under the originating trace (Case A tail).
-- **trace id:** reuse the `owner_request_id` already threaded into layerstack
-  leases (`layerstack/src/stack/mod.rs:75`) as the request-wide trace id.
+  `ObsExecutionObserver`. Because `on_running(&id)` carries **only** the exec id —
+  not the kind, trace, or parent — the observer keeps an
+  `exec_id → (TraceContext, name, start)` map: the **caller** registers
+  `(ctx, "namespace.exec.<kind>")` at launch (`engine.rs:108` shell / `:138`
+  mount_overlay, where kind + ctx are in scope), `on_running` stamps the start,
+  and `on_terminal` (`engine.rs:202`, watcher thread) pops the entry and writes
+  the single span record.
+- The one-shot finalize (`exec_command.rs:181`) runs inside that watcher but
+  **captures no context today** — capture the request's `TraceContext` in the
+  finalize closure so its `destroy` span and `publish`/`lease` events land under
+  the originating trace (Case A tail). This in-process threading is Phase-A work
+  (§9.3), distinct from the cross-process threading deferred to Phase B.
 
 ---
 
@@ -330,10 +373,10 @@ Hook the **existing** lifecycle edges; do not sprinkle inline timing.
 |---|---|---|
 | `src/paths.rs` | **Keep** | `database_path()` → `log_path()` (`observability.ndjson`) |
 | `src/records.rs` | **Reshape** | keep length bounds + validation; structs → `Span`/`Event`/`Sample` |
-| `src/store.rs` | **Delete+replace** | `rusqlite` store → `Sink` (append `O_APPEND` writer) |
+| `src/store.rs` | **Delete+replace** | `rusqlite` store → `Sink` (append `O_APPEND` writer, one write/line) |
 | `src/store/schema.rs` | **Delete** | 8 migrations gone |
-| `src/store/{read,rows}.rs` | **Delete+replace** | SQL queries → `Reader` + views |
-| `src/lib.rs` | **Rewrite** | export `Observer`, `Span`, `TraceContext`, `Reader`, record + view types |
+| `src/store/{read,rows}.rs` | **Delete+replace** | SQL queries → `Reader` + history views |
+| `src/lib.rs` | **Rewrite** | export `Observer`, `SpanGuard`, `AsyncSpan`, `TraceContext`, `Reader`, record + view types |
 | `Cargo.toml` | **Edit** | drop `rusqlite`; add `serde`/`serde_json` |
 
 ```
@@ -342,31 +385,65 @@ crates/sandbox-observability/src/
   collect/{mod.rs,  cgroup.rs,  disk.rs}      ← moved from sandbox-daemon (pure &Path → struct)
 ```
 
-**Atomicity / bounds.** Records are appended as single lines; `O_APPEND` writes
-≤ `PIPE_BUF` (4096 B) are atomic on local Linux fs — so the forked
-namespace-process and the daemon can share the file. The reused `MAX_*` length
-bounds keep every line under that ceiling (their new purpose). Soft size cap with
-one rotation (`…ndjson.1`) keeps the file bounded; the reader reads both.
+**Atomicity / bounds.** Each record is serialized — **including its trailing
+`\n`** — into one buffer and emitted with a **single `write()`** to an `O_APPEND`
+fd. On a local Linux fs (incl. the in-container tmpfs/overlay) the kernel
+serializes concurrent `write()`s per inode, so one-syscall line appends from the
+daemon and the forked namespace-process never interleave — **at any line length**.
+(`PIPE_BUF` is a pipe/FIFO guarantee and does not apply to regular files; what
+matters is one syscall per line, not a 4096 B ceiling.) A **total
+serialized-line cap** is enforced at emit: if a line would exceed it, `attrs` are
+truncated to fit — the line is never split. The reused `MAX_*` field bounds are
+necessary but not sufficient for this (one 4096 B path attr already nears the
+budget), so the cap is on the whole serialized line. A soft size cap with one
+rotation (`…ndjson.1`), **owned by the daemon**, bounds the file; the reader reads
+both, ordered by `ts`. Rotation drops the oldest history; when it does, the daemon
+emits a marker record so a missing trace reads as "rotated out," not "never
+happened."
+
+**Redaction.** `attrs` and event payloads MUST NOT carry raw command lines, env,
+or secret-bearing paths — the file is shipped to the host over the daemon RPC.
+`name`s are `&'static str`; attrs are bounded and truncated at the line cap.
 
 **Emit API (shape):**
 
 ```rust
 impl Observer {
-    fn span(&self, name: &'static str) -> Span;                 // sync; end on drop; thread-local parent
-    fn span_in(&self, ctx: TraceContext, name: &'static str) -> Span;
-    fn open(&self, ctx: TraceContext, name: &'static str) -> SpanHandle;  // async; Send; .end(status, code)
+    fn span(&self, name: &'static str) -> SpanGuard;            // sync; thread-local parent; one record on drop
+    fn span_in(&self, ctx: TraceContext, name: &'static str) -> SpanGuard;  // explicit parent
+    fn open(&self, ctx: TraceContext, name: &'static str) -> AsyncSpan;     // Send; .end(status, code) writes one record
     fn event(&self, ctx: TraceContext, name: &'static str, attrs: Attrs);
-    fn sample(&self, scope: Scope, metrics: SampleMetrics);
+    fn sample(&self, scope: &str, metrics: SampleMetrics);
 }
 ```
+
+`TraceContext = { trace, parent }` — the two ids needed to cross a thread or
+process boundary; the sync `span()` reads the thread-local context set at
+dispatch. **Consolidations vs. a naïve port:** no `ev` start/end split (one
+record); no separate `Scope` type (`sample` takes `scope: &str`); `Attrs` is a
+`serde_json::Map` alias, not a new type. `SpanGuard` (sync, ends on drop, same
+thread) and `AsyncSpan` (`Send`, ends on an explicit `.end()` from the watcher
+thread) are a *real* split — drop-on-same-thread vs. manual-end-from-another —
+not two names for one thing.
 
 Emit is config-gated (`observability.enabled`, default on in-sandbox; off for the
 host CLI unless a flag) and near-free when disabled. Observability MUST never
 fail the operation it observes — over-long attrs truncate, errors are swallowed.
 
-**Reader (shape):** `snapshot()` (current state + in-flight = unpaired starts),
-`trace(id)` (the waterfall), `samples(scope, window)` (series + deltas),
-`raw(filter)`. Single forward scan, filter-while-reading.
+**Reader (shape), over the log:**
+
+- `trace(id)` — the waterfall: filter by `trace`, build the tree by `parent`,
+  order siblings by start (`ts - dur_ms`), offset each node by
+  `(ts - dur_ms) - trace_start`. Events render at their `ts` under `parent`.
+- `samples(scope, window)` — filter by `scope` and `ts ≥ now - window`, sort by
+  `ts`, compute pairwise deltas between adjacent samples per scope.
+- `raw(filter)` — single forward scan, filter-while-reading (`kind`, `since_ms`,
+  `trace`).
+
+The **`snapshot()` view does not read the log** — it returns the runtime's live
+`observability_snapshot()` (sandbox state, workspaces, in-flight executions),
+joined with the latest `sample` per scope. For a *currently-running* trace,
+`trace(id)` may merge the live in-flight spans on top of the completed records.
 
 **Boundary.** `sandbox-observability` stays a **leaf** (`serde`, `serde_json`,
 `thiserror` only — never `protocol`/`runtime`/`daemon`/`config`). All dependency
@@ -375,7 +452,7 @@ runtime emit into it.
 
 ---
 
-## 7. Fetch — one generalized op
+## 7. Fetch — one generalized op + CLI reference
 
 The current single op `get_observability_snapshot`
 (`sandbox-daemon/src/server/dispatch.rs:9`, handler `:87`) is **generalized**:
@@ -387,28 +464,122 @@ params: { view:"snapshot"|"trace"|"samples"|"raw" (default "snapshot"),
 → JSON of the view
 ```
 
+Every command is `sandbox-cli <sandbox-id> observability [flags]`. `snapshot` is
+served from the live runtime snapshot; `trace`/`samples`/`raw` are folded from the
+log (a forward scan of up to two files, bounded by the size cap). **Pull is
+one-shot** — `--follow` is out of scope; re-poll for a running command.
+
+### 7.1 `observability` — snapshot (default; live registry)
+
+```console
+$ sandbox-cli eos-abc observability
+sandbox eos-abc   state ready
+
+  workspaces
+    ws-7   active    profile=default   layers=4
+
+  in-flight executions            (from runtime registry, not the log)
+    ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
+
+  resources (latest)
+    sandbox   cpu 12.3s   mem 41MB / 256MB
+    ws-7      cpu  4.1s   mem 18MB        disk 1.2MB (320 files)
 ```
-sandbox-cli <id> observability                       # snapshot (Case B)
-sandbox-cli <id> observability --trace req-7f3       # waterfall (Case A)
-sandbox-cli <id> observability --samples ws-1 --window 60000   # series (Case D)
-sandbox-cli <id> observability --raw --kind span --since <ms>
+
+### 7.2 `observability --trace <id>` — waterfall (log fold)
+
+The `<id>` is the request's `request_id`. Two ways to get it: a flow-starting
+command **echoes it on stderr**, and `--trace last` resolves the most recent root
+trace in the log.
+
+```console
+$ sandbox-cli eos-abc exec "cargo build"
+# trace: req-7f3
+... command output ...
+
+$ sandbox-cli eos-abc observability --trace req-7f3      # or: --trace last
+trace req-7f3   sandbox eos-abc   wall 4.30s   (call returned at 1.05s)
+
+  +00.000  daemon.dispatch op=exec_command                 1051ms  ✓
+  +00.002   └ exec_command one_shot                        1048ms  ✓
+  +00.003      ├ workspace_session.create                    38ms  ✓
+  +00.004      │   ├ workspace.create                         8ms  ✓
+  +00.009      │   │   • lease.acquired r5
+  +00.013      │   └ namespace.exec.mount_overlay [async]    27ms  ✓ exit0
+  +00.042      └ namespace.exec.shell           [async]    4231ms  ✓ exit0   ← outlives call
+  +00.055         ├ ns_runner.shell.spawn_child              6ms  ✓   [Phase B: cross-process]
+  +04.274         ├ • exec.terminal exit=0
+  +04.275         └ workspace_session.destroy one_shot       25ms  ✓
+  +04.290            • layerstack.publish r5→r6  +2 layers 40KB
+  +04.295            • lease.released r6
+```
+
+(Background flows render the same way: `--trace sq-22` → the Case C squash tree.)
+
+### 7.3 `observability --samples <scope> --window <ms>` — series + deltas
+
+`<scope>` is `sandbox`, a workspace id, or `stack` (layerstack side spec).
+
+```console
+$ sandbox-cli eos-abc observability --samples ws-1 --window 60000
+scope ws-1   window 60s   (Δ computed at read)
+
+  t(+s)   cpu_total   Δcpu      mem_cur    disk        Δdisk
+  00.0     1.00s        –       18.0MB     1.20MB        –
+  10.0     4.10s     +3.10s     21.0MB     1.32MB     +120KB
+  20.0     4.25s     +0.15s     20.5MB     1.32MB        +0
+```
+
+### 7.4 `observability --raw [--kind <k>] [--trace <id>] [--since <ms>]` — filtered lines
+
+Returns the matching NDJSON lines verbatim (newline-delimited), for grep/jq.
+
+```console
+$ sandbox-cli eos-abc observability --raw --trace req-7f3 --kind span
+{"ts":1719500000012,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-3","parent":"d-2","name":"workspace.create","dur_ms":8.0,"status":"completed"}
+{"ts":1719500001050,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-1","parent":"d-0","name":"exec_command","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
+{"ts":1719500004273,"kind":"span","sandbox":"eos-abc","component":"sandbox-runtime","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.shell","dur_ms":4231.0,"status":"completed","exit_code":0,"attrs":{"exec_id":"ns-9","async":true}}
+```
+
+### 7.5 Empty / error states
+
+```console
+$ sandbox-cli eos-abc observability --trace nope
+trace nope   sandbox eos-abc   (no records — unknown trace, or rotated out)
+
+$ sandbox-cli eos-abc observability --samples ws-1 --window 999999999
+error: window_ms exceeds max (600000)
 ```
 
 ---
 
-## 8. Removal checklist (mechanical; greps must go to zero)
+## 8. Removal checklist (mechanical; scoped greps must go to zero)
 
-1. Delete 6 `timing.rs` + their `mod` decls: `sandbox-daemon` (`lib.rs:8`),
-   `sandbox-gateway/cli` (`cli/mod.rs:7`), `namespace-execution` (`lib.rs:9`),
-   `namespace-process` (`lib.rs:12`), `operation` (`lib.rs:12`), `workspace`
-   (`lib.rs:24`).
-2. Replace/delete ~38 call sites → `grep -rn 'timing::' crates` is empty. Dotted
-   labels carry over verbatim as span `name`s.
-3. Delete `runtime_timing_env()` + uses (`sandbox-provider-docker/src/runtime.rs:88,113`)
-   → `grep -rn 'EOS_.*TIMING' crates` is empty.
+This rework covers **in-sandbox** observability. Host-side gateway/CLI timing is
+retained (the in-sandbox `Sink` isn't reachable from the host process), so the
+greps are **scoped to the in-sandbox crates**, not the whole workspace.
+
+1. Delete the **5 in-sandbox** `timing.rs` + their `mod` decls: `sandbox-daemon`
+   (`lib.rs:8`), `namespace-execution` (`lib.rs:9`), `namespace-process`
+   (`lib.rs:12`), `operation` (`lib.rs:12`), `workspace` (`lib.rs:24`). **Retain**
+   `sandbox-gateway/src/cli/timing.rs` (`cli/mod.rs:7`) and the gateway's host-side
+   sites — out of scope.
+2. Replace/delete the **~56 in-sandbox** call sites →
+   `grep -rn 'timing::' crates/sandbox-runtime crates/sandbox-daemon` is empty.
+   (Total `timing::` sites are ~77; the ~21 in `sandbox-gateway` stay.) Dotted
+   labels carry over verbatim as span `name`s; return values are never used, so
+   the swap is mechanical.
+3. Delete `runtime_timing_env()` + its use
+   (`sandbox-provider-docker/src/runtime.rs:88,113`) so timing env is no longer
+   forwarded into the container → `grep -rn 'runtime_timing_env' crates` is empty.
+   (`EOS_*_TIMING` remains a host-only gateway/CLI knob.)
 4. Delete `src/store/**` + `rusqlite` → `grep -rn 'rusqlite' crates` is empty.
-5. Collapse `sandbox-daemon/src/observability` to the thin caller (cgroup/disk
-   moved; delta/counter caches removed; `collect()` emits `obs.sample`).
+5. Collapse `sandbox-daemon/src/observability` to a thin caller: cgroup/disk
+   readers move into the leaf crate; the SQLite store, the delta/counter caches,
+   and the `namespace_execution_snapshots` replace/reconcile all go away.
+   `collect()` emits `obs.sample` lines; the `snapshot` view is served straight
+   from the live `observability_snapshot()` (no persistence, no reconcile —
+   deltas are computed at read by the `Reader`).
 6. Repoint the boundary test
    `operation/tests/observability_snapshot.rs` to the new leaf invariant (no
    protocol/runtime/daemon dep) or remove it.
@@ -420,33 +591,47 @@ layer-projection domain concept, not timing.
 
 ## 9. Rollout
 
-1. **Crate rework** (§6) — record types, `Sink`, `Observer`/`Span`,
-   `Reader`/views, `paths.rs` retarget, move `collect/{cgroup,disk}`. Standalone,
-   unit-tested; nothing consumes it yet.
+1. **Crate rework** (§6) — record types (one-record span), `Sink` (single-write
+   append + rotation), `Observer`/`SpanGuard`/`AsyncSpan`/`TraceContext`,
+   `Reader`/history views, `paths.rs` retarget, move `collect/{cgroup,disk}`.
+   Standalone, unit-tested; nothing consumes it yet.
 2. **Daemon swap** — build `Observer`; `NoopObserver` → `ObsExecutionObserver`;
-   `collect()` → `obs.sample`; generalize the RPC op + CLI.
-3. **Replace the 38 timing sites** with span guards / events (Phase A:
-   per-process correlation; in-daemon spans already form per-request trees).
-4. **Layerstack events** (lease / publish / squash).
-5. **Removal checklist** (§8) — the three greps gate the change.
+   `collect()` → emit `obs.sample`; serve the `snapshot` view from the live
+   `observability_snapshot()`; generalize the RPC op + CLI.
+3. **Replace the ~56 in-sandbox timing sites** with span guards / events, and
+   **thread the trace id** (= `Request.request_id`): thread-local set at
+   `dispatch_request`; the `ObsExecutionObserver` `exec_id → (ctx, name, start)`
+   map for the async exec span; the one-shot finalize closure captures the
+   `TraceContext`. This in-process threading is what makes **Case A's async tail**
+   (`d-5`, `d-6`, `publish`/`lease`) correlate in Phase A.
+4. **Layerstack events** (lease / publish / squash); squash mints a fresh
+   background `trace` id at its root span.
+5. **Removal checklist** (§8) — the scoped greps gate the change.
 6. **Phase B (follow-up):** thread `trace`/`parent` through
    `NamespaceRunnerRequest` (and optionally the daemon protocol) so the forked
-   process and gateway-initiated requests stitch into one cross-process tree; the
-   watcher already carries the handle. Autosquash opens a background root span
-   here. **No schema change between phases** — Phase A already has `trace`/`parent`
-   fields; Phase B only populates them across boundaries.
+   namespace-process (Case A's `np-0`) and gateway-initiated requests stitch into
+   one cross-process tree; the watcher already carries the handle. Autosquash
+   reuses the squash root-span shape. **No schema change between phases** — the
+   `trace`/`parent`/`span` fields exist from Phase A; Phase B only populates them
+   across the fork.
 
 ---
 
 ## 10. Testing
 
-- **Unit (crate):** record round-trip; bounds keep lines < `PIPE_BUF`; `Reader`
-  folds — in-flight detection (start w/o end), latest-state-per-id, pairwise
-  sample deltas; N concurrent appenders → every line parses.
-- **Integration:** an `exec_command` reproduces Case A's shape (spans paired,
-  `namespace.exec.shell` closes on terminal, finalize events share the trace); a
-  `squash` reproduces Case C.
+- **Unit (crate):** record round-trip; **single-write append** keeps lines intact
+  under N concurrent appenders (every line parses; none interleaved); the
+  serialized-line cap truncates `attrs`, never the line; span ids are unique
+  across simulated processes; `Reader` folds — trace tree + offsets from
+  `ts - dur_ms`, pairwise sample deltas, raw filter; rotation emits the drop
+  marker and the reader spans both files.
+- **Integration:** an `exec_command` reproduces Case A's shape (one record per
+  span, `namespace.exec.shell` written on terminal under `req-7f3`, finalize
+  `destroy` span + `publish`/`lease` events share the trace); a `squash`
+  reproduces Case C; the `snapshot` view reflects live-registry in-flight (Case B)
+  with **no** log dependency.
 - **Fetch:** `get_observability` returns each view; `--trace` the waterfall;
-  `--samples` the series with deltas.
-- **Gates:** the three removal greps return nothing; `cargo build`, `cargo test`,
-  `cargo clippy --all-targets` clean.
+  `--samples` the series with deltas; `snapshot` from the live registry.
+- **Gates:** the scoped removal greps return nothing (`timing::` empty in
+  `sandbox-runtime` + `sandbox-daemon`; `rusqlite` empty; `runtime_timing_env`
+  empty); `cargo build`, `cargo test`, `cargo clippy --all-targets` clean.

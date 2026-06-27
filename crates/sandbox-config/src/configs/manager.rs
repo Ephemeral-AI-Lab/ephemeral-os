@@ -8,8 +8,7 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_non_empty, require_u64_at_least, require_usize_at_least,
-    ConfigFieldError,
+    require_absolute, require_non_empty, require_u64_at_least, ConfigFieldError,
 };
 
 pub const DEFAULT_CONTAINER_WORKSPACE_ROOT: &str = "/workspace";
@@ -17,9 +16,6 @@ pub const DEFAULT_CONTAINER_DAEMON_BINARY_PATH: &str = "/eos/bin/sandbox-daemon"
 pub const DEFAULT_CONTAINER_DAEMON_CONFIG_PATH: &str = "/eos/config/daemon.yml";
 pub const DEFAULT_DAEMON_PORT: u16 = 7000;
 pub const DEFAULT_READINESS_TIMEOUT_MS: u64 = 15_000;
-pub const DEFAULT_MAX_ACTIVE_SANDBOXES: usize = 64;
-pub const DEFAULT_MAX_CONCURRENT_CREATES: usize = 4;
-pub const DEFAULT_MAX_CONCURRENT_DESTROYS: usize = 4;
 pub const DEFAULT_GATEWAY_INSTANCE_ID: &str = "eos-gateway";
 
 /// Root `manager` section. Holds one backend sub-section; only `docker` exists
@@ -58,12 +54,6 @@ pub struct DockerRuntimeConfig {
     pub daemon_port: u16,
     /// Identifies the owning gateway; recovery filters containers by this label.
     pub gateway_instance_id: String,
-    /// Upper bound on simultaneously active sandboxes.
-    pub max_active_sandboxes: usize,
-    /// Bound on concurrent create operations.
-    pub max_concurrent_creates: usize,
-    /// Bound on concurrent destroy operations.
-    pub max_concurrent_destroys: usize,
     /// Readiness deadline for the authenticated daemon check.
     pub readiness_timeout_ms: u64,
     /// Optional per-container memory cap in bytes.
@@ -86,9 +76,6 @@ impl Default for DockerRuntimeConfig {
             privileged: true,
             daemon_port: DEFAULT_DAEMON_PORT,
             gateway_instance_id: DEFAULT_GATEWAY_INSTANCE_ID.to_owned(),
-            max_active_sandboxes: DEFAULT_MAX_ACTIVE_SANDBOXES,
-            max_concurrent_creates: DEFAULT_MAX_CONCURRENT_CREATES,
-            max_concurrent_destroys: DEFAULT_MAX_CONCURRENT_DESTROYS,
             readiness_timeout_ms: DEFAULT_READINESS_TIMEOUT_MS,
             memory_bytes: None,
             nano_cpus: None,
@@ -131,21 +118,6 @@ impl DockerRuntimeConfig {
             self.readiness_timeout_ms,
             1,
             "manager.docker.readiness_timeout_ms",
-        )?;
-        require_usize_at_least(
-            self.max_active_sandboxes,
-            1,
-            "manager.docker.max_active_sandboxes",
-        )?;
-        require_usize_at_least(
-            self.max_concurrent_creates,
-            1,
-            "manager.docker.max_concurrent_creates",
-        )?;
-        require_usize_at_least(
-            self.max_concurrent_destroys,
-            1,
-            "manager.docker.max_concurrent_destroys",
         )?;
         Ok(())
     }

@@ -7,14 +7,14 @@ use serde_json::{json, Value};
 use crate::model::NetworkProfile;
 use crate::namespace::HolderKillReport;
 use crate::overlay::tree::TreeResourceStats;
-use crate::profile::manager::WorkspaceModeError;
-use crate::profile::{WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeManager};
+use crate::profile::manager::WorkspaceProfileError;
+use crate::profile::{WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileManager};
 
 use super::{monotonic_seconds, record_phase_ms};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExitOutcome {
-    pub workspace_id: WorkspaceModeId,
+    pub workspace_id: WorkspaceProfileId,
     pub lease_id: String,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
@@ -23,10 +23,10 @@ pub struct ExitOutcome {
     pub inspection: Value,
 }
 
-impl WorkspaceModeManager {
+impl WorkspaceProfileManager {
     pub(crate) fn teardown_handle(
         &mut self,
-        handle: &WorkspaceModeHandle,
+        handle: &WorkspaceProfileHandle,
         grace_s: f64,
     ) -> (Value, HashMap<String, f64>) {
         let mut phases_ms = HashMap::new();
@@ -75,7 +75,7 @@ impl WorkspaceModeManager {
 
     fn teardown_isolated_network(
         &mut self,
-        handle: &WorkspaceModeHandle,
+        handle: &WorkspaceProfileHandle,
         phases_ms: &mut HashMap<String, f64>,
     ) {
         if handle.profile != NetworkProfile::Isolated {
@@ -90,11 +90,11 @@ impl WorkspaceModeManager {
 
     pub fn exit(
         &mut self,
-        workspace_id: &WorkspaceModeId,
+        workspace_id: &WorkspaceProfileId,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, WorkspaceModeError> {
+    ) -> Result<ExitOutcome, WorkspaceProfileError> {
         let Some(handle) = self.handles.remove(workspace_id) else {
-            return Err(WorkspaceModeError::NotOpen);
+            return Err(WorkspaceProfileError::NotOpen);
         };
         let timer = Instant::now();
         let upperdir_bytes = TreeResourceStats::collect(&handle.dirs.upperdir).bytes;
@@ -119,7 +119,7 @@ impl WorkspaceModeManager {
     }
 }
 
-fn close_handle_fds(handle: &WorkspaceModeHandle) {
+fn close_handle_fds(handle: &WorkspaceProfileHandle) {
     for fd in handle.ns_fds.values() {
         close_fd(fd);
     }

@@ -26,8 +26,8 @@ daemon:
   commands:
     scratch_root: /eos/scratch/commands
 runner:
-  env:
-    inherit_keys: [PATH, HOME]
+  mount_mask:
+    hidden_paths: [/eos, /tmp/eos]
 "#,
     );
     let override_doc = parse_doc(
@@ -36,8 +36,8 @@ daemon:
   commands:
     scratch_root: /tmp/eos/commands
 runner:
-  env:
-    inherit_keys: [TZ]
+  mount_mask:
+    hidden_paths: [/eos]
 "#,
     );
 
@@ -54,8 +54,8 @@ runner:
         Value::String("/tmp/eos/commands".to_owned())
     );
     assert_eq!(
-        runner["env"]["inherit_keys"],
-        Value::Sequence(vec![Value::String("TZ".to_owned())])
+        runner["mount_mask"]["hidden_paths"],
+        Value::Sequence(vec![Value::String("/eos".to_owned())])
     );
 }
 
@@ -119,8 +119,8 @@ fn load_test_override_merges_sandbox_local_test_yaml() {
         &override_path,
         r#"
 runner:
-  env:
-    inherit_keys: [PATH]
+  mount_mask:
+    hidden_paths: [/tmp/eos]
 "#,
     )
     .expect("write override");
@@ -129,13 +129,10 @@ runner:
     let section = doc.section::<Value>("runner").expect("section loads");
 
     assert_eq!(
-        section["env"]["inherit_keys"],
-        Value::Sequence(vec![Value::String("PATH".to_owned())])
+        section["mount_mask"]["hidden_paths"],
+        Value::Sequence(vec![Value::String("/tmp/eos".to_owned())])
     );
-    assert!(matches!(
-        section["env"]["restricted_keys"],
-        Value::Sequence(_)
-    ));
+    assert!(matches!(section["mount_mask"], Value::Mapping(_)));
 }
 
 #[test]

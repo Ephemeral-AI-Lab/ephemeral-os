@@ -6,7 +6,7 @@ use sandbox_runtime_namespace_execution::NamespaceTarget;
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NsFds};
 
 use crate::overlay::tree::TreeResourceStats;
-use crate::profile::{WorkspaceModeFds, WorkspaceModeHandle};
+use crate::profile::{WorkspaceProfileFds, WorkspaceProfileHandle};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceSessionId(pub String);
@@ -469,8 +469,8 @@ pub struct DestroyWorkspaceResult {
     pub active_leases_after: usize,
 }
 
-impl From<&WorkspaceModeHandle> for WorkspaceHandle {
-    fn from(handle: &WorkspaceModeHandle) -> Self {
+impl From<&WorkspaceProfileHandle> for WorkspaceHandle {
+    fn from(handle: &WorkspaceProfileHandle) -> Self {
         Self {
             id: WorkspaceSessionId(handle.workspace_id.0.clone()),
             workspace_root: PathBuf::from(&handle.workspace_root),
@@ -499,7 +499,7 @@ impl From<&WorkspaceModeHandle> for WorkspaceHandle {
     }
 }
 
-fn holder_fds_from_mode(ns_fds: WorkspaceModeFds) -> Option<WorkspaceLaunchFds> {
+fn holder_fds_from_mode(ns_fds: WorkspaceProfileFds) -> Option<WorkspaceLaunchFds> {
     if ns_fds.is_empty() {
         return None;
     }

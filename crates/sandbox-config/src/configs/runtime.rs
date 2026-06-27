@@ -8,8 +8,7 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_f64_at_least, require_f64_gt, require_ratio, require_u64_at_least,
-    ConfigFieldError,
+    require_absolute, require_f64_at_least, require_f64_gt, ConfigFieldError,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -33,8 +32,6 @@ impl RuntimeConfig {
 pub struct WorkspaceConfig {
     pub layer_stack_root: PathBuf,
     pub scratch_root: PathBuf,
-    pub upperdir_bytes: u64,
-    pub memavail_fraction: f64,
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
@@ -45,8 +42,6 @@ impl Default for WorkspaceConfig {
         Self {
             layer_stack_root: PathBuf::from("/eos/layer-stack"),
             scratch_root: PathBuf::from("/eos/scratch/workspace"),
-            upperdir_bytes: 1_073_741_824,
-            memavail_fraction: 0.5,
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
@@ -62,11 +57,6 @@ impl WorkspaceConfig {
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_absolute(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
         require_absolute(&self.scratch_root, "runtime.workspace.scratch_root")?;
-        require_u64_at_least(self.upperdir_bytes, 1, "runtime.workspace.upperdir_bytes")?;
-        require_ratio(
-            self.memavail_fraction,
-            "runtime.workspace.memavail_fraction",
-        )?;
         require_f64_gt(
             self.setup_timeout_s,
             0.0,

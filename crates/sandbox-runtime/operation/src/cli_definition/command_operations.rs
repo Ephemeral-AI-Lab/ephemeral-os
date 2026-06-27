@@ -24,7 +24,7 @@ const EXEC_COMMAND_SPEC: CliOperationSpec = CliOperationSpec {
     name: "exec_command",
     family: "command",
     summary: "Start a command in a workspace.",
-    description: "Start a shell command inside an existing workspace session when workspace_session_id is provided, otherwise create a one-shot shared-network workspace and destroy it when the command reaches terminal state. If the command is still running after the initial wait, the response includes a command_session_id that can be used with write_command_stdin or read_command_lines.",
+    description: "Start a shell command in a workspace session. With workspace_session_id, run inside that existing caller-owned (persistent) session, which the caller created and destroys. Without it, exec_command creates a one-shot exec-owned (ephemeral) shared-network workspace and destroys it when the command reaches terminal state. If the command is still running after the initial wait, the response includes a command_session_id usable with read_command_lines or write_command_stdin; a still-running command stays terminable through write_command_stdin (Ctrl-C or Ctrl-D).",
     args: EXEC_COMMAND_ARGS,
     cli: Some(EXEC_COMMAND_CLI),
     related: &["write_command_stdin", "read_command_lines"],

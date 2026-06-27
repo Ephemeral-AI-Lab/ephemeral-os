@@ -30,6 +30,10 @@ pub mod shell {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/shell.rs"));
 }
 
+pub mod timing {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/timing.rs"));
+}
+
 pub mod types {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/types.rs"));
 }

@@ -1,6 +1,6 @@
 use crate::error::WorkspaceError;
 use crate::model::{DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceHandle};
-use crate::service::support::{active_mode_id, workspace_error_from_mode_error};
+use crate::service::support::{active_profile_id, workspace_error_from_profile_error};
 use crate::service::WorkspaceRuntimeService;
 use crate::timing;
 
@@ -21,17 +21,17 @@ impl WorkspaceRuntimeService {
             let lock_started = std::time::Instant::now();
             let mut state = self.lock_state()?;
             timing::duration("workspace.destroy.lock_state", lock_started);
-            let mode_id = active_mode_id(&state, &handle)?;
+            let profile_id = active_profile_id(&state, &handle)?;
             let layer_stack_root = state.layer_stack_root.clone();
             let exit_started = std::time::Instant::now();
-            let outcome = match state.manager.exit(&mode_id, request.grace_s) {
+            let outcome = match state.manager.exit(&profile_id, request.grace_s) {
                 Ok(outcome) => {
                     timing::duration("workspace.destroy.profile.exit", exit_started);
                     outcome
                 }
                 Err(error) => {
                     timing::duration("workspace.destroy.profile.exit", exit_started);
-                    return Err(workspace_error_from_mode_error(error));
+                    return Err(workspace_error_from_profile_error(error));
                 }
             };
             (layer_stack_root, outcome)

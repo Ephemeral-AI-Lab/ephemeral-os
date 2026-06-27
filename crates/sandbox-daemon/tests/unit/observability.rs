@@ -819,8 +819,6 @@ fn runtime_config(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeConf
             layer_stack_root,
             scratch_root: root.join("workspace-scratch"),
             caps: sandbox_runtime::WorkspaceResourceCaps {
-                upperdir_bytes: 1_073_741_824,
-                memavail_fraction: 0.5,
                 setup_timeout_s: 30.0,
                 exit_grace_s: 0.25,
                 rfc1918_egress: sandbox_runtime::Rfc1918Egress::Allow,

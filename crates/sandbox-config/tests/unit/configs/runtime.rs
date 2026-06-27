@@ -28,10 +28,6 @@ fn config_validation_rejects_invalid_runtime_workspace_values() {
     assert_invalid(cfg, "runtime.workspace.scratch_root");
 
     let mut cfg = prd_config();
-    cfg.workspace.memavail_fraction = 0.0;
-    assert_invalid(cfg, "runtime.workspace.memavail_fraction");
-
-    let mut cfg = prd_config();
     cfg.workspace.exit_grace_s = -0.1;
     assert_invalid(cfg, "runtime.workspace.exit_grace_s");
 }

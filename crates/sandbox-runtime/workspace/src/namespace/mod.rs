@@ -7,7 +7,7 @@ use std::sync::Arc;
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NoopObserver};
 
 #[cfg(target_os = "linux")]
-use crate::profile::WorkspaceModeError;
+use crate::profile::WorkspaceProfileError;
 
 const MOUNT_MAX_ACTIVE: usize = 64;
 
@@ -87,8 +87,8 @@ impl NamespacePlan {
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceModeError {
-    WorkspaceModeError::SetupFailed {
+pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceProfileError {
+    WorkspaceProfileError::SetupFailed {
         step: error.to_string(),
     }
 }

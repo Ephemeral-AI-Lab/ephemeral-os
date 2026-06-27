@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::isolated_setup::IsolatedNetwork;
 use crate::namespace::NamespaceRuntime;
 pub use crate::profile::{
-    WorkspaceModeFds, WorkspaceModeHandle, WorkspaceModeId, WorkspaceModeSnapshot,
+    WorkspaceProfileFds, WorkspaceProfileHandle, WorkspaceProfileId, WorkspaceProfileSnapshot,
 };
 
 pub use crate::lifecycle::ExitOutcome;
@@ -28,8 +28,6 @@ pub enum Rfc1918Egress {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResourceCaps {
-    pub upperdir_bytes: u64,
-    pub memavail_fraction: f64,
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
@@ -38,8 +36,6 @@ pub struct ResourceCaps {
 impl Default for ResourceCaps {
     fn default() -> Self {
         Self {
-            upperdir_bytes: 1_073_741_824,
-            memavail_fraction: 0.5,
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
@@ -49,7 +45,7 @@ impl Default for ResourceCaps {
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum WorkspaceModeError {
+pub enum WorkspaceProfileError {
     #[error("invalid argument: {0}")]
     InvalidArgument(String),
 
@@ -63,7 +59,7 @@ pub enum WorkspaceModeError {
     NetworkUnavailable(String),
 }
 
-impl WorkspaceModeError {
+impl WorkspaceProfileError {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
         match self {
@@ -74,16 +70,16 @@ impl WorkspaceModeError {
     }
 }
 
-pub struct WorkspaceModeManager {
+pub struct WorkspaceProfileManager {
     pub(crate) workspace_root: String,
     pub(crate) caps: ResourceCaps,
     pub(crate) runtime: NamespaceRuntime,
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
-    pub(crate) handles: HashMap<WorkspaceModeId, WorkspaceModeHandle>,
+    pub(crate) handles: HashMap<WorkspaceProfileId, WorkspaceProfileHandle>,
 }
 
-impl WorkspaceModeManager {
+impl WorkspaceProfileManager {
     #[must_use]
     pub fn new(
         workspace_root: impl Into<String>,
@@ -111,20 +107,20 @@ impl WorkspaceModeManager {
         }
     }
 
-    pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceModeId) -> PathBuf {
+    pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceProfileId) -> PathBuf {
         self.scratch_root.join("sessions").join(&workspace_id.0)
     }
 }
 
-pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), WorkspaceModeError> {
+pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), WorkspaceProfileError> {
     let workspace_root = workspace_root.trim();
     if workspace_root.is_empty() {
-        return Err(WorkspaceModeError::InvalidArgument(
+        return Err(WorkspaceProfileError::InvalidArgument(
             "workspace_root is required".to_owned(),
         ));
     }
     if !Path::new(workspace_root).is_absolute() {
-        return Err(WorkspaceModeError::InvalidArgument(format!(
+        return Err(WorkspaceProfileError::InvalidArgument(format!(
             "workspace_root must be absolute: {workspace_root}"
         )));
     }
