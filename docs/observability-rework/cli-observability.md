@@ -443,8 +443,8 @@ $ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
   workspaces
-    ws-7   active   profile=default   head l3   mounts 4   upper 156KB
-    ws-9   active   profile=default   head l2   mounts 3   upper  88KB
+    ws-7   active   profile=default   mounts 4   upper 156KB
+    ws-9   active   profile=default   mounts 3   upper  88KB
 
   in-flight executions            (from runtime registry, not the log)
     ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
