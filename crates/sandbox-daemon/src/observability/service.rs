@@ -107,19 +107,29 @@ impl DaemonObservability {
             Ok(options) => options,
             Err(response) => return response,
         };
-        match self
-            .store
-            .read_observability_snapshot(&self.sandbox_id, &options)
-        {
-            Ok(rows) => match snapshot_value(rows) {
-                Ok(value) => sandbox_protocol::Response::ok(value),
-                Err(response) => response,
-            },
-            Err(error) => sandbox_protocol::Response::fault(
-                sandbox_protocol::error_kind::INTERNAL_ERROR,
-                format!("observability snapshot read failed: {error}"),
-            ),
+        match self.read_snapshot_value(&options) {
+            Ok(value) => sandbox_protocol::Response::ok(value),
+            Err(response) => response,
         }
+    }
+
+    /// Read the live snapshot as a JSON value, for the `get_observability`
+    /// `snapshot`/`cgroup` views to reshape. The SQLite store is refreshed on
+    /// every dispatch, so this is live state, not the NDJSON log.
+    pub(crate) fn read_snapshot_value(
+        &self,
+        options: &ObservabilitySnapshotReadOptions,
+    ) -> Result<Value, sandbox_protocol::Response> {
+        let rows = self
+            .store
+            .read_observability_snapshot(&self.sandbox_id, options)
+            .map_err(|error| {
+                sandbox_protocol::Response::fault(
+                    sandbox_protocol::error_kind::INTERNAL_ERROR,
+                    format!("observability snapshot read failed: {error}"),
+                )
+            })?;
+        snapshot_value(rows)
     }
 
     pub(crate) fn write_snapshot(

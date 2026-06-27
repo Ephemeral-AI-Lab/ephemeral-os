@@ -49,3 +49,16 @@ pub(crate) fn layerstack_view_value(
         "layers": layers,
     })
 }
+
+/// The one-line stack summary grafted onto the `snapshot` view:
+/// `N layers  <bytes>  K leases`.
+pub(crate) fn stack_summary_value(
+    observation: &StackObservation,
+    bytes: &LayerStackBytes,
+) -> Value {
+    json!({
+        "layer_count": observation.layers.len(),
+        "layers_bytes": bytes.total_bytes,
+        "active_leases": observation.active_lease_count,
+    })
+}

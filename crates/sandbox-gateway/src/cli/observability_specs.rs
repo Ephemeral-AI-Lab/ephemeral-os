@@ -67,11 +67,68 @@ Served live from the runtime; does not read the log.",
             "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7",
         ],
     }),
-    related: &[],
+    related: &["snapshot", "cgroup"],
+};
+
+const SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "snapshot",
+    family: "observability",
+    summary: "Show live sandbox state.",
+    description: "Show current state from the runtime registry: sandbox lifecycle \
+state, workspaces (with layer counts), in-flight executions, the latest resource \
+sample per scope, and the layer-stack summary line. Served live; does not read \
+the log.",
+    args: &[SANDBOX_ID_ARG],
+    cli: Some(CliSpec {
+        path: &["observability", "snapshot"],
+        usage: "sandbox-cli observability snapshot --sandbox-id ID",
+        examples: &["sandbox-cli observability snapshot --sandbox-id eos-abc"],
+    }),
+    related: &["layerstack", "cgroup"],
+};
+
+const CGROUP_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "cgroup",
+    family: "observability",
+    summary: "Resource series for a scope (cpu/mem/io + disk).",
+    description: "Resource time series for one scope: cgroup cpu/mem/io counters \
+plus the disk sample (upperdir bytes/files), with deltas computed at read.",
+    args: &[
+        SANDBOX_ID_ARG,
+        ArgSpec::optional(
+            "scope",
+            ArgKind::String,
+            "Resource scope: 'sandbox' or a workspace id.",
+            Some("sandbox"),
+            Some(ArgCliSpec {
+                flag: Some("--scope"),
+                positional: None,
+            }),
+        ),
+        ArgSpec::optional(
+            "window_ms",
+            ArgKind::Integer,
+            "Lookback window in milliseconds (max 600000).",
+            Some("60000"),
+            Some(ArgCliSpec {
+                flag: Some("--window-ms"),
+                positional: None,
+            }),
+        ),
+    ],
+    cli: Some(CliSpec {
+        path: &["observability", "cgroup"],
+        usage: "sandbox-cli observability cgroup --sandbox-id ID [--scope SCOPE] [--window-ms MS]",
+        examples: &[
+            "sandbox-cli observability cgroup --sandbox-id eos-abc",
+            "sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000",
+        ],
+    }),
+    related: &["snapshot"],
 };
 
 const FAMILIES: &[&CliOperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
-const SPECS: &[&CliOperationSpec] = &[&LAYERSTACK_SPEC];
+const SPECS: &[&CliOperationSpec] = &[&LAYERSTACK_SPEC, &SNAPSHOT_SPEC, &CGROUP_SPEC];
 
 #[must_use]
 pub fn observability_catalog() -> CliOperationCatalog {

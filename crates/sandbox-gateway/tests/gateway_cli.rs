@@ -597,6 +597,60 @@ fn observability_layerstack_maps_to_get_observability_view() -> TestResult {
 }
 
 #[test]
+fn observability_cgroup_maps_scope_and_window_to_get_observability() -> TestResult {
+    let catalog = observability_catalog()?;
+    let request = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: CliOperationExecutionSpace::Observability,
+            operation: "cgroup".to_owned(),
+            operation_argv: vec![
+                "--sandbox-id".to_owned(),
+                "eos-abc".to_owned(),
+                "--scope".to_owned(),
+                "ws-1".to_owned(),
+            ],
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )?;
+
+    assert_eq!(request.op, "get_observability");
+    assert_eq!(
+        request.scope,
+        CliOperationScope::Sandbox {
+            sandbox_id: "eos-abc".to_owned()
+        }
+    );
+    assert_eq!(
+        request.args,
+        json!({ "view": "cgroup", "scope": "ws-1", "window_ms": 60000 })
+    );
+    Ok(())
+}
+
+#[test]
+fn observability_snapshot_maps_to_get_observability_view() -> TestResult {
+    let catalog = observability_catalog()?;
+    let request = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: CliOperationExecutionSpace::Observability,
+            operation: "snapshot".to_owned(),
+            operation_argv: vec!["--sandbox-id".to_owned(), "eos-abc".to_owned()],
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )?;
+
+    assert_eq!(request.op, "get_observability");
+    assert_eq!(request.args, json!({ "view": "snapshot" }));
+    Ok(())
+}
+
+#[test]
 fn observability_requires_sandbox_id() -> TestResult {
     let catalog = observability_catalog()?;
     let error = build_request_from_catalog_with_id(

@@ -79,9 +79,14 @@ impl SandboxDaemonServer {
 
     async fn dispatch_private_observability(&self, request: Request) -> Value {
         let operations = Arc::clone(&self.operations);
+        let observability = self.observability.clone();
         let task = tokio::task::spawn_blocking(move || {
-            crate::observability::observability_view_response(&operations, &request)
-                .into_json_value()
+            crate::observability::observability_view_response(
+                &operations,
+                observability.as_deref(),
+                &request,
+            )
+            .into_json_value()
         });
         match task.await {
             Ok(response) => response,
