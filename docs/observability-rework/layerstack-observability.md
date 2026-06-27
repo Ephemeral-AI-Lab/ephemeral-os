@@ -123,12 +123,12 @@ merges lease-derived fields from the live registry (`leased_layers()` →
 `protected_bytes`) before emitting:
 
 ```json
-{"ts":1719500010000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"stack","layer_count":4,"layers_bytes":2516582,"leased_layers":3,"unleased_layers":1,"leased_bytes":2360022,"freeable_bytes":156560,"active_leases":2,"revision":"r6","truncated":false}
+{"ts":1719500010000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"stack","layer_count":4,"layers_bytes":2516582,"leased_layers":3,"unleased_layers":1,"leased_bytes":2360022,"squashable_bytes":156560,"active_leases":2,"revision":"r6","truncated":false}
 ```
 
 `layers_bytes` counts each unique layer **once** (never per-session);
 `leased_layers` = layers with lease count ≥ 1; `unleased_layers` = those with
-zero; `freeable_bytes` = unleased & unprotected bytes you can reclaim;
+zero; `squashable_bytes` = unleased & unprotected bytes you can reclaim;
 `active_leases` = number of live sessions holding a lease. Bounded and flat (no
 per-layer array — that would blow the line cap, main spec §6). It answers "is the
 stack growing / are leases/pins leaking over time" via the Case D delta
@@ -159,17 +159,17 @@ Two modes — stack-wide inventory, and one session's view.
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc
-stack r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB freeable   2 leases
+stack r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB squashable   2 leases
 
   layer        bytes    leases   status
   l0 (base)    1.80MB     2
   l1           480KB      2
   l2            80KB      1
-  l3           156KB      0      freeable
+  l3           156KB      0      squashable
 ```
 
 `leases` = how many live sessions hold the layer (from the registry); `status` is
-blank when leased, `freeable` when no lease holds it, `superseded` when a newer
+blank when leased, `squashable` when no lease holds it, `superseded` when a newer
 revision replaced it. Bytes are the unique per-layer size (cache §6). There is
 **no owner column** — owners aren't stored, only the count.
 
@@ -204,7 +204,7 @@ Deltas computed at read like every other counter (main spec §4.4).
 
 ### 4.4 Snapshot view addition (main spec §4.2)
 
-Leased/freeable counts are **stack-global**, so they get their own line in the
+Leased/squashable counts are **stack-global**, so they get their own line in the
 `observability` snapshot (main spec §7.1); the per-workspace rows show only what's
 session-local (leased lower count + private upper bytes). Both come from the live
 registry + disk reader:
@@ -213,7 +213,7 @@ registry + disk reader:
 $ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
-  stack   r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB freeable   2 leases
+  stack   r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB squashable   2 leases
 
   workspaces
     ws-7   active   profile=default   lower=3 (shared)   upper 156KB
