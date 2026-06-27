@@ -7,7 +7,7 @@ use sandbox_runtime::command::{
     CommandStatus, ExecCommandInput, ReadCommandLinesInput, WriteCommandStdinInput,
 };
 use sandbox_runtime::NamespaceExecutionId;
-use sandbox_runtime_workspace::WorkspaceProfile;
+use sandbox_runtime_workspace::NetworkProfile;
 
 use support::{
     build_services_with_launch_driver, create_request, success_exit, workspace_handle,
@@ -50,7 +50,7 @@ fn completed_session_with_transcript(transcript: &str) -> (TestServices, Namespa
         "workspace-session",
         "lease-1",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::clone(&driver));
     let handler = env
@@ -85,7 +85,7 @@ fn build_session(driver: &Arc<FakeLaunchDriver>) -> (TestServices, NamespaceExec
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), Arc::clone(driver));
     let handler = env
@@ -289,7 +289,7 @@ fn command_transcript_rows_report_running_status_for_active_command() {
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let driver = Arc::new(FakeLaunchDriver::new());
     driver.push_outcome(ScriptedCommandYield::Running("one-shot row\n".to_owned()));

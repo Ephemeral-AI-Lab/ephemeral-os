@@ -5,9 +5,8 @@ use sandbox_runtime_namespace_execution::NamespaceTarget;
 use sandbox_runtime_workspace::model::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,
-    LayerStackSnapshotView, LeaseId, ProtectedPathDrop, ProtectedPathDropReason,
-    ReadonlySnapshotHandle, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceProfile,
-    WorkspaceSessionId,
+    LayerStackSnapshotView, LeaseId, NetworkProfile, ProtectedPathDrop, ProtectedPathDropReason,
+    ReadonlySnapshotHandle, WorkspaceEntry, WorkspaceEntryFds, WorkspaceHandle, WorkspaceSessionId,
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
@@ -28,7 +27,7 @@ fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
 fn workspace_mode_handle() -> WorkspaceModeHandle {
     WorkspaceModeHandle {
         workspace_id: WorkspaceModeId("namespace-handle".to_owned()),
-        profile: WorkspaceProfile::Isolated,
+        profile: NetworkProfile::Isolated,
         lease_id: "lease-1".to_owned(),
         manifest_version: 42,
         manifest_root_hash: "root-hash".to_owned(),
@@ -58,7 +57,7 @@ fn workspace_mode_handle() -> WorkspaceModeHandle {
 fn assert_handle_projection(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceSessionId("namespace-handle".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.profile, WorkspaceProfile::Isolated);
+    assert_eq!(public.profile, NetworkProfile::Isolated);
     assert_eq!(
         public.base_revision,
         BaseRevision {
@@ -123,7 +122,7 @@ fn public_handle_debug_marks_launch_available_without_exposing_internals() {
 }
 
 #[test]
-fn host_compatible_entry_uses_holder_launch_without_network_fd() {
+fn shared_entry_uses_holder_launch_without_network_fd() {
     let snapshot = LayerStackSnapshotRef {
         lease_id: LeaseId("lease-1".to_owned()),
         manifest_version: 1,
@@ -134,13 +133,13 @@ fn host_compatible_entry_uses_holder_launch_without_network_fd() {
     let handle = WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId("shared-handle".to_owned()),
         "/workspace".into(),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
         snapshot,
         "/upper/shared".into(),
         "/work/shared".into(),
     );
 
-    let entry = handle.entry().expect("host-compatible launch is valid");
+    let entry = handle.entry().expect("shared launch is valid");
 
     assert_eq!(entry.ns_fds.user, 10);
     assert_eq!(entry.ns_fds.mnt, 11);
@@ -181,7 +180,7 @@ fn workspace_entry_converts_to_namespace_target() {
 #[test]
 fn entry_rejects_incomplete_holder_launch() {
     let mut missing_mount = workspace_mode_handle();
-    missing_mount.profile = WorkspaceProfile::HostCompatible;
+    missing_mount.profile = NetworkProfile::Shared;
     missing_mount.ns_fds.mnt = None;
 
     let mut missing_net = workspace_mode_handle();
@@ -208,7 +207,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
-                profile: WorkspaceProfile::HostCompatible,
+                profile: NetworkProfile::Shared,
             }
         ),
         format!(
@@ -216,7 +215,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
             WorkspaceHandle::without_launch_for_test(
                 WorkspaceSessionId("workspace".to_owned()),
                 "/workspace".into(),
-                WorkspaceProfile::HostCompatible,
+                NetworkProfile::Shared,
                 LayerStackSnapshotRef {
                     lease_id: LeaseId("lease".to_owned()),
                     manifest_version: 1,
@@ -318,12 +317,12 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
-        profile: WorkspaceProfile::HostCompatible,
+        profile: NetworkProfile::Shared,
     };
     let handle = WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId("workspace".to_owned()),
         "/workspace".into(),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
         LayerStackSnapshotRef {
             lease_id: LeaseId("lease".to_owned()),
             manifest_version: 1,

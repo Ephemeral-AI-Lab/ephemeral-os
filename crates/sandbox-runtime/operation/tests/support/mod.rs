@@ -17,8 +17,8 @@ use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
-    ReadonlySnapshotHandle, WorkspaceError, WorkspaceHandle, WorkspaceProfile,
-    WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
+    NetworkProfile, ReadonlySnapshotHandle, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 const MAX_ACTIVE_COMMANDS: usize = 256;
@@ -292,7 +292,7 @@ pub(crate) fn build_command_service(
 
 pub(crate) fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        profile: WorkspaceProfile::HostCompatible,
+        profile: NetworkProfile::Shared,
     }
 }
 
@@ -300,7 +300,7 @@ pub(crate) fn workspace_handle(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::holder_backed_for_test(
@@ -317,7 +317,7 @@ pub(crate) fn workspace_handle_without_launch(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
 ) -> WorkspaceHandle {
     WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
@@ -331,7 +331,7 @@ pub(crate) fn workspace_handle_unavailable_launch(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::unavailable_for_test(

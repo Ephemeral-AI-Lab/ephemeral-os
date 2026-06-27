@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::namespace_execution::RuntimeNamespaceExecutionSnapshot;
-use crate::workspace_crate::{WorkspaceProfile, WorkspaceSessionId};
+use crate::workspace_crate::{NetworkProfile, WorkspaceSessionId};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct RuntimeObservabilitySnapshot {
@@ -13,7 +13,7 @@ pub struct RuntimeObservabilitySnapshot {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeWorkspaceSnapshot {
     pub workspace_id: WorkspaceSessionId,
-    pub profile: WorkspaceProfile,
+    pub profile: NetworkProfile,
     pub workspace_root: PathBuf,
     pub upperdir: Option<PathBuf>,
     pub workdir: Option<PathBuf>,

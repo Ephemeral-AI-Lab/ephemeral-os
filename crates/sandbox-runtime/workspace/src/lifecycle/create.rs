@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
-use crate::model::WorkspaceProfile;
+use crate::model::NetworkProfile;
 use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
 use crate::profile::manager::WorkspaceModeError;
@@ -18,8 +18,8 @@ impl WorkspaceModeManager {
     ) -> Result<HashMap<String, f64>, WorkspaceModeError> {
         let layer_paths = handle.layer_paths.clone();
         let namespace_plan = match handle.profile {
-            WorkspaceProfile::HostCompatible => NamespacePlan::shared_network(),
-            WorkspaceProfile::Isolated => NamespacePlan::isolated(),
+            NetworkProfile::Shared => NamespacePlan::shared_network(),
+            NetworkProfile::Isolated => NamespacePlan::isolated(),
         };
         let mut phases_ms = HashMap::new();
 
@@ -35,7 +35,7 @@ impl WorkspaceModeManager {
             .open_ns_fds(handle.holder_pid, namespace_plan)?;
         record_create_phase_ms(&mut phases_ms, "open_ns_fds", phase_start);
 
-        if handle.profile == WorkspaceProfile::Isolated {
+        if handle.profile == NetworkProfile::Isolated {
             self.setup_isolated_network_after_namespace(handle, &mut phases_ms)?;
         }
 
@@ -43,7 +43,7 @@ impl WorkspaceModeManager {
         self.runtime.mount_overlay(handle, &layer_paths)?;
         record_create_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
 
-        if handle.profile == WorkspaceProfile::Isolated {
+        if handle.profile == NetworkProfile::Isolated {
             self.setup_isolated_network_after_mount(handle)?;
         }
 
@@ -80,7 +80,7 @@ impl WorkspaceModeManager {
     pub fn enter_with_profile(
         &mut self,
         snapshot: WorkspaceModeSnapshot,
-        profile: WorkspaceProfile,
+        profile: NetworkProfile,
     ) -> Result<WorkspaceModeHandle, WorkspaceModeError> {
         let workspace_root = self.validated_workspace_root()?;
 

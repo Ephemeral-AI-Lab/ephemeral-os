@@ -7,7 +7,7 @@ use sandbox_runtime::workspace_session::{WorkspaceSessionError, WorkspaceSession
 use sandbox_runtime::{CommandOperationService, LayerStackService, SandboxRuntimeOperations};
 use sandbox_runtime_workspace::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, WorkspaceError, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    DestroyWorkspaceRequest, NetworkProfile, WorkspaceError, WorkspaceHandle, WorkspaceSessionId,
 };
 use serde_json::json;
 
@@ -23,17 +23,13 @@ fn create_request() -> CreateWorkspaceRequest {
 }
 
 fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHandle {
-    workspace_handle_with_profile(
-        workspace_session_id,
-        lease_id,
-        WorkspaceProfile::HostCompatible,
-    )
+    workspace_handle_with_profile(workspace_session_id, lease_id, NetworkProfile::Shared)
 }
 
 fn workspace_handle_with_profile(
     workspace_session_id: &str,
     lease_id: &str,
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
 ) -> WorkspaceHandle {
     support::workspace_handle(
         workspace_session_id,
@@ -253,13 +249,13 @@ fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal
         response,
         json!({
             "workspace_session_id": "workspace-1",
-            "profile": "host_compatible",
+            "profile": "shared",
         })
     );
     assert_eq!(
         fake.create_requests(),
         vec![CreateWorkspaceRequest {
-            profile: WorkspaceProfile::HostCompatible,
+            profile: NetworkProfile::Shared,
         }]
     );
     Ok(())
@@ -272,7 +268,7 @@ fn workspace_session_create_operation_accepts_isolated_profile(
     fake.push_create_result(Ok(workspace_handle_with_profile(
         "workspace-1",
         "lease-1",
-        WorkspaceProfile::Isolated,
+        NetworkProfile::Isolated,
     )));
     let operations = operations_with_fake(&fake)?;
 
@@ -292,7 +288,7 @@ fn workspace_session_create_operation_accepts_isolated_profile(
     assert_eq!(
         fake.create_requests(),
         vec![CreateWorkspaceRequest {
-            profile: WorkspaceProfile::Isolated,
+            profile: NetworkProfile::Isolated,
         }]
     );
     Ok(())
@@ -374,7 +370,7 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
         "workspace-1",
         "lease-1",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let services = support::build_services(Arc::clone(&fake));
     let workspace_session_id = services

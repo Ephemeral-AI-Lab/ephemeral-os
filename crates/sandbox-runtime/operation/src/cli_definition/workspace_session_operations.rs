@@ -6,7 +6,7 @@ use crate::cli_definition::{
 use crate::command::WorkspaceDestroyOutcome;
 use crate::operation::OperationEntry;
 use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile, WorkspaceSessionId,
+    CreateWorkspaceRequest, DestroyWorkspaceResult, NetworkProfile, WorkspaceSessionId,
 };
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionHandler};
 use crate::SandboxRuntimeOperations;
@@ -23,14 +23,14 @@ const CREATE_SPEC: CliOperationSpec = CliOperationSpec {
     name: "create_workspace_session",
     family: "workspace_session",
     summary: "Create a runtime workspace session.",
-    description: "Create a user-owned runtime workspace session. When profile is omitted, the runtime creates a host-compatible workspace.",
+    description: "Create a user-owned runtime workspace session. When profile is omitted, the runtime creates a shared-network workspace.",
     args: CREATE_ARGS,
     cli: Some(CliSpec {
         path: &["runtime", "create_workspace_session"],
         usage: "sandbox-cli runtime create_workspace_session [--profile PROFILE]",
         examples: &[
             "sandbox-cli runtime create_workspace_session",
-            "sandbox-cli runtime create_workspace_session --profile host_compatible",
+            "sandbox-cli runtime create_workspace_session --profile shared",
             "sandbox-cli runtime create_workspace_session --profile isolated",
         ],
     }),
@@ -40,7 +40,7 @@ const CREATE_SPEC: CliOperationSpec = CliOperationSpec {
 const CREATE_ARGS: &[ArgSpec] = &[ArgSpec::optional(
     "profile",
     ArgKind::String,
-    "Workspace profile: host_compatible or isolated. Defaults to host_compatible when omitted.",
+    "Network profile: 'shared' joins the host network namespace (still isolated in mount/pid/user) or 'isolated' uses a dedicated network namespace. Defaults to 'shared' when omitted.",
     None,
     Some(ArgCliSpec {
         flag: Some("--profile"),
@@ -135,18 +135,14 @@ fn dispatch_destroy_workspace_session(
     }
 }
 
-fn parse_workspace_profile(request: &Request) -> Result<WorkspaceProfile, Response> {
+fn parse_workspace_profile(request: &Request) -> Result<NetworkProfile, Response> {
     match request.optional_string("profile")? {
-        None => Ok(WorkspaceProfile::HostCompatible),
-        Some(profile) if profile == WorkspaceProfile::HostCompatible.as_str() => {
-            Ok(WorkspaceProfile::HostCompatible)
+        None => Ok(NetworkProfile::Shared),
+        Some(profile) if profile == NetworkProfile::Shared.as_str() => Ok(NetworkProfile::Shared),
+        Some(profile) if profile == NetworkProfile::Isolated.as_str() => {
+            Ok(NetworkProfile::Isolated)
         }
-        Some(profile) if profile == WorkspaceProfile::Isolated.as_str() => {
-            Ok(WorkspaceProfile::Isolated)
-        }
-        Some(_) => {
-            Err(request.invalid_argument("profile must be one of host_compatible or isolated"))
-        }
+        Some(_) => Err(request.invalid_argument("profile must be one of shared or isolated")),
     }
 }
 

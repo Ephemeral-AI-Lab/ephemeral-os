@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::isolated_setup::VethAllocation;
-use crate::model::WorkspaceProfile;
+use crate::model::NetworkProfile;
 use crate::overlay::dirs::OverlayDirs;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -21,7 +21,7 @@ pub struct WorkspaceModeSnapshot {
 #[derive(Debug, Clone)]
 pub struct WorkspaceModeHandle {
     pub workspace_id: WorkspaceModeId,
-    pub profile: WorkspaceProfile,
+    pub profile: NetworkProfile,
     pub lease_id: String,
     pub manifest_version: i64,
     pub manifest_root_hash: String,

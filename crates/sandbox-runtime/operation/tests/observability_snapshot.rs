@@ -7,7 +7,7 @@ use std::sync::Arc;
 use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::{CommandOperationService, SandboxRuntimeOperations};
-use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
+use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
 
 use support::{
     build_services, create_request, workspace_handle, FakeWorkspaceService, TestServices,
@@ -23,7 +23,7 @@ fn observability_snapshot_copies_active_workspace_fields(
         &services,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::Isolated,
+        NetworkProfile::Isolated,
     );
     let operations = operations_for(&services)?;
 
@@ -33,7 +33,7 @@ fn observability_snapshot_copies_active_workspace_fields(
     assert_eq!(snapshot.workspaces.len(), 1);
     let workspace = &snapshot.workspaces[0];
     assert_eq!(workspace.workspace_id, workspace_session_id);
-    assert_eq!(workspace.profile, WorkspaceProfile::Isolated);
+    assert_eq!(workspace.profile, NetworkProfile::Isolated);
     assert_eq!(
         workspace.workspace_root,
         PathBuf::from("/workspace/session")
@@ -58,7 +58,7 @@ fn observability_snapshot_reports_active_command_namespace_execution(
         &services,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
     let command_yield = services.command.exec_command(ExecCommandInput {
         workspace_session_id: Some(workspace_session_id.clone()),
@@ -99,7 +99,7 @@ fn create_session(
     services: &TestServices,
     workspace_session_id: &str,
     workspace_root: PathBuf,
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
 ) -> WorkspaceSessionId {
     fake.push_create_result(Ok(workspace_handle(
         workspace_session_id,

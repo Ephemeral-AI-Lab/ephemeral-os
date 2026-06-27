@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use serde_json::{json, Value};
 
-use crate::model::WorkspaceProfile;
+use crate::model::NetworkProfile;
 use crate::namespace::HolderKillReport;
 use crate::overlay::tree::TreeResourceStats;
 use crate::profile::manager::WorkspaceModeError;
@@ -78,7 +78,7 @@ impl WorkspaceModeManager {
         handle: &WorkspaceModeHandle,
         phases_ms: &mut HashMap<String, f64>,
     ) {
-        if handle.profile != WorkspaceProfile::Isolated {
+        if handle.profile != NetworkProfile::Isolated {
             return;
         }
         let phase_start = Instant::now();

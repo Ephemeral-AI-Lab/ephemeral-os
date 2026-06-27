@@ -92,28 +92,30 @@ impl From<sandbox_runtime_layerstack::service::LeasedSnapshot> for LayerStackSna
     }
 }
 
-/// Workspace environment profile for a private mounted workspace.
+/// Network boundary applied to a private mounted workspace.
 ///
-/// The selector reflects the current concrete split: whether the workspace
-/// uses the host-compatible network path or adds a dedicated network boundary.
-/// It does not encode lifecycle length, publication behavior, or whether the
-/// caller is running a one-shot operation. Those decisions belong to the
-/// runtime or operation layer that owns the workspace handle.
+/// This selector encodes one axis only: whether the workspace shares the host
+/// network namespace or gets a dedicated, isolated one. Every workspace is
+/// otherwise isolated (private overlay plus mount/pid/user namespaces)
+/// regardless of this value. It does not encode lifecycle length, publication
+/// behavior, or whether the caller is running a one-shot operation; those
+/// decisions belong to the runtime or operation layer that owns the handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WorkspaceProfile {
-    /// Host-compatible profile: private overlay and holder namespace stack
-    /// without a dedicated network boundary.
-    HostCompatible,
-    /// Fully isolated profile: private overlay and holder namespace stack plus
-    /// a dedicated network boundary.
+pub enum NetworkProfile {
+    /// Shared network: the workspace joins the host network namespace (host
+    /// loopback and interfaces are visible). Mount, pid, and user namespaces
+    /// stay isolated — this is not the host.
+    Shared,
+    /// Isolated network: the workspace gets a dedicated network namespace with
+    /// veth and network policy.
     Isolated,
 }
 
-impl WorkspaceProfile {
+impl NetworkProfile {
     #[must_use]
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::HostCompatible => "host_compatible",
+            Self::Shared => "shared",
             Self::Isolated => "isolated",
         }
     }
@@ -123,7 +125,7 @@ impl WorkspaceProfile {
 pub struct WorkspaceHandle {
     pub id: WorkspaceSessionId,
     pub workspace_root: PathBuf,
-    pub profile: WorkspaceProfile,
+    pub profile: NetworkProfile,
     pub base_revision: BaseRevision,
     pub snapshot: LayerStackSnapshotRef,
     launch: Option<WorkspaceLaunchContext>,
@@ -155,7 +157,7 @@ impl WorkspaceHandle {
     pub fn holder_backed_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: WorkspaceProfile,
+        profile: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
         upperdir: PathBuf,
         workdir: PathBuf,
@@ -175,7 +177,7 @@ impl WorkspaceHandle {
                     user: Some(10),
                     mnt: Some(11),
                     pid: Some(12),
-                    net: (profile == WorkspaceProfile::Isolated).then_some(13),
+                    net: (profile == NetworkProfile::Isolated).then_some(13),
                 }),
             )),
         )
@@ -186,7 +188,7 @@ impl WorkspaceHandle {
     pub fn unavailable_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: WorkspaceProfile,
+        profile: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
         upperdir: PathBuf,
         workdir: PathBuf,
@@ -211,7 +213,7 @@ impl WorkspaceHandle {
     pub fn without_launch_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: WorkspaceProfile,
+        profile: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
     ) -> Self {
         Self::with_launch_for_test(id, workspace_root, profile, snapshot, None)
@@ -220,7 +222,7 @@ impl WorkspaceHandle {
     fn with_launch_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: WorkspaceProfile,
+        profile: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
         launch: Option<WorkspaceLaunchContext>,
     ) -> Self {
@@ -236,7 +238,7 @@ impl WorkspaceHandle {
 }
 
 fn launch_context_for_test(
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
     workspace_root: PathBuf,
     layer_paths: Vec<PathBuf>,
     upperdir: PathBuf,
@@ -255,7 +257,7 @@ fn launch_context_for_test(
 
 #[derive(Clone, PartialEq, Eq)]
 struct WorkspaceLaunchContext {
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
     workspace_root: PathBuf,
     layer_paths: Vec<PathBuf>,
     upperdir: PathBuf,
@@ -281,7 +283,7 @@ impl WorkspaceLaunchContext {
         let (Some(user), Some(mnt), Some(pid)) = (fds.user, fds.mnt, fds.pid) else {
             return Err(WorkspaceEntryError::incomplete());
         };
-        if self.profile == WorkspaceProfile::Isolated && fds.net.is_none() {
+        if self.profile == NetworkProfile::Isolated && fds.net.is_none() {
             return Err(WorkspaceEntryError::incomplete());
         }
         Ok(WorkspaceEntryFds {
@@ -391,7 +393,7 @@ struct WorkspaceLaunchFds {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub profile: WorkspaceProfile,
+    pub profile: NetworkProfile,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

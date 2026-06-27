@@ -7,7 +7,7 @@ use sandbox_runtime_namespace_execution::{
 use crate::command::{CommandConfig, CommandExecValue};
 use crate::namespace_execution::RuntimeNamespaceExecutionSnapshot;
 use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceProfile,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkProfile,
     WorkspaceSessionId,
 };
 use crate::workspace_session::{
@@ -128,7 +128,7 @@ impl CommandOperationService {
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         self.workspace
             .create_workspace_session(CreateWorkspaceRequest {
-                profile: WorkspaceProfile::HostCompatible,
+                profile: NetworkProfile::Shared,
             })
     }
 

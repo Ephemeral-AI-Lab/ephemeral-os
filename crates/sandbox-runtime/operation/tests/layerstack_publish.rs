@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use sandbox_runtime::command::{CommandStatus, ExecCommandInput};
 use sandbox_runtime_workspace::{
-    LayerStackSnapshotRef, LeaseId, WorkspaceHandle, WorkspaceProfile, WorkspaceSessionId,
+    LayerStackSnapshotRef, LeaseId, NetworkProfile, WorkspaceHandle, WorkspaceSessionId,
 };
 
 use support::{
@@ -96,7 +96,7 @@ fn workspace_handle(
     WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId("workspace-session".to_owned()),
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
         snapshot,
         std::env::temp_dir().join("operation-layerstack-publish-upper"),
         std::env::temp_dir().join("operation-layerstack-publish-work"),

@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde_json::json;
 
 use sandbox_runtime_workspace::model::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceProfile,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, NetworkProfile,
 };
 use sandbox_runtime_workspace::profile::{ResourceCaps, WorkspaceModeManager};
 use sandbox_runtime_workspace::WorkspaceRuntimeService;
@@ -40,11 +40,11 @@ fn runtime_service_create_and_destroy_are_backed_by_impl_files(
     let service = fixture.service();
 
     let handle = service.create_workspace(CreateWorkspaceRequest {
-        profile: WorkspaceProfile::HostCompatible,
+        profile: NetworkProfile::Shared,
     })?;
 
     assert_eq!(handle.workspace_root, fixture.workspace_root);
-    assert_eq!(handle.profile, WorkspaceProfile::HostCompatible);
+    assert_eq!(handle.profile, NetworkProfile::Shared);
     assert_eq!(handle.snapshot.manifest_version, 1);
     assert_eq!(
         sandbox_runtime_layerstack::LayerStack::open(fixture.layer_stack_root.clone())?

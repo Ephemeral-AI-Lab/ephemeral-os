@@ -15,7 +15,7 @@ use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild,
 };
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NamespaceRunnerRequest};
-use sandbox_runtime_workspace::{WorkspaceProfile, WorkspaceSessionId};
+use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
 use serde_json::json;
 
 use support::{
@@ -67,7 +67,7 @@ fn create_session(
     env: &support::TestServices,
     workspace_session_id: &str,
     workspace_root: PathBuf,
-    profile: WorkspaceProfile,
+    profile: NetworkProfile,
 ) -> WorkspaceSessionId {
     fake.push_create_result(Ok(workspace_handle(
         workspace_session_id,
@@ -90,7 +90,7 @@ fn exec_command_uses_resolved_session_without_workspace_create_or_destroy() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
     let create_count_before_exec = fake.create_requests().len();
 
@@ -141,7 +141,7 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
         "one-shot-session",
         "lease-1",
         PathBuf::from("/workspace/one-shot"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
@@ -172,7 +172,7 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
         "one-shot-session",
         "lease-1",
         PathBuf::from("/workspace/one-shot"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let stdout = format!("{}\nkept\n", "x".repeat(1024 * 1024 + 128));
@@ -207,7 +207,7 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
         "one-shot-session",
         "lease-1",
         PathBuf::from("/workspace/one-shot"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     // A single spawn that parks (never completes on its own).
@@ -264,7 +264,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
         "one-shot-session",
         "lease-1",
         PathBuf::from("/workspace/one-shot"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_spawn_error(CommandServiceError::CommandIo {
@@ -292,7 +292,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_launch_materia
         "one-shot-session",
         "lease-1",
         PathBuf::from("/workspace/one-shot"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -328,7 +328,7 @@ fn exec_command_spawn_failure_keeps_session_workspace_alive() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
 
     let error = env
@@ -392,7 +392,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
     let exec_workspace_session_id = workspace_session_id.clone();
     let exec_handle =
@@ -454,7 +454,7 @@ fn exec_command_passes_workspace_entry_to_spawn_paths() {
         &env,
         "workspace-session",
         workspace_root.clone(),
-        WorkspaceProfile::Isolated,
+        NetworkProfile::Isolated,
     );
     let mut input = exec_input(workspace_session_id);
     input.timeout_ms = Some(2500);
@@ -535,7 +535,7 @@ fn exec_command_places_shared_session_child_in_workspace_cgroup() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
 
     env.command
@@ -558,7 +558,7 @@ fn exec_command_missing_launch_material_rejects_without_spawn() {
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -590,7 +590,7 @@ fn exec_command_unavailable_workspace_launch_rejects_without_spawn() {
         "workspace-session",
         "lease-1",
         workspace_root.clone(),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver.clone());
@@ -624,7 +624,7 @@ fn exec_command_artifact_directory_failure_keeps_session_workspace_alive() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
     std::fs::write(
         env.command.config().scratch_root.clone(),
@@ -715,7 +715,7 @@ fn exec_command_initial_running_yield_returns_pending_output() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
 
     let output = env
@@ -742,7 +742,7 @@ fn exec_command_initial_completed_session_does_not_finalize_workspace() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
 
     let output = env
@@ -772,7 +772,7 @@ fn write_command_stdin_waits_for_output_after_write() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
     let command_session_id = env
         .command
@@ -840,7 +840,7 @@ fn write_command_stdin_finalizes_when_command_completes_after_write() {
         &env,
         "workspace-session",
         PathBuf::from("/workspace/session"),
-        WorkspaceProfile::HostCompatible,
+        NetworkProfile::Shared,
     );
     let command_session_id = env
         .command

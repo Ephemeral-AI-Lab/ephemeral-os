@@ -11,7 +11,7 @@ use sandbox_observability::{
 };
 use sandbox_runtime::{
     NamespaceExecutionId, RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot,
-    RuntimeWorkspaceSnapshot, WorkspaceProfile, WorkspaceSessionId,
+    RuntimeWorkspaceSnapshot, NetworkProfile, WorkspaceSessionId,
 };
 use serde_json::{json, Value};
 
@@ -755,7 +755,7 @@ fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
 fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeWorkspaceSnapshot {
     RuntimeWorkspaceSnapshot {
         workspace_id: WorkspaceSessionId(workspace_id.to_owned()),
-        profile: WorkspaceProfile::HostCompatible,
+        profile: NetworkProfile::Shared,
         workspace_root: PathBuf::from("/workspace").join(workspace_id),
         upperdir,
         workdir: Some(PathBuf::from("/workspace").join(workspace_id).join("work")),
