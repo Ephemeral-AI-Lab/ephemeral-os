@@ -24,10 +24,20 @@ pub use projection::MergedView;
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lease {
     pub lease_id: String,
-    pub manifest_version: i64,
-    pub root_hash: String,
     pub manifest: Manifest,
-    pub layer_paths: Vec<String>,
+    pub layer_paths: Vec<PathBuf>,
+}
+
+impl Lease {
+    #[must_use]
+    pub fn manifest_version(&self) -> i64 {
+        self.manifest.version
+    }
+
+    #[must_use]
+    pub fn root_hash(&self) -> String {
+        manifest_root_hash(&self.manifest)
+    }
 }
 
 #[derive(Debug)]
@@ -75,12 +85,9 @@ impl LayerStack {
             .layers
             .iter()
             .map(|layer| resolve_layer_path(&self.storage_root, &layer.path))
-            .map(|path| path.to_string_lossy().into_owned())
             .collect();
         Ok(Lease {
             lease_id: lease.lease_id,
-            manifest_version: manifest.version,
-            root_hash: manifest_root_hash(&manifest),
             manifest,
             layer_paths,
         })

@@ -80,14 +80,16 @@ impl LayerStackSnapshotRef {
     }
 }
 
-impl From<sandbox_runtime_layerstack::service::LeasedSnapshot> for LayerStackSnapshotRef {
-    fn from(snapshot: sandbox_runtime_layerstack::service::LeasedSnapshot) -> Self {
+impl From<sandbox_runtime_layerstack::Lease> for LayerStackSnapshotRef {
+    fn from(lease: sandbox_runtime_layerstack::Lease) -> Self {
+        let manifest_version = lease.manifest_version();
+        let root_hash = lease.root_hash();
         Self {
-            lease_id: LeaseId(snapshot.lease_id),
-            manifest_version: snapshot.manifest_version,
-            root_hash: snapshot.root_hash,
-            manifest: snapshot.manifest,
-            layer_paths: snapshot.layer_paths,
+            lease_id: LeaseId(lease.lease_id),
+            manifest_version,
+            root_hash,
+            manifest: lease.manifest,
+            layer_paths: lease.layer_paths,
         }
     }
 }
