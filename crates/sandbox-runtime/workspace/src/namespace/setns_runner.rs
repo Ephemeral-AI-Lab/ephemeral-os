@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 #[cfg(target_os = "linux")]
-use crate::isolated_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
+use crate::isolated_network_setup::{BRIDGE_PREFIX_LEN, GATEWAY};
 #[cfg(target_os = "linux")]
 use crate::model::WorkspaceHandle;
-use crate::profile::WorkspaceProfileError;
-use crate::profile::WorkspaceProfileHandle;
+use crate::session::MountedWorkspace;
+use crate::session::WorkspaceManagerError;
 #[cfg(target_os = "linux")]
 use sandbox_runtime_namespace_execution::NamespaceTarget;
 
@@ -20,9 +20,9 @@ use super::NamespaceRuntime;
 impl NamespaceRuntime {
     pub(crate) fn mount_overlay(
         &self,
-        handle: &WorkspaceProfileHandle,
+        handle: &MountedWorkspace,
         layer_paths: &[PathBuf],
-    ) -> Result<(), WorkspaceProfileError> {
+    ) -> Result<(), WorkspaceManagerError> {
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (&self.engine, handle, layer_paths);
@@ -30,31 +30,22 @@ impl NamespaceRuntime {
         }
         #[cfg(target_os = "linux")]
         {
-            self.mount_overlay_via_engine(handle, layer_paths)
+            let mut entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
+            entry.layer_paths = layer_paths.to_vec();
+            let id = self.engine.allocate_id();
+            self.engine
+                .mount_overlay(NamespaceTarget::from(entry), id)
+                .map_err(setup_error)?
+                .wait()
+                .map_err(setup_error)
         }
-    }
-
-    #[cfg(target_os = "linux")]
-    pub(crate) fn mount_overlay_via_engine(
-        &self,
-        handle: &WorkspaceProfileHandle,
-        layer_paths: &[PathBuf],
-    ) -> Result<(), WorkspaceProfileError> {
-        let mut entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
-        entry.layer_paths = layer_paths.to_vec();
-        let id = self.engine.allocate_id();
-        self.engine
-            .mount_overlay(NamespaceTarget::from(entry), id)
-            .map_err(setup_error)?
-            .wait()
-            .map_err(setup_error)
     }
 
     pub(crate) fn signal_net_ready(
         &self,
-        handle: &WorkspaceProfileHandle,
+        handle: &MountedWorkspace,
         setup_timeout_s: f64,
-    ) -> Result<(), WorkspaceProfileError> {
+    ) -> Result<(), WorkspaceManagerError> {
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (handle, setup_timeout_s);

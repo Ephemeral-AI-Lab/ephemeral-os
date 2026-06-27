@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 use std::net::Ipv4Addr;
 
-use crate::profile::Rfc1918Egress;
-use crate::profile::WorkspaceProfileError;
+use crate::session::Rfc1918Egress;
+use crate::session::WorkspaceManagerError;
 
 #[cfg(target_os = "linux")]
 mod netfilter;
@@ -63,14 +63,14 @@ pub(crate) struct BridgeAddressPool {
 }
 
 impl BridgeAddressPool {
-    pub(crate) fn allocate(&mut self) -> Result<Ipv4Addr, WorkspaceProfileError> {
+    pub(crate) fn allocate(&mut self) -> Result<Ipv4Addr, WorkspaceManagerError> {
         for host in POOL_FIRST_HOST..=POOL_LAST_HOST {
             let ip = Ipv4Addr::new(10, 244, 0, host);
             if self.allocated.insert(ip) {
                 return Ok(ip);
             }
         }
-        Err(WorkspaceProfileError::NetworkUnavailable(
+        Err(WorkspaceManagerError::NetworkUnavailable(
             "isolated_ip_pool_exhausted".to_owned(),
         ))
     }
@@ -97,7 +97,7 @@ impl IsolatedNetwork {
         }
     }
 
-    pub(crate) fn initialize(&mut self) -> Result<(), WorkspaceProfileError> {
+    pub(crate) fn initialize(&mut self) -> Result<(), WorkspaceManagerError> {
         let rfc1918_egress = self.rfc1918_egress;
         #[cfg(target_os = "linux")]
         {
@@ -119,7 +119,7 @@ impl IsolatedNetwork {
         &mut self,
         workspace_handle_id: &str,
         holder_pid: i32,
-    ) -> Result<VethAllocation, WorkspaceProfileError> {
+    ) -> Result<VethAllocation, WorkspaceManagerError> {
         if !self.initialized {
             self.initialize()?;
         }
@@ -130,7 +130,7 @@ impl IsolatedNetwork {
                 let host = allocation.host_name.clone();
                 let ns = allocation.ns_name.clone();
                 let holder_pid = u32::try_from(holder_pid).map_err(|_| {
-                    WorkspaceProfileError::NetworkUnavailable(format!(
+                    WorkspaceManagerError::NetworkUnavailable(format!(
                         "invalid isolated holder pid {holder_pid}"
                     ))
                 })?;
@@ -148,7 +148,7 @@ impl IsolatedNetwork {
     fn allocate_veth(
         &mut self,
         workspace_handle_id: &str,
-    ) -> Result<VethAllocation, WorkspaceProfileError> {
+    ) -> Result<VethAllocation, WorkspaceManagerError> {
         let (host_name, ns_name) = veth_names(workspace_handle_id);
         let ns_ip = self.pool.allocate()?;
         Ok(VethAllocation {
@@ -159,16 +159,9 @@ impl IsolatedNetwork {
     }
 
     pub(crate) fn teardown_veth(&mut self, allocation: &VethAllocation) {
-        self.teardown_host_veth(&allocation.host_name);
-        self.pool.free(allocation.ns_ip);
-    }
-
-    pub(crate) fn teardown_host_veth(&mut self, host_name: &str) {
-        #[cfg(not(target_os = "linux"))]
-        let _ = host_name;
         #[cfg(target_os = "linux")]
         {
-            let host_name = host_name.to_owned();
+            let host_name = allocation.host_name.clone();
             let _ = run_netlink(move |handle| async move {
                 if let Some(index) = link_index(&handle, &host_name).await? {
                     ignore_not_found("delete host veth", handle.link().del(index).execute().await)?;
@@ -176,6 +169,7 @@ impl IsolatedNetwork {
                 Ok(())
             });
         }
+        self.pool.free(allocation.ns_ip);
     }
 }
 
@@ -183,6 +177,6 @@ impl IsolatedNetwork {
 pub(crate) fn network_error_at(
     step: impl Into<String>,
     error: impl std::fmt::Display,
-) -> WorkspaceProfileError {
-    WorkspaceProfileError::NetworkUnavailable(format!("{}: {error}", step.into()))
+) -> WorkspaceManagerError {
+    WorkspaceManagerError::NetworkUnavailable(format!("{}: {error}", step.into()))
 }

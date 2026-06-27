@@ -5,16 +5,16 @@ use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
 use crate::model::{LayerStackSnapshotRef, NetworkProfile, WorkspaceSessionId};
 use crate::namespace::NamespacePlan;
 use crate::overlay::dirs::create_overlay_dirs;
-use crate::profile::manager::WorkspaceProfileError;
-use crate::profile::{validate_workspace_root, WorkspaceProfileHandle, WorkspaceProfileManager};
+use crate::session::manager::WorkspaceManagerError;
+use crate::session::{validate_workspace_root, MountedWorkspace, WorkspaceManager};
 
-impl WorkspaceProfileManager {
+impl WorkspaceManager {
     pub(crate) fn initialize_handle(
         &mut self,
-        handle: &mut WorkspaceProfileHandle,
-    ) -> Result<HashMap<String, f64>, WorkspaceProfileError> {
-        let layer_paths = handle.layer_paths.clone();
-        let namespace_plan = match handle.profile {
+        handle: &mut MountedWorkspace,
+    ) -> Result<HashMap<String, f64>, WorkspaceManagerError> {
+        let layer_paths = handle.snapshot.layer_paths.clone();
+        let namespace_plan = match handle.network {
             NetworkProfile::Shared => NamespacePlan::shared_network(),
             NetworkProfile::Isolated => NamespacePlan::isolated(),
         };
@@ -24,82 +24,78 @@ impl WorkspaceProfileManager {
         handle.holder_pid =
             self.runtime
                 .spawn_ns_holder(handle, self.caps.setup_timeout_s, namespace_plan)?;
-        record_create_phase_ms(&mut phases_ms, "spawn_ns_holder", phase_start);
+        super::record_phase_ms(&mut phases_ms, "spawn_ns_holder", phase_start);
 
         phase_start = Instant::now();
         handle.ns_fds = self
             .runtime
             .open_ns_fds(handle.holder_pid, namespace_plan)?;
-        record_create_phase_ms(&mut phases_ms, "open_ns_fds", phase_start);
+        super::record_phase_ms(&mut phases_ms, "open_ns_fds", phase_start);
 
-        if handle.profile == NetworkProfile::Isolated {
+        if handle.network == NetworkProfile::Isolated {
             self.setup_isolated_network_after_namespace(handle, &mut phases_ms)?;
         }
 
         phase_start = Instant::now();
         self.runtime.mount_overlay(handle, &layer_paths)?;
-        record_create_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
+        super::record_phase_ms(&mut phases_ms, "mount_overlay", phase_start);
 
-        if handle.profile == NetworkProfile::Isolated {
+        if handle.network == NetworkProfile::Isolated {
             self.setup_isolated_network_after_mount(handle)?;
         }
 
         Ok(phases_ms)
     }
 
-    pub(crate) fn rollback_partial(&mut self, handle: &WorkspaceProfileHandle) {
+    pub(crate) fn rollback_partial(&mut self, handle: &MountedWorkspace) {
         let _ = self.teardown_handle(handle, 1.0);
     }
 
     fn setup_isolated_network_after_namespace(
         &mut self,
-        handle: &mut WorkspaceProfileHandle,
+        handle: &mut MountedWorkspace,
         phases_ms: &mut HashMap<String, f64>,
-    ) -> Result<(), WorkspaceProfileError> {
+    ) -> Result<(), WorkspaceManagerError> {
         let phase_start = Instant::now();
         self.network.initialize()?;
         let veth = self
             .network
             .install_veth(&handle.workspace_id.0, handle.holder_pid)?;
         handle.veth = Some(veth);
-        record_create_phase_ms(phases_ms, "install_veth", phase_start);
+        super::record_phase_ms(phases_ms, "install_veth", phase_start);
         Ok(())
     }
 
     fn setup_isolated_network_after_mount(
         &mut self,
-        handle: &WorkspaceProfileHandle,
-    ) -> Result<(), WorkspaceProfileError> {
+        handle: &MountedWorkspace,
+    ) -> Result<(), WorkspaceManagerError> {
         self.runtime
             .signal_net_ready(handle, self.caps.setup_timeout_s)
     }
 
-    pub fn enter_with_profile(
+    pub fn open(
         &mut self,
         snapshot: LayerStackSnapshotRef,
-        profile: NetworkProfile,
-    ) -> Result<WorkspaceProfileHandle, WorkspaceProfileError> {
+        network: NetworkProfile,
+    ) -> Result<MountedWorkspace, WorkspaceManagerError> {
         let workspace_root = self.validated_workspace_root()?;
 
         let workspace_id = WorkspaceSessionId(next_handle_id());
         let dirs =
             create_overlay_dirs(self.workspace_session_root(&workspace_id)).map_err(|err| {
-                WorkspaceProfileError::SetupFailed {
+                WorkspaceManagerError::SetupFailed {
                     step: format!("create overlay scratch: {err}"),
                 }
             })?;
 
         let now = monotonic_seconds();
-        let mut handle = WorkspaceProfileHandle {
+        let mut handle = MountedWorkspace {
             workspace_id: workspace_id.clone(),
-            profile,
-            lease_id: snapshot.lease_id.0,
-            manifest_version: snapshot.manifest_version,
-            manifest_root_hash: snapshot.root_hash,
-            base_manifest: snapshot.manifest,
+            network,
+            snapshot,
             workspace_root,
             dirs,
-            layer_paths: snapshot.layer_paths,
             ns_fds: Default::default(),
             holder_pid: 0,
             readiness_fd: -1,
@@ -123,18 +119,9 @@ impl WorkspaceProfileManager {
         Ok(handle)
     }
 
-    pub(crate) fn validated_workspace_root(&self) -> Result<String, WorkspaceProfileError> {
+    pub(crate) fn validated_workspace_root(&self) -> Result<String, WorkspaceManagerError> {
         let workspace_root = self.workspace_root.trim();
         validate_workspace_root(workspace_root)?;
         Ok(workspace_root.to_owned())
     }
-}
-
-fn record_create_phase_ms(
-    phases_ms: &mut HashMap<String, f64>,
-    phase: &'static str,
-    started_at: Instant,
-) {
-    let duration_ms = started_at.elapsed().as_secs_f64() * 1000.0;
-    phases_ms.insert(phase.to_owned(), duration_ms);
 }

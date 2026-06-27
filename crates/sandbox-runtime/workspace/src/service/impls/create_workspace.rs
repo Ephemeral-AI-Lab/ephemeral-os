@@ -1,6 +1,6 @@
 use crate::error::WorkspaceError;
 use crate::model::{CreateWorkspaceRequest, LayerStackSnapshotRef, WorkspaceHandle};
-use crate::service::support::{ensure_absolute, workspace_error_from_profile_error};
+use crate::service::support::{ensure_absolute, workspace_error_from_manager_error};
 use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
@@ -24,20 +24,17 @@ impl WorkspaceRuntimeService {
             source: error.to_string(),
         })?;
         let lease_id = snapshot.lease_id.clone();
-        let profile_snapshot = LayerStackSnapshotRef::from(snapshot);
-        let profile_handle = match state
-            .manager
-            .enter_with_profile(profile_snapshot, request.profile)
-        {
+        let snapshot = LayerStackSnapshotRef::from(snapshot);
+        let session = match state.manager.open(snapshot, request.network) {
             Ok(handle) => handle,
             Err(error) => {
                 let _ = sandbox_runtime_layerstack::service::release_lease(
                     &layer_stack_root,
                     &lease_id,
                 );
-                return Err(workspace_error_from_profile_error(error));
+                return Err(workspace_error_from_manager_error(error));
             }
         };
-        Ok(WorkspaceHandle::from(&profile_handle))
+        Ok(WorkspaceHandle::from(&session))
     }
 }

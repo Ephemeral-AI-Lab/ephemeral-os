@@ -6,7 +6,7 @@ use sandbox_runtime_namespace_execution::NamespaceTarget;
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NsFds};
 
 use crate::overlay::tree::TreeResourceStats;
-use crate::profile::{WorkspaceProfileFds, WorkspaceProfileHandle};
+use crate::session::{HolderNsFds, MountedWorkspace};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WorkspaceSessionId(pub String);
@@ -125,8 +125,7 @@ impl NetworkProfile {
 pub struct WorkspaceHandle {
     pub id: WorkspaceSessionId,
     pub workspace_root: PathBuf,
-    pub profile: NetworkProfile,
-    pub base_revision: BaseRevision,
+    pub network: NetworkProfile,
     pub snapshot: LayerStackSnapshotRef,
     launch: Option<WorkspaceLaunchContext>,
 }
@@ -136,8 +135,7 @@ impl fmt::Debug for WorkspaceHandle {
         f.debug_struct("WorkspaceHandle")
             .field("id", &self.id)
             .field("workspace_root", &self.workspace_root)
-            .field("profile", &self.profile)
-            .field("base_revision", &self.base_revision)
+            .field("network", &self.network)
             .field("snapshot", &self.snapshot)
             .field("launch", &self.launch.as_ref().map(|_| "<available>"))
             .finish()
@@ -153,11 +151,16 @@ impl WorkspaceHandle {
     }
 
     #[must_use]
+    pub fn base_revision(&self) -> BaseRevision {
+        self.snapshot.base_revision()
+    }
+
+    #[must_use]
     #[allow(clippy::too_many_arguments)]
     pub fn holder_backed_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: NetworkProfile,
+        network: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
         upperdir: PathBuf,
         workdir: PathBuf,
@@ -165,19 +168,19 @@ impl WorkspaceHandle {
         Self::with_launch_for_test(
             id,
             workspace_root.clone(),
-            profile,
+            network,
             snapshot.clone(),
             Some(launch_context_for_test(
-                profile,
+                network,
                 workspace_root,
                 snapshot.layer_paths.clone(),
                 upperdir,
                 workdir,
-                Some(WorkspaceProfileFds {
+                Some(HolderNsFds {
                     user: Some(10),
                     mnt: Some(11),
                     pid: Some(12),
-                    net: (profile == NetworkProfile::Isolated).then_some(13),
+                    net: (network == NetworkProfile::Isolated).then_some(13),
                 }),
             )),
         )
@@ -188,7 +191,7 @@ impl WorkspaceHandle {
     pub fn unavailable_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: NetworkProfile,
+        network: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
         upperdir: PathBuf,
         workdir: PathBuf,
@@ -196,10 +199,10 @@ impl WorkspaceHandle {
         Self::with_launch_for_test(
             id,
             workspace_root.clone(),
-            profile,
+            network,
             snapshot.clone(),
             Some(launch_context_for_test(
-                profile,
+                network,
                 workspace_root,
                 snapshot.layer_paths.clone(),
                 upperdir,
@@ -213,24 +216,23 @@ impl WorkspaceHandle {
     pub fn without_launch_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: NetworkProfile,
+        network: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
     ) -> Self {
-        Self::with_launch_for_test(id, workspace_root, profile, snapshot, None)
+        Self::with_launch_for_test(id, workspace_root, network, snapshot, None)
     }
 
     fn with_launch_for_test(
         id: WorkspaceSessionId,
         workspace_root: PathBuf,
-        profile: NetworkProfile,
+        network: NetworkProfile,
         snapshot: LayerStackSnapshotRef,
         launch: Option<WorkspaceLaunchContext>,
     ) -> Self {
         Self {
             id,
             workspace_root,
-            profile,
-            base_revision: snapshot.base_revision(),
+            network,
             snapshot,
             launch,
         }
@@ -238,15 +240,15 @@ impl WorkspaceHandle {
 }
 
 fn launch_context_for_test(
-    profile: NetworkProfile,
+    network: NetworkProfile,
     workspace_root: PathBuf,
     layer_paths: Vec<PathBuf>,
     upperdir: PathBuf,
     workdir: PathBuf,
-    holder_fds: Option<WorkspaceProfileFds>,
+    holder_fds: Option<HolderNsFds>,
 ) -> WorkspaceLaunchContext {
     WorkspaceLaunchContext {
-        profile,
+        network,
         workspace_root,
         layer_paths,
         upperdir,
@@ -257,12 +259,12 @@ fn launch_context_for_test(
 
 #[derive(Clone, PartialEq, Eq)]
 struct WorkspaceLaunchContext {
-    profile: NetworkProfile,
+    network: NetworkProfile,
     workspace_root: PathBuf,
     layer_paths: Vec<PathBuf>,
     upperdir: PathBuf,
     workdir: PathBuf,
-    holder_fds: Option<WorkspaceProfileFds>,
+    holder_fds: Option<HolderNsFds>,
 }
 
 impl WorkspaceLaunchContext {
@@ -283,7 +285,7 @@ impl WorkspaceLaunchContext {
         let (Some(user), Some(mnt), Some(pid)) = (fds.user, fds.mnt, fds.pid) else {
             return Err(WorkspaceEntryError::incomplete());
         };
-        if self.profile == NetworkProfile::Isolated && fds.net.is_none() {
+        if self.network == NetworkProfile::Isolated && fds.net.is_none() {
             return Err(WorkspaceEntryError::incomplete());
         }
         Ok(WorkspaceEntryFds {
@@ -385,7 +387,7 @@ impl std::error::Error for WorkspaceEntryError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
-    pub profile: NetworkProfile,
+    pub network: NetworkProfile,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -461,28 +463,17 @@ pub struct DestroyWorkspaceResult {
     pub active_leases_after: usize,
 }
 
-impl From<&WorkspaceProfileHandle> for WorkspaceHandle {
-    fn from(handle: &WorkspaceProfileHandle) -> Self {
+impl From<&MountedWorkspace> for WorkspaceHandle {
+    fn from(handle: &MountedWorkspace) -> Self {
         Self {
             id: handle.workspace_id.clone(),
             workspace_root: PathBuf::from(&handle.workspace_root),
-            profile: handle.profile,
-            base_revision: BaseRevision {
-                version: handle.manifest_version,
-                root_hash: handle.manifest_root_hash.clone(),
-                layer_count: handle.layer_paths.len(),
-            },
-            snapshot: LayerStackSnapshotRef {
-                lease_id: LeaseId(handle.lease_id.clone()),
-                manifest_version: handle.manifest_version,
-                root_hash: handle.manifest_root_hash.clone(),
-                manifest: handle.base_manifest.clone(),
-                layer_paths: handle.layer_paths.clone(),
-            },
+            network: handle.network,
+            snapshot: handle.snapshot.clone(),
             launch: Some(WorkspaceLaunchContext {
-                profile: handle.profile,
+                network: handle.network,
                 workspace_root: PathBuf::from(&handle.workspace_root),
-                layer_paths: handle.layer_paths.clone(),
+                layer_paths: handle.snapshot.layer_paths.clone(),
                 upperdir: handle.dirs.upperdir.clone(),
                 workdir: handle.dirs.workdir.clone(),
                 holder_fds: (!handle.ns_fds.is_empty()).then_some(handle.ns_fds),

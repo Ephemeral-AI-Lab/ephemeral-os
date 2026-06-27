@@ -29,13 +29,13 @@ fn workspace_handle(workspace_session_id: &str, lease_id: &str) -> WorkspaceHand
 fn workspace_handle_with_profile(
     workspace_session_id: &str,
     lease_id: &str,
-    profile: NetworkProfile,
+    network: NetworkProfile,
 ) -> WorkspaceHandle {
     support::workspace_handle(
         workspace_session_id,
         lease_id,
         PathBuf::from("/workspace"),
-        profile,
+        network,
     )
 }
 
@@ -255,7 +255,7 @@ fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal
     assert_eq!(
         fake.create_requests(),
         vec![CreateWorkspaceRequest {
-            profile: NetworkProfile::Shared,
+            network: NetworkProfile::Shared,
         }]
     );
     Ok(())
@@ -291,7 +291,7 @@ fn workspace_session_create_operation_accepts_isolated_profile(
     assert_eq!(
         fake.create_requests(),
         vec![CreateWorkspaceRequest {
-            profile: NetworkProfile::Isolated,
+            network: NetworkProfile::Isolated,
         }]
     );
     Ok(())

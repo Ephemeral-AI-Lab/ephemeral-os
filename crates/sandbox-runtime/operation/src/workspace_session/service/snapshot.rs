@@ -29,14 +29,14 @@ impl WorkspaceSessionService {
 
                 RuntimeWorkspaceSnapshot {
                     workspace_id: session.workspace_session_id.clone(),
-                    profile: session.handle.profile,
+                    network: session.handle.network,
                     workspace_root: session.handle.workspace_root.clone(),
                     upperdir,
                     workdir,
                     namespace_fd_count,
-                    base_manifest_version: Some(session.handle.base_revision.version),
-                    base_root_hash: Some(session.handle.base_revision.root_hash.clone()),
-                    layer_count: Some(session.handle.base_revision.layer_count),
+                    base_manifest_version: Some(session.handle.snapshot.manifest_version),
+                    base_root_hash: Some(session.handle.snapshot.root_hash.clone()),
+                    layer_count: Some(session.handle.snapshot.layer_paths.len()),
                     cgroup_path: session.cgroup_path.clone(),
                 }
             })

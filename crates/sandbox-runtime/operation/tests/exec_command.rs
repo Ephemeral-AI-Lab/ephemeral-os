@@ -67,13 +67,13 @@ fn create_session(
     env: &support::TestServices,
     workspace_session_id: &str,
     workspace_root: PathBuf,
-    profile: NetworkProfile,
+    network: NetworkProfile,
 ) -> WorkspaceSessionId {
     fake.push_create_result(Ok(workspace_handle(
         workspace_session_id,
         "lease-1",
         workspace_root.clone(),
-        profile,
+        network,
     )));
     env.workspace
         .create_workspace_session(create_request())

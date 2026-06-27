@@ -102,14 +102,14 @@ fn dispatch_create_workspace_session(
     operations: &SandboxRuntimeOperations,
     request: &Request,
 ) -> Response {
-    let profile = match parse_workspace_profile(request) {
-        Ok(profile) => profile,
+    let network = match parse_workspace_profile(request) {
+        Ok(network) => network,
         Err(response) => return response,
     };
     workspace_session_handler_response(
         operations
             .workspace_session
-            .create_workspace_session(CreateWorkspaceRequest { profile }),
+            .create_workspace_session(CreateWorkspaceRequest { network }),
     )
 }
 
@@ -138,10 +138,8 @@ fn dispatch_destroy_workspace_session(
 fn parse_workspace_profile(request: &Request) -> Result<NetworkProfile, Response> {
     match request.optional_string("network_profile")? {
         None => Ok(NetworkProfile::Shared),
-        Some(profile) if profile == NetworkProfile::Shared.as_str() => Ok(NetworkProfile::Shared),
-        Some(profile) if profile == NetworkProfile::Isolated.as_str() => {
-            Ok(NetworkProfile::Isolated)
-        }
+        Some(value) if value == NetworkProfile::Shared.as_str() => Ok(NetworkProfile::Shared),
+        Some(value) if value == NetworkProfile::Isolated.as_str() => Ok(NetworkProfile::Isolated),
         Some(_) => Err(request.invalid_argument("profile must be one of shared or isolated")),
     }
 }
@@ -196,7 +194,7 @@ fn active_command_rejection(
 fn create_workspace_session_value(handler: WorkspaceSessionHandler) -> Value {
     json!({
         "workspace_session_id": handler.workspace_session_id.0,
-        "network_profile": handler.handle.profile.as_str(),
+        "network_profile": handler.handle.network.as_str(),
     })
 }
 

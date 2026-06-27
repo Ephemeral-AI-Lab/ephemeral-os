@@ -292,7 +292,7 @@ pub(crate) fn build_command_service(
 
 pub(crate) fn create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
-        profile: NetworkProfile::Shared,
+        network: NetworkProfile::Shared,
     }
 }
 
@@ -300,13 +300,13 @@ pub(crate) fn workspace_handle(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    profile: NetworkProfile,
+    network: NetworkProfile,
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::holder_backed_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
         workspace_root,
-        profile,
+        network,
         test_snapshot(lease_id),
         base_dir.join("upper"),
         base_dir.join("work"),
@@ -317,12 +317,12 @@ pub(crate) fn workspace_handle_without_launch(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    profile: NetworkProfile,
+    network: NetworkProfile,
 ) -> WorkspaceHandle {
     WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
         workspace_root,
-        profile,
+        network,
         test_snapshot(lease_id),
     )
 }
@@ -331,13 +331,13 @@ pub(crate) fn workspace_handle_unavailable_launch(
     workspace_session_id: &str,
     lease_id: &str,
     workspace_root: PathBuf,
-    profile: NetworkProfile,
+    network: NetworkProfile,
 ) -> WorkspaceHandle {
     let base_dir = test_launch_base_dir();
     WorkspaceHandle::unavailable_for_test(
         WorkspaceSessionId(workspace_session_id.to_owned()),
         workspace_root,
-        profile,
+        network,
         test_snapshot(lease_id),
         base_dir.join("upper"),
         base_dir.join("work"),

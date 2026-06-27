@@ -128,7 +128,7 @@ impl ObservabilityStore {
                     sandbox_id,
                     workspace_id,
                     state,
-                    profile,
+                    network_profile,
                     workspace_root,
                     upperdir,
                     workdir,
@@ -141,7 +141,7 @@ impl ObservabilityStore {
                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
                 ON CONFLICT(sandbox_id, workspace_id) DO UPDATE SET
                     state = excluded.state,
-                    profile = excluded.profile,
+                    network_profile = excluded.network_profile,
                     workspace_root = excluded.workspace_root,
                     upperdir = excluded.upperdir,
                     workdir = excluded.workdir,
@@ -155,7 +155,7 @@ impl ObservabilityStore {
                     &snapshot.sandbox_id,
                     &snapshot.workspace_id,
                     &snapshot.state,
-                    &snapshot.profile,
+                    &snapshot.network_profile,
                     &snapshot.workspace_root,
                     &snapshot.upperdir,
                     &snapshot.workdir,

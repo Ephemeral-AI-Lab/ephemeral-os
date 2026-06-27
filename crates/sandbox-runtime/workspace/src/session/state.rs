@@ -1,21 +1,15 @@
-use std::path::PathBuf;
-
-use crate::isolated_setup::VethAllocation;
-use crate::model::{NetworkProfile, WorkspaceSessionId};
+use crate::isolated_network_setup::VethAllocation;
+use crate::model::{LayerStackSnapshotRef, NetworkProfile, WorkspaceSessionId};
 use crate::overlay::dirs::OverlayDirs;
 
 #[derive(Debug, Clone)]
-pub struct WorkspaceProfileHandle {
+pub struct MountedWorkspace {
     pub workspace_id: WorkspaceSessionId,
-    pub profile: NetworkProfile,
-    pub lease_id: String,
-    pub manifest_version: i64,
-    pub manifest_root_hash: String,
-    pub base_manifest: sandbox_runtime_layerstack::Manifest,
+    pub network: NetworkProfile,
+    pub snapshot: LayerStackSnapshotRef,
     pub workspace_root: String,
     pub dirs: OverlayDirs,
-    pub layer_paths: Vec<PathBuf>,
-    pub ns_fds: WorkspaceProfileFds,
+    pub ns_fds: HolderNsFds,
     pub holder_pid: i32,
     pub readiness_fd: i32,
     pub control_fd: i32,
@@ -25,14 +19,14 @@ pub struct WorkspaceProfileHandle {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct WorkspaceProfileFds {
+pub struct HolderNsFds {
     pub user: Option<i32>,
     pub mnt: Option<i32>,
     pub pid: Option<i32>,
     pub net: Option<i32>,
 }
 
-impl WorkspaceProfileFds {
+impl HolderNsFds {
     pub(crate) fn len(self) -> usize {
         self.values().count()
     }

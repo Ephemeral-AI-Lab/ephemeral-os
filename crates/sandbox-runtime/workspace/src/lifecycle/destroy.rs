@@ -7,8 +7,8 @@ use serde_json::{json, Value};
 use crate::model::{NetworkProfile, WorkspaceSessionId};
 use crate::namespace::HolderKillReport;
 use crate::overlay::tree::TreeResourceStats;
-use crate::profile::manager::WorkspaceProfileError;
-use crate::profile::{WorkspaceProfileHandle, WorkspaceProfileManager};
+use crate::session::manager::WorkspaceManagerError;
+use crate::session::{MountedWorkspace, WorkspaceManager};
 
 use super::{monotonic_seconds, record_phase_ms};
 
@@ -23,10 +23,10 @@ pub struct ExitOutcome {
     pub inspection: Value,
 }
 
-impl WorkspaceProfileManager {
+impl WorkspaceManager {
     pub(crate) fn teardown_handle(
         &mut self,
-        handle: &WorkspaceProfileHandle,
+        handle: &MountedWorkspace,
         grace_s: f64,
     ) -> (Value, HashMap<String, f64>) {
         let mut phases_ms = HashMap::new();
@@ -75,10 +75,10 @@ impl WorkspaceProfileManager {
 
     fn teardown_isolated_network(
         &mut self,
-        handle: &WorkspaceProfileHandle,
+        handle: &MountedWorkspace,
         phases_ms: &mut HashMap<String, f64>,
     ) {
-        if handle.profile != NetworkProfile::Isolated {
+        if handle.network != NetworkProfile::Isolated {
             return;
         }
         let phase_start = Instant::now();
@@ -88,13 +88,13 @@ impl WorkspaceProfileManager {
         record_phase_ms(phases_ms, "teardown_veth", phase_start);
     }
 
-    pub fn exit(
+    pub fn close(
         &mut self,
         workspace_id: &WorkspaceSessionId,
         grace_s: Option<f64>,
-    ) -> Result<ExitOutcome, WorkspaceProfileError> {
+    ) -> Result<ExitOutcome, WorkspaceManagerError> {
         let Some(handle) = self.handles.remove(workspace_id) else {
-            return Err(WorkspaceProfileError::NotOpen);
+            return Err(WorkspaceManagerError::NotOpen);
         };
         let timer = Instant::now();
         let upperdir_bytes = TreeResourceStats::collect(&handle.dirs.upperdir).bytes;
@@ -109,7 +109,7 @@ impl WorkspaceProfileManager {
         let lifetime_s = (monotonic_seconds() - handle.created_at).max(0.0);
         Ok(ExitOutcome {
             workspace_id: handle.workspace_id,
-            lease_id: handle.lease_id,
+            lease_id: handle.snapshot.lease_id.0,
             evicted_upperdir_bytes: upperdir_bytes,
             lifetime_s,
             total_ms: timer.elapsed().as_secs_f64() * 1000.0,
@@ -119,7 +119,7 @@ impl WorkspaceProfileManager {
     }
 }
 
-fn close_handle_fds(handle: &WorkspaceProfileHandle) {
+fn close_handle_fds(handle: &MountedWorkspace) {
     for fd in handle.ns_fds.values() {
         close_fd(fd);
     }

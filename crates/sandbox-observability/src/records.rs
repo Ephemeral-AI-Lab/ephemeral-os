@@ -65,7 +65,7 @@ pub struct WorkspaceSnapshotRecord {
     pub sandbox_id: String,
     pub workspace_id: String,
     pub state: String,
-    pub profile: Option<String>,
+    pub network_profile: Option<String>,
     pub workspace_root: Option<String>,
     pub upperdir: Option<String>,
     pub workdir: Option<String>,
@@ -85,7 +85,11 @@ impl WorkspaceSnapshotRecord {
         validate_sandbox_match("workspace_snapshot", sandbox_id, &self.sandbox_id)?;
         validate_required("workspace_id", &self.workspace_id, MAX_ID_LENGTH)?;
         validate_required("state", &self.state, MAX_SNAPSHOT_STATE_LENGTH)?;
-        validate_optional("profile", self.profile.as_deref(), MAX_KIND_LENGTH)?;
+        validate_optional(
+            "network_profile",
+            self.network_profile.as_deref(),
+            MAX_KIND_LENGTH,
+        )?;
         validate_optional(
             "workspace_root",
             self.workspace_root.as_deref(),

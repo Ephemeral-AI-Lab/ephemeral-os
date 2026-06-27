@@ -149,7 +149,7 @@ pub fn workspace_snapshot(workspace_id: &str, sampled_at_unix_ms: i64) -> Worksp
         sandbox_id: "sandbox-1".to_owned(),
         workspace_id: workspace_id.to_owned(),
         state: "active".to_owned(),
-        profile: Some("shared".to_owned()),
+        network_profile: Some("shared".to_owned()),
         workspace_root: Some(format!("/workspace/{workspace_id}")),
         upperdir: Some(format!("/workspace/{workspace_id}/upper")),
         workdir: Some(format!("/workspace/{workspace_id}/work")),

@@ -245,7 +245,7 @@ impl DaemonObservability {
             sandbox_id: self.sandbox_id.clone(),
             workspace_id,
             state: "active".to_owned(),
-            profile: Some(bound_kind(workspace.profile.as_str().to_owned())),
+            network_profile: Some(bound_kind(workspace.network.as_str().to_owned())),
             workspace_root: Some(bound_path(path_string(&workspace.workspace_root))),
             upperdir: workspace
                 .upperdir
@@ -475,7 +475,7 @@ fn workspace_value(
     json!({
         "workspace_id": workspace.workspace_id.as_str(),
         "lifecycle_state": workspace.state.as_str(),
-        "profile": workspace.profile.as_deref(),
+        "network_profile": workspace.network_profile.as_deref(),
         "sampled_at_unix_ms": workspace.sampled_at_unix_ms,
         "errors": error_list(workspace.error_message.as_deref()),
         "layers": {

@@ -33,7 +33,7 @@ fn observability_snapshot_copies_active_workspace_fields(
     assert_eq!(snapshot.workspaces.len(), 1);
     let workspace = &snapshot.workspaces[0];
     assert_eq!(workspace.workspace_id, workspace_session_id);
-    assert_eq!(workspace.profile, NetworkProfile::Isolated);
+    assert_eq!(workspace.network, NetworkProfile::Isolated);
     assert_eq!(
         workspace.workspace_root,
         PathBuf::from("/workspace/session")
@@ -99,13 +99,13 @@ fn create_session(
     services: &TestServices,
     workspace_session_id: &str,
     workspace_root: PathBuf,
-    profile: NetworkProfile,
+    network: NetworkProfile,
 ) -> WorkspaceSessionId {
     fake.push_create_result(Ok(workspace_handle(
         workspace_session_id,
         "lease-1",
         workspace_root,
-        profile,
+        network,
     )));
     services
         .workspace

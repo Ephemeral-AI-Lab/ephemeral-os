@@ -6,7 +6,7 @@ use serde_json::json;
 use sandbox_runtime_workspace::model::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, NetworkProfile,
 };
-use sandbox_runtime_workspace::profile::{ResourceCaps, WorkspaceProfileManager};
+use sandbox_runtime_workspace::session::{ResourceCaps, WorkspaceManager};
 use sandbox_runtime_workspace::WorkspaceRuntimeService;
 
 #[test]
@@ -40,11 +40,11 @@ fn runtime_service_create_and_destroy_are_backed_by_impl_files(
     let service = fixture.service();
 
     let handle = service.create_workspace(CreateWorkspaceRequest {
-        profile: NetworkProfile::Shared,
+        network: NetworkProfile::Shared,
     })?;
 
     assert_eq!(handle.workspace_root, fixture.workspace_root);
-    assert_eq!(handle.profile, NetworkProfile::Shared);
+    assert_eq!(handle.network, NetworkProfile::Shared);
     assert_eq!(handle.snapshot.manifest_version, 1);
     assert_eq!(
         sandbox_runtime_layerstack::LayerStack::open(fixture.layer_stack_root.clone())?
@@ -98,7 +98,7 @@ impl Fixture {
 
     fn service(&self) -> WorkspaceRuntimeService {
         WorkspaceRuntimeService::new(
-            WorkspaceProfileManager::new(
+            WorkspaceManager::new(
                 self.workspace_root.to_string_lossy().into_owned(),
                 ResourceCaps::default(),
                 self.scratch_root.clone(),

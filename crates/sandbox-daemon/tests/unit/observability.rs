@@ -110,7 +110,7 @@ impl TestObservabilityStore {
                 sandbox_id,
                 workspace_id,
                 state,
-                profile,
+                network_profile,
                 workspace_root,
                 upperdir,
                 workdir,
@@ -129,7 +129,7 @@ impl TestObservabilityStore {
                 sandbox_id: row.get(0)?,
                 workspace_id: row.get(1)?,
                 state: row.get(2)?,
-                profile: row.get(3)?,
+                network_profile: row.get(3)?,
                 workspace_root: row.get(4)?,
                 upperdir: row.get(5)?,
                 workdir: row.get(6)?,
@@ -755,7 +755,7 @@ fn runtime_snapshot(missing_upperdir: PathBuf) -> RuntimeObservabilitySnapshot {
 fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeWorkspaceSnapshot {
     RuntimeWorkspaceSnapshot {
         workspace_id: WorkspaceSessionId(workspace_id.to_owned()),
-        profile: NetworkProfile::Shared,
+        network: NetworkProfile::Shared,
         workspace_root: PathBuf::from("/workspace").join(workspace_id),
         upperdir,
         workdir: Some(PathBuf::from("/workspace").join(workspace_id).join("work")),

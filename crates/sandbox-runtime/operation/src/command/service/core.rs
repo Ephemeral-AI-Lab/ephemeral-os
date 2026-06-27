@@ -128,7 +128,7 @@ impl CommandOperationService {
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
         self.workspace
             .create_workspace_session(CreateWorkspaceRequest {
-                profile: NetworkProfile::Shared,
+                network: NetworkProfile::Shared,
             })
     }
 

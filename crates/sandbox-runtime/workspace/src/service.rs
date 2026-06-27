@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
 use crate::error::WorkspaceError;
-use crate::profile::WorkspaceProfileManager;
+use crate::session::WorkspaceManager;
 
 mod hooks;
 mod impls;
@@ -15,7 +15,7 @@ pub struct WorkspaceRuntimeService {
 }
 
 pub(crate) struct WorkspaceRuntimeState {
-    pub(crate) manager: WorkspaceProfileManager,
+    pub(crate) manager: WorkspaceManager,
     pub(crate) layer_stack_root: PathBuf,
 }
 
@@ -26,7 +26,7 @@ enum WorkspaceRuntimeBackend {
 
 impl WorkspaceRuntimeService {
     #[must_use]
-    pub fn new(manager: WorkspaceProfileManager, layer_stack_root: PathBuf) -> Self {
+    pub fn new(manager: WorkspaceManager, layer_stack_root: PathBuf) -> Self {
         Self {
             backend: WorkspaceRuntimeBackend::Runtime(Box::new(Mutex::new(
                 WorkspaceRuntimeState {

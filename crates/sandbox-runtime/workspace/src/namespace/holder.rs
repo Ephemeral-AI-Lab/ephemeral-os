@@ -22,8 +22,8 @@ use nix::sys::signal::{kill, Signal};
 #[cfg(target_os = "linux")]
 use nix::unistd::{pipe2, Pid};
 
-use crate::profile::WorkspaceProfileError;
-use crate::profile::WorkspaceProfileHandle;
+use crate::session::MountedWorkspace;
+use crate::session::WorkspaceManagerError;
 
 #[cfg(target_os = "linux")]
 use super::fds::{clear_cloexec, expect_line, set_nonblocking};
@@ -34,10 +34,10 @@ use super::{HolderKillReport, NamespacePlan, NamespaceRuntime};
 impl NamespaceRuntime {
     pub(crate) fn spawn_ns_holder(
         &self,
-        handle: &mut WorkspaceProfileHandle,
+        handle: &mut MountedWorkspace,
         setup_timeout_s: f64,
         plan: NamespacePlan,
-    ) -> Result<i32, WorkspaceProfileError> {
+    ) -> Result<i32, WorkspaceManagerError> {
         #[cfg(not(target_os = "linux"))]
         {
             let _ = (handle, setup_timeout_s, plan);
@@ -94,7 +94,7 @@ impl NamespaceRuntime {
         &self,
         holder_pid: i32,
         grace_s: f64,
-    ) -> Result<HolderKillReport, WorkspaceProfileError> {
+    ) -> Result<HolderKillReport, WorkspaceManagerError> {
         if holder_pid <= 0 {
             return Ok(HolderKillReport::default());
         }
@@ -156,7 +156,7 @@ fn holder_children() -> &'static Mutex<HashMap<i32, Child>> {
 }
 
 #[cfg(target_os = "linux")]
-fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, WorkspaceProfileError>
+fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, WorkspaceManagerError>
 {
     holder_children()
         .lock()
@@ -165,18 +165,18 @@ fn lock_holder_children() -> Result<MutexGuard<'static, HashMap<i32, Child>>, Wo
 
 #[cfg(target_os = "linux")]
 fn ns_holder_startup_error(
-    error: WorkspaceProfileError,
+    error: WorkspaceManagerError,
     child: &mut Child,
     stderr: Option<ChildStderr>,
-) -> WorkspaceProfileError {
+) -> WorkspaceManagerError {
     let original_step = match error {
-        WorkspaceProfileError::SetupFailed { step } => step,
+        WorkspaceManagerError::SetupFailed { step } => step,
         other => other.to_string(),
     };
     let _ = child.kill();
     let status = child.wait().ok();
     let stderr = read_child_stderr(stderr);
-    WorkspaceProfileError::SetupFailed {
+    WorkspaceManagerError::SetupFailed {
         step: format!(
             "{original_step}; ns-holder {}; stderr: {}",
             format_exit_status(status.as_ref()),
@@ -187,21 +187,21 @@ fn ns_holder_startup_error(
 
 #[cfg(target_os = "linux")]
 pub(super) fn ns_holder_runtime_error(
-    error: WorkspaceProfileError,
+    error: WorkspaceManagerError,
     holder_pid: i32,
-) -> Result<WorkspaceProfileError, WorkspaceProfileError> {
+) -> Result<WorkspaceManagerError, WorkspaceManagerError> {
     let original_step = match error {
-        WorkspaceProfileError::SetupFailed { step } => step,
+        WorkspaceManagerError::SetupFailed { step } => step,
         other => other.to_string(),
     };
     let Some(mut child) = lock_holder_children()?.remove(&holder_pid) else {
-        return Ok(WorkspaceProfileError::SetupFailed {
+        return Ok(WorkspaceManagerError::SetupFailed {
             step: format!("{original_step}; ns-holder child {holder_pid} was not tracked"),
         });
     };
     let stderr = child.stderr.take();
     Ok(ns_holder_startup_error(
-        WorkspaceProfileError::SetupFailed {
+        WorkspaceManagerError::SetupFailed {
             step: original_step,
         },
         &mut child,

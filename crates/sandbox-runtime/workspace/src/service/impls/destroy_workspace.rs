@@ -1,6 +1,6 @@
 use crate::error::WorkspaceError;
 use crate::model::{DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceHandle};
-use crate::service::support::{active_profile_id, workspace_error_from_profile_error};
+use crate::service::support::workspace_error_from_manager_error;
 use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
@@ -15,12 +15,11 @@ impl WorkspaceRuntimeService {
 
         let (layer_stack_root, outcome) = {
             let mut state = self.lock_state()?;
-            let profile_id = active_profile_id(&state, &handle)?;
             let layer_stack_root = state.layer_stack_root.clone();
-            let outcome = match state.manager.exit(&profile_id, request.grace_s) {
+            let outcome = match state.manager.close(&handle.id, request.grace_s) {
                 Ok(outcome) => outcome,
                 Err(error) => {
-                    return Err(workspace_error_from_profile_error(error));
+                    return Err(workspace_error_from_manager_error(error));
                 }
             };
             (layer_stack_root, outcome)

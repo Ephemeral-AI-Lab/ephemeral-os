@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
 use crate::observability::RuntimeObservabilitySnapshot;
-use crate::workspace_crate::{profile::WorkspaceProfileManager, WorkspaceRuntimeService};
+use crate::workspace_crate::{session::WorkspaceManager, WorkspaceRuntimeService};
 use crate::workspace_session::WorkspaceSessionService;
 
 #[derive(Clone)]
@@ -31,7 +31,7 @@ impl SandboxRuntimeOperations {
     pub fn from_config(config: SandboxRuntimeConfig) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
-            WorkspaceProfileManager::new(
+            WorkspaceManager::new(
                 config
                     .workspace
                     .workspace_root
@@ -109,14 +109,14 @@ pub enum Rfc1918Egress {
     Deny,
 }
 
-impl From<WorkspaceResourceCaps> for crate::workspace_crate::profile::ResourceCaps {
+impl From<WorkspaceResourceCaps> for crate::workspace_crate::session::ResourceCaps {
     fn from(caps: WorkspaceResourceCaps) -> Self {
         Self {
             setup_timeout_s: caps.setup_timeout_s,
             exit_grace_s: caps.exit_grace_s,
             rfc1918_egress: match caps.rfc1918_egress {
-                Rfc1918Egress::Allow => crate::workspace_crate::profile::Rfc1918Egress::Allow,
-                Rfc1918Egress::Deny => crate::workspace_crate::profile::Rfc1918Egress::Deny,
+                Rfc1918Egress::Allow => crate::workspace_crate::session::Rfc1918Egress::Allow,
+                Rfc1918Egress::Deny => crate::workspace_crate::session::Rfc1918Egress::Deny,
             },
         }
     }

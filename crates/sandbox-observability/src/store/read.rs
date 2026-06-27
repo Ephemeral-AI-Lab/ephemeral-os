@@ -38,7 +38,7 @@ pub(super) fn read_active_workspace_snapshots(
         "SELECT
             workspace_id,
             state,
-            profile,
+            network_profile,
             namespace_fd_count,
             base_manifest_version,
             base_root_hash,
@@ -191,7 +191,7 @@ fn workspace_snapshot_from_row(
     Ok(ObservabilityWorkspaceSnapshotRow {
         workspace_id: row.get(0)?,
         state: row.get(1)?,
-        profile: row.get(2)?,
+        network_profile: row.get(2)?,
         namespace_fd_count: row.get(3)?,
         base_manifest_version: row.get(4)?,
         base_root_hash: row.get(5)?,

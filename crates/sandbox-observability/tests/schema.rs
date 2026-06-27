@@ -53,7 +53,7 @@ fn schema_initialization_is_idempotent() -> TestResult {
             "namespace execution snapshots unexpectedly include {forbidden_column}"
         );
     }
-    assert_eq!(migration_count(&connection)?, 8);
+    assert_eq!(migration_count(&connection)?, 9);
     assert!(paths.database_path().exists());
     assert!(dir
         .path()
@@ -113,7 +113,7 @@ fn schema_migration_checksums_are_recorded() -> TestResult {
         .query_map([], |row| row.get::<_, String>(0))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
 
-    assert_eq!(checksums.len(), 8);
+    assert_eq!(checksums.len(), 9);
     assert!(
         checksums
             .iter()

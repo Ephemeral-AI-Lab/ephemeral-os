@@ -3,15 +3,15 @@ use std::path::Path;
 
 use serde_json::{json, Value};
 
-use crate::profile::manager::PERSISTED_HANDLES_SCHEMA_VERSION;
-use crate::profile::{WorkspaceProfileError, WorkspaceProfileManager};
+use crate::session::manager::PERSISTED_HANDLES_SCHEMA_VERSION;
+use crate::session::{WorkspaceManager, WorkspaceManagerError};
 
-impl WorkspaceProfileManager {
+impl WorkspaceManager {
     fn persisted_handles_path(&self) -> std::path::PathBuf {
         self.scratch_root.join("manager.json")
     }
 
-    pub(crate) fn persist_handles(&self) -> Result<(), WorkspaceProfileError> {
+    pub(crate) fn persist_handles(&self) -> Result<(), WorkspaceManagerError> {
         std::fs::create_dir_all(&self.scratch_root)
             .map_err(|err| manager_setup_error("manager_root", err))?;
         let handles: Vec<Value> = self
@@ -20,15 +20,15 @@ impl WorkspaceProfileManager {
             .map(|handle| {
                 json!({
                     "workspace_handle_id": handle.workspace_id.0,
-                    "lease_id": handle.lease_id,
-                    "manifest_version": handle.manifest_version,
-                    "manifest_root_hash": handle.manifest_root_hash,
-                    "profile": handle.profile.as_str(),
+                    "lease_id": handle.snapshot.lease_id.0,
+                    "manifest_version": handle.snapshot.manifest_version,
+                    "manifest_root_hash": handle.snapshot.root_hash,
+                    "network_profile": handle.network.as_str(),
                     "workspace_root": handle.workspace_root,
                     "scratch_dir": handle.dirs.run_dir.to_string_lossy(),
                     "upperdir": handle.dirs.upperdir.to_string_lossy(),
                     "workdir": handle.dirs.workdir.to_string_lossy(),
-                    "layer_paths": handle.layer_paths,
+                    "layer_paths": handle.snapshot.layer_paths,
                     "holder_pid": handle.holder_pid,
                     "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
                     "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
@@ -63,8 +63,8 @@ impl WorkspaceProfileManager {
     }
 }
 
-fn manager_setup_error(step: &str, err: impl std::fmt::Display) -> WorkspaceProfileError {
-    WorkspaceProfileError::SetupFailed {
+fn manager_setup_error(step: &str, err: impl std::fmt::Display) -> WorkspaceManagerError {
+    WorkspaceManagerError::SetupFailed {
         step: format!("{step}: {err}"),
     }
 }

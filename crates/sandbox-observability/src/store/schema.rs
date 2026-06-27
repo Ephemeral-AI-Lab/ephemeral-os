@@ -49,6 +49,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "phase_6_resource_sample_deltas",
         sql: V8_SCHEMA_SQL,
     },
+    Migration {
+        version: 9,
+        name: "phase_7_workspace_network_profile_rename",
+        sql: V9_SCHEMA_SQL,
+    },
 ];
 
 const SCHEMA_MIGRATIONS_SQL: &str = r#"
@@ -262,6 +267,10 @@ ALTER TABLE resource_samples ADD COLUMN cpu_usage_delta_usec INTEGER;
 ALTER TABLE resource_samples ADD COLUMN sample_delta_ms INTEGER;
 ALTER TABLE resource_samples ADD COLUMN memory_current_delta_bytes INTEGER;
 ALTER TABLE resource_samples ADD COLUMN disk_upperdir_delta_bytes INTEGER;
+"#;
+
+const V9_SCHEMA_SQL: &str = r#"
+ALTER TABLE workspace_snapshots RENAME COLUMN profile TO network_profile;
 "#;
 
 pub(super) fn apply_schema(connection: &mut Connection) -> Result<(), StoreError> {

@@ -10,7 +10,7 @@ use sandbox_runtime_workspace::model::{
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
-use sandbox_runtime_workspace::profile::{WorkspaceProfileFds, WorkspaceProfileHandle};
+use sandbox_runtime_workspace::session::{HolderNsFds, MountedWorkspace};
 
 fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     sandbox_runtime_layerstack::Manifest::new(
@@ -24,22 +24,24 @@ fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     .expect("test manifest is valid")
 }
 
-fn workspace_profile_handle() -> WorkspaceProfileHandle {
-    WorkspaceProfileHandle {
+fn workspace_profile_handle() -> MountedWorkspace {
+    MountedWorkspace {
         workspace_id: WorkspaceSessionId("namespace-handle".to_owned()),
-        profile: NetworkProfile::Isolated,
-        lease_id: "lease-1".to_owned(),
-        manifest_version: 42,
-        manifest_root_hash: "root-hash".to_owned(),
-        base_manifest: test_manifest(),
+        network: NetworkProfile::Isolated,
+        snapshot: LayerStackSnapshotRef {
+            lease_id: LeaseId("lease-1".to_owned()),
+            manifest_version: 42,
+            root_hash: "root-hash".to_owned(),
+            manifest: test_manifest(),
+            layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
+        },
         workspace_root: "/workspace".to_owned(),
         dirs: OverlayDirs {
             run_dir: "/tmp/eos/run".into(),
             upperdir: "/tmp/eos/upper".into(),
             workdir: "/tmp/eos/work".into(),
         },
-        layer_paths: vec!["/lower/one".into(), "/lower/two".into()],
-        ns_fds: WorkspaceProfileFds {
+        ns_fds: HolderNsFds {
             user: Some(10),
             mnt: Some(11),
             pid: Some(12),
@@ -57,9 +59,9 @@ fn workspace_profile_handle() -> WorkspaceProfileHandle {
 fn assert_handle_projection(public: &WorkspaceHandle) {
     assert_eq!(public.id, WorkspaceSessionId("namespace-handle".to_owned()));
     assert_eq!(public.workspace_root, PathBuf::from("/workspace"));
-    assert_eq!(public.profile, NetworkProfile::Isolated);
+    assert_eq!(public.network, NetworkProfile::Isolated);
     assert_eq!(
-        public.base_revision,
+        public.base_revision(),
         BaseRevision {
             version: 42,
             root_hash: "root-hash".to_owned(),
@@ -180,7 +182,7 @@ fn workspace_entry_converts_to_namespace_target() {
 #[test]
 fn entry_rejects_incomplete_holder_launch() {
     let mut missing_mount = workspace_profile_handle();
-    missing_mount.profile = NetworkProfile::Shared;
+    missing_mount.network = NetworkProfile::Shared;
     missing_mount.ns_fds.mnt = None;
 
     let mut missing_net = workspace_profile_handle();
@@ -207,7 +209,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
-                profile: NetworkProfile::Shared,
+                network: NetworkProfile::Shared,
             }
         ),
         format!(
@@ -317,7 +319,7 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
-        profile: NetworkProfile::Shared,
+        network: NetworkProfile::Shared,
     };
     let handle = WorkspaceHandle::without_launch_for_test(
         WorkspaceSessionId("workspace".to_owned()),

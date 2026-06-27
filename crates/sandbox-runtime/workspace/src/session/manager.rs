@@ -1,18 +1,18 @@
-//! Workspace profile manager.
+//! Workspace manager.
 //!
 //! The manager owns admission policy, persistence, and the lifecycle
-//! modules own profile-specific setup, shared holder, overlay, teardown, and
-//! persistence behavior.
+//! modules own network-mode-specific setup, shared holder, overlay, teardown,
+//! and persistence behavior.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::isolated_setup::IsolatedNetwork;
+use crate::isolated_network_setup::IsolatedNetwork;
 use crate::model::WorkspaceSessionId;
 use crate::namespace::NamespaceRuntime;
-pub use crate::profile::{WorkspaceProfileFds, WorkspaceProfileHandle};
+pub use crate::session::{HolderNsFds, MountedWorkspace};
 
 pub use crate::lifecycle::ExitOutcome;
 
@@ -44,7 +44,7 @@ impl Default for ResourceCaps {
 
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
-pub enum WorkspaceProfileError {
+pub enum WorkspaceManagerError {
     #[error("invalid argument: {0}")]
     InvalidArgument(String),
 
@@ -58,27 +58,16 @@ pub enum WorkspaceProfileError {
     NetworkUnavailable(String),
 }
 
-impl WorkspaceProfileError {
-    #[must_use]
-    pub const fn kind(&self) -> &'static str {
-        match self {
-            Self::InvalidArgument(_) => "invalid_argument",
-            Self::NotOpen => "not_open",
-            Self::SetupFailed { .. } | Self::NetworkUnavailable(_) => "setup_failed",
-        }
-    }
-}
-
-pub struct WorkspaceProfileManager {
+pub struct WorkspaceManager {
     pub(crate) workspace_root: String,
     pub(crate) caps: ResourceCaps,
     pub(crate) runtime: NamespaceRuntime,
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
-    pub(crate) handles: HashMap<WorkspaceSessionId, WorkspaceProfileHandle>,
+    pub(crate) handles: HashMap<WorkspaceSessionId, MountedWorkspace>,
 }
 
-impl WorkspaceProfileManager {
+impl WorkspaceManager {
     #[must_use]
     pub fn new(
         workspace_root: impl Into<String>,
@@ -111,15 +100,15 @@ impl WorkspaceProfileManager {
     }
 }
 
-pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), WorkspaceProfileError> {
+pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), WorkspaceManagerError> {
     let workspace_root = workspace_root.trim();
     if workspace_root.is_empty() {
-        return Err(WorkspaceProfileError::InvalidArgument(
+        return Err(WorkspaceManagerError::InvalidArgument(
             "workspace_root is required".to_owned(),
         ));
     }
     if !Path::new(workspace_root).is_absolute() {
-        return Err(WorkspaceProfileError::InvalidArgument(format!(
+        return Err(WorkspaceManagerError::InvalidArgument(format!(
             "workspace_root must be absolute: {workspace_root}"
         )));
     }
