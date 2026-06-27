@@ -8,6 +8,7 @@ use crate::{ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSp
 pub enum CliOperationExecutionSpace {
     Manager,
     Runtime,
+    Observability,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,6 +150,7 @@ pub const fn operation_execution_space_name(
     match operation_execution_space {
         CliOperationExecutionSpace::Manager => "manager",
         CliOperationExecutionSpace::Runtime => "runtime",
+        CliOperationExecutionSpace::Observability => "observability",
     }
 }
 
@@ -338,6 +340,7 @@ fn operation_execution_space_from_name(
     match value {
         "manager" => Ok(CliOperationExecutionSpace::Manager),
         "runtime" => Ok(CliOperationExecutionSpace::Runtime),
+        "observability" => Ok(CliOperationExecutionSpace::Observability),
         other => Err(decode_error(format!(
             "unknown operation_execution_space: {other}"
         ))),

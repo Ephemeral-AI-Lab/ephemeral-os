@@ -8,8 +8,8 @@ use sandbox_gateway::cli::config::{
 };
 use sandbox_gateway::cli::output::render_response;
 use sandbox_gateway::cli::request_builder::{
-    build_request_from_catalog_with_id, manager_catalog_document, runtime_catalog_document,
-    BuildRequestInput,
+    build_request_from_catalog_with_id, manager_catalog_document, observability_catalog_document,
+    runtime_catalog_document, BuildRequestInput,
 };
 use sandbox_protocol::{
     CliOperationCatalogDocument, CliOperationExecutionSpace, CliOperationScope, Request,
@@ -521,6 +521,103 @@ async fn runtime_help_destroy_workspace_session_renders_detail_without_sandbox_i
 }
 
 #[tokio::test]
+async fn observability_help_renders_grouped_catalog_help() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "observability", "help"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Sandbox Observability Help"));
+    assert!(help.contains("Observability"));
+    assert!(help.contains("layerstack"));
+    assert!(help.contains("sandbox-cli observability help OPERATION"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn observability_help_layerstack_renders_detail_page() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "observability", "help", "layerstack"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Family\n  Observability"));
+    assert!(help.contains("Usage\n  sandbox-cli observability layerstack --sandbox-id ID"));
+    assert!(help.contains("--sandbox-id"));
+    assert!(help.contains("--window-ms"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[test]
+fn observability_layerstack_maps_to_get_observability_view() -> TestResult {
+    let catalog = observability_catalog()?;
+    let request = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: CliOperationExecutionSpace::Observability,
+            operation: "layerstack".to_owned(),
+            operation_argv: vec!["--sandbox-id".to_owned(), "eos-abc".to_owned()],
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )?;
+
+    // One transport, one view: the op is get_observability, the operation name is
+    // the view, and --sandbox-id is routing (scope), not a wire param.
+    assert_eq!(request.op, "get_observability");
+    assert_eq!(
+        request.scope,
+        CliOperationScope::Sandbox {
+            sandbox_id: "eos-abc".to_owned()
+        }
+    );
+    assert_eq!(
+        request.args,
+        json!({
+            "view": "layerstack",
+            "window_ms": 60000,
+        })
+    );
+    Ok(())
+}
+
+#[test]
+fn observability_requires_sandbox_id() -> TestResult {
+    let catalog = observability_catalog()?;
+    let error = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: CliOperationExecutionSpace::Observability,
+            operation: "layerstack".to_owned(),
+            operation_argv: vec![],
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )
+    .err()
+    .ok_or("observability request unexpectedly succeeded")?;
+
+    assert!(error.message().contains("--sandbox-id"));
+    Ok(())
+}
+
+#[tokio::test]
 async fn runtime_help_unknown_operation_reports_suggestions() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
@@ -745,4 +842,9 @@ fn manager_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::
 fn runtime_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>>
 {
     Ok(runtime_catalog_document()?)
+}
+
+fn observability_catalog(
+) -> Result<CliOperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>> {
+    Ok(observability_catalog_document()?)
 }

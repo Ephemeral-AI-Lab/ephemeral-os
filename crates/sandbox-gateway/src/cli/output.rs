@@ -10,8 +10,8 @@ use serde_json::{json, Value};
 use crate::cli::client::GatewayClient;
 use crate::cli::config::{GatewayConfig, GatewayConfigOverrides};
 use crate::cli::request_builder::{
-    build_request_from_catalog, manager_catalog_document, resolve_runtime_sandbox_id,
-    runtime_catalog_document, BuildRequestInput, RequestBuildError,
+    build_request_from_catalog, manager_catalog_document, observability_catalog_document,
+    resolve_runtime_sandbox_id, runtime_catalog_document, BuildRequestInput, RequestBuildError,
 };
 use sandbox_protocol::{
     render_catalog_help, render_operation_help, CliOperationCatalogDocument,
@@ -42,6 +42,7 @@ struct Cli {
 enum Command {
     Manager(OperationCommand),
     Runtime(RuntimeCommand),
+    Observability(OperationCommand),
 }
 
 #[derive(Debug, Args)]
@@ -182,6 +183,34 @@ where
                 stderr,
             )
             .await;
+        }
+        Command::Observability(command) => {
+            let catalog = match observability_catalog_document() {
+                Ok(catalog) => catalog,
+                Err(error) => {
+                    let _ = render_request_error(&error, stderr);
+                    return EXIT_USAGE;
+                }
+            };
+            if command.operation == "help" {
+                return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
+            }
+            let config = match discover_config(config_overrides, stderr) {
+                Ok(config) => config,
+                Err(exit) => return exit,
+            };
+            let client = GatewayClient::new(
+                config.gateway_socket_path.to_string_lossy().into_owned(),
+                config.gateway_auth_token.clone(),
+            );
+            let request_input = BuildRequestInput {
+                execution_space: CliOperationExecutionSpace::Observability,
+                operation: command.operation,
+                operation_argv: command.operation_argv,
+                sandbox_id: None,
+            };
+            run_request_from_catalog(&client, request_input, &config, &catalog, stdout, stderr)
+                .await
         }
     }
 }

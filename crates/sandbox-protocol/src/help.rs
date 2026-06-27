@@ -241,6 +241,7 @@ fn catalog_title(operation_execution_space: CliOperationExecutionSpace) -> &'sta
     match operation_execution_space {
         CliOperationExecutionSpace::Manager => "Sandbox Manager Help",
         CliOperationExecutionSpace::Runtime => "Sandbox Runtime Help",
+        CliOperationExecutionSpace::Observability => "Sandbox Observability Help",
     }
 }
 

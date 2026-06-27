@@ -43,6 +43,10 @@ pub fn runtime_catalog_document() -> Result<CliOperationCatalogDocument, Request
     catalog_document(sandbox_runtime::cli_operation_catalog())
 }
 
+pub fn observability_catalog_document() -> Result<CliOperationCatalogDocument, RequestBuildError> {
+    catalog_document(crate::cli::observability_specs::observability_catalog())
+}
+
 pub fn build_request_from_catalog(
     input: BuildRequestInput,
     config: &GatewayConfig,
@@ -71,15 +75,52 @@ pub fn build_request_from_catalog_with_id(
     }
     let spec = find_cli_operation_spec(catalog, &input.operation)?;
     let args = build_args(spec, &input.operation_argv)?;
-    let scope = match input.execution_space {
-        CliOperationExecutionSpace::Manager => CliOperationScope::system(),
-        CliOperationExecutionSpace::Runtime => {
-            CliOperationScope::sandbox(resolve_runtime_sandbox_id(input.sandbox_id, config)?)
+    match input.execution_space {
+        CliOperationExecutionSpace::Manager => Ok(Request::new(
+            &spec.name,
+            request_id,
+            CliOperationScope::system(),
+            args,
+        )),
+        CliOperationExecutionSpace::Runtime => Ok(Request::new(
+            &spec.name,
+            request_id,
+            CliOperationScope::sandbox(resolve_runtime_sandbox_id(input.sandbox_id, config)?),
+            args,
+        )),
+        CliOperationExecutionSpace::Observability => {
+            build_observability_request(&spec.name, args, request_id)
         }
-    };
-
-    Ok(Request::new(&spec.name, request_id, scope, args))
+    }
 }
+
+/// Build the wire request for the read-only `observability` space.
+///
+/// Every view resolves to the single daemon op `get_observability`; the
+/// operation name becomes the `view` param, and `--sandbox-id` is CLI routing
+/// (it selects the daemon) rather than an op param.
+fn build_observability_request(
+    view: &str,
+    args: Value,
+    request_id: impl Into<String>,
+) -> Result<Request, RequestBuildError> {
+    let Value::Object(mut args) = args else {
+        return Err(build_error("observability arguments must be an object"));
+    };
+    let sandbox_id = match args.remove("sandbox_id") {
+        Some(Value::String(sandbox_id)) if !sandbox_id.trim().is_empty() => sandbox_id,
+        _ => return Err(build_error("observability operations require --sandbox-id")),
+    };
+    args.insert("view".to_owned(), Value::String(view.to_owned()));
+    Ok(Request::new(
+        OBSERVABILITY_OP,
+        request_id,
+        CliOperationScope::sandbox(sandbox_id),
+        Value::Object(args),
+    ))
+}
+
+const OBSERVABILITY_OP: &str = "get_observability";
 
 pub fn resolve_runtime_sandbox_id(
     sandbox_id: Option<String>,
