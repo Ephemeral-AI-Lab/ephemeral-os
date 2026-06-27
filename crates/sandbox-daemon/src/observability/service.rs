@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, MutexGuard};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use sandbox_observability::{
     sample_layerstack, ObservabilityNamespaceExecutionSnapshotRow, ObservabilityPaths,
@@ -23,7 +23,6 @@ use super::namespace_execution;
 use serde_json::{json, Value};
 
 const DISK_SAMPLE_MIN_INTERVAL: Duration = Duration::from_secs(10);
-const MAX_RESOURCE_WINDOW_MS: u64 = 600_000;
 
 pub struct DaemonObservability {
     sandbox_id: String,
@@ -91,7 +90,7 @@ impl DaemonObservability {
         config: &ServerConfig,
         operations: &SandboxRuntimeOperations,
     ) -> Result<(), StoreError> {
-        let sampled_at_unix_ms = unix_ms();
+        let sampled_at_unix_ms = super::unix_ms();
         self.write_snapshot(
             config,
             operations.observability_snapshot(),
@@ -438,13 +437,6 @@ impl DaemonObservability {
     }
 }
 
-fn unix_ms() -> i64 {
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
-}
-
 fn sandbox_cgroup_sample(config: &ServerConfig) -> CgroupSample {
     match &config.cgroup_root {
         Some(cgroup_root) => CgroupSample::read(cgroup_root),
@@ -458,7 +450,7 @@ fn snapshot_read_options(
     Ok(ObservabilitySnapshotReadOptions {
         resource_window_ms: request
             .optional_u64("resource_window_ms")?
-            .map(|window_ms| window_ms.min(MAX_RESOURCE_WINDOW_MS)),
+            .map(|window_ms| window_ms.min(super::MAX_RESOURCE_WINDOW_MS)),
     })
 }
 

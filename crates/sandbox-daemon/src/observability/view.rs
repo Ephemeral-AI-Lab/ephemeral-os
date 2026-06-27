@@ -8,9 +8,7 @@ use sandbox_runtime::SandboxRuntimeOperations;
 use serde_json::{json, Value};
 
 use super::layerstack::{layerstack_view_value, stack_summary_value, workspace_layerstack_value};
-use super::DaemonObservability;
-
-const MAX_RESOURCE_WINDOW_MS: u64 = 600_000;
+use super::{DaemonObservability, MAX_RESOURCE_WINDOW_MS};
 
 pub(crate) fn observability_view_response(
     operations: &SandboxRuntimeOperations,
@@ -66,7 +64,7 @@ fn layerstack_view_response(
     if let (Some(observability), Some(window_ms), Value::Object(object)) =
         (observability, window_ms, &mut view)
     {
-        let since = now_unix_ms().saturating_sub(i64::try_from(window_ms).unwrap_or(i64::MAX));
+        let since = super::unix_ms().saturating_sub(i64::try_from(window_ms).unwrap_or(i64::MAX));
         object.insert(
             "trend".to_owned(),
             Value::Array(observability.stack_trend(since)),
@@ -116,17 +114,8 @@ fn snapshot_view_response(
     observability: Option<&DaemonObservability>,
     request: &Request,
 ) -> Response {
-    let Some(observability) = observability else {
-        return observability_unconfigured();
-    };
-    let window_ms = match resource_window_ms(request) {
-        Ok(window_ms) => window_ms,
-        Err(response) => return response,
-    };
-    let mut snapshot = match observability.read_snapshot_value(&ObservabilitySnapshotReadOptions {
-        resource_window_ms: window_ms,
-    }) {
-        Ok(value) => value,
+    let mut snapshot = match live_snapshot(observability, request) {
+        Ok(snapshot) => snapshot,
         Err(response) => return response,
     };
     if let (Ok(observation), Value::Object(object)) =
@@ -145,21 +134,12 @@ fn cgroup_view_response(
     observability: Option<&DaemonObservability>,
     request: &Request,
 ) -> Response {
-    let Some(observability) = observability else {
-        return observability_unconfigured();
-    };
     let scope = match request.optional_string("scope") {
         Ok(scope) => scope.unwrap_or_else(|| "sandbox".to_owned()),
         Err(response) => return response,
     };
-    let window_ms = match resource_window_ms(request) {
-        Ok(window_ms) => window_ms,
-        Err(response) => return response,
-    };
-    let snapshot = match observability.read_snapshot_value(&ObservabilitySnapshotReadOptions {
-        resource_window_ms: window_ms,
-    }) {
-        Ok(value) => value,
+    let snapshot = match live_snapshot(observability, request) {
+        Ok(snapshot) => snapshot,
         Err(response) => return response,
     };
     Response::ok(json!({
@@ -167,6 +147,17 @@ fn cgroup_view_response(
         "scope": scope,
         "series": resource_series_for_scope(&snapshot, &scope),
     }))
+}
+
+/// Read the live snapshot value with the request's bounded resource window. The
+/// `snapshot` and `cgroup` views differ only in how they reshape the result.
+fn live_snapshot(
+    observability: Option<&DaemonObservability>,
+    request: &Request,
+) -> Result<Value, Response> {
+    let observability = observability.ok_or_else(observability_unconfigured)?;
+    let resource_window_ms = resource_window_ms(request)?;
+    observability.read_snapshot_value(&ObservabilitySnapshotReadOptions { resource_window_ms })
 }
 
 /// Pick the resource bundle (`{latest, history}`) for one scope out of a live
@@ -205,13 +196,4 @@ fn observability_unconfigured() -> Response {
         error_kind::INTERNAL_ERROR,
         "daemon observability is not configured".to_owned(),
     )
-}
-
-fn now_unix_ms() -> i64 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
-        .unwrap_or_default()
 }
