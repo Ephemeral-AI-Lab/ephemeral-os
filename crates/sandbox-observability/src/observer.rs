@@ -168,6 +168,17 @@ impl Observer {
         CTX.with(|cell| cell.borrow().clone())
     }
 
+    /// The append log path to hand to a forked child. Disabled observers return
+    /// `None`, so child emit remains gated by the same config switch.
+    #[must_use]
+    pub fn log_path(&self) -> Option<std::path::PathBuf> {
+        if !self.core.enabled {
+            return None;
+        }
+        let path = self.core.sink.path();
+        (!path.as_os_str().is_empty()).then(|| path.to_path_buf())
+    }
+
     /// Set the thread-local context for `f`, then restore the previous one —
     /// even if `f` unwinds, and even when `ctx` is `None` (which makes any
     /// span/event inside `f` no-op rather than emit an orphan).

@@ -69,17 +69,20 @@ impl CommandOperationService {
                 .cgroup_path
                 .as_ref()
                 .map(|cgroup| cgroup.join("cgroup.procs"));
+            let observability_log_path = self.obs().log_path();
             let exec = self.exec_spans().launch(
                 id.clone(),
                 self.obs().context(),
                 names::NAMESPACE_EXEC_RUN_SHELL,
-                |_child_ctx| {
+                |child_ctx| {
                     self.engine().run_shell_interactive(
                         exec_command,
                         target,
                         id.clone(),
                         on_complete,
                         cgroup_procs_path,
+                        child_ctx,
+                        observability_log_path,
                     )
                 },
             );
@@ -215,7 +218,6 @@ fn finalize_one_shot(
     layerstack: Arc<crate::layerstack::LayerStackService>,
     handler: WorkspaceSessionHandler,
 ) {
-    // ponytail: completion hooks cannot surface publish errors yet; destroy still runs.
     let _ = workspace
         .capture_session_changes(
             &handler,

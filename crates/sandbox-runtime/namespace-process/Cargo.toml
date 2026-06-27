@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 serde.workspace = true
 sandbox-runtime-overlay.workspace = true
+sandbox-observability.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 libc.workspace = true

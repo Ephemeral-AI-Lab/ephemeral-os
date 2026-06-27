@@ -11,8 +11,8 @@ mod workspace_base;
 pub(crate) use storage::{fs, lock, whiteout};
 
 pub use model::{
-    aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
-    LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
+    aggregate_layer_changes, layer_digest, manifest_root_hash, published_layer_bytes, CasError,
+    LayerChange, LayerPath, LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
 
 pub use error::LayerStackError;

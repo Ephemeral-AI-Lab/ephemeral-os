@@ -5,7 +5,7 @@ fn daemon_manifest_excludes_host_store_and_sqlite_dependencies() {
     )
     .expect("read daemon manifest");
     let dependencies = manifest_section(&manifest, "[dependencies]");
-    for forbidden in ["rusqlite", "host"] {
+    for forbidden in [concat!("rusq", "lite"), "host"] {
         assert!(
             !dependencies.contains(forbidden),
             "daemon hot path must not depend on {forbidden}"

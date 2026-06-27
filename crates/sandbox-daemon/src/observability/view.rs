@@ -88,8 +88,7 @@ fn workspace_view_response(
     }
 }
 
-/// The live `snapshot` view. Also serves the legacy `get_observability_snapshot`
-/// op as a thin no-SQLite alias (the request carries no view-specific args).
+/// The live `snapshot` view.
 pub(crate) fn snapshot_view_response(
     operations: &SandboxRuntimeOperations,
     observability: Option<&DaemonObservability>,

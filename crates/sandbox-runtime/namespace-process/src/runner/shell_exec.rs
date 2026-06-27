@@ -2,11 +2,15 @@
 
 #[cfg(target_os = "linux")]
 use std::process::{Command, Stdio};
+#[cfg(target_os = "linux")]
+use std::sync::Arc;
 
 #[cfg(target_os = "linux")]
 use super::RunnerError;
 #[cfg(target_os = "linux")]
 use crate::runner::protocol::{NamespaceRunnerRequest, RunResult};
+#[cfg(target_os = "linux")]
+use sandbox_observability::{record, Observer, ObserverConfig, Sink, TraceContext};
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
 
@@ -48,7 +52,7 @@ fn execute_shell_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, Ru
         .stderr(Stdio::inherit());
     install_command_process_group(&mut command);
 
-    let mut child = command.spawn().map_err(RunnerError::Child)?;
+    let mut child = spawn_child(&mut command, request)?;
     let child_pgid = child_process_group(&child)?;
     let (exit_code, timed_out) = match wait_for_command_execution_scope(
         &mut child,
@@ -100,5 +104,38 @@ fn install_command_process_group(command: &mut Command) {
 fn child_process_group(child: &std::process::Child) -> Result<i32, RunnerError> {
     i32::try_from(child.id()).map_err(|_| {
         RunnerError::InvalidRequest(format!("child pid does not fit i32: {}", child.id()))
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn spawn_child(
+    command: &mut Command,
+    request: &NamespaceRunnerRequest,
+) -> Result<std::process::Child, RunnerError> {
+    let Some(ctx) = trace_context(request) else {
+        return command.spawn().map_err(RunnerError::Child);
+    };
+    let Some(path) = request.observability_log_path.clone() else {
+        return command.spawn().map_err(RunnerError::Child);
+    };
+    let obs = Observer::new(
+        ObserverConfig {
+            proc: record::proc::NAMESPACE_PROCESS,
+            enabled: true,
+        },
+        Sink::new(path),
+    );
+    obs.with_context(ctx, || {
+        obs.scope(record::names::NAMESPACE_RUNNER_SPAWN_CHILD, |_| {
+            command.spawn().map_err(RunnerError::Child)
+        })
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn trace_context(request: &NamespaceRunnerRequest) -> Option<TraceContext> {
+    Some(TraceContext {
+        trace: Arc::<str>::from(request.trace.as_deref()?),
+        parent: request.parent.as_deref().map(Arc::<str>::from),
     })
 }

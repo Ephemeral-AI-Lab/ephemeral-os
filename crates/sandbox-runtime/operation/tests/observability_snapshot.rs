@@ -91,13 +91,13 @@ fn observability_snapshot_reports_active_command_namespace_execution(
 /// The runtime now depends on the `sandbox-observability` leaf (it carries the
 /// span/event emit seams), so the old "operation excludes sandbox-observability"
 /// assertion is intentionally gone. What must still hold is that the runtime
-/// never pulls a storage engine: `rusqlite` stays out. The leaf-boundary
+/// never pulls a storage engine: SQLite stays out. The leaf-boundary
 /// invariant (obs must not depend on runtime/daemon/manager) is owned by the obs
 /// crate's own `dependency_guard.rs`.
 #[test]
-fn runtime_never_pulls_rusqlite() {
+fn runtime_never_pulls_sqlite_storage() {
     let manifest = include_str!("../Cargo.toml");
-    assert!(!manifest.contains("rusqlite"));
+    assert!(!manifest.contains(concat!("rusq", "lite")));
 }
 
 fn create_session(

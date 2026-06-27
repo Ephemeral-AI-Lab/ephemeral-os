@@ -189,30 +189,6 @@ fn disabled_gate_emits_no_log() -> TestResult {
 }
 
 #[tokio::test]
-async fn private_snapshot_op_returns_live_summary_without_sqlite() -> TestResult {
-    let root = test_root("private-snapshot");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_SNAPSHOT_OP,
-                "req-private-snapshot",
-                json!({ "resource_window_ms": 60_000 }),
-            )?,
-            false,
-        )
-        .await;
-
-    assert_eq!(response["sandbox_id"], "sandbox-1");
-    assert_eq!(response["lifecycle_state"], "ready");
-    assert_eq!(response["availability"], "available");
-    assert!(response["workspaces"].is_array(), "live (empty) workspaces");
-    assert!(response["resources"].is_object());
-    Ok(())
-}
-
-#[tokio::test]
 async fn cgroup_view_dispatch_returns_series() -> TestResult {
     let root = test_root("cgroup-view");
     let server = daemon_server(&root, Some("sandbox-1"))?;

@@ -17,6 +17,9 @@ fn command_timeout_survives_as_timed_out_result() {
         workdir: None,
         ns_fds: None,
         timeout_seconds: Some(0.05),
+        trace: None,
+        parent: None,
+        observability_log_path: None,
     };
 
     let result =
@@ -24,6 +27,41 @@ fn command_timeout_survives_as_timed_out_result() {
 
     assert_eq!(result.exit_code, 124);
     assert_eq!(result.payload["status"], "timed_out");
+    let _ = std::fs::remove_dir_all(workspace_root);
+}
+
+#[test]
+fn trace_handoff_writes_namespace_process_spawn_span() {
+    let workspace_root = unique_workspace_root();
+    let log_path = workspace_root
+        .join("observability")
+        .join("observability.ndjson");
+    std::fs::create_dir_all(&workspace_root).expect("create workspace root");
+    let request = NamespaceRunnerRequest {
+        request_id: "trace-regression".to_owned(),
+        args: json!({ "command": "true", "cwd": "." }),
+        workspace_root: workspace_root.clone(),
+        layer_paths: vec![],
+        upperdir: None,
+        workdir: None,
+        ns_fds: None,
+        timeout_seconds: Some(5.0),
+        trace: Some("req-child".to_owned()),
+        parent: Some("d-5".to_owned()),
+        observability_log_path: Some(log_path.clone()),
+    };
+
+    let result = crate::runner::shell_exec::execute_shell(&request).expect("command runs");
+
+    assert_eq!(result.exit_code, 0);
+    let line = std::fs::read_to_string(&log_path).expect("span log");
+    let value: serde_json::Value = serde_json::from_str(line.trim()).expect("span json");
+    assert_eq!(value["kind"], "span");
+    assert_eq!(value["trace"], "req-child");
+    assert_eq!(value["span"], "np-0");
+    assert_eq!(value["parent"], "d-5");
+    assert_eq!(value["name"], "namespace.runner.spawn_child");
+    assert_eq!(value["status"], "completed");
     let _ = std::fs::remove_dir_all(workspace_root);
 }
 

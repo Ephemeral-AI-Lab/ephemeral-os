@@ -16,14 +16,6 @@ impl SandboxManagerRouter {
                 error_kind::INVALID_REQUEST,
                 "manager operation requires system scope",
             ),
-            (CliOperationScope::Sandbox { .. }, false)
-                if request.op == crate::operation::PRIVATE_DAEMON_OBSERVABILITY_SNAPSHOT_OP =>
-            {
-                Response::fault(
-                    error_kind::INVALID_REQUEST,
-                    "private daemon operation is manager-internal",
-                )
-            }
             (CliOperationScope::Sandbox { .. }, false) => {
                 self.forward_sandbox_request(request).await
             }

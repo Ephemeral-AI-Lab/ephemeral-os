@@ -199,42 +199,6 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
 }
 
 #[tokio::test]
-async fn manager_router_rejects_private_observability_snapshot_forwarding() {
-    let (services, store, daemon_client) = services();
-    store
-        .insert(ready_record(
-            "sbox-1",
-            Some(SandboxDaemonEndpoint::new(
-                "127.0.0.1",
-                7000,
-                "token-sbox-1",
-            )),
-        ))
-        .expect("insert sandbox");
-    let router = router(services);
-
-    let response = router
-        .dispatch_request(request(
-            "get_observability_snapshot",
-            CliOperationScope::sandbox("sbox-1"),
-            json!({}),
-        ))
-        .await
-        .into_json_value();
-
-    assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
-    assert!(response["error"]["message"]
-        .as_str()
-        .expect("message")
-        .contains("manager-internal"));
-    assert!(daemon_client
-        .invocations
-        .lock()
-        .expect("invocations lock")
-        .is_empty());
-}
-
-#[tokio::test]
 async fn manager_router_rejects_sandbox_scope_when_sandbox_missing() {
     let (services, _store, _daemon_client) = services();
     let router = router(services);

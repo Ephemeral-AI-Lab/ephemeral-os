@@ -7,7 +7,7 @@ mod support;
 
 use std::sync::Arc;
 
-use sandbox_observability::{NoopHook, SpanStatus};
+use sandbox_observability::{NoopHook, SpanStatus, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
 use serde_json::json;
 use support::{
@@ -48,7 +48,15 @@ fn shell_execution_resolves_finalized_output_and_records_terminal() {
     let id = id("ok");
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id.clone(),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("shell admitted");
     assert_eq!(exec.id().0, id.0);
 
@@ -78,6 +86,8 @@ fn shell_finalize_error_resolves_terminal_error() {
             id("finalize_err"),
             |_| {},
             None,
+            None,
+            None,
         )
         .expect("admitted");
     fake.complete_latest(run_result(0, "ok"));
@@ -98,7 +108,15 @@ fn shell_finalize_panic_resolves_terminal_error_and_completes_registry() {
     let id = id("finalize_panic");
 
     let exec = engine
-        .run_shell_interactive(PanicShellOp, sample_target(), id.clone(), |_| {}, None)
+        .run_shell_interactive(
+            PanicShellOp,
+            sample_target(),
+            id.clone(),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("admitted");
     fake.complete_latest(run_result(0, "ok"));
 
@@ -123,7 +141,15 @@ fn wait_completion_error_resolves_terminal_error_and_completes_registry() {
     let id = id("wait_error");
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id.clone(),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("admitted");
     fake.fail_latest_wait("result fd read failed");
 
@@ -145,7 +171,15 @@ fn cancel_unblocks_the_blocked_watcher() {
     let engine = test_engine(&fake, observer.clone(), 4);
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id("cancel"), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id("cancel"),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("admitted");
 
     // The watcher is blocked in wait_completion; cancel trips the fake completion
@@ -164,10 +198,26 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
 
     let first_id = id("1");
     let first = engine
-        .run_shell_interactive(OkShellOp, sample_target(), first_id.clone(), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            first_id.clone(),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("first admitted");
     let refused = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id("2"), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id("2"),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .err()
         .expect("second refused while full");
     assert!(matches!(
@@ -181,7 +231,15 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
     assert!(engine.is_completed(&first_id));
 
     let third = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id("3"), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id("3"),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("readmitted after completion");
     fake.complete_latest(run_result(0, "ok"));
     assert_eq!(third.wait().expect("third resolved"), 0);
@@ -215,7 +273,15 @@ fn shell_request_carries_args_timeout_and_target_fields() {
     let id = id("shell_request");
 
     let exec = engine
-        .run_shell_interactive(TimedShellOp, target.clone(), id.clone(), |_| {}, None)
+        .run_shell_interactive(
+            TimedShellOp,
+            target.clone(),
+            id.clone(),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("admitted");
 
     let requests = fake.recorded_requests();
@@ -227,6 +293,38 @@ fn shell_request_carries_args_timeout_and_target_fields() {
         json!({ "command": "printf ready", "cwd": "." })
     );
     assert_eq!(request.timeout_seconds, Some(2.5));
+
+    fake.complete_latest(run_result(0, "ok"));
+    assert_eq!(exec.wait().expect("resolved"), 0);
+}
+
+#[test]
+fn shell_request_carries_trace_handoff_when_supplied() {
+    let fake = FakeLauncher::new();
+    let observer = Arc::new(FakeObserver::new());
+    let engine = test_engine(&fake, observer, 4);
+    let id = id("shell_trace");
+    let log_path = std::path::PathBuf::from("/tmp/observability.ndjson");
+
+    let exec = engine
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id,
+            |_| {},
+            None,
+            Some(TraceContext {
+                trace: Arc::from("req-1"),
+                parent: Some(Arc::from("d-5")),
+            }),
+            Some(log_path.clone()),
+        )
+        .expect("admitted");
+
+    let request = fake.recorded_requests().pop().expect("request");
+    assert_eq!(request.trace.as_deref(), Some("req-1"));
+    assert_eq!(request.parent.as_deref(), Some("d-5"));
+    assert_eq!(request.observability_log_path, Some(log_path));
 
     fake.complete_latest(run_result(0, "ok"));
     assert_eq!(exec.wait().expect("resolved"), 0);
@@ -319,7 +417,15 @@ fn namespace_execution_id_is_the_runner_request_id() {
     let id = id("42");
 
     let exec = engine
-        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None)
+        .run_shell_interactive(
+            OkShellOp,
+            sample_target(),
+            id.clone(),
+            |_| {},
+            None,
+            None,
+            None,
+        )
         .expect("admitted");
     assert_eq!(exec.id().0, id.0);
     assert_eq!(fake.recorded_request_ids(), vec![id.0.clone()]);

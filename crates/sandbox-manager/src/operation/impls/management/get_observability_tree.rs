@@ -12,6 +12,7 @@ use serde_json::{json, Map, Value};
 const MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS: usize = 8;
 const DEFAULT_DAEMON_SNAPSHOT_TIMEOUT_MS: u64 = 1_500;
 const MAX_NODE_ERROR_BYTES: usize = 4_096;
+const PRIVATE_DAEMON_OBSERVABILITY_OP: &str = "get_observability";
 
 pub(crate) const SPEC: CliOperationSpec = CliOperationSpec {
     name: "get_observability_tree",
@@ -184,11 +185,12 @@ fn private_snapshot_request(
     request_id: &str,
 ) -> Request {
     let mut args = Map::new();
+    args.insert("view".to_owned(), json!("snapshot"));
     if let Some(resource_window_ms) = options.resource_window_ms {
         args.insert("resource_window_ms".to_owned(), json!(resource_window_ms));
     }
     Request::new(
-        crate::operation::PRIVATE_DAEMON_OBSERVABILITY_SNAPSHOT_OP,
+        PRIVATE_DAEMON_OBSERVABILITY_OP,
         format!(
             "{}:{}:observability_snapshot",
             request_id,

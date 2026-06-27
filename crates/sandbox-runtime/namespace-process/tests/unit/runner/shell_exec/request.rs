@@ -53,5 +53,8 @@ fn request(args: serde_json::Value) -> NamespaceRunnerRequest {
         workdir: None,
         ns_fds: None,
         timeout_seconds: None,
+        trace: None,
+        parent: None,
+        observability_log_path: None,
     }
 }

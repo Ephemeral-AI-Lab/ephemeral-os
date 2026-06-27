@@ -213,6 +213,23 @@ pub fn aggregate_layer_changes(changes: &[LayerChange]) -> Vec<LayerChange> {
     by_path.into_values().collect()
 }
 
+/// Total bytes a changeset publishes: in-memory write payloads plus on-disk
+/// file sizes. Deletes, symlinks, and opaque dirs contribute nothing. Saturating
+/// so a pathological changeset cannot overflow.
+#[must_use]
+pub fn published_layer_bytes(changes: &[LayerChange]) -> u64 {
+    changes
+        .iter()
+        .map(|change| match change {
+            LayerChange::Write { content, .. } => u64::try_from(content.len()).unwrap_or(u64::MAX),
+            LayerChange::WriteFile { size, .. } => *size,
+            LayerChange::Delete { .. }
+            | LayerChange::Symlink { .. }
+            | LayerChange::OpaqueDir { .. } => 0,
+        })
+        .fold(0_u64, u64::saturating_add)
+}
+
 fn update_digest(hasher: &mut Sha256, change: &LayerChange) -> io::Result<()> {
     hasher.update(change.kind().as_bytes());
     hasher.update(b"\0");

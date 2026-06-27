@@ -3,7 +3,7 @@ mod service;
 pub(crate) mod view;
 
 pub use service::DaemonObservability;
-pub(crate) use view::{observability_view_response, snapshot_view_response};
+pub(crate) use view::observability_view_response;
 
 /// Maximum resource/trend lookback window honored by the observability views.
 pub(crate) const MAX_RESOURCE_WINDOW_MS: u64 = 600_000;

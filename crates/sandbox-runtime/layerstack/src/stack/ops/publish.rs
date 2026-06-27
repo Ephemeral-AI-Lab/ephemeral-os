@@ -1,14 +1,11 @@
 use std::io::ErrorKind;
 
-use sandbox_observability::record::names;
-use sandbox_observability::Observer;
-
 use crate::error::LayerStackError;
 use crate::fs::{
     allocate_layer_dirs, fsync_dir, fsync_tree_files, layer_digest_path, remove_path,
     write_layer_bytes, write_layer_digest, write_manifest,
 };
-use crate::model::{try_layer_digest, LayerChange, LayerRef, Manifest};
+use crate::model::{published_layer_bytes, try_layer_digest, LayerChange, LayerRef, Manifest};
 use crate::stack::layer::write_layer_changes;
 use crate::stack::publish::model::{PublishValidatedChangesRequest, PublishValidatedChangesResult};
 use crate::stack::publish::{plan_publish, validate_source_paths};
@@ -46,36 +43,6 @@ impl LayerStack {
             manifest: outcome.manifest,
             route_summary: plan.route_summary(),
             no_op: !outcome.created,
-        })
-    }
-
-    /// `publish_validated_changes` wrapped in a `layerstack.publish` span. The
-    /// span records the publish facts (`base`/`revision`/`layers_added`/`bytes`/
-    /// `no_op`) and flips to `error` with `reason="manifest_conflict"` when the
-    /// active manifest moved underneath the publish. The `Observer` is threaded in
-    /// at this boundary; the lock-held domain internals stay obs-free.
-    pub fn publish_validated_changes_traced(
-        &mut self,
-        request: PublishValidatedChangesRequest,
-        obs: &Observer,
-    ) -> Result<PublishValidatedChangesResult, LayerStackError> {
-        let base = request.base.revision.manifest_version;
-        let bytes = published_layer_bytes(&request.changes);
-        obs.scope(names::LAYERSTACK_PUBLISH, |span| {
-            span.attr("base", base).attr("bytes", bytes);
-            let result = self.publish_validated_changes(request);
-            match &result {
-                Ok(published) => {
-                    span.attr("revision", published.manifest.version)
-                        .attr("no_op", published.no_op)
-                        .attr("layers_added", if published.no_op { 0 } else { 1 });
-                }
-                Err(LayerStackError::ManifestConflict { .. }) => {
-                    span.attr("reason", "manifest_conflict");
-                }
-                Err(_) => {}
-            }
-            result
         })
     }
 
@@ -181,19 +148,6 @@ impl LayerStack {
             Err(err) => Err(err.into()),
         }
     }
-}
-
-fn published_layer_bytes(changes: &[LayerChange]) -> u64 {
-    changes
-        .iter()
-        .map(|change| match change {
-            LayerChange::Write { content, .. } => u64::try_from(content.len()).unwrap_or(u64::MAX),
-            LayerChange::WriteFile { size, .. } => *size,
-            LayerChange::Delete { .. }
-            | LayerChange::Symlink { .. }
-            | LayerChange::OpaqueDir { .. } => 0,
-        })
-        .fold(0_u64, u64::saturating_add)
 }
 
 pub(in crate::stack) struct PublishLayerOutcome {

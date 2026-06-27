@@ -5,7 +5,7 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -28,6 +28,11 @@ impl Sink {
             let _ = fs::create_dir_all(parent);
         }
         Self { path }
+    }
+
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
     }
 
     /// Append one record as a single newline-delimited line. The whole line is

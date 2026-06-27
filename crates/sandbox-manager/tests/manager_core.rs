@@ -615,7 +615,7 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
     assert_eq!(invocations.len(), 2);
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.op == "get_observability_snapshot"));
+        .all(|invocation| invocation.op == "get_observability"));
     assert!(invocations.iter().all(|invocation| {
         matches!(
             &invocation.scope,
@@ -623,6 +623,9 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
                 if sandbox_id == "sbox-1" || sandbox_id == "sbox-2"
         )
     }));
+    assert!(invocations
+        .iter()
+        .all(|invocation| invocation.args["view"] == "snapshot"));
     assert!(invocations
         .iter()
         .all(|invocation| invocation.args["resource_window_ms"] == 999_999));

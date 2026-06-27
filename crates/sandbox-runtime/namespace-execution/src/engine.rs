@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use sandbox_observability::{SpanStatus, TerminalHook};
+use sandbox_observability::{SpanStatus, TerminalHook, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
 use serde_json::Value;
 
@@ -90,8 +90,17 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         id: NamespaceExecutionId,
         on_complete: impl FnOnce(&Result<S::Output, NamespaceExecutionError>) + Send + 'static,
         cgroup_procs_path: Option<PathBuf>,
+        trace: Option<TraceContext>,
+        observability_log_path: Option<PathBuf>,
     ) -> Result<InteractiveExecution<S::Output>, NamespaceExecutionError> {
-        let request = build_request(&target, &id, shell_args(op.command()), op.timeout_seconds());
+        let request = build_request(
+            &target,
+            &id,
+            shell_args(op.command()),
+            op.timeout_seconds(),
+            trace,
+            observability_log_path,
+        );
         let transcript_path = op.transcript_path().map(Path::to_path_buf);
         let cancelled = Arc::new(AtomicBool::new(false));
         let op = Box::new(op);
@@ -127,7 +136,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         target: NamespaceTarget,
         id: NamespaceExecutionId,
     ) -> Result<ExecutionHandle<()>, NamespaceExecutionError> {
-        let request = build_request(&target, &id, serde_json::json!({}), None);
+        let request = build_request(&target, &id, serde_json::json!({}), None, None, None);
         let child = self.reserve_spawn(&id, || {
             self.launcher
                 .spawn_overlay_mount(request, self.setup_timeout_s)
@@ -252,7 +261,17 @@ fn build_request(
     id: &NamespaceExecutionId,
     args: Value,
     timeout_seconds: Option<f64>,
+    trace: Option<TraceContext>,
+    observability_log_path: Option<PathBuf>,
 ) -> NamespaceRunnerRequest {
+    let (trace, parent, observability_log_path) = match (trace, observability_log_path) {
+        (Some(trace), Some(path)) => (
+            Some(trace.trace.to_string()),
+            trace.parent.as_ref().map(|parent| parent.to_string()),
+            Some(path),
+        ),
+        _ => (None, None, None),
+    };
     NamespaceRunnerRequest {
         request_id: id.0.clone(),
         args,
@@ -262,5 +281,8 @@ fn build_request(
         workdir: target.workdir.clone(),
         ns_fds: Some(target.ns_fds),
         timeout_seconds,
+        trace,
+        parent,
+        observability_log_path,
     }
 }

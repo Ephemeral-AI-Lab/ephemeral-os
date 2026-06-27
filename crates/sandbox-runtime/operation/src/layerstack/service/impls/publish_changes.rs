@@ -1,3 +1,5 @@
+use sandbox_observability::record::names;
+
 use crate::layerstack::{
     LayerStackRevision, LayerStackService, LayerStackServiceError, PublishChangesRequest,
     PublishChangesResult,
@@ -16,6 +18,8 @@ impl LayerStackService {
             });
         }
 
+        let base_version = base.manifest_version;
+        let bytes = sandbox_runtime_layerstack::published_layer_bytes(&request.changes);
         let publish_request = sandbox_runtime_layerstack::PublishValidatedChangesRequest {
             base: sandbox_runtime_layerstack::PublishBase {
                 manifest: request.base_manifest,
@@ -33,7 +37,22 @@ impl LayerStackService {
                 operation: "open",
                 error,
             })?;
-        let published = match stack.publish_validated_changes_traced(publish_request, &self.obs) {
+        let published = match self.obs.scope(names::LAYERSTACK_PUBLISH, |span| {
+            span.attr("base", base_version).attr("bytes", bytes);
+            let result = stack.publish_validated_changes(publish_request);
+            match &result {
+                Ok(published) => {
+                    span.attr("revision", published.manifest.version)
+                        .attr("no_op", published.no_op)
+                        .attr("layers_added", if published.no_op { 0 } else { 1 });
+                }
+                Err(sandbox_runtime_layerstack::LayerStackError::ManifestConflict { .. }) => {
+                    span.attr("reason", "manifest_conflict");
+                }
+                Err(_) => {}
+            }
+            result
+        }) {
             Ok(published) => published,
             Err(error) => return Err(map_publish_error(error)),
         };

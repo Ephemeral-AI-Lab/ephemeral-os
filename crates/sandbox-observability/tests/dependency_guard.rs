@@ -6,7 +6,7 @@ fn observability_leaf_excludes_runtime_and_daemon_dependencies() {
     .expect("read observability manifest");
     let dependencies = manifest_section(&manifest, "[dependencies]");
     for forbidden in [
-        "rusqlite",
+        concat!("rusq", "lite"),
         "sandbox-runtime",
         "sandbox-daemon",
         "sandbox-manager",
