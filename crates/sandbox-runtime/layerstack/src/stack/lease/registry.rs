@@ -14,7 +14,7 @@ pub(in crate::stack) struct LayerStackLeaseRecord {
 }
 
 #[derive(Debug, Default)]
-pub(in crate::stack) struct LeaseRegistry {
+pub(crate) struct LeaseRegistry {
     leases: HashMap<String, LayerStackLeaseRecord>,
 }
 
@@ -31,7 +31,7 @@ pub(in crate::stack) fn shared_registry_for_root(
         .clone())
 }
 
-pub(in crate::stack) fn lock_shared_registry(
+pub(crate) fn lock_shared_registry(
     registry: &Arc<Mutex<LeaseRegistry>>,
 ) -> Result<MutexGuard<'_, LeaseRegistry>, LayerStackError> {
     registry
@@ -80,11 +80,11 @@ impl LeaseRegistry {
             .collect()
     }
 
-    pub(in crate::stack) fn active_count(&self) -> usize {
+    pub(crate) fn active_count(&self) -> usize {
         self.leases.len()
     }
 
-    pub(in crate::stack) fn lease_newest_layers(&self) -> Vec<LayerRef> {
+    pub(crate) fn lease_newest_layers(&self) -> Vec<LayerRef> {
         self.leases
             .values()
             .filter_map(|lease| lease.manifest.layers.first().cloned())

@@ -2,6 +2,7 @@
 
 mod error;
 mod model;
+mod observability;
 pub mod service;
 mod stack;
 mod storage;

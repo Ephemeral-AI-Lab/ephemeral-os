@@ -8,6 +8,8 @@ pub(crate) mod fs;
 pub(crate) mod lock;
 #[path = "../src/model/mod.rs"]
 mod model;
+#[path = "../src/observability.rs"]
+mod observability;
 #[path = "../src/service/mod.rs"]
 pub mod service;
 #[path = "../src/stack/mod.rs"]
