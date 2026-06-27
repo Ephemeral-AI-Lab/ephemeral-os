@@ -648,7 +648,9 @@ impl<K: Eq + Hash> SpanRegistry<K> {
         ctx: Option<TraceContext>,
         name: &'static str,
         f: impl FnOnce(Option<TraceContext>) -> Result<T, E>,
-    ) -> Result<T, E>;
+    ) -> Result<T, E>
+    where
+        K: Clone;
 
     pub fn record(&self, id: &K, status: SpanStatus, attrs: impl Into<Value>);
 
@@ -660,7 +662,7 @@ Shape rules:
 
 - No standalone `AsyncSpan` handle.
 - `open` and `cancel` are crate-private.
-- `launch` is the public launch path.
+- `launch` is the public launch path; it requires `K: Clone` (parks the id, retains it to `cancel` on `Err`).
 - `record` pops by id and writes one completed async span.
 - `Drop` records remaining open spans as `Cancelled`.
 
@@ -727,11 +729,14 @@ pub struct DaemonObservability {
     paths: ObservabilityPaths,
     observer: Observer,
     max_file_bytes: u64,
+    rotate_lock: Mutex<()>,
 }
 ```
 
 `observer` can be represented as a `Sink` only if no span/event API is needed at
-that layer yet, but the intended shape is `Observer`.
+that layer yet, but the intended shape is `Observer`. `rotate_lock` serializes
+`rotate_if_needed` so two concurrent `collect()` ticks can't both rename and
+clobber freshly rotated history (the size is re-checked under the lock).
 
 ### Method shape changes
 

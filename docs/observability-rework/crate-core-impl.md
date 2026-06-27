@@ -544,7 +544,7 @@ be a **new call site, not a crate change**. What is open vs. closed:
 |---|---|---|
 | span   | `name`, `attrs` (incl. `exit_code`), nesting via `parent` | `SpanStatus` enum |
 | event  | `name`, `attrs` — fully open | — |
-| sample | `scope`, every `metrics` key, and its counter/gauge tag (set at emit) — fully open | — |
+| sample | `scope`, every non-`_` `metrics` key, and its counter/gauge tag (set at emit) — fully open | `_`-prefixed keys are reserved meta (`_counters`, `_truncated`) |
 | trace  | any participant joins by sharing `trace` + `parent` | single `parent` ⇒ tree, not DAG |
 | async source | wire a `SpanRegistry<ItsId>` as `TerminalHook<K>` (blanket impl) + impl `SpanKeyAttrs` for `ItsId` | — |
 
@@ -645,7 +645,7 @@ a span-less explicit-parent emit is `with_context(ctx, || obs.event(name, attrs)
 |---|---|---|---|---|
 | `new` | `obs: Observer` | `SpanRegistry<K>` | — | empty registry sharing the `Core` |
 | `open` *(pub(crate))* | `id: K, ctx: TraceContext, name: &'static str` | `TraceContext` | — | internal to `launch`: mint span id + park; self-stamp start; return child ctx `{ trace, parent: <new id> }` (M7) |
-| `launch` | `id: K, ctx: Option<TraceContext>, name: &'static str, f: impl FnOnce(Option<TraceContext>) -> Result<T, E>` | `Result<T, E>` | on `record` | open iff `ctx` is `Some`, pass child ctx to `f`, `cancel` on `Err` (M3) |
+| `launch` | `id: K, ctx: Option<TraceContext>, name: &'static str, f: impl FnOnce(Option<TraceContext>) -> Result<T, E>` | `Result<T, E>` | on `record` | open iff `ctx` is `Some`, pass child ctx to `f`, `cancel` on `Err` (M3); requires `K: Clone` (id parked, then retained for `cancel`) |
 | `record` | `id: &K, status: SpanStatus, attrs: impl Into<Value>` | `()` | **now** | pop + write one `Span`; `dur_ms = now − start`; no-op if `id` was never parked |
 | `cancel` *(pub(crate))* | `id: &K` | `()` | — | internal to `launch`: pop without writing; no-op if `id` was never parked |
 | *(Drop)* | — | — | `record` leftovers as `Cancelled` (shutdown sweep) |

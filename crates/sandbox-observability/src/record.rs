@@ -18,6 +18,17 @@ pub type Attrs = serde_json::Map<String, serde_json::Value>;
 /// `{"_truncated": <byte_len>}` marker (see `Sink::append`).
 pub const MAX_LINE_BYTES: usize = 16 * 1024;
 
+/// Emit-site tag naming which `Sample.metrics` keys are monotonic counters: the
+/// emitter owns the metric vocabulary and marks counter keys here, so the
+/// `Reader` Δs exactly these and leaves gauges untouched. Rides in-band in the
+/// flattened sample line and is stripped from the presented view. The `_` prefix
+/// marks a reserved system meta-key that callers must not emit themselves.
+pub const COUNTERS_METRIC_KEY: &str = "_counters";
+
+/// Marker the `Sink` writes when a record line exceeds `MAX_LINE_BYTES`, carrying
+/// the original `attrs`/`metrics` byte length. Reserved like `COUNTERS_METRIC_KEY`.
+pub const TRUNCATED_KEY: &str = "_truncated";
+
 /// Named `<proc>` tokens for the `"<proc>-<seq>"` span id (§2.3). One per OS
 /// process so the daemon (`d-*`) and forked namespace-process (`np-*`) never
 /// collide on one file.
@@ -36,7 +47,6 @@ pub mod proc {
 ///   `namespace.exec.mount_overlay`, `layerstack.publish`.
 /// - **events** = `subsystem.fact` (past-tense) — `lease.acquired`, `lease.released`.
 pub mod names {
-    // Spans.
     /// Daemon request dispatch span (trace root).
     pub const DAEMON_DISPATCH: &str = "daemon.dispatch";
     /// Command execution span.
@@ -54,7 +64,6 @@ pub mod names {
     /// Layerstack publish span.
     pub const LAYERSTACK_PUBLISH: &str = "layerstack.publish";
 
-    // Events.
     /// A layer lease was acquired.
     pub const LEASE_ACQUIRED: &str = "lease.acquired";
     /// A layer lease was released.

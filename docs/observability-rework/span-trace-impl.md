@@ -185,45 +185,41 @@ promise.resolve(result);
   maps to `SpanStatus` via a small `to_span_status()` on the local type (avoids an
   orphan `From` impl).
 
-With m1's blanket `impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K>`
-(`crate-core-impl.md` §3.4), the `SpanRegistry<NamespaceExecutionId>` **is** the engine's
-terminal hook. The blanket impl folds the generic terminal payload (`async:true`,
-`exit_code`) plus the key's own domain attrs (`id.write_attrs`) into the one Span record at
-`on_terminal`, which calls `record`:
+With the blanket `impl<K> TerminalHook<K> for SpanRegistry<K>` (`crate-core-impl.md` §3.4),
+the `SpanRegistry<NamespaceExecutionId>` **is** the engine's terminal hook — no per-source
+adapter type and no per-key trait. The blanket impl folds the one generic terminal datum
+(`exit_code`, when present) into the parked span at `on_terminal`, which calls `record`:
 
 ```rust
-impl<K: SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> {
+impl<K: Eq + Hash + Send + Sync> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
         let mut attrs = Attrs::new();
-        attrs.insert("async".into(), true.into());
         if let Some(code) = exit_code { attrs.insert("exit_code".into(), code.into()); }
-        id.write_attrs(&mut attrs);       // domain residual, e.g. exec_id = id.0 (SpanKeyAttrs)
         self.record(id, status, attrs);   // pop + self-stamp end + write the one Span
     }
 }
 ```
 
-The namespace's `exec_id = id.0` is the single domain residual, folded by
-`NamespaceExecutionId`'s own `SpanKeyAttrs` impl (in `namespace-execution`: a foreign trait
-on a local type, orphan-legal) — **not** a second `TerminalHook` impl on `SpanRegistry`,
-which would overlap the blanket impl (E0119). The caller
-drives the registry directly — `spans.launch(id, ctx, name, |child_ctx| …)` at launch (M3),
-`on_terminal` → `record` at child-exit. No bespoke map, lock, or `remove`-then-`end`
-dance: it is all in `SpanRegistry`, so the next async source (background compaction, GC,
-prefetch) reuses the same primitive with a different `K` and the **same** blanket hook —
-the extensibility the rework is built for (`crate-core-impl.md` §3.4/§3.6).
+The caller drives the registry directly — `exec_spans.launch(id, ctx, name, |child_ctx| …)`
+at launch (M3), `on_terminal` → `record` at child-exit. No bespoke map, lock, per-key trait,
+or `remove`-then-`end` dance: it is all in `SpanRegistry`, so the next async source
+(background compaction, GC, prefetch) reuses the same primitive with a different `K` and the
+**same** blanket hook — the extensibility the rework is built for (`crate-core-impl.md`
+§3.4/§3.6). A source that needs a domain attr on its span folds it at its own `record` call;
+the namespace exec span needs none — `exec_id` was dropped as unread (the live id comes from
+the engine registry, not the span), so the span carries only `exit_code` + `status`.
 
 **Wiring (one registry, both sides).** `core.rs:new` builds
-`let exec_obs = Arc::new(SpanRegistry::new(observer.clone()));` and wires the **same**
-`exec_obs` to both the engine (as `Arc<dyn TerminalHook<NamespaceExecutionId>>`, via the
-blanket impl m1) and the service — `with_engine(workspace, config, engine, exec_obs)`
+`let exec_spans = Arc::new(SpanRegistry::new(obs.clone()));` and wires the **same**
+`exec_spans` to both the engine (as `Arc<dyn TerminalHook<NamespaceExecutionId>>`, via the
+blanket impl) and the service — `with_engine(workspace, config, engine, exec_spans)`
 (m4) — so `launch` and `on_terminal` share one registry instance and a span can never
 park where nothing records. The engine only ever calls the trait method `on_terminal`;
 the service calls `launch`.
 
 - **Launch the shell span (M3).** `exec_command` (`exec_command.rs:35-65`) allocates the
   id (`:35`) and calls `run_shell_interactive(..., id.clone(), ...)` (`:59`). Wrap that
-  launch in `exec_obs.launch(id.clone(), obs.context(), "namespace.exec.shell", |child_ctx| …)`
+  launch in `exec_spans.launch(id.clone(), obs.context(), "namespace.exec.run_shell", |child_ctx| …)`
   (thread-local `TraceContext`, §2): `launch` opens the parked span when context exists,
   passes the child ctx to the launch body, and `cancel`s the parked span **internally** if
   the body returns `Err` before the watcher exists (`exec_command.rs:66-76`) — so there is
@@ -237,15 +233,17 @@ the service calls `launch`.
   exists at launch because the id is minted there, not at completion
   (`removal-and-phaseb-impl.md` §B.2).
 - **Record / write.** `on_terminal` (watcher thread, right after child-exit) calls
-  `exec_obs.record(id, …)`, which pops the parked span and writes the **one** span record
+  `exec_spans.record(id, …)`, which pops the parked span and writes the **one** span record
   — on whichever thread finishes the work (`README.md` §3.1), self-stamping the end. If a
   watcher dies before `on_terminal`, the registry's shutdown sweep emits the span as
   `cancelled` at process teardown (`crate-core-impl.md` §3.4) — a backstop, not a
   per-span guarantee. This is Case A's `d-5` (the shell, which lands at ~4.27 s, after
   the call returned at ~1.05 s); `d-4` (`mount_overlay`) is now a sync guard (§5), not
   this hook.
-- `attrs`: `exec_id = id.0`, `async = true`, `exit_code` (in attrs, not a field —
-  `crate-core-impl.md` §2.1). No command line (redaction, `crate-core-impl.md` §3.4).
+- `attrs`: `exit_code` (in attrs, not a field — `crate-core-impl.md` §2.1). No `exec_id`
+  and no `async` flag — both were unread: the async shape is derivable from completion
+  order (the async span records after its parent call returned) and the live id comes from
+  the engine registry, not the span. No command line (redaction, `crate-core-impl.md` §3.4).
 
 ---
 
@@ -257,8 +255,10 @@ grammar — the former timing labels, renamed where it applies (`README.md` §8.
 combinator (`crate-core-impl.md` §3.4 / M2) so an early-return or explicit `Err`
 sets `status:"error"` before the guard drops only when the status is still `Completed` —
 a bare `obs.span(name)` guard that just drops records `completed`, which is correct only
-for an infallible success-with-no-facts scope. Attach facts with `.attr()`; an explicit `Err` arm can chain
-`.status(SpanStatus::Error)` (m2, now `-> &Self`). The Case A waterfall (`README.md`
+for an infallible success-with-no-facts scope. Attach facts with `.attr()`. Inside a
+`scope` do **not** set `Error` by hand — the combinator does it; reserve manual `.status()`
+for a non-`Error` terminal outcome (`TimedOut`/`Cancelled`) or the `daemon.dispatch`
+`Response` seam (§2), which `scope` cannot cover. The Case A waterfall (`README.md`
 §4.1) fixes the minimum set:
 
 | Span `name` | Site | Notes |
@@ -270,7 +270,7 @@ for an infallible success-with-no-facts scope. Attach facts with `.attr()`; an e
 | `workspace_session.capture_changes` | `capture_session_changes.rs:7` | `d-6`; one-shot finalize tail (§7), parent `d-1` |
 | `workspace_session.destroy` | `destroy_session.rs:7` | `d-8`; one-shot finalize tail (§7), parent `d-1` |
 
-The engine-side `namespace.exec.shell` span is async (§4), not a sync guard;
+The engine-side `namespace.exec.run_shell` span is async (§4), not a sync guard;
 `namespace.exec.mount_overlay` is now a **sync** guard (above, C1). Other former labels
 (`runtime.exec.*`, `namespace.runner.*`, `workspace.destroy.*`) may be added as nested
 guards where cheap, but the table above is the contract the integration test asserts.
@@ -283,19 +283,27 @@ Each guard nests automatically via the thread-local parent set by its enclosing 
 With the runtime now depending on the obs leaf (§3), emit the lease facts as `event`
 records. They nest under the enclosing span via the thread-local parent, so each is a
 plain `obs.event(name, attrs)` — no `ctx` threading. **Label grammar (M10):** events are
-`subsystem.fact` (past-tense), spans are `subsystem[.area].action` (imperative) — except
-the `namespace.exec.<kind>` family, whose leaf inherits the engine's exec-kind names
-(`namespace.exec.shell` is a noun); state this rule next to `record::names` so the on-disk
-vocabulary does not drift. The Case A
+`subsystem.fact` (past-tense), spans are `subsystem[.area].action` (imperative) —
+uniformly, including the `namespace.exec.*` family (`namespace.exec.run_shell`,
+`namespace.exec.mount_overlay`, both imperative); state this rule next to `record::names`
+so the on-disk vocabulary does not drift. The Case A
 lease facts are `lease.acquired` (at session create) and `lease.released` (at one-shot
 destroy after publish), served as
 `events` view rows (`cli-observability.md` §3.4, via `Reader::raw(kind=event, name=…)`,
 `crate-core-impl.md` §3.3).
 
+**Emit at the layerstack service boundary, not in the domain crate.** `acquire_snapshot`
+(`stack/mod.rs:75`) and the `pub(in crate::stack)` `release_lease_locked` (`cleanup.rs:11`)
+take only domain params and have **no** `Observer` — §3 threads the `Observer` into the
+layerstack **service**, not into `LayerStack`. So emit each event one level up, where the
+service calls the domain op and the thread-local parent is already set; the returned `Lease`
+already carries the `revision`. This keeps the domain types obs-free (the leaf edge points
+into the service, not the lock-held internals).
+
 | Event `name` | Site | `attrs` |
 |---|---|---|
-| `lease.acquired` | `stack/mod.rs:acquire_snapshot` (after `leases.acquire`, `:78-81`) | `revision` (= manifest newest layer / version) |
-| `lease.released` | `cleanup.rs:release_lease_locked` after `leases.release` (`:16`) | `revision` of the released lease (Case A releases the original `r5` lease even when the publish span creates `r6`) |
+| `lease.acquired` | layerstack **service**, right after `acquire_snapshot` returns the `Lease` (nests under `workspace_session.create`, `d-2`) | `revision` (= manifest newest layer / version), read off the returned `Lease` |
+| `lease.released` | layerstack **service** release path, right after `release_lease` returns (nests under `workspace_session.destroy`, `d-8`) | `revision` of the released lease (Case A releases the original `r5` lease even when the publish span creates `r6`) |
 
 **`layerstack.publish` is a sync span, not an event (M9).** `publish_layer_unlocked`
 (`publish.rs:65-116`) does real variable-duration I/O (per-file `fsync`, `fsync_dir`,
@@ -365,7 +373,7 @@ Inside `finalize_one_shot`, `workspace_session.capture_changes` (`d-6`),
 `layerstack.publish` (`d-7`), and `workspace_session.destroy` (`d-8`) read the
 thread-local (parent = `d-1`). The `lease.released` event (`obs.event(...)`, §6)
 then reads the destroy span's thread-local parent and attaches under `d-8`. These tail
-spans are siblings of `namespace.exec.shell` under `d-1`, not children of the shell span;
+spans are siblings of `namespace.exec.run_shell` under `d-1`, not children of the shell span;
 `README.md` §4.1 / `cli-observability.md` §4.2 render that shape.
 
 This in-process threading is what makes Case A's async tail (`d-5`, `d-6`/`d-7`/`d-8`,
@@ -416,7 +424,7 @@ gone) or the cross-process fork (Phase B).
 ## 10. Testing
 
 - **Integration (Case A):** an `exec_command` with no existing session produces, in
-  one `observability.ndjson`: one record per span; `namespace.exec.shell` written on
+  one `observability.ndjson`: one record per span; `namespace.exec.run_shell` written on
   terminal under `req-…` with `start = ts - dur_ms` before its own `ts` and **before**
   the finalize tail (recorded at child-exit, before finalize); the finalize
   `workspace_session.capture_changes`, `layerstack.publish`, and `workspace_session.destroy`

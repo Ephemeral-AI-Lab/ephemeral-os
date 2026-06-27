@@ -3,6 +3,8 @@
 //! reshape live runtime state + the latest samples into the `snapshot`/`cgroup`
 //! views. No storage engine, no write-time deltas — deltas are read-time.
 
+use std::sync::{Mutex, PoisonError};
+
 use sandbox_observability::collect::cgroup::CgroupSample;
 use sandbox_observability::collect::disk;
 use sandbox_observability::{
@@ -30,6 +32,7 @@ pub struct DaemonObservability {
     paths: ObservabilityPaths,
     observer: Observer,
     max_file_bytes: u64,
+    rotate_lock: Mutex<()>,
 }
 
 impl DaemonObservability {
@@ -52,6 +55,7 @@ impl DaemonObservability {
             paths,
             observer,
             max_file_bytes: config.observability.max_file_bytes,
+            rotate_lock: Mutex::new(()),
         })
     }
 
@@ -96,9 +100,15 @@ impl DaemonObservability {
     }
 
     /// Rotate `observability.ndjson` → `observability.ndjson.1` (replacing any
-    /// prior `.1`) once it exceeds the cap. The `Sink` opens its fd per append,
-    /// so the next sample re-creates the primary log — no explicit reopen.
+    /// prior `.1`) once it exceeds the cap. Serialized by `rotate_lock` with the
+    /// size re-checked under it, so two concurrent `collect()` ticks can't both
+    /// rename and clobber freshly rotated history. The `Sink` opens its fd per
+    /// append, so the next sample re-creates the primary log — no explicit reopen.
     fn rotate_if_needed(&self) {
+        let _guard = self
+            .rotate_lock
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         let Ok(metadata) = std::fs::metadata(self.paths.log_path()) else {
             return;
         };
@@ -298,5 +308,5 @@ fn cgroup_metrics(cgroup: &CgroupSample) -> Map<String, Value> {
 }
 
 fn tag_counters(metrics: &mut Map<String, Value>) {
-    metrics.insert("_counters".to_owned(), json!(COUNTER_KEYS));
+    metrics.insert(record::COUNTERS_METRIC_KEY.to_owned(), json!(COUNTER_KEYS));
 }

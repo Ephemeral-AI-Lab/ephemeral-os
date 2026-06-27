@@ -15,7 +15,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use serde_json::Value;
 
-use crate::record::{Attrs, Event, Record, Sample, Span, SpanIds, SpanStatus};
+use crate::record::{Attrs, Event, Record, Sample, Span, SpanIds, SpanStatus, COUNTERS_METRIC_KEY};
 use crate::sink::Sink;
 use crate::unix_now_ms;
 
@@ -132,10 +132,18 @@ impl Observer {
         if !self.core.enabled {
             return;
         }
+        let metrics = value_to_attrs(metrics.into());
+        debug_assert!(
+            metrics
+                .keys()
+                .all(|key| !key.starts_with('_') || key == COUNTERS_METRIC_KEY),
+            "sample metric keys starting with '_' are reserved for system meta; \
+             only the emit-site counter tag may be supplied by callers"
+        );
         let sample = Sample {
             ts: unix_now_ms(),
             scope: scope.to_owned(),
-            metrics: value_to_attrs(metrics.into()),
+            metrics,
         };
         let _ = self.core.sink.append(&Record::Sample(sample));
     }
@@ -311,7 +319,8 @@ impl<K: Eq + Hash> SpanRegistry<K> {
     /// The public launch path: `open` iff `ctx` is `Some` (passing the child
     /// context to `f`), run `f`, and `cancel` internally on `Err` — so the
     /// open↔record/cancel pairing can't be broken and a failed launch writes no
-    /// bogus `cancelled`.
+    /// bogus `cancelled`. Requires `K: Clone`: the id is parked under `open` and
+    /// retained to `cancel` the same entry on `Err`.
     pub fn launch<T, E>(
         &self,
         id: K,
@@ -392,7 +401,7 @@ impl<K> TerminalHook<K> for NoopHook {
 /// A new async source wires its `SpanRegistry<ItsId>` as the hook directly — no
 /// adapter type and no per-source impl; the generality lives entirely in `<K>`.
 /// Source-specific terminal facts ride in the `record` attrs, not a wider trait.
-impl<K: Eq + Hash + Send + Sync> TerminalHook<K> for SpanRegistry<K> {
+impl<K: Eq + Hash + Send> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
         let mut attrs = Attrs::new();
         if let Some(exit_code) = exit_code {

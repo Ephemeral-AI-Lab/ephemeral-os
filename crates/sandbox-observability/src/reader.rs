@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::record::{Attrs, Event, Record, Span};
+use crate::record::{Attrs, Event, Record, Span, COUNTERS_METRIC_KEY};
 use crate::unix_now_ms;
 
 /// Reader over the one append-only log and its single rotated sibling.
@@ -54,7 +54,9 @@ pub struct EventNode {
 pub struct SampleDelta {
     pub ts: i64,
     pub scope: String,
-    /// Raw metric values with reserved `_`-prefixed keys stripped.
+    /// Raw metric values with the internal `_counters` tag stripped; a
+    /// `_truncated` marker (set when the sample line was capped) is preserved as
+    /// the truncation signal.
     pub metrics: Attrs,
     /// Counter deltas versus the previous in-window sample of this scope.
     pub deltas: Attrs,
@@ -221,6 +223,16 @@ fn span_start(span: &Span) -> f64 {
     span.ts as f64 - span.dur_ms
 }
 
+/// The parent key a span attaches under within its own trace: its `parent` when
+/// that parent is itself present in the trace, otherwise `None` — a span whose
+/// parent lies outside this trace is re-rooted, not dropped.
+fn in_trace_parent(span: &Span, span_ids: &std::collections::HashSet<String>) -> Option<String> {
+    match &span.parent {
+        Some(parent) if span_ids.contains(parent) => Some(parent.clone()),
+        _ => None,
+    }
+}
+
 fn build_trace_forest(spans: Vec<Span>, events: Vec<Event>) -> Vec<SpanNode> {
     if spans.is_empty() {
         return Vec::new();
@@ -241,11 +253,7 @@ fn build_trace_forest(spans: Vec<Span>, events: Vec<Event>) -> Vec<SpanNode> {
     let mut children_by_parent: std::collections::HashMap<Option<String>, Vec<Span>> =
         std::collections::HashMap::new();
     for span in spans {
-        // A span whose parent is outside this trace is treated as a root.
-        let key = match &span.parent {
-            Some(parent) if span_ids.contains(parent) => Some(parent.clone()),
-            _ => None,
-        };
+        let key = in_trace_parent(&span, &span_ids);
         children_by_parent.entry(key).or_default().push(span);
     }
 
@@ -295,15 +303,9 @@ fn build_nodes(
         .collect()
 }
 
-const COUNTERS_KEY: &str = "_counters";
-
-fn is_meta_key(key: &str) -> bool {
-    key.starts_with('_')
-}
-
 fn counter_keys(metrics: &Attrs) -> Vec<String> {
     metrics
-        .get(COUNTERS_KEY)
+        .get(COUNTERS_METRIC_KEY)
         .and_then(Value::as_array)
         .map(|entries| {
             entries
@@ -317,7 +319,7 @@ fn counter_keys(metrics: &Attrs) -> Vec<String> {
 fn presented_metrics(metrics: &Attrs) -> Attrs {
     metrics
         .iter()
-        .filter(|(key, _)| !is_meta_key(key))
+        .filter(|(key, _)| key.as_str() != COUNTERS_METRIC_KEY)
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect()
 }

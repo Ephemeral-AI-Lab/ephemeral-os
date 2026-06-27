@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use serde_json::Value;
 
-use crate::record::{Attrs, Event, Record, Sample, Span, MAX_LINE_BYTES};
+use crate::record::{Attrs, Event, Record, Sample, Span, MAX_LINE_BYTES, TRUNCATED_KEY};
 
 /// Append-only sink over one log file. The parent directory is created once at
 /// construction; each append opens an `O_APPEND` fd, robust to the daemon
@@ -73,6 +73,6 @@ fn truncate(record: &Record, original_len: usize) -> Record {
 
 fn marker(original_len: usize) -> Attrs {
     let mut map = Attrs::new();
-    map.insert("_truncated".to_owned(), Value::from(original_len));
+    map.insert(TRUNCATED_KEY.to_owned(), Value::from(original_len));
     map
 }

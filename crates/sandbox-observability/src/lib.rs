@@ -17,7 +17,10 @@ pub use observer::{
 };
 pub use paths::{ObservabilityPathError, ObservabilityPaths};
 pub use reader::{EventNode, RawFilter, Reader, SampleDelta, SpanNode};
-pub use record::{Attrs, Event, Record, Sample, Span, SpanStatus, MAX_LINE_BYTES};
+pub use record::{
+    Attrs, Event, Record, Sample, Span, SpanStatus, COUNTERS_METRIC_KEY, MAX_LINE_BYTES,
+    TRUNCATED_KEY,
+};
 pub use sink::Sink;
 
 /// Current unix time in milliseconds — the single clock the emit/read sides
