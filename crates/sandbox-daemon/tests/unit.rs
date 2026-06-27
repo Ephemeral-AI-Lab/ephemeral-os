@@ -59,6 +59,13 @@ mod observability_tests {
     ));
 }
 
+mod observability_layerstack_tests {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/observability_layerstack.rs"
+    ));
+}
+
 mod cgroup_tests {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/unit/cgroup.rs"));
 }

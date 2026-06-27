@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use sandbox_runtime_layerstack::service::StackObservation;
+
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
 use crate::observability::RuntimeObservabilitySnapshot;
@@ -73,6 +75,22 @@ impl SandboxRuntimeOperations {
             active_namespace_executions,
             partial_errors,
         }
+    }
+
+    /// Live per-layer lease breakdown of the active manifest (in-memory state).
+    ///
+    /// The daemon merges this with the observability leaf reader's disk byte
+    /// sizes (keyed by layer id) to render the `layerstack` inventory.
+    pub fn observe_layerstack(
+        &self,
+    ) -> Result<StackObservation, crate::layerstack::LayerStackServiceError> {
+        self.layerstack.observe()
+    }
+
+    /// Storage root of the layer stack, for the observability leaf byte reader.
+    #[must_use]
+    pub fn layer_stack_root(&self) -> &std::path::Path {
+        self.layerstack.layer_stack_root()
     }
 }
 

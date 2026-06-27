@@ -6,6 +6,7 @@ use sandbox_protocol::{decode_request_value, error_kind, Request, DAEMON_AUTH_FI
 use serde_json::{Map, Value};
 
 pub(crate) const PRIVATE_OBSERVABILITY_SNAPSHOT_OP: &str = "get_observability_snapshot";
+pub(crate) const PRIVATE_OBSERVABILITY_OP: &str = "get_observability";
 pub(crate) const PRIVATE_DAEMON_READY_OP: &str = "sandbox_daemon_ready";
 const DAEMON_NAME: &str = "sandbox-daemon";
 
@@ -51,6 +52,9 @@ impl SandboxDaemonServer {
         if request.op == PRIVATE_OBSERVABILITY_SNAPSHOT_OP {
             return self.dispatch_private_observability_snapshot(request).await;
         }
+        if request.op == PRIVATE_OBSERVABILITY_OP {
+            return self.dispatch_private_observability(request).await;
+        }
         let operations = Arc::clone(&self.operations);
         let task = tokio::task::spawn_blocking(move || {
             sandbox_runtime::dispatch_operation(&operations, &request).into_json_value()
@@ -68,6 +72,27 @@ impl SandboxDaemonServer {
             Err(err) => super::error_response(
                 error_kind::INTERNAL_ERROR,
                 format!("daemon request failed: {err}"),
+                serde_json::json!({}),
+            ),
+        }
+    }
+
+    async fn dispatch_private_observability(&self, request: Request) -> Value {
+        let operations = Arc::clone(&self.operations);
+        let task = tokio::task::spawn_blocking(move || {
+            crate::observability::observability_view_response(&operations, &request)
+                .into_json_value()
+        });
+        match task.await {
+            Ok(response) => response,
+            Err(err) if err.is_cancelled() => super::error_response(
+                error_kind::INTERNAL_ERROR,
+                "daemon observability request cancelled",
+                serde_json::json!({}),
+            ),
+            Err(err) => super::error_response(
+                error_kind::INTERNAL_ERROR,
+                format!("daemon observability request failed: {err}"),
                 serde_json::json!({}),
             ),
         }

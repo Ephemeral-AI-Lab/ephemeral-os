@@ -21,6 +21,7 @@ pub use namespace_execution::{
     NamespaceExecutionId, NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };
 pub use observability::{RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot};
+pub use sandbox_runtime_layerstack::service::{LayerStatus, StackObservation};
 pub use services::{
     NamespaceExecutionRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
