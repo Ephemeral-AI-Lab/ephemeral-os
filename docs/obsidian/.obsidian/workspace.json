@@ -13,7 +13,7 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "file": "ephemeral-os/daily-progress-tracker/2026-06-27.md",
                 "mode": "source",
                 "source": false
               },
@@ -53,7 +53,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "tag:#task/main",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -74,7 +74,8 @@
               "title": "Bookmarks"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "horizontal",
@@ -94,7 +95,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "file": "ephemeral-os/daily-progress-tracker/2026-06-27.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -113,7 +114,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "file": "ephemeral-os/daily-progress-tracker/2026-06-27.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
@@ -156,7 +157,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "file": "ephemeral-os/daily-progress-tracker/2026-06-27.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
@@ -183,21 +184,24 @@
       "bases:Create new base": false
     }
   },
-  "active": "bfb8ca6220b437db",
+  "active": "44262734f76a6936",
   "lastOpenFiles": [
     "ephemeral-os/docs/cli-gateway-manager-runtime.md",
     "ephemeral-os/daily-planner/2026-06-27.md",
+    "ephemeral-os/daily-progress-tracker/2026-06-27.md",
+    "ephemeral-os/daily-progress-tracker",
     "ephemeral-os/index.md",
-    "ephemeral-os/docs/cli-gateway-manager-runtime/Untitled.md",
-    "ephemeral-os/docs/Untitled.canvas",
-    "ephemeral-os/docs/cli-gateway-manager-runtime",
+    "ephemeral-os/daily-planner/2026-06-27.md.tmp.92696.7e4ecbf18c4f",
     "ephemeral-os/roadmap.md",
-    "daily-planner.md",
-    "docs.md",
-    "index.md",
     "ephemeral-os/docs",
     "ephemeral-os/daily-planner",
     "ephemeral-os",
+    "ephemeral-os/docs/cli-gateway-manager-runtime/Untitled.md",
+    "ephemeral-os/docs/Untitled.canvas",
+    "ephemeral-os/docs/cli-gateway-manager-runtime",
+    "daily-planner.md",
+    "docs.md",
+    "index.md",
     "roadmap.md"
   ]
 }

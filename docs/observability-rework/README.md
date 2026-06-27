@@ -25,7 +25,7 @@ and the rendered views, for real scenarios. The rest is structure around those
 examples.
 
 > **Companion:** `layerstack-observability.md` extends this spec with a third
-> `collect/` reader (layer count / per-layer bytes from disk), pinned-layer
+> `collect/` reader (layer count / per-layer bytes from disk), leased/booked-by
 > counts from the runtime registry, and a cgroup `io.stat` field — additive, no
 > record-kind or schema change.
 
@@ -483,7 +483,7 @@ scan of up to two files, bounded by the size cap). **Pull is one-shot** —
 | `trace` | one flow as a span waterfall (events attached inline) | log |
 | `events` | a flat, cross-trace stream of domain facts, by name/time | log |
 | `cgroup` | resource series for a scope: cpu/mem/io **+ disk** | log |
-| `layerstack` | layer inventory + refcounts + stack series (see side spec) | registry + disk/log |
+| `layerstack` | layer inventory (leased / booked-by) + stack series (see side spec) | registry + disk/log |
 | `raw` | matching NDJSON lines, for grep/jq | log |
 
 ### 7.1 `snapshot` — live current state (default; runtime registry)
@@ -564,11 +564,11 @@ scope ws-1   window 60s   (Δ computed at read)
 
 ### 7.5 `layerstack` — layer inventory + stack stats
 
-Layer inventory, refcounts, and the stack time-series. Full examples in
+Layer inventory (leased / booked-by) and the stack time-series. Full examples in
 `layerstack-observability.md` §4; the shapes:
 
 ```console
-$ sandbox-cli observability layerstack --sandbox-id eos-abc                  # stack inventory + refcounts
+$ sandbox-cli observability layerstack --sandbox-id eos-abc                  # stack inventory (leased / booked-by)
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7 # one session's lowers + private upper
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --samples --window 60000   # stack time-series
 ```

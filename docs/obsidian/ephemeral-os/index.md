@@ -10,8 +10,8 @@ status: draft
 
 ## Hierarchy
 
-- Daily Planner
-  - [[daily-planner/2026-06-27|2026-06-27]]
+- Daily Progress Tracker
+  - [[daily-progress-tracker/2026-06-27|2026-06-27]]
 - [[roadmap|Roadmap]]
 - Docs
 
@@ -20,7 +20,7 @@ status: draft
 ```text
 ephemeral-os/
   index.md
-  daily-planner/
+  daily-progress-tracker/
     YYYY-MM-DD.md
   roadmap.md
   docs/

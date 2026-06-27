@@ -190,11 +190,11 @@ bytes/files) carried in the same record.",
 const LAYERSTACK_SPEC: CliOperationSpec = CliOperationSpec {
     name: "layerstack",
     family: "observability",
-    summary: "Layer inventory, refcounts, and stack series.",
+    summary: "Layer inventory (leased / booked-by), and stack series.",
     description: "Inspect the shared layer stack. Default: stack inventory (per-layer \
-bytes + refcounts). With --workspace: one session's lower layers (shared) plus its \
-private upper/workdir. With --window-ms: the stack time series (layers/bytes/pins \
-over time).",
+bytes, leased, and booked-by). With --workspace: one session's mounted layers \
+(shared with whom) plus its private upper/workdir. With --window-ms: the stack \
+time series (layers/bytes/squashable over time).",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
@@ -301,7 +301,7 @@ Observability
     Resource series for a scope (cpu/mem/io + disk).
 
   layerstack
-    Layer inventory, refcounts, and stack series.
+    Layer inventory (leased / booked-by), and stack series.
 
   raw
     Print matching NDJSON log lines.
@@ -441,7 +441,7 @@ Family
   Observability
 
 Description
-  Inspect the shared layer stack. Default: stack inventory (per-layer bytes + refcounts). With --workspace: one session's lower layers (shared) plus its private upper/workdir. With --window-ms: the stack time series (layers/bytes/pins over time).
+  Inspect the shared layer stack. Default: stack inventory (per-layer bytes, leased, and booked-by). With --workspace: one session's mounted layers (shared with whom) plus its private upper/workdir. With --window-ms: the stack time series (layers/bytes/squashable over time).
 
 Usage
   sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]
@@ -519,11 +519,11 @@ layerstack side spec, so shapes line up across docs.
 $ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
-  stack   r6   4 layers   3 pinned / 1 reclaimable   2.40MB unique   2 leases
+  stack   r6   5 layers (4 needed, 1 squashable)   2.55MB   2 leases
 
   workspaces
-    ws-7   active   profile=default   lower=3 (shared)   upper 156KB
-    ws-9   active   profile=default   lower=3 (shared)   upper  88KB
+    ws-7   active   profile=default   head l3   mounts 4   upper 156KB
+    ws-9   active   profile=default   head l2   mounts 3   upper  88KB
 
   in-flight executions            (from runtime registry, not the log)
     ns-42  namespace.exec.shell   trace req-9a1   running 7.3s   ws-7
@@ -646,34 +646,35 @@ error: window_ms exceeds max (600000)
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc        # stack inventory
-stack r6   4 layers   2.40MB unique   2 active leases
+stack r6   5 layers (4 needed, 1 squashable)   2.55MB   2 leases
 
-  layer        bytes      refcount   since
-  l0 (base)    1.80MB        2        r1     shared
-  l1           480KB         2        r3     shared
-  l2            80KB         1        r5
-  l3           156KB         0        r6     unpinned · reclaimable
+  layer        bytes    leased   booked by    status
+  l0 (base)    1.80MB     0       l2, l3
+  l1           480KB      0       l2, l3
+  l2            80KB      1       l3
+  l3           156KB      1       —
+  l4            40KB      0       —            squashable
 ```
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
-workspace ws-7   lease over r5   3 lower layers (shared)   upper 156KB   workdir 8KB
+workspace ws-7   head l3   mounts l0..l3 (4 layers)   upper 156KB   workdir 8KB
 
-  lower (shared — bytes belong to the stack)
-    l0 (base)  1.80MB   refcount 2
-    l1         480KB    refcount 2
-    l2          80KB    refcount 1
-  upper (private, live)
-    156KB   (writable)
+  layer        bytes    shared with
+  l0 (base)    1.80MB   ws-9
+  l1           480KB    ws-9
+  l2            80KB    ws-9
+  l3           156KB    — (only ws-7)
+  upper        156KB    private
 ```
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --window-ms 60000      # presence ⇒ time series
 scope stack   window 60s   (Δ computed at read)
 
-  t(+s)   layers   Δlayers   unique_bytes   Δbytes     pinned   leases
-  00.0      4         –         2.40MB         –          3        2
-  60.0      5        +1         2.88MB      +480KB        4        2
+  t(+s)   layers   Δlayers   unique_bytes   Δbytes     squashable   leases
+  00.0      5         –         2.55MB         –           1          2
+  60.0      6        +1         2.88MB      +330KB         2          2
 ```
 
 ### 4.6 `raw` — none / --kind / --trace / --since-ms / combined

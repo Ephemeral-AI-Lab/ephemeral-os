@@ -9,8 +9,8 @@ This side spec adds **layerstack** to both sides of that line:
 
 - a third pure reader — `collect/layerstack.rs` — for the **structural** facts
   that live on disk (`manifest.json` + the `layers/` tree);
-- a **pinned/leased** count drawn from the runtime, because that state lives only
-  in process memory and is not on disk.
+- a **leased / booked-by** breakdown drawn from the runtime, because that state
+  lives only in process memory and is not on disk.
 
 It changes **no** record kinds and adds **no** dependency to the leaf crate. It
 reuses the main spec's `sample` kind (§3.3) and snapshot view (§4.2).
@@ -28,8 +28,8 @@ want is already persisted as plain files, and the rest is runtime memory.
 | layer count, ordered refs, revision, root hash | `storage_root/manifest.json` | ✅ one read + parse | `lib.rs:36` (`ACTIVE_MANIFEST_FILE`), `storage/fs.rs:189` (`read_manifest`) |
 | per-layer directory + bytes | `storage_root/layers/<id>` | ✅ du-walk (cached, §6) | `stack/mod.rs:8` (`LAYERS_DIR`), `:85` (`resolve_layer_path`) |
 | active upperdir bytes | the workspace upperdir | ✅ already done | `disk.rs:24` (`sample_upperdir`) |
-| **per-layer refcount / pinned set / lease count** | **process memory** | ❌ never persisted | `lease/registry.rs:18` (`refcounts: BTreeMap<LayerRef,usize>`), `:139` (process-global `OnceLock`), `stack/mod.rs:116` (`leased_layers`), `:121` (`active_count`) |
-| protected pinned bytes | computed by reclaim | ❌ runtime call | `reclaim_unpinned_layers/mod.rs:56` (`protected_pinned_bytes`) |
+| **leased heads + per-layer refcount** | **process memory** | ❌ never persisted | `lease/registry.rs:18` (`refcounts: BTreeMap<LayerRef,usize>`), `lease_head_layers`, `stack/mod.rs:116` (`leased_layers`), `:121` (`active_count`) |
+| protected bytes | computed by reclaim | ❌ runtime call | `reclaim_unpinned_layers/mod.rs:56` (`protected_pinned_bytes`) |
 
 **Sharing model (load-bearing — get this right).** There is **one** `LayerStack`
 per sandbox (`storage_root`), shared by every workspace session; the lease
@@ -37,19 +37,23 @@ registry is keyed by the stack root (`shared_registry_for_root`, `registry.rs`).
 Each session takes its **own** lease over a manifest (its lower layers) and has
 its **own** upperdir / workdir / mount namespace — but **lower layers are
 shared**: the same layer can be leased by many sessions at once. The registry
-tracks this as a **per-layer refcount** (`refcounts: BTreeMap<LayerRef,usize>`,
-`registry.rs:18`; `increment_layers`/`decrement_layers` on acquire/release). A
-layer is *pinned* iff refcount ≥ 1; `leased_layers()` returns the **union** of
-pinned layers across all leases, **not** a per-owner list — owners are not stored
+tracks this with a **per-layer refcount** (`refcounts: BTreeMap<LayerRef,usize>`,
+`registry.rs:18`; `increment_layers`/`decrement_layers` on acquire/release) and the
+set of **leased heads** (`lease_head_layers`). A workspace leases a **head** layer
+and thereby mounts every layer below it, so a layer is **needed** while any lease
+sits at or above it, and **squashable** when none does. Owners are not stored
 (`owner_request_id` is discarded, main spec §5). So:
 
-- **Pinned-ness is a stack-global refcount**, not a per-workspace fact.
+- **Needed-ness is a stack-global fact** (any lease, any workspace), not
+  per-workspace.
+- The two distinct per-layer relationships are **leased** (a workspace's head *is*
+  this layer) and **booked by** (higher leased heads that need it as a base).
 - **Bytes of lower layers belong to the stack, counted once.** Summing them
   per-session double-counts every shared layer.
 - **Only upperdir/workdir/namespace are session-local.**
 
 This dictates the scoping: `scope:"stack"` carries the shared inventory (per-layer
-bytes once + refcounts); `scope:"<ws>"` carries only the session's **private**
+bytes once + leased/booked-by); `scope:"<ws>"` carries only the session's **private**
 bytes (its upperdir — the existing disk sample — and workdir) plus *which* layers
 its lease references (ids, not bytes).
 
@@ -58,7 +62,7 @@ its lease references (ids, not bytes).
 Do **not** reconstruct pins by folding `lease.acquired` − `lease.released` from
 the log: it breaks on daemon restart (the in-memory registry resets to empty
 while the log still shows old acquires) and on crash (a `lease.acquired` with no
-release → false "pinned forever"). The in-memory registry is the only truth.
+release → false "needed forever"). The in-memory registry is the only truth.
 
 ---
 
@@ -123,28 +127,28 @@ merges lease-derived fields from the live registry (`leased_layers()` →
 `protected_bytes`) before emitting:
 
 ```json
-{"ts":1719500010000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"stack","layer_count":4,"layers_bytes":2516582,"leased_layers":3,"unleased_layers":1,"leased_bytes":2360022,"squashable_bytes":156560,"active_leases":2,"revision":"r6","truncated":false}
+{"ts":1719500010000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"stack","layer_count":5,"layers_bytes":2670000,"needed_layers":4,"squashable_layers":1,"squashable_bytes":40960,"active_leases":2,"revision":"r6","truncated":false}
 ```
 
 `layers_bytes` counts each unique layer **once** (never per-session);
-`leased_layers` = layers with lease count ≥ 1; `unleased_layers` = those with
-zero; `squashable_bytes` = unleased & unprotected bytes you can reclaim;
-`active_leases` = number of live sessions holding a lease. Bounded and flat (no
-per-layer array — that would blow the line cap, main spec §6). It answers "is the
-stack growing / are leases/pins leaking over time" via the Case D delta
+`needed_layers` = layers some lease still needs (directly leased, or booked by a
+higher lease); `squashable_layers` / `squashable_bytes` = what no lease needs, so
+squash can drop it; `active_leases` = live sessions holding a lease. Bounded and
+flat (no per-layer array — that would blow the line cap, main spec §6). It answers
+"is the stack growing / is squashable dead-weight piling up" via the Case D delta
 machinery. **Per-session private bytes stay the existing `scope:"<ws>"` disk
 sample** (upperdir; add workdir if wanted) — that's where the per-workspace
 numbers live, with no double-counting of shared layers.
 
-**Rendered — `observability layerstack --samples` (main spec §7.5):**
+**Rendered — `observability layerstack --window-ms …` (cli-observability.md §4.5):**
 
 ```console
-$ sandbox-cli observability layerstack --sandbox-id eos-abc --samples --window 60000
+$ sandbox-cli observability layerstack --sandbox-id eos-abc --window-ms 60000
 scope stack   window 60s   (Δ computed at read)
 
-  t(+s)   layers   Δlayers   unique_bytes   Δbytes     leased   leases
-  00.0      4         –         2.40MB         –          3        2
-  60.0      5        +1         2.88MB      +480KB        4        2
+  t(+s)   layers   Δlayers   unique_bytes   Δbytes     squashable   leases
+  00.0      5         –         2.55MB         –           1          2
+  60.0      6        +1         2.88MB      +330KB         2          2
 ```
 
 ### 4.2 On-demand per-layer detail — `layerstack`
@@ -159,38 +163,41 @@ Two modes — stack-wide inventory, and one session's view.
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc
-stack r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB squashable   2 leases
+stack r6   5 layers (4 needed, 1 squashable)   2.55MB   2 leases
 
-  layer        bytes    leases   status
-  l0 (base)    1.80MB     2
-  l1           480KB      2
-  l2            80KB      1
-  l3           156KB      0      squashable
+  layer        bytes    leased   booked by    status
+  l0 (base)    1.80MB     0       l2, l3
+  l1           480KB      0       l2, l3
+  l2            80KB      1       l3
+  l3           156KB      1       —
+  l4            40KB      0       —            squashable
 ```
 
-`leases` = how many live sessions hold the layer (from the registry); `status` is
-blank when leased, `squashable` when no lease holds it, `superseded` when a newer
-revision replaced it. Bytes are the unique per-layer size (cache §6). There is
-**no owner column** — owners aren't stored, only the count.
+`leased` = how many workspaces book this layer as their head (direct); `booked by`
+= the higher leased layers that need it mounted as a base. A layer is `squashable`
+when **no** lease sits at or above it (`leased 0` and `booked by —`); everything
+else is `needed`. Bytes are the unique per-layer size (cache §6). There is **no
+owner column** — owners aren't stored.
 
-**Per session** (`view:"layerstack"`, `workspace:"ws-7"`): the layers *this*
-session's lease references (shared, with stack-wide lease count) plus its **private**
-upper/workdir:
+**Per session** (`view:"layerstack"`, `workspace:"ws-7"`): the layers this session
+mounts (its head + every layer below it), flagged by which other workspaces share
+them, plus its **private** upper/workdir:
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
-workspace ws-7   lease over r5   3 lower layers (shared)   upper 156KB   workdir 8KB
+workspace ws-7   head l3   mounts l0..l3 (4 layers)   upper 156KB   workdir 8KB
 
-  lower (shared — bytes belong to the stack)
-    l0 (base)  1.80MB   2 leases
-    l1         480KB    2 leases
-    l2          80KB    1 lease
-  upper (private, live)
-    156KB   (writable)
+  layer        bytes    shared with
+  l0 (base)    1.80MB   ws-9
+  l1           480KB    ws-9
+  l2            80KB    ws-9
+  l3           156KB    — (only ws-7)
+  upper        156KB    private
 ```
 
-The lower layers are shared (note the lease counts > 1 — `ws-9` leases l0/l1 too);
-only `upper`/`workdir` are this session's own bytes (from the `disk.rs` walk).
+`shared with` names the other workspaces also mounting the layer; `l3` (ws-7's
+head) is unique to it. Only `upper`/`workdir` are this session's own bytes (from
+the `disk.rs` walk) — the lower layers' bytes belong to the stack.
 
 ### 4.3 cgroup `io.stat` (bonus, main spec `cgroup.rs`)
 
@@ -204,24 +211,24 @@ Deltas computed at read like every other counter (main spec §4.4).
 
 ### 4.4 Snapshot view addition (main spec §4.2)
 
-Leased/squashable counts are **stack-global**, so they get their own line in the
+Needed/squashable counts are **stack-global**, so they get their own line in the
 `observability` snapshot (main spec §7.1); the per-workspace rows show only what's
-session-local (leased lower count + private upper bytes). Both come from the live
-registry + disk reader:
+session-local (its head, how many layers it mounts, private upper bytes). Both come
+from the live registry + disk reader:
 
 ```console
 $ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
-  stack   r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB squashable   2 leases
+  stack   r6   5 layers (4 needed, 1 squashable)   2.55MB   2 leases
 
   workspaces
-    ws-7   active   profile=default   lower=3 (shared)   upper 156KB
-    ws-9   active   profile=default   lower=3 (shared)   upper  88KB
+    ws-7   active   profile=default   head l3   mounts 4   upper 156KB
+    ws-9   active   profile=default   head l2   mounts 3   upper  88KB
 ```
 
-Note `ws-7` and `ws-9` both report `lower=3` over the same shared layers — the
-2.40MB is counted once at the stack line, not added per workspace.
+Note `ws-7` (head l3) and `ws-9` (head l2) share `l0`–`l2`; the 2.55MB is counted
+once at the stack line, not added per workspace.
 
 ---
 
@@ -236,7 +243,7 @@ mutates), so their byte size is computed **once** and never recomputed:
 - `sample_layerstack` reads sizes from the sidecar and **sums** — no walk for
   published layers.
 - Sizes are keyed by **layer id**, so a layer shared across N sessions (§1) is
-  measured **once**, not N times — the cache and the refcount model line up.
+  measured **once**, not N times — the cache and the lease model line up.
 - Only the **active upperdir** is mutable and is walked live (per session) —
   already handled and throttled (10s min interval) by `disk.rs`.
 
@@ -265,7 +272,7 @@ sample rather than fail collection (main spec: observability never fails the op)
 `collect/layerstack.rs` reads files and returns a plain struct — it depends on
 nothing but `std` + `serde_json` (to parse the manifest payload shape it already
 knows). It does **not** import `sandbox-runtime` / `layerstack` types, so the leaf
-stays a leaf (main spec §6 boundary). The pinned merge happens in the daemon,
+stays a leaf (main spec §6 boundary). The leased / booked-by merge happens in the daemon,
 which already holds both the reader output and the runtime handle — no new edge
 into the leaf crate. The manifest JSON shape is duplicated as a minimal
 deserialization struct in the leaf (just the fields it needs: layer ids,
@@ -285,7 +292,7 @@ Slots into the main spec's phases; nothing here blocks Phase A.
    pins); extend `cgroup.rs` with `io.stat`.
 4. **Views** — add `view:"layerstack"` to `get_observability` + the
    `observability layerstack` CLI subcommand (`--workspace`, `--samples`); add
-   pinned counts to the snapshot view rows; surface `io.stat` under `cgroup`.
+   needed/squashable counts to the snapshot view rows; surface `io.stat` under `cgroup`.
 
 No record-kind change, no schema break, no new leaf dependency.
 
@@ -301,11 +308,12 @@ No record-kind change, no schema break, no new leaf dependency.
   pairwise.
 - **Integration:** a publish records the sidecar size; `collect()` emits a
   `scope:"stack"` sample combining disk unique-layer count/bytes + registry
-  refcounts; `--layers` (stack) shows correct refcounts.
-- **Sharing (the multi-session case):** two sessions lease overlapping lower
-  layers → shared layers show `refcount 2`; `layers_bytes` counts them **once**
-  (no double count); each session's `--layers <ws>` shows the shared lowers + its
-  **own** upper bytes; releasing one lease drops the refcount (and `pinned_layers`
-  if it hits 0), the other lease keeps the layer pinned.
+  needed/squashable counts; `--layers` (stack) shows correct `leased` / `booked by`.
+- **Sharing (the multi-session case):** two sessions with heads at different layers
+  → a lower layer shows the higher heads under `booked by`; `layers_bytes` counts
+  each layer **once** (no double count); each session's `--layers <ws>` shows which
+  lowers are `shared with` others + its **own** upper bytes; releasing the higher
+  lease flips the now-unneeded layers to `squashable`, while layers a remaining
+  lease still sits at or above stay `needed`.
 - **Gates:** leaf crate still has no `runtime`/`layerstack`/`daemon` dep
   (boundary test); `cargo build`/`test`/`clippy` clean.
