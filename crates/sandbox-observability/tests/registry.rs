@@ -9,8 +9,8 @@ use std::sync::Arc;
 
 use sandbox_observability::record::proc;
 use sandbox_observability::{
-    Attrs, NoopHook, Observer, ObserverConfig, RawFilter, Reader, Sink, Span, SpanKeyAttrs,
-    SpanRegistry, SpanStatus, TerminalHook, TraceContext,
+    NoopHook, Observer, ObserverConfig, RawFilter, Reader, Sink, Span, SpanRegistry, SpanStatus,
+    TerminalHook, TraceContext,
 };
 use serde_json::{json, Value};
 
@@ -18,12 +18,6 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct FakeId(String);
-
-impl SpanKeyAttrs for FakeId {
-    fn write_attrs(&self, attrs: &mut Attrs) {
-        attrs.insert("exec_id".to_owned(), Value::from(self.0.clone()));
-    }
-}
 
 fn temp_log(label: &str) -> PathBuf {
     std::env::temp_dir()
@@ -98,9 +92,7 @@ fn launch_ok_parks_and_terminal_records_async_span() {
         "async span parent stamped at launch"
     );
     assert_eq!(span.status, SpanStatus::Completed);
-    assert_eq!(span.attrs["async"], true, "blanket hook stamps async:true");
-    assert_eq!(span.attrs["exit_code"], 0);
-    assert_eq!(span.attrs["exec_id"], "e1", "key folds its own domain attr");
+    assert_eq!(span.attrs["exit_code"], 0, "blanket hook folds exit_code");
 }
 
 #[test]

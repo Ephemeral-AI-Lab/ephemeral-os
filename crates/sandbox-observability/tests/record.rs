@@ -51,7 +51,7 @@ fn span_exit_code_and_status_round_trip_as_fields_and_attrs() {
         name: Cow::Borrowed("command.exec"),
         dur_ms: 1.0,
         status: SpanStatus::Error,
-        attrs: attrs(json!({ "exit_code": 137, "async": true })),
+        attrs: attrs(json!({ "exit_code": 137 })),
     });
 
     let line = serde_json::to_string(&record).expect("serialize");

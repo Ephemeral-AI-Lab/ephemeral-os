@@ -1,4 +1,4 @@
-# Crate-Core Observability — Multi-Agent Adversarial Review Spec
+# Crate-Core Observability — Subagent Adversarial Review Spec
 
 Status: ready-to-run. Drives a parallel, evidence-gated review of the landed
 crate-core slice (`crate-core-impl.md` + `crate-core-impl-expected-outcomeshape.md`).
@@ -45,9 +45,9 @@ review asks the harder questions a green build cannot:
   (`server/runtime.rs`, `serve.rs`, `server/dispatch.rs`), and
   `crates/sandbox-config/src/configs/observability.rs`.
 
-## 3. Review lenses (parallel reviewers)
+## 3. Review lenses (parallel subagents)
 
-Each lens is one agent. It reads the real code + spec and returns structured
+Each lens is one reviewer subagent. It reads the real code + spec and returns structured
 findings.
 
 | # | Lens | Charge |
@@ -60,18 +60,19 @@ findings.
 | L6 | **Extensibility — sync ops / events / metrics / scopes (PRIORITY)** | Validate the open/closed table (§3.6) against code: a new sync op = one `obs.span(name)`; a new event = one `obs.event(name, json!)`; a new metric = one key + (if counter) the emit-site `_counters` tag; a new scope = one `obs.sample(scope, …)`. Find every spot where adding a "variety" actually forces a leaf change, a new enum arm, a hard-coded key list, or a daemon/leaf coupling. Assess `SpanStatus` closedness, the counter-tag-at-emit design, and the daemon's `COUNTER_KEYS` const as a coupling smell. |
 | L7 | **Cleanness / boundary / SRP** | Leaf deps = `serde`/`serde_json`/`thiserror` only (no rusqlite/daemon/runtime/manager/config/protocol); no inline comments in `src/`; no test code in `src/`; SRP per module; dead/forward-only API (`record::names`, `Reader::events`) justified or flagged; redaction of `attrs`/`metrics`; the `get_observability_snapshot` alias is genuinely SQLite-free; naming consistency. |
 
-## 4. Pipeline
+## 4. Subagent workflow
 
-```
-pipeline(lenses,
-  stage 1: REVIEW  — agent reads code+spec, returns Finding[] (schema below)
-  stage 2: VERIFY  — for each finding, an independent skeptic re-reads the cited
-                     code and tries to REFUTE it; default to refuted unless the
-                     evidence holds. Returns a verdict per finding.
-)
-then SYNTHESIZE — one agent dedupes survivors across lenses, ranks by severity,
-                  and emits the final report.
-```
+Do not use a dynamic workflow. Do not spawn subagents based on discovered findings.
+Use this fixed subagent set:
+
+1. **Review.** Run seven reviewer subagents in parallel, one for each lens L1-L7.
+   Each returns `Finding[]` using the schema below.
+2. **Verify.** Run seven verifier subagents in parallel, one for each reviewer
+   output. Each verifier re-reads the cited code for its assigned lens and tries to
+   refute every finding. If a reviewer returns no findings, its verifier returns an
+   empty verdict list.
+3. **Synthesize.** Run one synthesis subagent. It dedupes verifier-confirmed
+   findings across lenses, ranks by severity, and emits the final report.
 
 A finding survives only if the verifier confirms the citation is real and the
 claim follows from it. Extensibility findings (L5/L6) are weighted highest in the

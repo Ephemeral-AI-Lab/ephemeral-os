@@ -84,8 +84,7 @@ impl Observer {
             Arc::clone(&self.core),
             OpenGuard {
                 span: span_id,
-                trace: parent.trace,
-                parent: parent.parent,
+                ctx: parent,
                 name,
                 start_ms: unix_now_ms(),
                 previous,
@@ -179,8 +178,7 @@ impl Drop for CtxRestore {
 
 struct OpenGuard {
     span: String,
-    trace: Arc<str>,
-    parent: Option<Arc<str>>,
+    ctx: TraceContext,
     name: &'static str,
     start_ms: i64,
     previous: Option<TraceContext>,
@@ -249,9 +247,9 @@ impl Drop for SpanGuard {
         let now = unix_now_ms();
         let span = Span {
             ts: now,
-            trace: open.trace.to_string(),
+            trace: open.ctx.trace.to_string(),
             span: open.span,
-            parent: open.parent.as_ref().map(|parent| parent.to_string()),
+            parent: open.ctx.parent.as_ref().map(|parent| parent.to_string()),
             name: Cow::Borrowed(open.name),
             dur_ms: (now - open.start_ms) as f64,
             status: self.status.get(),
@@ -389,21 +387,17 @@ impl<K> TerminalHook<K> for NoopHook {
     fn on_terminal(&self, _: &K, _: SpanStatus, _: Option<i64>) {}
 }
 
-/// A span key contributes its own domain attrs (e.g. `exec_id`). Implemented by
-/// each id type in its own crate (foreign trait + local type ⇒ orphan-legal), so
-/// the leaf names no domain attr and there is no per-source hook adapter type.
-pub trait SpanKeyAttrs {
-    fn write_attrs(&self, attrs: &mut Attrs);
-}
-
-impl<K: Eq + Hash + Send + Sync + SpanKeyAttrs> TerminalHook<K> for SpanRegistry<K> {
+/// The registry is itself the terminal hook for any async source: it folds the
+/// one generic terminal datum (`exit_code`) into the parked span and records it.
+/// A new async source wires its `SpanRegistry<ItsId>` as the hook directly — no
+/// adapter type and no per-source impl; the generality lives entirely in `<K>`.
+/// Source-specific terminal facts ride in the `record` attrs, not a wider trait.
+impl<K: Eq + Hash + Send + Sync> TerminalHook<K> for SpanRegistry<K> {
     fn on_terminal(&self, id: &K, status: SpanStatus, exit_code: Option<i64>) {
         let mut attrs = Attrs::new();
-        attrs.insert("async".to_owned(), Value::Bool(true));
         if let Some(exit_code) = exit_code {
             attrs.insert("exit_code".to_owned(), Value::from(exit_code));
         }
-        id.write_attrs(&mut attrs);
         self.record(id, status, Value::Object(attrs));
     }
 }

@@ -1,13 +1,13 @@
 # Adversarial Review Prompt — Architecture, Wiring, API & Naming (post-rework)
 
-Use this to drive a skeptical, **multi-agent** review of the observability rework
+Use this to drive a skeptical, **subagent** review of the observability rework
 **after** the crate-core / span-trace updates landed (drop-`component`, time-free
 emit API, generic `SpanObserver<K>`, `NamespaceExecutionObserver`, `exit_code`-in-
 attrs, `events`=`raw`+name, Case A `d-6`→`d-1`). It is scoped to **architecture
 simplicity, wiring ergonomics, API minimalism, naming, and concrete trace
 examples** — not the record-model decisions, which are settled (see Fixed intent).
 
-Paste into a fresh orchestrator with repo access. It is self-contained.
+Paste into a fresh lead agent with repo access. It is self-contained.
 
 ---
 
@@ -24,19 +24,22 @@ finds nothing is a failed review.** Be concrete, cite the specific spec §/type/
 or code path, propose the smaller/clearer thing, and state the cost. Bias to
 subtraction.
 
-## Multi-agent orchestration (how to run this)
+## Subagent workflow (how to run this)
 
-Run it as a fan-out, one independent adversarial reviewer per area, then synthesize:
+Do not use a dynamic workflow. Do not spawn subagents based on discovered findings.
+Run this fixed subagent set:
 
-1. **Phase 1 — area reviewers (parallel, 5 agents).** One agent per Area 1–5 below.
-   Each gets: the area's targets, the *Fixed intent* (do-not-relitigate) block, and
-   *What to read*. Each returns the area's **Findings + Proposed change** in the
-   required format. The Area 5 agent **additionally drafts the new md file**.
-2. **Phase 2 — adversarial verification (parallel, per finding).** For each non-trivial
-   finding, spawn a skeptic prompted to **refute** it (is the "simpler" thing actually
-   simpler? does the rename actually read better? does the proposed helper hide a
-   footgun?). Drop findings a majority of skeptics refute.
-3. **Phase 3 — synthesis (1 agent).** Dedupe across areas (naming and API findings
+1. **Phase 1 — area reviewers (parallel, 5 subagents).** One subagent per Area
+   1-5 below. Each gets: the area's targets, the *Fixed intent* (do-not-relitigate)
+   block, and *What to read*. Each returns the area's **Findings + Proposed change**
+   in the required format. The Area 5 subagent **additionally drafts the new md
+   file**.
+2. **Phase 2 — adversarial verification (parallel, 5 subagents).** One verifier
+   subagent reviews each area output and tries to **refute** every non-trivial
+   finding (is the "simpler" thing actually simpler? does the rename actually read
+   better? does the proposed helper hide a footgun?). Drop findings their verifier
+   refutes.
+3. **Phase 3 — synthesis (1 subagent).** Dedupe across areas (naming and API findings
    will overlap), resolve conflicts (e.g. an Area 3 "merge methods" vs an Area 2 "add a
    helper"), and emit the consolidated report + the Area 5 md file.
 

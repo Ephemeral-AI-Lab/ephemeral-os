@@ -25,26 +25,32 @@ pub mod proc {
     /// The daemon/runtime process token.
     pub const DAEMON: &str = "d";
     /// The forked namespace-process token.
-    pub const NS: &str = "np";
+    pub const NAMESPACE_PROCESS: &str = "np";
 }
 
 /// Grep-able, typo-safe span/event labels. The vocabulary is open (a new name is
-/// one new const), but the grammar is fixed:
+/// one new const), but the grammar is fixed and uniform:
 ///
 /// - **spans** = `subsystem[.area].action` (imperative) — `command.exec`,
-///   `workspace_session.create`, `namespace.exec.mount_overlay`, `layerstack.publish`.
+///   `workspace_session.create`, `namespace.exec.run_shell`,
+///   `namespace.exec.mount_overlay`, `layerstack.publish`.
 /// - **events** = `subsystem.fact` (past-tense) — `lease.acquired`, `lease.released`.
-///
-/// The lone exception is the `namespace.exec.<kind>` family, whose leaf inherits
-/// the engine's `NamespaceExecutionKind` noun.
 pub mod names {
     // Spans.
-    /// Daemon request dispatch span.
+    /// Daemon request dispatch span (trace root).
     pub const DAEMON_DISPATCH: &str = "daemon.dispatch";
     /// Command execution span.
     pub const COMMAND_EXEC: &str = "command.exec";
     /// Workspace session creation span.
     pub const WORKSPACE_SESSION_CREATE: &str = "workspace_session.create";
+    /// Workspace session change-capture span (one-shot finalize tail).
+    pub const WORKSPACE_SESSION_CAPTURE_CHANGES: &str = "workspace_session.capture_changes";
+    /// Workspace session teardown span (one-shot finalize tail).
+    pub const WORKSPACE_SESSION_DESTROY: &str = "workspace_session.destroy";
+    /// Namespace shell-exec span (async; recorded at child-exit).
+    pub const NAMESPACE_EXEC_RUN_SHELL: &str = "namespace.exec.run_shell";
+    /// Namespace overlay-mount span (sync).
+    pub const NAMESPACE_EXEC_MOUNT_OVERLAY: &str = "namespace.exec.mount_overlay";
     /// Layerstack publish span.
     pub const LAYERSTACK_PUBLISH: &str = "layerstack.publish";
 
@@ -53,6 +59,8 @@ pub mod names {
     pub const LEASE_ACQUIRED: &str = "lease.acquired";
     /// A layer lease was released.
     pub const LEASE_RELEASED: &str = "lease.released";
+    /// A running command was signaled (e.g. Ctrl-D / kill).
+    pub const COMMAND_SIGNALED: &str = "command.signaled";
 }
 
 /// One NDJSON record. Internally tagged on `kind` so the tag is a sibling field,
@@ -86,7 +94,7 @@ pub struct Span {
     pub dur_ms: f64,
     /// Closed cross-cutting outcome.
     pub status: SpanStatus,
-    /// Open domain facts: `exit_code`, `op`, `one_shot`, `exec_id`, `async`, ….
+    /// Open domain facts: `exit_code`, `op`, `one_shot`, ….
     pub attrs: Attrs,
 }
 

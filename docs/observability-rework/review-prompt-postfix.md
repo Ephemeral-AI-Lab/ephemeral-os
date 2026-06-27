@@ -1,6 +1,6 @@
 # Adversarial Review Prompt — Post-Fix Regression & New-Decision Audit
 
-Use this to drive a skeptical, **multi-agent** review of the observability rework
+Use this to drive a skeptical, **subagent** review of the observability rework
 **after** the 41 findings from the first review (`review-prompt-arch.md`) were applied
 across all six design docs. Its job is **not** to re-find the original 41 — it is to
 (a) verify those fixes actually landed, completely and *consistently across every doc*;
@@ -8,7 +8,7 @@ across all six design docs. Its job is **not** to re-find the original 41 — it
 themselves reviewed); and (c) take a fresh skeptical pass for anything the first review
 missed or the fixes broke. **A review that rubber-stamps the fixes is a failed review.**
 
-Paste into a fresh orchestrator with repo access. It is self-contained.
+Paste into a fresh lead agent with repo access. It is self-contained.
 
 ---
 
@@ -27,18 +27,22 @@ delta. Be concrete: cite the doc, the section, the line/record, propose the exac
 correction, state the cost. Bias to subtraction. Assume the author is convinced the
 fixes are clean; your value is the inconsistency or the bad new trade they didn't see.
 
-## Multi-agent orchestration (how to run this)
+## Subagent workflow (how to run this)
 
-1. **Phase 1 — area reviewers (parallel, 5 agents).** One agent per Area 1–5. Each gets
-   the area's targets, the *Settled* (do-not-relitigate) block, and *What to read*. Each
-   returns **Findings + Proposed change** in the required format. The Area 5 agent
-   additionally produces the **consolidated cross-doc diff punch-list**.
-2. **Phase 2 — adversarial verification (parallel, per non-trivial finding).** Spawn ≥3
-   skeptics per finding, each on a distinct lens — *is it really inconsistent or did I
-   misread the doc?* / *is the proposed change actually simpler, or lateral?* / *does the
-   "regression" break a Settled invariant or just offend taste?* Drop any finding a
-   majority refute.
-3. **Phase 3 — synthesis (1 agent).** Dedupe across areas (naming/consistency overlap),
+Do not use a dynamic workflow. Do not spawn subagents based on discovered findings.
+Run this fixed subagent set:
+
+1. **Phase 1 — area reviewers (parallel, 5 subagents).** One subagent per Area 1-5.
+   Each gets the area's targets, the *Settled* (do-not-relitigate) block, and *What
+   to read*. Each returns **Findings + Proposed change** in the required format. The
+   Area 5 subagent additionally produces the **consolidated cross-doc diff
+   punch-list**.
+2. **Phase 2 — adversarial verification (parallel, 5 subagents).** One verifier
+   subagent reviews each area output and tries to refute every non-trivial finding:
+   *is it really inconsistent or did I misread the doc?* / *is the proposed change
+   actually simpler, or lateral?* / *does the "regression" break a Settled invariant
+   or just offend taste?* Drop findings their verifier refutes.
+3. **Phase 3 — synthesis (1 subagent).** Dedupe across areas (naming/consistency overlap),
    resolve conflicts, emit the consolidated report + the punch-list, and render the
    **implementation-readiness verdict**.
 

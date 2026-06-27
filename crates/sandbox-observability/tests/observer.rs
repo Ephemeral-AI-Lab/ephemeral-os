@@ -246,7 +246,7 @@ fn span_ids_unique_across_proc_tokens() {
     let daemon_path = temp_log("proc-daemon");
     let ns_path = temp_log("proc-ns");
     let daemon = observer(&daemon_path, proc::DAEMON, true);
-    let ns = observer(&ns_path, proc::NS, true);
+    let ns = observer(&ns_path, proc::NAMESPACE_PROCESS, true);
     daemon.with_context(ctx("t", None), || {
         let _ = daemon.span("daemon.dispatch");
     });
@@ -258,6 +258,6 @@ fn span_ids_unique_across_proc_tokens() {
     assert_eq!(
         spans(&ns_path)[0].span,
         "np-0",
-        "NS proc token keeps ids disjoint"
+        "namespace-process proc token keeps ids disjoint"
     );
 }

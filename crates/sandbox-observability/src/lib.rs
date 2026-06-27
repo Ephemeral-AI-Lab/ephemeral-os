@@ -13,8 +13,7 @@ mod sink;
 
 pub use collect::{sample_layerstack, LayerBytes, LayerStackBytes};
 pub use observer::{
-    NoopHook, Observer, ObserverConfig, SpanGuard, SpanKeyAttrs, SpanRegistry, TerminalHook,
-    TraceContext,
+    NoopHook, Observer, ObserverConfig, SpanGuard, SpanRegistry, TerminalHook, TraceContext,
 };
 pub use paths::{ObservabilityPathError, ObservabilityPaths};
 pub use reader::{EventNode, RawFilter, Reader, SampleDelta, SpanNode};
