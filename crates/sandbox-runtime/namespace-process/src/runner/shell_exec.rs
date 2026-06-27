@@ -8,8 +8,6 @@ use super::RunnerError;
 #[cfg(target_os = "linux")]
 use crate::runner::protocol::{NamespaceRunnerRequest, RunResult};
 #[cfg(target_os = "linux")]
-use crate::timing;
-#[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
 
 #[cfg(target_os = "linux")]
@@ -29,11 +27,8 @@ pub(crate) fn execute_shell(request: &NamespaceRunnerRequest) -> Result<RunResul
 
 #[cfg(target_os = "linux")]
 fn execute_shell_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
-    let total_started = std::time::Instant::now();
-    let prepare_started = std::time::Instant::now();
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
-    timing::duration("ns_runner.shell.prepare_argv_cwd", prepare_started);
     // Open a handle to /proc before applying the mount mask, so scope-wait can
     // still enumerate same-pgid descendant processes if a custom config hides it.
     let proc_dir = rustix::fs::open(
@@ -53,11 +48,8 @@ fn execute_shell_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, Ru
         .stderr(Stdio::inherit());
     install_command_process_group(&mut command);
 
-    let spawn_started = std::time::Instant::now();
     let mut child = command.spawn().map_err(RunnerError::Child)?;
-    timing::duration("ns_runner.shell.spawn_child", spawn_started);
     let child_pgid = child_process_group(&child)?;
-    let wait_started = std::time::Instant::now();
     let (exit_code, timed_out) = match wait_for_command_execution_scope(
         &mut child,
         child_pgid,
@@ -68,8 +60,6 @@ fn execute_shell_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, Ru
         Err(RunnerError::TimedOut) => (124, true),
         Err(err) => return Err(err),
     };
-    timing::duration("ns_runner.shell.wait_scope", wait_started);
-    timing::duration("ns_runner.shell.total", total_started);
     Ok(RunResult {
         exit_code,
         payload: serde_json::json!({

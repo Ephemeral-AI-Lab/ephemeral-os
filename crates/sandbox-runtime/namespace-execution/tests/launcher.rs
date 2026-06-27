@@ -8,11 +8,6 @@ pub mod pty {
 }
 
 #[allow(dead_code)]
-pub mod timing {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/timing.rs"));
-}
-
-#[allow(dead_code)]
 pub mod launcher {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/launcher.rs"));
 

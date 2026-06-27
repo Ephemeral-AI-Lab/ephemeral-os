@@ -14,7 +14,6 @@ use crate::launcher::{ForkRunnerLauncher, NsRunnerLauncher, RunnerChild, MOUNT_O
 use crate::promise::CompletionPromise;
 use crate::registry::ExecutionRegistry;
 use crate::shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
-use crate::timing;
 use crate::types::{ExecutionObserver, NamespaceExecutionId, NamespaceTarget};
 
 pub struct NamespaceExecutionEngine<V = ()> {
@@ -95,7 +94,6 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         let transcript_path = op.transcript_path().map(Path::to_path_buf);
         let cancelled = Arc::new(AtomicBool::new(false));
         let op = Box::new(op);
-        let spawn_started = std::time::Instant::now();
         let (child, pty) = self.reserve_spawn(&id, || {
             self.launcher.spawn_pty(
                 request,
@@ -104,7 +102,6 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
                 cgroup_procs_path,
             )
         })?;
-        timing::duration("namespace.exec.spawn_pty", spawn_started);
         self.observer.on_running(&id);
         let promise = Arc::new(CompletionPromise::new());
         self.spawn_watcher(
@@ -175,19 +172,15 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         let registry = Arc::clone(&self.registry);
         let observer = Arc::clone(&self.observer);
         thread::spawn(move || {
-            let wait_started = std::time::Instant::now();
             let wait_result = child.wait_completion();
-            timing::duration("namespace.exec.wait_completion", wait_started);
             let (result, status, exit_code) = match wait_result {
                 Ok(run_result) => {
                     let outcome = RunnerOutcome::new(run_result)
                         .with_cancelled(cancelled.load(Ordering::Acquire));
                     let status = outcome.status();
                     let exit_code = Some(outcome.exit_code());
-                    let finalize_started = std::time::Instant::now();
                     let result = mount_exit_error(mount_error_mode, &outcome)
                         .map_or_else(|| finalize_outcome(finalize, outcome), Err);
-                    timing::duration("namespace.exec.finalize", finalize_started);
                     let status = if result.is_ok() {
                         status
                     } else {

@@ -85,7 +85,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
             name,
             image: resolve_image(config, &request.image),
             cmd,
-            env: runtime_timing_env(),
+            env: Vec::new(),
             labels: build_labels(config, &id, &auth_token, &request.workspace_root),
             binds: vec![format!(
                 "{}:{}",
@@ -108,17 +108,6 @@ impl SandboxRuntime for DockerSandboxRuntime {
             .remove_container(record.id.as_str().to_owned())
             .map_err(runtime_failed)
     }
-}
-
-fn runtime_timing_env() -> Vec<String> {
-    ["EOS_RUNTIME_TIMING", "EOS_RUNTIME_TIMING_LOG"]
-        .into_iter()
-        .filter_map(|key| {
-            std::env::var(key)
-                .ok()
-                .map(|value| format!("{key}={value}"))
-        })
-        .collect()
 }
 
 fn runtime_tmpfs_mounts() -> HashMap<String, String> {

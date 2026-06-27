@@ -5,6 +5,5 @@
 
 pub(crate) mod observability;
 mod server;
-pub(crate) mod timing;
 
 pub use server::{SandboxDaemonError, SandboxDaemonServer, ServerConfig};

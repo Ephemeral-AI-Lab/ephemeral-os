@@ -118,16 +118,17 @@ walk is unavoidable, and `/proc/self/mountinfo` is the cheap source for overlay
 A `sample` (main spec §3.3) with `scope` = `"stack"` (one stack per sandbox; use
 `"stack:<id>"` only if a sandbox ever holds several). The daemon's `collect()`
 calls `sample_layerstack(storage_root)` (disk: unique-layer count + bytes) and
-merges refcount-derived fields from the live registry (`leased_layers()` →
-`pinned_layers`, `active_count()` → `active_leases`, `protected_pinned_bytes`)
-before emitting:
+merges lease-derived fields from the live registry (`leased_layers()` →
+`leased_layers`, `active_count()` → `active_leases`, `protected_pinned_bytes` →
+`protected_bytes`) before emitting:
 
 ```json
-{"ts":1719500010000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"stack","layer_count":4,"layers_bytes":2516582,"pinned_layers":3,"unpinned_layers":1,"pinned_bytes":2360022,"active_leases":2,"revision":"r6","truncated":false}
+{"ts":1719500010000,"kind":"sample","sandbox":"eos-abc","component":"sandbox-daemon","scope":"stack","layer_count":4,"layers_bytes":2516582,"leased_layers":3,"unleased_layers":1,"leased_bytes":2360022,"freeable_bytes":156560,"active_leases":2,"revision":"r6","truncated":false}
 ```
 
 `layers_bytes` counts each unique layer **once** (never per-session);
-`pinned_layers` = layers with refcount ≥ 1; `unpinned_layers` = reclaimable;
+`leased_layers` = layers with lease count ≥ 1; `unleased_layers` = those with
+zero; `freeable_bytes` = unleased & unprotected bytes you can reclaim;
 `active_leases` = number of live sessions holding a lease. Bounded and flat (no
 per-layer array — that would blow the line cap, main spec §6). It answers "is the
 stack growing / are leases/pins leaking over time" via the Case D delta
@@ -141,7 +142,7 @@ numbers live, with no double-counting of shared layers.
 $ sandbox-cli observability layerstack --sandbox-id eos-abc --samples --window 60000
 scope stack   window 60s   (Δ computed at read)
 
-  t(+s)   layers   Δlayers   unique_bytes   Δbytes     pinned   leases
+  t(+s)   layers   Δlayers   unique_bytes   Δbytes     leased   leases
   00.0      4         –         2.40MB         –          3        2
   60.0      5        +1         2.88MB      +480KB        4        2
 ```
@@ -150,7 +151,7 @@ scope stack   window 60s   (Δ computed at read)
 
 Per-layer breakdown is high-cardinality, so it is **not** logged periodically — it
 is served fresh on request, joining the disk reader (sizes), `manifest.json`
-(ordering/revision), and the runtime registry (**refcounts**). Same composition as
+(ordering/revision), and the runtime registry (**lease counts**). Same composition as
 the snapshot view (main spec §4.2): served by the daemon, not folded from the log.
 Two modes — stack-wide inventory, and one session's view.
 
@@ -158,21 +159,22 @@ Two modes — stack-wide inventory, and one session's view.
 
 ```console
 $ sandbox-cli observability layerstack --sandbox-id eos-abc
-stack r6   4 layers   2.40MB unique   2 active leases
+stack r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB freeable   2 leases
 
-  layer        bytes      refcount   since
-  l0 (base)    1.80MB        2        r1     shared
-  l1           480KB         2        r3     shared
-  l2            80KB         1        r5
-  l3           156KB         0        r6     unpinned · reclaimable
+  layer        bytes    leases   status
+  l0 (base)    1.80MB     2
+  l1           480KB      2
+  l2            80KB      1
+  l3           156KB      0      freeable
 ```
 
-`refcount` = how many live sessions lease the layer (from the registry); bytes are
-the unique per-layer size (cache §6). There is **no owner column** — owners aren't
-stored, only the count.
+`leases` = how many live sessions hold the layer (from the registry); `status` is
+blank when leased, `freeable` when no lease holds it, `superseded` when a newer
+revision replaced it. Bytes are the unique per-layer size (cache §6). There is
+**no owner column** — owners aren't stored, only the count.
 
 **Per session** (`view:"layerstack"`, `workspace:"ws-7"`): the layers *this*
-session's lease references (shared, with stack-wide refcount) plus its **private**
+session's lease references (shared, with stack-wide lease count) plus its **private**
 upper/workdir:
 
 ```console
@@ -180,14 +182,14 @@ $ sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
 workspace ws-7   lease over r5   3 lower layers (shared)   upper 156KB   workdir 8KB
 
   lower (shared — bytes belong to the stack)
-    l0 (base)  1.80MB   refcount 2
-    l1         480KB    refcount 2
-    l2          80KB    refcount 1
+    l0 (base)  1.80MB   2 leases
+    l1         480KB    2 leases
+    l2          80KB    1 lease
   upper (private, live)
     156KB   (writable)
 ```
 
-The lower layers are shared (note the refcounts > 1 — `ws-9` leases l0/l1 too);
+The lower layers are shared (note the lease counts > 1 — `ws-9` leases l0/l1 too);
 only `upper`/`workdir` are this session's own bytes (from the `disk.rs` walk).
 
 ### 4.3 cgroup `io.stat` (bonus, main spec `cgroup.rs`)
@@ -202,7 +204,7 @@ Deltas computed at read like every other counter (main spec §4.4).
 
 ### 4.4 Snapshot view addition (main spec §4.2)
 
-Pinned/lease counts are **stack-global**, so they get their own line in the
+Leased/freeable counts are **stack-global**, so they get their own line in the
 `observability` snapshot (main spec §7.1); the per-workspace rows show only what's
 session-local (leased lower count + private upper bytes). Both come from the live
 registry + disk reader:
@@ -211,7 +213,7 @@ registry + disk reader:
 $ sandbox-cli observability snapshot --sandbox-id eos-abc
 sandbox eos-abc   state ready
 
-  stack   r6   4 layers   3 pinned / 1 reclaimable   2.40MB unique   2 leases
+  stack   r6   4 layers (3 leased, 1 unleased)   2.40MB   156KB freeable   2 leases
 
   workspaces
     ws-7   active   profile=default   lower=3 (shared)   upper 156KB

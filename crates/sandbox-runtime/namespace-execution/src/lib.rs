@@ -6,7 +6,6 @@ mod promise;
 mod pty;
 mod registry;
 mod shell;
-mod timing;
 mod transcript_rows;
 mod types;
 
