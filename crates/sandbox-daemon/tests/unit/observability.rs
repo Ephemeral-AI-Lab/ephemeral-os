@@ -763,6 +763,7 @@ fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeW
         base_manifest_version: Some(1),
         base_root_hash: Some("root".to_owned()),
         layer_count: Some(1),
+        layer_ids: vec![format!("{workspace_id}-layer")],
         cgroup_path: None,
     }
 }

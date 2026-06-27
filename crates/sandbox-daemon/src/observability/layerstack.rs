@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 
 use sandbox_observability::LayerStackBytes;
-use sandbox_runtime::StackObservation;
+use sandbox_runtime::{RuntimeWorkspaceSnapshot, StackObservation};
 use serde_json::{json, Value};
 
 /// Join per-layer bytes (by id) onto the lease observation and derive each
@@ -61,4 +61,38 @@ pub(crate) fn stack_summary_value(
         "layers_bytes": bytes.total_bytes,
         "active_leases": observation.active_lease_count,
     })
+}
+
+/// Per-session layerstack view (`--workspace`): the layers `target` mounts
+/// (base → newest) and, for each, the other sessions that also mount it, plus
+/// the session's private upper bytes. Returns `None` when `target` is unknown.
+pub(crate) fn workspace_layerstack_value(
+    workspaces: &[RuntimeWorkspaceSnapshot],
+    target: &str,
+    upper_bytes: Option<u64>,
+) -> Option<Value> {
+    let session = workspaces
+        .iter()
+        .find(|workspace| workspace.workspace_id.0 == target)?;
+    let mounts = session
+        .layer_ids
+        .iter()
+        .map(|layer_id| {
+            let shared_with = workspaces
+                .iter()
+                .filter(|other| {
+                    other.workspace_id.0 != target
+                        && other.layer_ids.iter().any(|id| id == layer_id)
+                })
+                .map(|other| other.workspace_id.0.clone())
+                .collect::<Vec<_>>();
+            json!({ "layer_id": layer_id, "shared_with": shared_with })
+        })
+        .collect::<Vec<_>>();
+    Some(json!({
+        "view": "layerstack",
+        "workspace": target,
+        "mounts": mounts,
+        "upper_bytes": upper_bytes,
+    }))
 }

@@ -37,6 +37,15 @@ impl WorkspaceSessionService {
                     base_manifest_version: Some(session.handle.snapshot.manifest_version),
                     base_root_hash: Some(session.handle.snapshot.root_hash.clone()),
                     layer_count: Some(session.handle.snapshot.layer_paths.len()),
+                    layer_ids: session
+                        .handle
+                        .snapshot
+                        .manifest
+                        .layers
+                        .iter()
+                        .rev()
+                        .map(|layer| layer.layer_id.clone())
+                        .collect(),
                     cgroup_path: session.cgroup_path.clone(),
                 }
             })

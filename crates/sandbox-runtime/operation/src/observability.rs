@@ -21,5 +21,8 @@ pub struct RuntimeWorkspaceSnapshot {
     pub base_manifest_version: Option<i64>,
     pub base_root_hash: Option<String>,
     pub layer_count: Option<usize>,
+    /// Mounted layer ids, base → newest. The per-session layerstack view joins
+    /// these across workspaces to derive layer sharing.
+    pub layer_ids: Vec<String>,
     pub cgroup_path: Option<PathBuf>,
 }
