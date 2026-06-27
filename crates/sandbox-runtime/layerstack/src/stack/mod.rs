@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use crate::error::LayerStackError;
 use crate::fs::{read_manifest, resolve_layer_path};
 use crate::lock::StorageWriterLockLease;
-use crate::model::{manifest_root_hash, LayerRef, Manifest};
+use crate::model::{manifest_root_hash, Manifest};
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
 
 mod layer;
@@ -90,11 +90,6 @@ impl LayerStack {
         let _guard = self.writer_lock.exclusive()?;
         let mut leases = lock_shared_registry(&self.leases)?;
         release_lease_locked(&self.storage_root, &mut leases, lease_id)
-    }
-
-    #[must_use]
-    pub fn leased_layers(&self) -> Vec<LayerRef> {
-        lock_shared_registry_recover(&self.leases).leased_layers()
     }
 
     #[must_use]

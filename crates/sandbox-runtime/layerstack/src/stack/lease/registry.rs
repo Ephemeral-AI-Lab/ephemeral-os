@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -16,7 +16,6 @@ pub(in crate::stack) struct LayerStackLeaseRecord {
 #[derive(Debug, Default)]
 pub(in crate::stack) struct LeaseRegistry {
     leases: HashMap<String, LayerStackLeaseRecord>,
-    refcounts: BTreeMap<LayerRef, usize>,
 }
 
 pub(in crate::stack) fn shared_registry_for_root(
@@ -63,45 +62,26 @@ impl LeaseRegistry {
             lease_id: new_lease_id(),
             manifest,
         };
-        increment_layers(&mut self.refcounts, &lease.manifest.layers);
         self.leases.insert(lease.lease_id.clone(), lease.clone());
         Ok(lease)
     }
 
     pub(in crate::stack) fn release(&mut self, lease_id: &str) -> Option<LayerStackLeaseRecord> {
-        let lease = self.leases.remove(lease_id)?;
-        self.decrement_layers(&lease.manifest.layers);
-        Some(lease)
+        self.leases.remove(lease_id)
     }
 
     pub(in crate::stack) fn leased_layers(&self) -> Vec<LayerRef> {
-        self.refcounts.keys().cloned().collect()
+        self.leases
+            .values()
+            .flat_map(|lease| &lease.manifest.layers)
+            .cloned()
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
     }
 
     pub(in crate::stack) fn active_count(&self) -> usize {
         self.leases.len()
-    }
-
-    fn decrement_layers(&mut self, layers: &[LayerRef]) {
-        decrement_layers(&mut self.refcounts, layers);
-    }
-}
-
-fn increment_layers(refcounts: &mut BTreeMap<LayerRef, usize>, layers: &[LayerRef]) {
-    for layer in layers {
-        *refcounts.entry(layer.clone()).or_insert(0) += 1;
-    }
-}
-
-fn decrement_layers(refcounts: &mut BTreeMap<LayerRef, usize>, layers: &[LayerRef]) {
-    for layer in layers {
-        match refcounts.get_mut(layer) {
-            Some(count) if *count > 1 => *count -= 1,
-            Some(_) => {
-                refcounts.remove(layer);
-            }
-            None => {}
-        }
     }
 }
 
