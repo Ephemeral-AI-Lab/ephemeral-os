@@ -1,0 +1,203 @@
+{
+  "main": {
+    "id": "b8f1726ef831887f",
+    "type": "split",
+    "children": [
+      {
+        "id": "d8151519b7c1da2b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "bfb8ca6220b437db",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2026-06-27"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "088e2de7e2900b01",
+    "type": "split",
+    "children": [
+      {
+        "id": "bf1682318c1d9b34",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "2b73796146464bdb",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "44262734f76a6936",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "8b77428a04f6344a",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "f8f9ee279898b7ef",
+    "type": "split",
+    "children": [
+      {
+        "id": "122ee0a792005c3c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "53cfb5e348510393",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 2026-06-27"
+            }
+          },
+          {
+            "id": "61fa435b246ea6b9",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 2026-06-27"
+            }
+          },
+          {
+            "id": "c72c51dbf8857e68",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "2b746dad3462cda9",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "da1a2d7b7c1244ed",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "ephemeral-os/daily-planner/2026-06-27.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 2026-06-27"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "bfb8ca6220b437db",
+  "lastOpenFiles": [
+    "ephemeral-os/docs/cli-gateway-manager-runtime.md",
+    "ephemeral-os/daily-planner/2026-06-27.md",
+    "ephemeral-os/docs/cli-gateway-manager-runtime/Untitled.md",
+    "ephemeral-os/docs/Untitled.canvas",
+    "ephemeral-os/docs/cli-gateway-manager-runtime",
+    "ephemeral-os/roadmap.md",
+    "ephemeral-os/index.md",
+    "daily-planner.md",
+    "docs.md",
+    "index.md",
+    "ephemeral-os/docs",
+    "ephemeral-os/daily-planner",
+    "ephemeral-os",
+    "roadmap.md"
+  ]
+}
