@@ -5,11 +5,11 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use sandbox_observability::{
-    ObservabilityNamespaceExecutionSnapshotRow, ObservabilityPaths, ObservabilityResourceSampleRow,
-    ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows, ObservabilityStore,
-    ObservabilityWorkspaceSnapshotRow, ResourceSampleRecord, SandboxSnapshotRecord, StoreError,
-    WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH,
-    MAX_PATH_LENGTH,
+    sample_layerstack, ObservabilityNamespaceExecutionSnapshotRow, ObservabilityPaths,
+    ObservabilityResourceSampleRow, ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows,
+    ObservabilityStore, ObservabilityWorkspaceSnapshotRow, ResourceSampleRecord, SampleReader,
+    SampleSink, SandboxSnapshotRecord, StoreError, WorkspaceSnapshotRecord,
+    MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH, MAX_KIND_LENGTH, MAX_PATH_LENGTH,
 };
 use sandbox_runtime::{
     RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, SandboxRuntimeOperations,
@@ -91,12 +91,34 @@ impl DaemonObservability {
         config: &ServerConfig,
         operations: &SandboxRuntimeOperations,
     ) -> Result<(), StoreError> {
+        let sampled_at_unix_ms = unix_ms();
         self.write_snapshot(
             config,
             operations.observability_snapshot(),
-            unix_ms(),
+            sampled_at_unix_ms,
             false,
-        )
+        )?;
+        self.append_stack_sample(operations, sampled_at_unix_ms);
+        Ok(())
+    }
+
+    /// Append the periodic `scope:"stack"` sample — the only layerstack data
+    /// written to the NDJSON log, feeding the `--window-ms` stack trend.
+    /// Best-effort: a layerstack read failure or unwritable log is skipped.
+    fn append_stack_sample(&self, operations: &SandboxRuntimeOperations, sampled_at_unix_ms: i64) {
+        let Ok(observation) = operations.observe_layerstack() else {
+            return;
+        };
+        let bytes = sample_layerstack(operations.layer_stack_root());
+        let record = json!({
+            "ts": sampled_at_unix_ms,
+            "kind": "sample",
+            "scope": "stack",
+            "layer_count": observation.layers.len(),
+            "layers_bytes": bytes.total_bytes,
+            "active_leases": observation.active_lease_count,
+        });
+        let _ = SampleSink::new(self.paths.samples_log_path().to_path_buf()).append(&record);
     }
 
     pub(crate) fn observability_snapshot_response(
@@ -111,6 +133,16 @@ impl DaemonObservability {
             Ok(value) => sandbox_protocol::Response::ok(value),
             Err(response) => response,
         }
+    }
+
+    /// Stack samples (`scope:"stack"`) from the NDJSON log at or after
+    /// `since_unix_ms`, for the layerstack `--window-ms` trend.
+    pub(crate) fn stack_trend(&self, since_unix_ms: i64) -> Vec<Value> {
+        SampleReader::new(self.paths.samples_log_path().to_path_buf())
+            .samples(since_unix_ms)
+            .into_iter()
+            .filter(|record| record.get("scope").and_then(Value::as_str) == Some("stack"))
+            .collect()
     }
 
     /// Read the live snapshot as a JSON value, for the `get_observability`

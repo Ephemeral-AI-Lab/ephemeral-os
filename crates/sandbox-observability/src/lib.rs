@@ -1,6 +1,7 @@
 mod collect;
 mod paths;
 mod records;
+mod samples;
 mod store;
 
 pub use collect::{sample_layerstack, LayerBytes, LayerStackBytes};
@@ -10,6 +11,7 @@ pub use records::{
     SandboxSnapshotRecord, WorkspaceSnapshotRecord, MAX_ERROR_MESSAGE_LENGTH, MAX_ID_LENGTH,
     MAX_KIND_LENGTH, MAX_OPERATION_LENGTH, MAX_PATH_LENGTH, MAX_SNAPSHOT_STATE_LENGTH,
 };
+pub use samples::{SampleReader, SampleSink};
 pub use store::{
     ObservabilityNamespaceExecutionSnapshotRow, ObservabilityResourceSampleRow,
     ObservabilitySandboxSnapshotRow, ObservabilitySnapshotReadOptions, ObservabilitySnapshotRows,

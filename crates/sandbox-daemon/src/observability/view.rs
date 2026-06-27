@@ -22,7 +22,7 @@ pub(crate) fn observability_view_response(
         Err(response) => return response,
     };
     match view.as_deref() {
-        Some("layerstack") => layerstack_view_response(operations),
+        Some("layerstack") => layerstack_view_response(operations, observability, request),
         Some("snapshot") => snapshot_view_response(operations, observability, request),
         Some("cgroup") => cgroup_view_response(observability, request),
         Some(other) => Response::fault(
@@ -36,7 +36,11 @@ pub(crate) fn observability_view_response(
     }
 }
 
-fn layerstack_view_response(operations: &SandboxRuntimeOperations) -> Response {
+fn layerstack_view_response(
+    operations: &SandboxRuntimeOperations,
+    observability: Option<&DaemonObservability>,
+    request: &Request,
+) -> Response {
     let observation = match operations.observe_layerstack() {
         Ok(observation) => observation,
         Err(error) => {
@@ -47,7 +51,21 @@ fn layerstack_view_response(operations: &SandboxRuntimeOperations) -> Response {
         }
     };
     let bytes = sample_layerstack(operations.layer_stack_root());
-    Response::ok(layerstack_view_value(&observation, &bytes))
+    let mut view = layerstack_view_value(&observation, &bytes);
+    let window_ms = match resource_window_ms(request) {
+        Ok(window_ms) => window_ms,
+        Err(response) => return response,
+    };
+    if let (Some(observability), Some(window_ms), Value::Object(object)) =
+        (observability, window_ms, &mut view)
+    {
+        let since = now_unix_ms().saturating_sub(i64::try_from(window_ms).unwrap_or(i64::MAX));
+        object.insert(
+            "trend".to_owned(),
+            Value::Array(observability.stack_trend(since)),
+        );
+    }
+    Response::ok(view)
 }
 
 fn snapshot_view_response(
@@ -144,4 +162,13 @@ fn observability_unconfigured() -> Response {
         error_kind::INTERNAL_ERROR,
         "daemon observability is not configured".to_owned(),
     )
+}
+
+fn now_unix_ms() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
+        .unwrap_or_default()
 }

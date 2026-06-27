@@ -21,6 +21,12 @@ fn derives_observability_database_from_daemon_socket_path() -> Result<(), Box<dy
             .join("observability")
             .join("observability.sqlite")
     );
+    assert_eq!(
+        paths.samples_log_path(),
+        daemon_runtime_dir
+            .join("observability")
+            .join("samples.ndjson")
+    );
 
     Ok(())
 }

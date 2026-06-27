@@ -13,6 +13,7 @@ pub struct ObservabilityPaths {
     daemon_runtime_dir: PathBuf,
     observability_dir: PathBuf,
     database_path: PathBuf,
+    samples_log_path: PathBuf,
 }
 
 impl ObservabilityPaths {
@@ -27,11 +28,13 @@ impl ObservabilityPaths {
             .to_path_buf();
         let observability_dir = daemon_runtime_dir.join("observability");
         let database_path = observability_dir.join("observability.sqlite");
+        let samples_log_path = observability_dir.join("samples.ndjson");
 
         Ok(Self {
             daemon_runtime_dir,
             observability_dir,
             database_path,
+            samples_log_path,
         })
     }
 
@@ -45,5 +48,9 @@ impl ObservabilityPaths {
 
     pub fn database_path(&self) -> &Path {
         &self.database_path
+    }
+
+    pub fn samples_log_path(&self) -> &Path {
+        &self.samples_log_path
     }
 }
