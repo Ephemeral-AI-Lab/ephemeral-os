@@ -1,103 +1,41 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{
-    ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord,
-    SandboxState,
-};
-use sandbox_protocol::{
-    ArgCliSpec, ArgKind, ArgSpec, CliOperationScope, CliOperationSpec, CliSpec, Request, Response,
-};
+use sandbox_protocol::{CliOperationScope, Request};
 use serde_json::{json, Map, Value};
+
+use crate::operation::ManagerServices;
+use crate::{
+    ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState,
+};
+
 const MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS: usize = 8;
 const DEFAULT_DAEMON_SNAPSHOT_TIMEOUT_MS: u64 = 1_500;
 const MAX_NODE_ERROR_BYTES: usize = 4_096;
 const PRIVATE_DAEMON_OBSERVABILITY_OP: &str = "get_observability";
 
-pub(crate) const SPEC: CliOperationSpec = CliOperationSpec {
-    name: "get_observability_tree",
-    family: "management",
-    summary: "Aggregate daemon observability snapshots for manager-known sandboxes.",
-    description: "Aggregate daemon-local observability snapshots for ready manager-known sandboxes without reading daemon storage from the manager.",
-    args: GET_OBSERVABILITY_TREE_ARGS,
-    cli: Some(GET_OBSERVABILITY_TREE_CLI),
-    related: &["list_sandboxes", "inspect_sandbox"],
-};
-
-const GET_OBSERVABILITY_TREE_ARGS: &[ArgSpec] = &[
-    ArgSpec::optional(
-        "sandbox_id",
-        ArgKind::String,
-        "Optional manager sandbox id. When omitted, all ready sandboxes with daemon endpoints are queried.",
-        None,
-        Some(ArgCliSpec {
-            flag: Some("--sandbox-id"),
-            positional: None,
-        }),
-    ),
-    ArgSpec::optional(
-        "resource_window_ms",
-        ArgKind::Integer,
-        "Optional bounded resource history window in milliseconds.",
-        None,
-        Some(ArgCliSpec {
-            flag: Some("--resource-window-ms"),
-            positional: None,
-        }),
-    ),
-];
-
-const GET_OBSERVABILITY_TREE_CLI: CliSpec = CliSpec {
-    path: &["manager", "get_observability_tree"],
-    usage: "sandbox-cli manager get_observability_tree [--sandbox-id ID] [--resource-window-ms MS]",
-    examples: &[
-        "sandbox-cli manager get_observability_tree",
-        "sandbox-cli manager get_observability_tree --sandbox-id sbox-1",
-        "sandbox-cli manager get_observability_tree --resource-window-ms 60000",
-    ],
-};
-
 #[derive(Clone, Debug)]
-struct TreeOptions {
-    sandbox_id: Option<SandboxId>,
-    resource_window_ms: Option<u64>,
+pub(crate) struct TreeOptions {
+    pub(crate) sandbox_id: Option<SandboxId>,
+    pub(crate) resource_window_ms: Option<u64>,
 }
 
-pub(crate) fn dispatch(
-    services: &crate::operation::ManagerServices,
-    request: &Request,
-) -> Response {
-    let options = match tree_options(request) {
-        Ok(options) => options,
-        Err(response) => return response,
-    };
-    let records = match selected_records(services, options.sandbox_id.as_ref()) {
-        Ok(records) => records,
-        Err(error) => return error.into_response(),
-    };
-    let sandboxes = aggregate_records(
+pub(crate) fn get_observability_tree(
+    services: &ManagerServices,
+    options: TreeOptions,
+    request_id: &str,
+) -> Result<Vec<Value>, ManagerError> {
+    let records = selected_records(services, options.sandbox_id.as_ref())?;
+    Ok(aggregate_records(
         records,
         options,
         Arc::clone(&services.daemon_client),
-        &request.request_id,
-    );
-    Response::ok(json!({ "sandboxes": sandboxes }))
-}
-
-fn tree_options(request: &Request) -> Result<TreeOptions, Response> {
-    let sandbox_id = request
-        .optional_string("sandbox_id")?
-        .map(SandboxId::new)
-        .transpose()
-        .map_err(ManagerError::into_response)?;
-    Ok(TreeOptions {
-        sandbox_id,
-        resource_window_ms: request.optional_u64("resource_window_ms")?,
-    })
+        request_id,
+    ))
 }
 
 fn selected_records(
-    services: &crate::operation::ManagerServices,
+    services: &ManagerServices,
     sandbox_id: Option<&SandboxId>,
 ) -> Result<Vec<SandboxRecord>, ManagerError> {
     match sandbox_id {

@@ -6,6 +6,7 @@ members = [
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
     "crates/sandbox-observability",
+    "crates/sandbox-observability-operations",
     "crates/sandbox-gateway",
     "crates/sandbox-protocol",
     "crates/sandbox-runtime/workspace",
@@ -66,6 +67,7 @@ sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
 sandbox-observability = { path = "crates/sandbox-observability" }
+sandbox-observability-operations = { path = "crates/sandbox-observability-operations" }
 sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }

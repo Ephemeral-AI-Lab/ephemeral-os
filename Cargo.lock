@@ -1392,6 +1392,7 @@ dependencies = [
  "clap",
  "sandbox-config",
  "sandbox-manager",
+ "sandbox-observability-operations",
  "sandbox-protocol",
  "sandbox-provider-docker",
  "sandbox-runtime",
@@ -1421,6 +1422,13 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "sandbox-observability-operations"
+version = "0.1.0"
+dependencies = [
+ "sandbox-protocol",
 ]
 
 [[package]]

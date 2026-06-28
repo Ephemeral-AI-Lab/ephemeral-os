@@ -44,7 +44,7 @@ pub fn runtime_catalog_document() -> Result<CliOperationCatalogDocument, Request
 }
 
 pub fn observability_catalog_document() -> Result<CliOperationCatalogDocument, RequestBuildError> {
-    catalog_document(crate::cli::observability_specs::observability_catalog())
+    catalog_document(sandbox_observability_operations::observability_catalog())
 }
 
 pub fn build_request_from_catalog(
