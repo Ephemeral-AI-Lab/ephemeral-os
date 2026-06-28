@@ -54,34 +54,22 @@ impl SandboxRuntimeOperations {
             config.cgroup_root.clone(),
             observer.clone(),
         ));
-        emit_daemon_progress(
-            "layerstack.ensure_workspace_base",
-            "started",
-            format!(
-                "ensuring workspace base for {}",
-                config.workspace.workspace_root.display()
-            ),
-        );
+        cli_log(format!(
+            "ensuring workspace base for {}",
+            config.workspace.workspace_root.display()
+        ));
         let base_result = sandbox_runtime_layerstack::ensure_workspace_base(
             &layer_stack_root,
             &config.workspace.workspace_root,
         );
         match base_result {
-            Ok((_binding, built)) => emit_daemon_progress(
-                "layerstack.ensure_workspace_base",
-                "completed",
-                if built {
-                    "workspace base built"
-                } else {
-                    "workspace base already exists"
-                },
-            ),
+            Ok((_binding, built)) => cli_log(if built {
+                "workspace base built"
+            } else {
+                "workspace base already exists"
+            }),
             Err(error) => {
-                emit_daemon_progress(
-                    "layerstack.ensure_workspace_base",
-                    "failed",
-                    error.to_string(),
-                );
+                cli_log(error.to_string());
                 panic!("layerstack workspace base initialization failed: {error}");
             }
         }
@@ -128,12 +116,8 @@ impl SandboxRuntimeOperations {
     }
 }
 
-fn emit_daemon_progress(_phase: &str, _state: &str, message: impl Into<String>) {
-    cli_log(message.into());
-}
-
-fn cli_log(message: String) {
-    let escaped = serde_json::to_string(&message).unwrap_or_else(|_| "\"\"".to_owned());
+fn cli_log(message: impl AsRef<str>) {
+    let escaped = serde_json::to_string(message.as_ref()).unwrap_or_else(|_| "\"\"".to_owned());
     eprintln!("cli_log({escaped})");
 }
 

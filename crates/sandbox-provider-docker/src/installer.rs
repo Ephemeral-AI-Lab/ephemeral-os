@@ -11,7 +11,6 @@ use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_manager::{
     ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxRecord,
 };
-use serde_json::Value;
 
 use crate::archive::build_install_archive;
 use crate::engine::{DockerEngine, DockerError};
@@ -131,7 +130,6 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
                     &self.engine.capture_logs(sandbox_id.to_owned()),
                     &mut seen_logs,
                     progress,
-                    sandbox_id,
                 );
             },
         )
@@ -189,50 +187,14 @@ where
     }
 }
 
-fn emit_container_progress(
-    logs: &str,
-    seen_logs: &mut HashSet<String>,
-    progress: &ProgressSink,
-    default_sandbox_id: &str,
-) {
+fn emit_container_progress(logs: &str, seen_logs: &mut HashSet<String>, progress: &ProgressSink) {
     for line in logs.lines().map(str::trim).filter(|line| !line.is_empty()) {
         if !seen_logs.insert(line.to_owned()) {
             continue;
         }
         if let Some(message) = parse_cli_log(line) {
-            progress.emit("cli_log", "log", "info", message, Some(default_sandbox_id));
-            continue;
+            progress.emit(message);
         }
-        let Ok(value) = serde_json::from_str::<Value>(line) else {
-            continue;
-        };
-        let progress_value = value.get("progress").unwrap_or(&value);
-        if progress_value.get("event").and_then(Value::as_str) != Some("progress")
-            && value.get("event").and_then(Value::as_str) != Some("progress")
-        {
-            continue;
-        }
-        let op = progress_value
-            .get("op")
-            .and_then(Value::as_str)
-            .unwrap_or("daemon");
-        let phase = progress_value
-            .get("phase")
-            .and_then(Value::as_str)
-            .unwrap_or("log");
-        let state = progress_value
-            .get("state")
-            .and_then(Value::as_str)
-            .unwrap_or("info");
-        let message = progress_value
-            .get("message")
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        let sandbox_id = progress_value
-            .get("sandbox_id")
-            .and_then(Value::as_str)
-            .unwrap_or(default_sandbox_id);
-        progress.emit(op, phase, state, message, Some(sandbox_id));
     }
 }
 
@@ -278,7 +240,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn emit_container_progress_relays_cli_log_lines_once_and_keeps_json_compat() {
+    fn emit_container_progress_relays_cli_log_lines_once() {
         let events = Arc::new(Mutex::new(Vec::new()));
         let progress = ProgressSink::new({
             let events = Arc::clone(&events);
@@ -289,23 +251,12 @@ mod tests {
 not json
 cli_log("ensuring base")
 cli_log("copied files")
-{"event":"progress","progress":{"op":"daemon.startup","phase":"layerstack.ensure_workspace_base","state":"started","message":"ensuring base","sandbox_id":"sbox-1"}}
 "#;
 
-        emit_container_progress(logs, &mut seen_logs, &progress, "fallback-sbox");
-        emit_container_progress(logs, &mut seen_logs, &progress, "fallback-sbox");
+        emit_container_progress(logs, &mut seen_logs, &progress);
+        emit_container_progress(logs, &mut seen_logs, &progress);
 
         let events = events.lock().expect("events lock");
-        assert_eq!(events.len(), 3);
-        assert_eq!(events[0].op, "cli_log");
-        assert_eq!(events[0].phase, "log");
-        assert_eq!(events[0].message, "ensuring base");
-        assert_eq!(events[0].sandbox_id.as_deref(), Some("fallback-sbox"));
-        assert_eq!(events[1].op, "cli_log");
-        assert_eq!(events[1].message, "copied files");
-        assert_eq!(events[1].sandbox_id.as_deref(), Some("fallback-sbox"));
-        assert_eq!(events[2].op, "daemon.startup");
-        assert_eq!(events[2].phase, "layerstack.ensure_workspace_base");
-        assert_eq!(events[2].sandbox_id.as_deref(), Some("sbox-1"));
+        assert_eq!(*events, vec!["ensuring base", "copied files"]);
     }
 }

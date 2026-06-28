@@ -1,7 +1,9 @@
 use std::io::{ErrorKind, Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
+use rayon::prelude::*;
 use sha2::{Digest, Sha256};
 
 use crate::error::LayerStackError;
@@ -13,6 +15,7 @@ use super::collect::{base_root_hash, format_path_sample, relative_path, BaseEntr
 
 const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
 const PROGRESS_INTERVAL: Duration = Duration::from_secs(1);
+const COPY_BUFFER_BYTES: usize = 1024 * 1024;
 
 pub(super) fn build_base_layer(
     stack: &Path,
@@ -30,35 +33,38 @@ pub(super) fn build_base_layer(
     std::fs::create_dir_all(&staging_dir)?;
     let result = (|| {
         let mut entries = Vec::new();
+        let mut file_tasks = Vec::new();
         let mut special = Vec::new();
         let mut unstable = Vec::new();
-        let mut stats = BuildStats::new();
-        stats.emit(
-            "workspace_base.copy",
-            "started",
-            format!("copying workspace {} into base layer", workspace.display()),
-        );
-        copy_workspace_dir(
+        let stats = BuildStats::new();
+        stats.emit(format!(
+            "copying workspace {} into base layer",
+            workspace.display()
+        ));
+        collect_tree(
             workspace,
             workspace,
             &staging_dir,
             &mut entries,
+            &mut file_tasks,
             &mut special,
             &mut unstable,
-            &mut stats,
+            &stats,
         )?;
+        merge_file_outcomes(
+            copy_files(&file_tasks, &stats)?,
+            &mut entries,
+            &mut special,
+            &mut unstable,
+        );
         if !special.is_empty() || !unstable.is_empty() {
             special.sort();
             unstable.sort();
-            stats.emit(
-                "workspace_base.copy",
-                "failed",
-                format!(
-                    "workspace changed or contains unsupported files: special={} unstable={}",
-                    special.len(),
-                    unstable.len()
-                ),
-            );
+            stats.emit(format!(
+                "workspace changed or contains unsupported files: special={} unstable={}",
+                special.len(),
+                unstable.len()
+            ));
             return Err(LayerStackError::Storage(format!(
                 "workspace base must be a full copy; special={} [{}], unstable={} [{}]",
                 special.len(),
@@ -67,27 +73,15 @@ pub(super) fn build_base_layer(
                 format_path_sample(&unstable)
             )));
         }
-        stats.emit("workspace_base.copy", "completed", stats.summary());
-        stats.emit(
-            "workspace_base.manifest",
-            "started",
-            format!("hashing base manifest entries={}", entries.len()),
-        );
+        stats.emit(stats.summary());
+        stats.emit(format!("hashing base manifest entries={}", entries.len()));
         let root_hash = base_root_hash(&mut entries);
-        stats.emit(
-            "workspace_base.manifest",
-            "completed",
-            format!("base manifest root_hash={root_hash}"),
-        );
+        stats.emit(format!("base manifest root_hash={root_hash}"));
         if let Some(parent) = layer_dir.parent() {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::rename(&staging_dir, &layer_dir)?;
-        stats.emit(
-            "workspace_base.layer",
-            "completed",
-            format!("base layer ready at {}", layer_dir.display()),
-        );
+        stats.emit(format!("base layer ready at {}", layer_dir.display()));
         Ok::<String, LayerStackError>(root_hash)
     })();
     let root_hash = match result {
@@ -107,14 +101,29 @@ pub(super) fn build_base_layer(
     ))
 }
 
-fn copy_workspace_dir(
+struct FileTask {
+    source: PathBuf,
+    target: PathBuf,
+    rel: String,
+    permissions: std::fs::Permissions,
+}
+
+enum FileOutcome {
+    Copied(BaseEntry),
+    Unstable(String),
+    Special(String),
+}
+
+#[allow(clippy::too_many_arguments)]
+fn collect_tree(
     workspace: &Path,
     current: &Path,
     staging_dir: &Path,
     entries: &mut Vec<BaseEntry>,
+    file_tasks: &mut Vec<FileTask>,
     special: &mut Vec<String>,
     unstable: &mut Vec<String>,
-    stats: &mut BuildStats,
+    stats: &BuildStats,
 ) -> Result<(), LayerStackError> {
     let mut children = match std::fs::read_dir(current) {
         Ok(read_dir) => read_dir.collect::<Result<Vec<_>, _>>()?,
@@ -144,52 +153,33 @@ fn copy_workspace_dir(
                 special.push(rel);
                 continue;
             };
-            if let Some(parent) = target.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            remove_path(&target)?;
             std::os::unix::fs::symlink(&link_target, &target)?;
             entries.push(BaseEntry::Symlink {
                 path: rel,
                 link_target: link_target.to_string_lossy().into_owned(),
             });
-            stats.symlinks += 1;
-            stats.maybe_emit();
+            stats.record_symlink();
         } else if meta.is_dir() {
             std::fs::create_dir_all(&target)?;
             entries.push(BaseEntry::Directory { path: rel });
-            stats.directories += 1;
-            stats.maybe_emit();
-            copy_workspace_dir(
+            stats.record_directory();
+            collect_tree(
                 workspace,
                 &source,
                 staging_dir,
                 entries,
+                file_tasks,
                 special,
                 unstable,
                 stats,
             )?;
         } else if meta.is_file() {
-            if let Some(parent) = target.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            remove_path(&target)?;
-            match copy_file_with_hash(&source, &target, &meta) {
-                Ok(copied) => {
-                    let size = copied.size;
-                    entries.push(BaseEntry::File {
-                        path: rel,
-                        size,
-                        content_hash: copied.content_hash,
-                    });
-                    stats.files += 1;
-                    stats.bytes += size;
-                    stats.maybe_emit();
-                }
-                Err(CopyFileError::SourceNotFound) => unstable.push(rel),
-                Err(CopyFileError::SourceUnreadable) => special.push(rel),
-                Err(CopyFileError::Target(err)) => return Err(err.into()),
-            }
+            file_tasks.push(FileTask {
+                source,
+                target,
+                rel,
+                permissions: meta.permissions(),
+            });
         } else {
             special.push(rel);
         }
@@ -197,53 +187,121 @@ fn copy_workspace_dir(
     Ok(())
 }
 
+fn copy_files(tasks: &[FileTask], stats: &BuildStats) -> Result<Vec<FileOutcome>, LayerStackError> {
+    tasks
+        .par_iter()
+        .map_init(
+            || vec![0_u8; COPY_BUFFER_BYTES].into_boxed_slice(),
+            |buffer, task| -> Result<FileOutcome, LayerStackError> {
+                let outcome = copy_one_file(task, buffer)?;
+                if let FileOutcome::Copied(BaseEntry::File { size, .. }) = &outcome {
+                    stats.record_file(*size);
+                }
+                Ok(outcome)
+            },
+        )
+        .collect()
+}
+
+fn merge_file_outcomes(
+    outcomes: Vec<FileOutcome>,
+    entries: &mut Vec<BaseEntry>,
+    special: &mut Vec<String>,
+    unstable: &mut Vec<String>,
+) {
+    for outcome in outcomes {
+        match outcome {
+            FileOutcome::Copied(entry) => entries.push(entry),
+            FileOutcome::Unstable(rel) => unstable.push(rel),
+            FileOutcome::Special(rel) => special.push(rel),
+        }
+    }
+}
+
+fn copy_one_file(task: &FileTask, buffer: &mut [u8]) -> Result<FileOutcome, LayerStackError> {
+    match copy_file_with_hash(&task.source, &task.target, &task.permissions, buffer) {
+        Ok(copied) => Ok(FileOutcome::Copied(BaseEntry::File {
+            path: task.rel.clone(),
+            size: copied.size,
+            content_hash: copied.content_hash,
+        })),
+        Err(CopyFileError::SourceNotFound) => Ok(FileOutcome::Unstable(task.rel.clone())),
+        Err(CopyFileError::SourceUnreadable) => Ok(FileOutcome::Special(task.rel.clone())),
+        Err(CopyFileError::Target(err)) => Err(err.into()),
+    }
+}
+
 struct BuildStats {
     started: Instant,
-    last_emit: Instant,
-    files: u64,
-    directories: u64,
-    symlinks: u64,
-    bytes: u64,
+    last_emit_ms: AtomicU64,
+    files: AtomicU64,
+    directories: AtomicU64,
+    symlinks: AtomicU64,
+    bytes: AtomicU64,
 }
 
 impl BuildStats {
     fn new() -> Self {
-        let now = Instant::now();
         Self {
-            started: now,
-            last_emit: now,
-            files: 0,
-            directories: 0,
-            symlinks: 0,
-            bytes: 0,
+            started: Instant::now(),
+            last_emit_ms: AtomicU64::new(0),
+            files: AtomicU64::new(0),
+            directories: AtomicU64::new(0),
+            symlinks: AtomicU64::new(0),
+            bytes: AtomicU64::new(0),
         }
     }
 
     fn summary(&self) -> String {
         format!(
             "copied files={} dirs={} symlinks={} bytes={}",
-            self.files, self.directories, self.symlinks, self.bytes
+            self.files.load(Ordering::Relaxed),
+            self.directories.load(Ordering::Relaxed),
+            self.symlinks.load(Ordering::Relaxed),
+            self.bytes.load(Ordering::Relaxed),
         )
     }
 
-    fn maybe_emit(&mut self) {
-        if self.last_emit.elapsed() >= PROGRESS_INTERVAL {
-            self.emit("workspace_base.copy", "running", self.summary());
+    fn record_file(&self, size: u64) {
+        self.files.fetch_add(1, Ordering::Relaxed);
+        self.bytes.fetch_add(size, Ordering::Relaxed);
+        self.maybe_emit();
+    }
+
+    fn record_directory(&self) {
+        self.directories.fetch_add(1, Ordering::Relaxed);
+        self.maybe_emit();
+    }
+
+    fn record_symlink(&self) {
+        self.symlinks.fetch_add(1, Ordering::Relaxed);
+        self.maybe_emit();
+    }
+
+    fn maybe_emit(&self) {
+        let elapsed = self.started.elapsed().as_millis() as u64;
+        let last = self.last_emit_ms.load(Ordering::Relaxed);
+        if elapsed.saturating_sub(last) < PROGRESS_INTERVAL.as_millis() as u64 {
+            return;
+        }
+        if self
+            .last_emit_ms
+            .compare_exchange(last, elapsed, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        {
+            cli_log(self.summary());
         }
     }
 
-    fn emit(&mut self, phase: &str, state: &str, message: impl Into<String>) {
-        self.last_emit = Instant::now();
-        emit_progress(phase, state, message, self.started.elapsed().as_millis());
+    fn emit(&self, message: impl AsRef<str>) {
+        self.last_emit_ms
+            .store(self.started.elapsed().as_millis() as u64, Ordering::Relaxed);
+        cli_log(message);
     }
 }
 
-fn emit_progress(_phase: &str, _state: &str, message: impl Into<String>, _elapsed_ms: u128) {
-    cli_log(message.into());
-}
-
-fn cli_log(message: String) {
-    let escaped = serde_json::to_string(&message).unwrap_or_else(|_| "\"\"".to_owned());
+fn cli_log(message: impl AsRef<str>) {
+    let escaped = serde_json::to_string(message.as_ref()).unwrap_or_else(|_| "\"\"".to_owned());
     eprintln!("cli_log({escaped})");
 }
 
@@ -261,27 +319,33 @@ enum CopyFileError {
 fn copy_file_with_hash(
     source: &Path,
     target: &Path,
-    source_meta: &std::fs::Metadata,
+    permissions: &std::fs::Permissions,
+    buffer: &mut [u8],
 ) -> Result<CopiedFile, CopyFileError> {
     let mut input = std::fs::File::open(source).map_err(map_source_error)?;
-    let mut output = std::fs::File::create(target).map_err(CopyFileError::Target)?;
+    let output = std::fs::File::create(target).map_err(CopyFileError::Target)?;
+    let mut writer = std::io::BufWriter::new(output);
     let mut digest = Sha256::new();
     let mut size = 0_u64;
-    let mut buffer = vec![0_u8; 1024 * 1024].into_boxed_slice();
 
     loop {
-        let count = input.read(&mut buffer).map_err(map_source_error)?;
+        let count = input.read(buffer).map_err(map_source_error)?;
         if count == 0 {
             break;
         }
-        output
+        writer
             .write_all(&buffer[..count])
             .map_err(CopyFileError::Target)?;
         digest.update(&buffer[..count]);
         size += count as u64;
     }
 
-    std::fs::set_permissions(target, source_meta.permissions()).map_err(CopyFileError::Target)?;
+    let output = writer
+        .into_inner()
+        .map_err(|err| CopyFileError::Target(err.into_error()))?;
+    output
+        .set_permissions(permissions.clone())
+        .map_err(CopyFileError::Target)?;
     Ok(CopiedFile {
         size,
         content_hash: hex_lower(digest.finalize()),

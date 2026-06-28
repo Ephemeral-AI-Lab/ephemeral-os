@@ -18,7 +18,7 @@ pub use operation::{
     cli_operation_catalog, cli_operation_families, cli_operation_specs, dispatch_operation,
     dispatch_operation_with_progress, ManagerServices,
 };
-pub use progress::{ManagerProgressEvent, ProgressSink};
+pub use progress::ProgressSink;
 pub use router::SandboxManagerRouter;
 pub use runtime::{CreateSandboxRequest, CreateSandboxResult, SandboxRuntime};
 pub use store::SandboxStore;

@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use sandbox_manager::ManagerProgressEvent;
 use sandbox_protocol::{decode_request_value, Request};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
@@ -46,8 +45,8 @@ impl SandboxGatewayServer {
         W: AsyncWrite + Unpin,
     {
         let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-        let progress = sandbox_manager::ProgressSink::new(move |event| {
-            let _ = tx.send(cli_log(event));
+        let progress = sandbox_manager::ProgressSink::new(move |log| {
+            let _ = tx.send(log);
         });
         let manager = self.manager.clone();
         let response_task = tokio::spawn(async move {
@@ -91,10 +90,6 @@ impl SandboxGatewayServer {
         }
         decode_request(Value::Object(object)).map(|request| (request, stream_logs))
     }
-}
-
-fn cli_log(event: ManagerProgressEvent) -> String {
-    event.message
 }
 
 fn cli_log_line(message: &str) -> Vec<u8> {
