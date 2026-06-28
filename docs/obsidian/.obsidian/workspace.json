@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "ephemeral-os/daily-progress-tracker/2026-06-27.md",
+                "file": "ephemeral-os/docs/cli-operations/observability/cgroup.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "2026-06-27"
+              "title": "cgroup"
             }
           }
         ]
@@ -183,26 +183,44 @@
       "bases:Create new base": false
     }
   },
-  "active": "2b73796146464bdb",
+  "active": "bfb8ca6220b437db",
   "lastOpenFiles": [
-    "Untitled 1",
-    "Untitled",
+    "ephemeral-os/docs/cli-operations/observability/layerstack.md",
+    "ephemeral-os/docs/cli-operations/observability/snapshot.md",
+    "ephemeral-os/docs/cli-operations/observability/trace.md",
+    "ephemeral-os/docs/cli-operations/observability/events.md",
+    "ephemeral-os/docs/cli-operations/observability/cgroup.md",
+    "ephemeral-os/docs/cli-operations/manager/get_observability_tree.md",
+    "ephemeral-os/docs/cli-operations/manager/inspect_sandbox.md",
+    "ephemeral-os/docs/cli-operations/manager/destroy_sandbox.md",
+    "ephemeral-os/docs/cli-operations/manager/create_sandbox.md",
+    "ephemeral-os/docs/cli-operations/runtime/command/exec_command.md",
+    "ephemeral-os/docs/cli-operations/runtime/workspace_session/create_workspace_session.md",
+    "ephemeral-os/docs/cli-operations/runtime/command/write_command_stdin.md",
+    "ephemeral-os/docs/cli-operations/runtime/workspace_session/destroy_workspace_session.md",
+    "ephemeral-os/docs/cli-operations/runtime/command/read_command_lines.md",
     "ephemeral-os/docs/cli-gateway-manager-runtime.md",
-    "ephemeral-os/daily-planner/2026-06-27.md",
-    "ephemeral-os/daily-progress-tracker/2026-06-27.md",
-    "ephemeral-os/daily-progress-tracker",
+    "ephemeral-os/docs/cli-operations/runtime/workspace_session/create_workspace_session.md.tmp.7941.fabd6e23eaf4",
+    "ephemeral-os/docs/cli-operations/runtime/workspace_session",
+    "ephemeral-os/docs/cli-operations/runtime/command",
+    "ephemeral-os/docs/cli-operations/manager/list_sandboxes.md",
+    "ephemeral-os/docs/cli-operations/manager/list_sandboxes.md.tmp.7941.8973fe1c9e48",
+    "ephemeral-os/docs/cli-operations/manager",
+    "ephemeral-os/docs/cli-operations/observability",
+    "ephemeral-os/docs/cli-operations/runtime/Untitled.md",
+    "ephemeral-os/docs/cli-operations/runtime",
+    "ephemeral-os/docs/cli-operations",
+    "ephemeral-os/daily-progress-tracker/2026-06-28.md",
     "ephemeral-os/index.md",
-    "ephemeral-os/daily-planner/2026-06-27.md.tmp.92696.7e4ecbf18c4f",
+    "ephemeral-os/daily-progress-tracker/2026-06-27.md",
+    "ephemeral-os/docs/cli-operations/manager/management",
+    "ephemeral-os/docs/cli-operations/manager/Untitled.md",
+    "ephemeral-os/docs/cli-operations/observability",
     "ephemeral-os/roadmap.md",
-    "ephemeral-os/docs",
-    "ephemeral-os/daily-planner",
-    "ephemeral-os",
+    "ephemeral-os/daily-planner/2026-06-27.md",
     "ephemeral-os/docs/cli-gateway-manager-runtime/Untitled.md",
     "ephemeral-os/docs/Untitled.canvas",
-    "ephemeral-os/docs/cli-gateway-manager-runtime",
     "daily-planner.md",
-    "docs.md",
-    "index.md",
-    "roadmap.md"
+    "docs.md"
   ]
 }
