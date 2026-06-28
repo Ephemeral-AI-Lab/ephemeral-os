@@ -29,13 +29,14 @@ afterward — you do **not** start it by hand.
 |---------------------------------------------------------------|-----------------------------------------------|
 | `pytest -m smoke`                                             | smallest end-to-end check                     |
 | `pytest manager`                                             | manager `management` family lifecycle         |
-| `pytest runtime`                                            | runtime `command` + `workspace_session`       |
 | `pytest observability`                                     | placeholder (skipped)                         |
 | `pytest`                                                   | everything                                    |
-| `pytest runtime/command`                                  | one family                                    |
-| `pytest runtime/command/test_command.py::test_exec_one_shot` | one test                                      |
+| `pytest manager/management`                               | one family                                    |
+| `pytest manager/management/test_management.py::test_sandbox_lifecycle` | one test                            |
 | `pytest -v`                                                | verbose (per-test names)                      |
 | `pytest -x`                                                | stop at first failure                         |
+
+> `runtime/` is currently an empty placeholder, so it has no tests to run yet.
 
 Exit code is `0` only when everything that ran passed.
 
@@ -47,7 +48,6 @@ inline for one run:
 ```sh
 E2E_IMAGE=debian:12 pytest manager                   # different image
 E2E_WORKSPACE_VARIANT=special_case_b pytest manager  # different repo/ workspace variant
-E2E_NETWORK_PROFILE=isolated pytest runtime
 E2E_REBUILD_BINARY=0 pytest -m smoke     # fastest cold start: skip the forced daemon rebuild
 ```
 
@@ -60,11 +60,43 @@ workspace root. `repo/testbed` is the default.
 | `E2E_IMAGE`                   | `ubuntu:24.04`      | Docker image for new sandboxes                     |
 | `E2E_WORKSPACE_VARIANT`       | `testbed`           | variant subfolder under `repo/` (bind-mounted)     |
 | `E2E_WORKSPACE_ROOT`          | `repo/<variant>`    | absolute host workspace root (overrides variant)   |
-| `E2E_NETWORK_PROFILE`         | `shared`            | workspace-session profile (`shared`/`isolated`)    |
 | `SANDBOX_GATEWAY_CONFIG_YAML` | `../config/prd.yml` | daemon/sandbox config YAML used by the gateway      |
 | `E2E_REBUILD_BINARY`          | `1`                 | cold-start gateway with `--rebuild-binary`          |
+| `E2E_PROGRESS`                | `0`                 | `1` streams daemon-side op progress live (`--progress`) |
 
-## 5. Gateway & cleanup
+## 5. Metrics & in-flight logs
+
+Enabled by default in `pytest.ini` — no extra flags needed:
+
+- **Live logs** (`log_cli = true`): each test streams its operations as they
+  happen. The `e2e.cli` logger prints every `sandbox-cli` call and its result
+  with elapsed time (`→ …` / `← … (exit=0, 0.03s)`); `e2e.gateway` logs
+  bring-up; `e2e.timing` prints a per-test total.
+- **Per-test timing** (`--durations=0`): a `slowest durations` table at the end
+  with a `setup / call / teardown` breakdown per test, plus the live
+  `⏱ <test> — N.NNNs total` line during the run.
+
+Useful overrides:
+
+```sh
+pytest -m smoke                       # default: live logs + timing
+pytest --log-cli-level=WARNING        # quieter (suppress the per-op INFO lines)
+pytest -q --no-header                 # compact
+pytest -s                             # also stream raw subprocess output
+                                      #   (e.g. the gateway cold-start cargo build)
+E2E_PROGRESS=1 pytest manager         # stream daemon-side op progress live
+                                      #   (workspace base copy/hash for create_sandbox)
+```
+
+`log_cli` streams our logging records live; raw stdout/stderr of subprocesses
+(like the gateway build) is still captured unless you add `-s`.
+
+`E2E_PROGRESS=1` adds sandbox-cli's global `--progress` flag so long-running
+operations (notably `create_sandbox`, which copies + hashes the workspace base)
+stream their progress lines live through the `e2e.cli` logger (prefixed `‖`).
+The final JSON is still parsed normally, so assertions are unaffected.
+
+## 6. Gateway & cleanup
 
 - **First run** (no gateway up) cold-starts it via
   `bin/start-sandbox-docker-gateway` — with `--rebuild-binary` when
@@ -75,7 +107,7 @@ workspace root. `repo/testbed` is the default.
   teardown — even when the test fails. Logs are never scraped; results come from
   each operation's JSON.
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 - **`pytest: command not found`** → `pip install -r requirements.txt`
   (or run `python3 -m pytest ...`).
@@ -85,7 +117,7 @@ workspace root. `repo/testbed` is the default.
 - **`create_sandbox` errors with `start_container: expected value at line 1
   column 1`** → that is a backend (Docker provider) failure, not a test bug. The
   suite is reporting it faithfully; the create path must be fixed in
-  `crates/sandbox-provider-docker` for the manager/runtime tests to pass.
+  `crates/sandbox-provider-docker` for the manager tests to pass.
 - **First cold start is slow** → expected (it builds/packages binaries). Use
   `E2E_REBUILD_BINARY=0` once the daemon artifacts in `dist/` are current.
 ```

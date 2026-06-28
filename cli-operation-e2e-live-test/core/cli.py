@@ -4,12 +4,21 @@ The CLI writes its result as a single JSON line — to stdout on success (exit 0
 and to stderr on error (exit 1). We capture both and parse whichever carries the
 JSON, so error responses come back as ``{"error": {...}}`` dicts rather than
 exceptions. Tests assert on the structured result; they never read logs.
+
+With ``E2E_PROGRESS=1`` we add the CLI's global ``--progress`` flag and stream
+the daemon-side progress lines (e.g. workspace base copy/hash) live to the
+``e2e.cli`` logger as they arrive, while still parsing the final JSON line.
 """
 
 import json
+import logging
 import subprocess
+import threading
+import time
 
-from .config import REPO_ROOT, SANDBOX_CLI
+from .config import PROGRESS, REPO_ROOT, SANDBOX_CLI
+
+_log = logging.getLogger("e2e.cli")
 
 
 class CliError(Exception):
@@ -18,20 +27,82 @@ class CliError(Exception):
 
 def cli(*args, timeout=180):
     """Run ``sandbox-cli <args...>`` and return the parsed JSON response."""
-    proc = subprocess.run(
-        [str(SANDBOX_CLI), *map(str, args)],
-        cwd=str(REPO_ROOT),
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    raw = proc.stdout.strip() or proc.stderr.strip()
+    printable = " ".join(["sandbox-cli", *map(str, args)])
+    _log.info("→ %s", printable)
+    started = time.monotonic()
+    if PROGRESS:
+        stdout, stderr_lines, returncode = _run_streaming(args, timeout)
+        raw = _select_json(stdout, stderr_lines)
+    else:
+        proc = subprocess.run(
+            [str(SANDBOX_CLI), *map(str, args)],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        returncode = proc.returncode
+        raw = proc.stdout.strip() or proc.stderr.strip()
+    _log.info("← %s  (exit=%s, %.2fs)", printable, returncode, time.monotonic() - started)
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
         raise CliError(
-            f"non-JSON CLI output (exit {proc.returncode}): {raw!r}"
+            f"non-JSON CLI output (exit {returncode}): {raw!r}"
         ) from exc
+
+
+def _run_streaming(args, timeout):
+    """Run with --progress, streaming stderr (progress) live.
+
+    Returns ``(stdout, stderr_lines, returncode)``.
+    """
+    cmd = [str(SANDBOX_CLI), "--progress", *map(str, args)]
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(REPO_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+    stderr_lines = []
+
+    def drain():
+        for line in iter(proc.stderr.readline, ""):
+            stripped = line.rstrip("\n")
+            stderr_lines.append(stripped)
+            if stripped:
+                _log.info("  ‖ %s", stripped)
+
+    drainer = threading.Thread(target=drain, daemon=True)
+    drainer.start()
+
+    timed_out = []
+    watchdog = threading.Timer(timeout, lambda: (timed_out.append(True), proc.kill()))
+    watchdog.start()
+    try:
+        stdout = proc.stdout.read()
+        proc.wait()
+    finally:
+        watchdog.cancel()
+        drainer.join(timeout=5)
+    if timed_out:
+        raise subprocess.TimeoutExpired(cmd, timeout)
+    return stdout, stderr_lines, proc.returncode
+
+
+def _select_json(stdout, stderr_lines):
+    """Pick the final JSON line: stdout on success, else the last JSON-looking
+    stderr line (progress lines are ``[progress …]``/``[Output]``, never JSON)."""
+    out = stdout.strip()
+    if out:
+        return out
+    for line in reversed(stderr_lines):
+        stripped = line.strip()
+        if stripped.startswith("{"):
+            return stripped
+    return ""
 
 
 def manager(operation, *args, **kwargs):

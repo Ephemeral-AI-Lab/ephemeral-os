@@ -9,8 +9,13 @@ Test plan for the `management` family. Two parts per operation:
 
 - **CLI-driven**: every action goes through `sandbox-cli manager <op>`; results
   are verified from the operation's **JSON** (`json.loads`), never from logs.
-- **Lifecycle via fixtures**: `sandbox` (and `workspace_session`) in
-  `conftest.py` create-and-teardown so cleanup runs even on failure.
+- **Lifecycle via fixtures**: the `sandbox` fixture in `conftest.py`
+  creates-and-teardown a ready sandbox so cleanup runs even on failure.
+- **Cleanup is guaranteed**: per-test fixtures destroy what they create, and a
+  session-wide safety net (`core/cleanup.py` + the `_session_sandbox_cleanup`
+  finalizer) destroys any sandbox the suite created but a test leaked. Only
+  suite-created ids are touched — never other clients' sandboxes. Inline-create
+  tests still register automatically via `helpers.create_sandbox`.
 - **Workspace variants**: `--workspace-root` is a **host path** the Docker
   backend bind-mounts into the sandbox. Variants live under `repo/` (one host
   dir each: `repo/testbed` default, `repo/special_case_b`, …), selected via
@@ -59,6 +64,25 @@ On any failure the daemon, runtime sandbox, and record are rolled back.
   usage error (no sandbox created).
 - **F7 nonexistent workspace_root** — a host path that does not exist surfaces a
   backend error (mount failure); documents expected behavior.
+- **F8 special / invalid files in workspace** — a workspace containing a
+  non-regular file (FIFO/named pipe, socket, block/char device), an unreadable
+  file, or a broken symlink → `create_sandbox` fails and rolls back. See
+  *base-build error mechanism* below.
+- **F9 workspace mutated during base hashing** — a file/dir removed while the
+  base is being walked/copied (TOCTOU race) → `create_sandbox` fails and rolls
+  back. Same error class as F8 (`unstable` instead of `special`). Inherently
+  racy to trigger.
+
+> **Base-build error mechanism (F8/F9).** At daemon startup `create_sandbox`
+> builds the layerstack workspace base by walking the bind-mounted workspace
+> (`layerstack/src/workspace_base/layer.rs`). Non-regular/unreadable entries are
+> collected as `special`; entries that vanish mid-walk as `unstable`. A non-empty
+> `special`/`unstable` set makes the base build return
+> `Storage("workspace base must be a full copy; special=… unstable=…")`, which
+> panics `Services::from_config`, kills the daemon, and surfaces to the client as
+> `create_sandbox` error `internal_error` "sandbox daemon install failed: start
+> daemon …". **Structured assertion is limited to failure + rollback** — the
+> precise `special=/unstable=` reason is only in the daemon log, not the JSON.
 
 ### (b) Test files
 - `test_create_sandbox.py`
@@ -69,6 +93,14 @@ On any failure the daemon, runtime sandbox, and record are rolled back.
   - `test_invalid_image_rolls_back` (F5)
   - `test_missing_required_args` (F6) — parametrized over the two flags.
   - `test_nonexistent_workspace_root` (F7) — may `xfail` until behavior is pinned.
+  - `test_special_file_in_workspace_fails` (F8) — build a throwaway workspace dir
+    with a FIFO (`os.mkfifo`) + a regular file, pass it as `workspace_root`,
+    assert `create_sandbox` returns an error and the id is absent from
+    `list_sandboxes` (rollback). Tear the temp dir down in `finally`.
+  - `test_workspace_mutated_during_hash_fails` (F9) — best-effort: a large temp
+    workspace plus a background thread deleting files while `create_sandbox`
+    runs; assert failure + rollback. Mark `@pytest.mark.flaky`/`skip` by default
+    since the race is timing-dependent; documents the `unstable` path.
 
 ---
 

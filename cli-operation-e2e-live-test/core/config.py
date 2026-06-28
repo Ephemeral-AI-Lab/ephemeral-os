@@ -34,9 +34,6 @@ def workspace_variant(name=None):
 # to point at any absolute host directory directly.
 WORKSPACE_ROOT = os.environ.get("E2E_WORKSPACE_ROOT", workspace_variant())
 
-# Default workspace-session network profile (shared | isolated).
-NETWORK_PROFILE = os.environ.get("E2E_NETWORK_PROFILE", "shared")
-
 # Daemon/sandbox config YAML used by the gateway start script.
 CONFIG_YAML = os.environ.get(
     "SANDBOX_GATEWAY_CONFIG_YAML", str(REPO_ROOT / "config" / "prd.yml")
@@ -44,3 +41,7 @@ CONFIG_YAML = os.environ.get(
 
 # "1" -> cold-start the gateway with --rebuild-binary (the documented path).
 REBUILD_BINARY = os.environ.get("E2E_REBUILD_BINARY", "1")
+
+# "1" -> pass sandbox-cli's global --progress flag and stream daemon-side
+# progress lines (e.g. workspace base copy/hash) live. Off by default.
+PROGRESS = os.environ.get("E2E_PROGRESS", "0") == "1"

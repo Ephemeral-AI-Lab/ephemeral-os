@@ -13,7 +13,7 @@ never scrapes `/tmp/eos-gateway.log`.
 
 ```
 cli-operation-e2e-live-test/
-├── conftest.py                # fixtures: gateway bring-up, sandbox / workspace-session lifecycle
+├── conftest.py                # fixtures: gateway bring-up, sandbox lifecycle, session cleanup
 ├── pytest.ini                 # pytest config (pythonpath, markers)
 ├── requirements.txt           # pytest
 ├── test_smoke.py              # smallest check (pytest -m smoke)
@@ -25,21 +25,19 @@ cli-operation-e2e-live-test/
 │   └── management/            # family: management
 │       ├── helpers.py
 │       └── test_management.py # create -> inspect -> list -> destroy
-├── runtime/                   # one folder per family
-│   ├── command/               # family: command
-│   │   ├── helpers.py
-│   │   └── test_command.py    # exec in session + one-shot
-│   └── workspace_session/     # family: workspace_session
-│       ├── helpers.py
-│       └── test_workspace_session.py
+├── runtime/                   # placeholder (empty; tests not implemented yet)
 └── observability/             # placeholder (see observability/README.md)
     └── test_observability.py
 ```
 
 Each **family** owns a folder with its own `helpers.py` (thin wrappers over the
 family's `sandbox-cli` operations) and its `test_*.py`. `core/` holds only
-generic, cross-family machinery. Sandbox / workspace-session lifecycle lives in
-`conftest.py` fixtures so teardown runs even when a test fails.
+generic, cross-family machinery. Sandbox lifecycle lives in `conftest.py`
+fixtures so teardown runs even when a test fails.
+
+`runtime/` is intentionally empty for now — when runtime tests are added they
+follow the same per-family layout (e.g. `runtime/command/`,
+`runtime/workspace_session/`).
 
 ## Prerequisites
 
@@ -55,7 +53,6 @@ cd cli-operation-e2e-live-test
 
 pytest -m smoke              # smallest check: gateway up + structured list_sandboxes
 pytest manager              # management lifecycle: create -> inspect -> list -> destroy
-pytest runtime              # workspace_session + command families
 pytest observability        # placeholder (skipped)
 pytest                      # everything
 ```
@@ -63,8 +60,8 @@ pytest                      # everything
 Run a single family or test:
 
 ```sh
-pytest runtime/command
-pytest runtime/command/test_command.py::test_exec_one_shot
+pytest manager/management
+pytest manager/management/test_management.py::test_sandbox_lifecycle
 ```
 
 ## Gateway lifecycle
@@ -91,7 +88,6 @@ All knobs live in `core/config.py` and are overridable from the environment:
 | `E2E_IMAGE`                   | `ubuntu:24.04`        | Docker image for `create_sandbox --image`          |
 | `E2E_WORKSPACE_VARIANT`       | `testbed`             | variant subfolder under `repo/` (host dir, bind-mounted as workspace root) |
 | `E2E_WORKSPACE_ROOT`          | `repo/<variant>`      | absolute host workspace root (overrides the variant) |
-| `E2E_NETWORK_PROFILE`         | `shared`              | workspace-session profile (`shared` \| `isolated`) |
 | `SANDBOX_GATEWAY_CONFIG_YAML` | `../config/prd.yml`   | daemon/sandbox config YAML used by the gateway      |
 | `E2E_REBUILD_BINARY`          | `1`                   | cold-start with `--rebuild-binary`; `0` to skip     |
 
