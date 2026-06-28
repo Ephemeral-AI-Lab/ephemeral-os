@@ -105,7 +105,6 @@ struct FileTask {
     source: PathBuf,
     target: PathBuf,
     rel: String,
-    permissions: std::fs::Permissions,
 }
 
 enum FileOutcome {
@@ -139,15 +138,14 @@ fn collect_tree(
         let source = child.path();
         let rel = relative_path(workspace, &source);
         let target = join_layer_path(staging_dir, &rel);
-        let meta = match std::fs::symlink_metadata(&source) {
-            Ok(meta) => meta,
+        let file_type = match child.file_type() {
+            Ok(file_type) => file_type,
             Err(err) if err.kind() == ErrorKind::NotFound => {
                 unstable.push(rel);
                 continue;
             }
             Err(err) => return Err(err.into()),
         };
-        let file_type = meta.file_type();
         if file_type.is_symlink() {
             let Ok(link_target) = std::fs::read_link(&source) else {
                 special.push(rel);
@@ -159,7 +157,7 @@ fn collect_tree(
                 link_target: link_target.to_string_lossy().into_owned(),
             });
             stats.record_symlink();
-        } else if meta.is_dir() {
+        } else if file_type.is_dir() {
             std::fs::create_dir_all(&target)?;
             entries.push(BaseEntry::Directory { path: rel });
             stats.record_directory();
@@ -173,12 +171,11 @@ fn collect_tree(
                 unstable,
                 stats,
             )?;
-        } else if meta.is_file() {
+        } else if file_type.is_file() {
             file_tasks.push(FileTask {
                 source,
                 target,
                 rel,
-                permissions: meta.permissions(),
             });
         } else {
             special.push(rel);
@@ -219,7 +216,7 @@ fn merge_file_outcomes(
 }
 
 fn copy_one_file(task: &FileTask, buffer: &mut [u8]) -> Result<FileOutcome, LayerStackError> {
-    match copy_file_with_hash(&task.source, &task.target, &task.permissions, buffer) {
+    match copy_file_with_hash(&task.source, &task.target, buffer) {
         Ok(copied) => Ok(FileOutcome::Copied(BaseEntry::File {
             path: task.rel.clone(),
             size: copied.size,
@@ -319,12 +316,11 @@ enum CopyFileError {
 fn copy_file_with_hash(
     source: &Path,
     target: &Path,
-    permissions: &std::fs::Permissions,
     buffer: &mut [u8],
 ) -> Result<CopiedFile, CopyFileError> {
     let mut input = std::fs::File::open(source).map_err(map_source_error)?;
-    let output = std::fs::File::create(target).map_err(CopyFileError::Target)?;
-    let mut writer = std::io::BufWriter::new(output);
+    let permissions = input.metadata().map_err(map_source_error)?.permissions();
+    let mut output = std::fs::File::create(target).map_err(CopyFileError::Target)?;
     let mut digest = Sha256::new();
     let mut size = 0_u64;
 
@@ -333,18 +329,15 @@ fn copy_file_with_hash(
         if count == 0 {
             break;
         }
-        writer
+        output
             .write_all(&buffer[..count])
             .map_err(CopyFileError::Target)?;
         digest.update(&buffer[..count]);
         size += count as u64;
     }
 
-    let output = writer
-        .into_inner()
-        .map_err(|err| CopyFileError::Target(err.into_error()))?;
     output
-        .set_permissions(permissions.clone())
+        .set_permissions(permissions)
         .map_err(CopyFileError::Target)?;
     Ok(CopiedFile {
         size,
