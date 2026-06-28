@@ -168,13 +168,13 @@ async fn send_raw(server: &SandboxGatewayServer, raw: &[u8]) -> Value {
     response
 }
 
-async fn send_value_lines(server: &SandboxGatewayServer, value: Value) -> Vec<Value> {
+async fn send_value_lines(server: &SandboxGatewayServer, value: Value) -> Vec<String> {
     let mut raw = serde_json::to_vec(&value).expect("serialize request");
     raw.push(b'\n');
     send_raw_lines(server, &raw).await
 }
 
-async fn send_raw_lines(server: &SandboxGatewayServer, raw: &[u8]) -> Vec<Value> {
+async fn send_raw_lines(server: &SandboxGatewayServer, raw: &[u8]) -> Vec<String> {
     let (client, server_stream) = tokio::io::duplex(64 * 1024);
     let server_future = server.handle_connection(server_stream);
     let client_future = async {
@@ -193,7 +193,7 @@ async fn send_raw_lines(server: &SandboxGatewayServer, raw: &[u8]) -> Vec<Value>
             if bytes == 0 {
                 break;
             }
-            responses.push(serde_json::from_str::<Value>(&response).expect("decode response"));
+            responses.push(response);
         }
         responses
     };
@@ -270,17 +270,18 @@ async fn gateway_streams_create_sandbox_progress_before_final_response() -> Test
         CliOperationScope::System,
         json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
     );
-    request["_stream_events"] = json!(true);
+    request["_stream_logs"] = json!(true);
 
     let responses = send_value_lines(&server, request).await;
 
     assert!(responses.len() > 1);
-    assert_eq!(responses[0]["event"], "progress");
-    assert_eq!(responses[0]["progress"]["op"], "create_sandbox");
+    assert!(responses[0].starts_with("cli_log("));
     assert!(responses
         .iter()
-        .any(|response| response["progress"]["phase"] == "runtime.create"));
-    let final_response = responses.last().expect("final response");
+        .any(|response| response.contains("creating runtime sandbox for /testbed")));
+    let final_response = serde_json::from_str::<Value>(
+        responses.last().expect("final response"),
+    )?;
     assert_eq!(final_response["id"], "container-1");
     assert_eq!(final_response["workspace_root"], "/testbed");
     assert_eq!(final_response["state"], "ready");

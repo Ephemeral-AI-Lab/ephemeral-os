@@ -135,7 +135,16 @@ fn push_u_escape(out: &mut String, value: u32) {
 }
 
 pub(crate) fn manifest_layers_json(layers: &[LayerRef]) -> String {
-    let mut out = String::from("{\"layers\":[");
+    let capacity = "{\"layers\":[]}".len()
+        + layers
+            .iter()
+            .map(|layer| {
+                "{\"layer_id\":\"\",\"path\":\"\"}".len() + layer.layer_id.len() + layer.path.len()
+            })
+            .sum::<usize>()
+        + layers.len().saturating_sub(1);
+    let mut out = String::with_capacity(capacity);
+    out.push_str("{\"layers\":[");
     for (i, layer) in layers.iter().enumerate() {
         if i > 0 {
             out.push(',');

@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use sandbox_manager::ManagerProgressEvent;
 use sandbox_protocol::{decode_request_value, Request};
-use serde_json::{json, Value};
+use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
@@ -18,7 +18,7 @@ impl SandboxGatewayServer {
         let bytes = read_request_line(&mut reader).await;
         let response = match bytes {
             Ok(bytes) => match self.authorize_and_decode(&bytes) {
-                Ok((request, stream_events)) if stream_events => {
+                Ok((request, stream_logs)) if stream_logs => {
                     return self.handle_streaming_request(request, &mut writer).await;
                 }
                 Ok((request, _)) => self
@@ -45,9 +45,9 @@ impl SandboxGatewayServer {
     where
         W: AsyncWrite + Unpin,
     {
-        let (tx, mut rx) = mpsc::unbounded_channel::<Value>();
+        let (tx, mut rx) = mpsc::unbounded_channel::<String>();
         let progress = sandbox_manager::ProgressSink::new(move |event| {
-            let _ = tx.send(progress_event_value(event));
+            let _ = tx.send(cli_log(event));
         });
         let manager = self.manager.clone();
         let response_task = tokio::spawn(async move {
@@ -56,10 +56,8 @@ impl SandboxGatewayServer {
                 .await
                 .into_json_value()
         });
-        while let Some(event) = rx.recv().await {
-            writer
-                .write_all(&sandbox_protocol::response_line(&event))
-                .await?;
+        while let Some(log) = rx.recv().await {
+            writer.write_all(&cli_log_line(&log)).await?;
         }
         let response = response_task.await.map_err(|error| {
             GatewayError::Io(std::io::Error::new(
@@ -79,8 +77,8 @@ impl SandboxGatewayServer {
         let Value::Object(mut object) = value else {
             return decode_request(value).map(|request| (request, false));
         };
-        let stream_events = object
-            .remove("_stream_events")
+        let stream_logs = object
+            .remove("_stream_logs")
             .and_then(|value| value.as_bool())
             .unwrap_or(false);
         let presented = object
@@ -91,22 +89,17 @@ impl SandboxGatewayServer {
                 return Err(GatewayError::Unauthorized);
             }
         }
-        decode_request(Value::Object(object)).map(|request| (request, stream_events))
+        decode_request(Value::Object(object)).map(|request| (request, stream_logs))
     }
 }
 
-fn progress_event_value(event: ManagerProgressEvent) -> Value {
-    json!({
-        "event": "progress",
-        "progress": {
-            "op": event.op,
-            "phase": event.phase,
-            "state": event.state,
-            "message": event.message,
-            "sandbox_id": event.sandbox_id,
-            "elapsed_ms": event.elapsed_ms,
-        },
-    })
+fn cli_log(event: ManagerProgressEvent) -> String {
+    event.message
+}
+
+fn cli_log_line(message: &str) -> Vec<u8> {
+    let escaped = serde_json::to_string(message).unwrap_or_else(|_| "\"\"".to_owned());
+    format!("cli_log({escaped})\n").into_bytes()
 }
 
 async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, GatewayError>

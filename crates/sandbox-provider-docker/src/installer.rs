@@ -199,6 +199,10 @@ fn emit_container_progress(
         if !seen_logs.insert(line.to_owned()) {
             continue;
         }
+        if let Some(message) = parse_cli_log(line) {
+            progress.emit("cli_log", "log", "info", message, Some(default_sandbox_id));
+            continue;
+        }
         let Ok(value) = serde_json::from_str::<Value>(line) else {
             continue;
         };
@@ -230,6 +234,11 @@ fn emit_container_progress(
             .unwrap_or(default_sandbox_id);
         progress.emit(op, phase, state, message, Some(sandbox_id));
     }
+}
+
+fn parse_cli_log(line: &str) -> Option<String> {
+    let encoded = line.strip_prefix("cli_log(")?.strip_suffix(')')?;
+    serde_json::from_str(encoded).ok()
 }
 
 fn authenticated_exchange(
@@ -269,7 +278,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn emit_container_progress_relays_json_progress_lines_once() {
+    fn emit_container_progress_relays_cli_log_lines_once_and_keeps_json_compat() {
         let events = Arc::new(Mutex::new(Vec::new()));
         let progress = ProgressSink::new({
             let events = Arc::clone(&events);
@@ -278,20 +287,25 @@ mod tests {
         let mut seen_logs = HashSet::new();
         let logs = r#"
 not json
+cli_log("ensuring base")
+cli_log("copied files")
 {"event":"progress","progress":{"op":"daemon.startup","phase":"layerstack.ensure_workspace_base","state":"started","message":"ensuring base","sandbox_id":"sbox-1"}}
-{"event":"progress","op":"layerstack.setup","phase":"workspace_base.copy","state":"running","message":"copied files"}
 "#;
 
         emit_container_progress(logs, &mut seen_logs, &progress, "fallback-sbox");
         emit_container_progress(logs, &mut seen_logs, &progress, "fallback-sbox");
 
         let events = events.lock().expect("events lock");
-        assert_eq!(events.len(), 2);
-        assert_eq!(events[0].op, "daemon.startup");
-        assert_eq!(events[0].phase, "layerstack.ensure_workspace_base");
-        assert_eq!(events[0].sandbox_id.as_deref(), Some("sbox-1"));
-        assert_eq!(events[1].op, "layerstack.setup");
-        assert_eq!(events[1].phase, "workspace_base.copy");
+        assert_eq!(events.len(), 3);
+        assert_eq!(events[0].op, "cli_log");
+        assert_eq!(events[0].phase, "log");
+        assert_eq!(events[0].message, "ensuring base");
+        assert_eq!(events[0].sandbox_id.as_deref(), Some("fallback-sbox"));
+        assert_eq!(events[1].op, "cli_log");
+        assert_eq!(events[1].message, "copied files");
         assert_eq!(events[1].sandbox_id.as_deref(), Some("fallback-sbox"));
+        assert_eq!(events[2].op, "daemon.startup");
+        assert_eq!(events[2].phase, "layerstack.ensure_workspace_base");
+        assert_eq!(events[2].sandbox_id.as_deref(), Some("sbox-1"));
     }
 }

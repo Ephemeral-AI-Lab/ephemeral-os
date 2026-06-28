@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use sandbox_observability::Observer;
 use sandbox_runtime_layerstack::service::StackObservation;
-use serde_json::json;
 
 use crate::command::CommandOperationService;
 use crate::layerstack::LayerStackService;
@@ -129,24 +128,13 @@ impl SandboxRuntimeOperations {
     }
 }
 
-fn emit_daemon_progress(phase: &str, state: &str, message: impl Into<String>) {
-    let mut event = json!({
-        "event": "progress",
-        "op": "daemon.startup",
-        "phase": phase,
-        "state": state,
-        "message": message.into(),
-    });
-    if let Some(sandbox_id) = daemon_sandbox_id() {
-        event["sandbox_id"] = json!(sandbox_id);
-    }
-    eprintln!("{event}");
+fn emit_daemon_progress(_phase: &str, _state: &str, message: impl Into<String>) {
+    cli_log(message.into());
 }
 
-fn daemon_sandbox_id() -> Option<String> {
-    std::env::var("SANDBOX_DAEMON_SANDBOX_ID")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
+fn cli_log(message: String) {
+    let escaped = serde_json::to_string(&message).unwrap_or_else(|_| "\"\"".to_owned());
+    eprintln!("cli_log({escaped})");
 }
 
 #[derive(Debug, Clone, PartialEq)]

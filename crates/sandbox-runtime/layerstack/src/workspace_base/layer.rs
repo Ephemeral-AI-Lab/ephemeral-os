@@ -2,7 +2,6 @@ use std::io::{ErrorKind, Read, Write};
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use serde_json::json;
 use sha2::{Digest, Sha256};
 
 use crate::error::LayerStackError;
@@ -239,25 +238,13 @@ impl BuildStats {
     }
 }
 
-fn emit_progress(phase: &str, state: &str, message: impl Into<String>, elapsed_ms: u128) {
-    let mut event = json!({
-        "event": "progress",
-        "op": "layerstack.setup",
-        "phase": phase,
-        "state": state,
-        "message": message.into(),
-        "elapsed_ms": elapsed_ms,
-    });
-    if let Some(sandbox_id) = daemon_sandbox_id() {
-        event["sandbox_id"] = json!(sandbox_id);
-    }
-    eprintln!("{event}");
+fn emit_progress(_phase: &str, _state: &str, message: impl Into<String>, _elapsed_ms: u128) {
+    cli_log(message.into());
 }
 
-fn daemon_sandbox_id() -> Option<String> {
-    std::env::var("SANDBOX_DAEMON_SANDBOX_ID")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
+fn cli_log(message: String) {
+    let escaped = serde_json::to_string(&message).unwrap_or_else(|_| "\"\"".to_owned());
+    eprintln!("cli_log({escaped})");
 }
 
 struct CopiedFile {

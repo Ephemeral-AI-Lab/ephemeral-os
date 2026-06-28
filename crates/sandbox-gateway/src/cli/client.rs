@@ -28,17 +28,17 @@ impl GatewayClient {
     }
 
     pub async fn send(&self, request: &Request) -> Result<Value, GatewayClientError> {
-        self.send_with_events(request, false, |_| {}).await
+        self.send_with_logs(request, false, |_| {}).await
     }
 
-    pub async fn send_with_events<F>(
+    pub async fn send_with_logs<F>(
         &self,
         request: &Request,
-        stream_events: bool,
-        on_event: F,
+        stream_logs: bool,
+        on_log: F,
     ) -> Result<Value, GatewayClientError>
     where
-        F: FnMut(&Value),
+        F: FnMut(&str),
     {
         let mut stream = TcpStream::connect(self.addr.as_str())
             .await
@@ -48,7 +48,7 @@ impl GatewayClient {
             map.insert(GATEWAY_AUTH_FIELD.to_owned(), Value::String(token.clone()));
         }
         if let Value::Object(map) = &mut request_value {
-            map.insert("_stream_events".to_owned(), Value::Bool(stream_events));
+            map.insert("_stream_logs".to_owned(), Value::Bool(stream_logs));
         }
         let request_line = json_line(&request_value);
         stream
@@ -59,8 +59,8 @@ impl GatewayClient {
             .shutdown()
             .await
             .map_err(GatewayClientError::Transport)?;
-        if stream_events {
-            read_response_stream(stream, on_event).await
+        if stream_logs {
+            read_response_stream(stream, on_log).await
         } else {
             read_response_line(stream).await
         }
@@ -120,10 +120,10 @@ where
     serde_json::from_slice::<Value>(&line).map_err(GatewayClientError::Json)
 }
 
-async fn read_response_stream<S, F>(stream: S, mut on_event: F) -> Result<Value, GatewayClientError>
+async fn read_response_stream<S, F>(stream: S, mut on_log: F) -> Result<Value, GatewayClientError>
 where
     S: AsyncRead + Unpin,
-    F: FnMut(&Value),
+    F: FnMut(&str),
 {
     let mut reader = BufReader::new(stream);
     loop {
@@ -147,13 +147,27 @@ where
                 "gateway response was not newline terminated".to_owned(),
             ));
         }
-        let value = serde_json::from_slice::<Value>(&line).map_err(GatewayClientError::Json)?;
-        if value.get("event").is_some() {
-            on_event(&value);
-        } else {
-            return Ok(value);
+        if let Some(log) = parse_cli_log_line(&line)? {
+            on_log(&log);
+            continue;
         }
+        return serde_json::from_slice::<Value>(&line).map_err(GatewayClientError::Json);
     }
+}
+
+fn parse_cli_log_line(line: &[u8]) -> Result<Option<String>, GatewayClientError> {
+    let prefix = b"cli_log(";
+    if !line.starts_with(prefix) {
+        return Ok(None);
+    }
+    if !line.ends_with(b")\n") {
+        return Err(GatewayClientError::Protocol(
+            "gateway cli_log line was not terminated".to_owned(),
+        ));
+    }
+    serde_json::from_slice(&line[prefix.len()..line.len() - 2])
+        .map(Some)
+        .map_err(GatewayClientError::Json)
 }
 
 fn json_line(value: &Value) -> Vec<u8> {

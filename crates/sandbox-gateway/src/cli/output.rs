@@ -2,6 +2,7 @@ use std::ffi::OsString;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::time::Instant;
 
 use clap::error::ErrorKind;
 use clap::{Args, CommandFactory, Parser, Subcommand};
@@ -329,7 +330,7 @@ async fn run_request_from_catalog<WOut, WErr>(
     request_input: BuildRequestInput,
     config: &GatewayConfig,
     catalog: &CliOperationCatalogDocument,
-    stream_events: bool,
+    stream_logs: bool,
     stdout: &mut WOut,
     stderr: &mut WErr,
 ) -> u8
@@ -337,6 +338,7 @@ where
     WOut: Write,
     WErr: Write,
 {
+    let started = Instant::now();
     let request = match build_request_from_catalog(request_input, config, catalog) {
         Ok(request) => request,
         Err(error) => {
@@ -346,8 +348,8 @@ where
     };
 
     let response = match client
-        .send_with_events(&request, stream_events, |event| {
-            let _ = write_json_line(stderr, event);
+        .send_with_logs(&request, stream_logs, |log| {
+            let _ = cli_log(stderr, started, log);
         })
         .await
     {
@@ -358,6 +360,9 @@ where
         }
     };
 
+    if stream_logs && response.get("error").is_none() {
+        let _ = writeln!(stderr, "[Output]");
+    }
     render_response(&response, stdout, stderr).unwrap_or(EXIT_FAILURE)
 }
 
@@ -403,6 +408,17 @@ where
     W: Write,
 {
     writer.write_all(&json_line(value))
+}
+
+fn cli_log<W>(writer: &mut W, started: Instant, message: &str) -> io::Result<()>
+where
+    W: Write,
+{
+    writeln!(
+        writer,
+        "[progress {:.3}s] {message}",
+        started.elapsed().as_secs_f64()
+    )
 }
 
 fn json_line(value: &Value) -> Vec<u8> {
