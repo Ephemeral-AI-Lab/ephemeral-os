@@ -197,11 +197,6 @@ impl DaemonObservability {
             .as_u64()
     }
 
-    /// The `raw` view: verbatim log lines kept by the filter, ordered by `ts`.
-    pub(crate) fn raw_lines(&self, filter: RawFilter) -> Vec<String> {
-        self.reader().raw(filter)
-    }
-
     /// The `events` view: parsed `Event` records kept by the same filter shape.
     pub(crate) fn events(&self, filter: RawFilter) -> Vec<Event> {
         self.reader().events(filter)
@@ -210,6 +205,12 @@ impl DaemonObservability {
     /// The `trace` view: one flow folded into a span forest from the log.
     pub(crate) fn trace(&self, id: &str) -> Vec<SpanNode> {
         self.reader().trace(id)
+    }
+
+    /// Resolve the `trace --trace-id last` sentinel: the id of the most recent
+    /// root trace in the log, or `None` when no root span has been recorded.
+    pub(crate) fn latest_root_trace(&self) -> Option<String> {
+        self.reader().latest_root_trace()
     }
 }
 

@@ -29,12 +29,12 @@ from the specs in §2. Three small deltas:
    `operation_execution_space_name` arm `"observability"`.
 2. `catalog_title` arm `"Sandbox Observability Help"` (`help.rs:240`).
 3. An observability catalog (`CliOperationCatalog::new(Observability,
-   &[&OBSERVABILITY_FAMILY], &[…6 specs…])`), served read-only.
+   &[&OBSERVABILITY_FAMILY], &[…5 specs…])`), served read-only.
 
-**One transport, six views.** All six operations resolve to the single daemon op
+**One transport, five views.** All five operations resolve to the single daemon op
 `get_observability`; the operation `name` *is* the `view` value, and the CLI flags
 map to that op's params (`trace`, `name`, `scope`, `workspace`, `window_ms`,
-`since_ms`, `kind`). The specs exist so each view gets its own subcommand, help page, and
+`since_ms`). The specs exist so each view gets its own subcommand, help page, and
 args.
 
 ---
@@ -88,27 +88,27 @@ const TRACE_SPEC: CliOperationSpec = CliOperationSpec {
     family: "observability",
     summary: "Render one flow as a span waterfall.",
     description: "Fold the log into a span waterfall for one trace: spans nested by \
-parent, offset by start, with attached events inline. Use --id last for the most \
+parent, offset by start, with attached events inline. Use --trace-id last for the most \
 recent root trace.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
-            "trace",
+            "trace_id",
             ArgKind::String,
             "Trace id to render, or 'last' for the most recent root trace.",
             Some("last"),
-            Some(ArgCliSpec { flag: Some("--id"), positional: None }),
+            Some(ArgCliSpec { flag: Some("--trace-id"), positional: None }),
         ),
     ],
     cli: Some(CliSpec {
         path: &["observability", "trace"],
-        usage: "sandbox-cli observability trace --sandbox-id ID [--id TRACE|last]",
+        usage: "sandbox-cli observability trace --sandbox-id ID [--trace-id TRACE|last]",
         examples: &[
-            "sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3",
-            "sandbox-cli observability trace --sandbox-id eos-abc --id last",
+            "sandbox-cli observability trace --sandbox-id eos-abc --trace-id req-7f3",
+            "sandbox-cli observability trace --sandbox-id eos-abc --trace-id last",
         ],
     }),
-    related: &["events", "raw", "snapshot"],
+    related: &["events", "snapshot"],
 };
 
 // ── events ──────────────────────────────────────────────────────────────────
@@ -118,7 +118,7 @@ const EVENTS_SPEC: CliOperationSpec = CliOperationSpec {
     summary: "List domain-fact events across traces.",
     description: "Fold the log into a flat, cross-trace stream of point-in-time \
 events (lease, errors, …), newest first. Filter by exact name and/or a \
-start timestamp.",
+start timestamp, and cap to the newest N with --last-n.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
@@ -135,16 +135,24 @@ start timestamp.",
             None,
             Some(ArgCliSpec { flag: Some("--since-ms"), positional: None }),
         ),
+        ArgSpec::optional(
+            "last_n",
+            ArgKind::Integer,
+            "Keep only the N newest matched events.",
+            None,
+            Some(ArgCliSpec { flag: Some("--last-n"), positional: None }),
+        ),
     ],
     cli: Some(CliSpec {
         path: &["observability", "events"],
-        usage: "sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS]",
+        usage: "sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]",
         examples: &[
             "sandbox-cli observability events --sandbox-id eos-abc",
             "sandbox-cli observability events --sandbox-id eos-abc --name lease.acquired",
+            "sandbox-cli observability events --sandbox-id eos-abc --last-n 20",
         ],
     }),
-    related: &["trace", "raw"],
+    related: &["trace"],
 };
 
 // ── cgroup ──────────────────────────────────────────────────────────────────
@@ -194,11 +202,11 @@ Served live from the runtime; does not read the log.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
-            "workspace",
+            "workspace_id",
             ArgKind::String,
             "Show one workspace's lower layers and private upperdir.",
             None,
-            Some(ArgCliSpec { flag: Some("--workspace"), positional: None }),
+            Some(ArgCliSpec { flag: Some("--workspace-id"), positional: None }),
         ),
         ArgSpec::optional(
             "window_ms",
@@ -210,67 +218,18 @@ Served live from the runtime; does not read the log.",
     ],
     cli: Some(CliSpec {
         path: &["observability", "layerstack"],
-        usage: "sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]",
+        usage: "sandbox-cli observability layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]",
         examples: &[
             "sandbox-cli observability layerstack --sandbox-id eos-abc",
-            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7",
+            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace-id ws-7",
         ],
     }),
     related: &["snapshot", "cgroup"],
 };
-
-// ── raw ─────────────────────────────────────────────────────────────────────
-const RAW_SPEC: CliOperationSpec = CliOperationSpec {
-    name: "raw",
-    family: "observability",
-    summary: "Print matching NDJSON log lines.",
-    description: "Forward-scan the log and print matching records verbatim \
-    (newline-delimited JSON), for grep/jq. Filter by kind, name, trace, and start time.",
-    args: &[
-        SANDBOX_ID_ARG,
-        ArgSpec::optional(
-            "kind",
-            ArgKind::String,
-            "Filter by record kind: span | event | sample.",
-            None,
-            Some(ArgCliSpec { flag: Some("--kind"), positional: None }),
-        ),
-        ArgSpec::optional(
-            "name",
-            ArgKind::String,
-            "Filter by exact record name.",
-            None,
-            Some(ArgCliSpec { flag: Some("--name"), positional: None }),
-        ),
-        ArgSpec::optional(
-            "trace",
-            ArgKind::String,
-            "Filter to one trace id.",
-            None,
-            Some(ArgCliSpec { flag: Some("--trace"), positional: None }),
-        ),
-        ArgSpec::optional(
-            "since_ms",
-            ArgKind::Integer,
-            "Only records at or after this unix-ms timestamp.",
-            None,
-            Some(ArgCliSpec { flag: Some("--since-ms"), positional: None }),
-        ),
-    ],
-    cli: Some(CliSpec {
-        path: &["observability", "raw"],
-        usage: "sandbox-cli observability raw --sandbox-id ID [--kind K] [--name NAME] [--trace ID] [--since-ms MS]",
-        examples: &[
-            "sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3",
-            "sandbox-cli observability raw --sandbox-id eos-abc --kind span --name layerstack.publish",
-        ],
-    }),
-    related: &["trace", "events"],
-};
 ```
 
 **Format notes.** Arg `name` is the wire param sent to `get_observability`; the
-CLI flag is the spelling (e.g. `trace` ⇄ `--id`).
+CLI flag is the spelling (e.g. `since_ms` ⇄ `--since-ms`).
 
 ---
 
@@ -302,9 +261,6 @@ Observability
 
   layerstack
     Per-layer leasing/booking inventory, and stack series.
-
-  raw
-    Print matching NDJSON log lines.
 
 Use:
   sandbox-cli observability help OPERATION
@@ -346,25 +302,24 @@ Family
   Observability
 
 Description
-  Fold the log into a span waterfall for one trace: spans nested by parent, offset by start, with attached events inline. Use --id last for the most recent root trace.
+  Fold the log into a span waterfall for one trace: spans nested by parent, offset by start, with attached events inline. Use --trace-id last for the most recent root trace.
 
 Usage
-  sandbox-cli observability trace --sandbox-id ID [--id TRACE|last]
+  sandbox-cli observability trace --sandbox-id ID [--trace-id TRACE|last]
 
 Arguments
   --sandbox-id string required
     Target sandbox id (selects the daemon to query).
-  --id string optional
+  --trace-id string optional
     Trace id to render, or 'last' for the most recent root trace.
     Default: last
 
 Examples
-  sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3
-  sandbox-cli observability trace --sandbox-id eos-abc --id last
+  sandbox-cli observability trace --sandbox-id eos-abc --trace-id req-7f3
+  sandbox-cli observability trace --sandbox-id eos-abc --trace-id last
 
 Related Operations
   events
-  raw
   snapshot
 ```
 
@@ -377,10 +332,10 @@ Family
   Observability
 
 Description
-  Fold the log into a flat, cross-trace stream of point-in-time events (lease, errors, …), newest first. Filter by exact name and/or a start timestamp.
+  Fold the log into a flat, cross-trace stream of point-in-time events (lease, errors, …), newest first. Filter by exact name and/or a start timestamp, and cap to the newest N with --last-n.
 
 Usage
-  sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS]
+  sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]
 
 Arguments
   --sandbox-id string required
@@ -389,14 +344,16 @@ Arguments
     Filter to events with this exact name (e.g. lease.acquired).
   --since-ms integer optional
     Only events at or after this unix-ms timestamp.
+  --last-n integer optional
+    Keep only the N newest matched events.
 
 Examples
   sandbox-cli observability events --sandbox-id eos-abc
   sandbox-cli observability events --sandbox-id eos-abc --name lease.acquired
+  sandbox-cli observability events --sandbox-id eos-abc --last-n 20
 
 Related Operations
   trace
-  raw
 ```
 
 ### 3.5 `sandbox-cli observability help cgroup`
@@ -431,42 +388,7 @@ Related Operations
   snapshot
 ```
 
-### 3.6 `sandbox-cli observability help raw`
-
-```text
-raw
-
-Family
-  Observability
-
-Description
-  Forward-scan the log and print matching records verbatim (newline-delimited JSON), for grep/jq. Filter by kind, name, trace, and start time.
-
-Usage
-  sandbox-cli observability raw --sandbox-id ID [--kind K] [--name NAME] [--trace ID] [--since-ms MS]
-
-Arguments
-  --sandbox-id string required
-    Target sandbox id (selects the daemon to query).
-  --kind string optional
-    Filter by record kind: span | event | sample.
-  --name string optional
-    Filter by exact record name.
-  --trace string optional
-    Filter to one trace id.
-  --since-ms integer optional
-    Only records at or after this unix-ms timestamp.
-
-Examples
-  sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3
-  sandbox-cli observability raw --sandbox-id eos-abc --kind span --name layerstack.publish
-
-Related Operations
-  trace
-  events
-```
-
-### 3.7 `sandbox-cli observability help layerstack`
+### 3.6 `sandbox-cli observability help layerstack`
 
 ```text
 layerstack
@@ -478,12 +400,12 @@ Description
   Show the active manifest as a per-layer inventory: disk bytes, how many workspaces lease each layer, and which leased layers book each base. Served live from the runtime; does not read the log.
 
 Usage
-  sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]
+  sandbox-cli observability layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]
 
 Arguments
   --sandbox-id string required
     Target sandbox id (selects the daemon to query).
-  --workspace string optional
+  --workspace-id string optional
     Show one workspace's lower layers and private upperdir.
   --window-ms integer optional
     Lookback window in milliseconds for the stack trend (max 600000).
@@ -491,7 +413,7 @@ Arguments
 
 Examples
   sandbox-cli observability layerstack --sandbox-id eos-abc
-  sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7
+  sandbox-cli observability layerstack --sandbox-id eos-abc --workspace-id ws-7
 
 Related Operations
   snapshot
@@ -536,7 +458,7 @@ sandbox eos-abc   state ready
 ### 4.2 `trace` — by id / last / unknown
 
 ```console
-$ sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3
+$ sandbox-cli observability trace --sandbox-id eos-abc --trace-id req-7f3
 trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
 
   +00.000  daemon.dispatch op=exec_command                 1051ms  ✓
@@ -553,7 +475,7 @@ trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
 ```
 
 ```console
-$ sandbox-cli observability trace --sandbox-id eos-abc        # --id defaults to "last"
+$ sandbox-cli observability trace --sandbox-id eos-abc        # --trace-id defaults to "last"
 trace req-9a1   sandbox eos-abc   wall — (in flight)   1 span open
 
   +00.000  daemon.dispatch op=exec_command                 1021ms  ✓
@@ -562,11 +484,11 @@ trace req-9a1   sandbox eos-abc   wall — (in flight)   1 span open
 ```
 
 ```console
-$ sandbox-cli observability trace --sandbox-id eos-abc --id nope
+$ sandbox-cli observability trace --sandbox-id eos-abc --trace-id nope
 trace nope   sandbox eos-abc   (no records — unknown trace, or rotated out)
 ```
 
-### 4.3 `events` — none / --name / --since-ms / both
+### 4.3 `events` — none / --name / --since-ms / --last-n / both
 
 ```console
 $ sandbox-cli observability events --sandbox-id eos-abc
@@ -603,6 +525,15 @@ events  sandbox eos-abc   name=lease.acquired since 1719500000000   1 matched
   +00.009   req-7f3   d-2     revision=r5
 ```
 
+```console
+$ sandbox-cli observability events --sandbox-id eos-abc --last-n 2
+events  sandbox eos-abc   last 2 (newest first)
+
+  ts        name                trace     parent  attrs
+  +04.320   lease.released      req-7f3   d-8     revision=r5
+  +00.009   lease.acquired      req-7f3   d-2     revision=r5
+```
+
 ### 4.4 `cgroup` — default scope / workspace / window cap error
 
 ```console
@@ -629,36 +560,7 @@ $ sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms
 error: window_ms exceeds max (600000)
 ```
 
-### 4.5 `raw` — none / --kind / --trace / --since-ms / combined
-
-```console
-$ sandbox-cli observability raw --sandbox-id eos-abc --kind span --trace req-7f3
-{"ts":1719500000040,"kind":"span","trace":"req-7f3","span":"d-4","parent":"d-2","name":"namespace.exec.mount_overlay","dur_ms":27.0,"status":"completed"}
-{"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed"}
-{"ts":1719500000061,"kind":"span","trace":"req-7f3","span":"np-0","parent":"d-5","name":"namespace.runner.spawn_child","dur_ms":6.0,"status":"completed","attrs":{}}
-{"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}
-{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}
-{"ts":1719500004273,"kind":"span","trace":"req-7f3","span":"d-5","parent":"d-1","name":"namespace.exec.run_shell","dur_ms":4231.0,"status":"completed","attrs":{"exit_code":0}}
-{"ts":1719500004286,"kind":"span","trace":"req-7f3","span":"d-6","parent":"d-1","name":"workspace_session.capture_changes","dur_ms":11.0,"status":"completed","attrs":{"one_shot":true}}
-{"ts":1719500004299,"kind":"span","trace":"req-7f3","span":"d-7","parent":"d-1","name":"layerstack.publish","dur_ms":12.0,"status":"completed","attrs":{"base":"r5","revision":"r6","layers_added":1,"bytes":40960,"no_op":false}}
-{"ts":1719500004325,"kind":"span","trace":"req-7f3","span":"d-8","parent":"d-1","name":"workspace_session.destroy","dur_ms":25.0,"status":"completed","attrs":{"one_shot":true}}
-```
-
-```console
-$ sandbox-cli observability raw --sandbox-id eos-abc --kind sample --since-ms 1719500010000
-{"ts":1719500010000,"kind":"sample","scope":"ws-1","cpu_usec":4100000,"mem_cur":21000000,"disk_bytes":1320000,"files":340}
-{"ts":1719500020000,"kind":"sample","scope":"ws-1","cpu_usec":4250000,"mem_cur":20500000,"disk_bytes":1320000,"files":340}
-```
-
-```console
-$ sandbox-cli observability raw --sandbox-id eos-abc            # no filter: all lines, bounded by the size cap
-… every record in the log, append order …
-
-$ sandbox-cli observability raw --sandbox-id eos-abc --trace nope
-                                                               # empty: no matching lines (exit 0)
-```
-
-### 4.6 `layerstack` — inventory / one workspace / stack series
+### 4.5 `layerstack` — inventory / one workspace / stack series
 
 Three forms (plus the window-cap error); the exact rendered shapes — per-layer inventory,
 one-session lowers+upper, and the `--window-ms` stack trend with read-time Δ — are the
@@ -667,20 +569,19 @@ source of truth in `layerstack-impl.md` §4 and are not duplicated here.
 | Command | Outcome |
 |---|---|
 | `… layerstack --sandbox-id eos-abc` | active manifest as a per-layer inventory (disk bytes, leased-by, books-base) — live from the registry |
-| `… layerstack --sandbox-id eos-abc --workspace ws-7` | one session's lower layers + private upperdir |
+| `… layerstack --sandbox-id eos-abc --workspace-id ws-7` | one session's lower layers + private upperdir |
 | `… layerstack --sandbox-id eos-abc --window-ms 60000` | stack time-series (`layers`/`layers_bytes`), Δ at read |
 | `… layerstack --sandbox-id eos-abc --window-ms 999999999` | `error: window_ms exceeds max (600000)` |
 
-### 4.7 Permutation coverage summary
+### 4.6 Permutation coverage summary
 
 | view | flags | distinct forms shown |
 |---|---|---|
 | `snapshot` | — | 1 |
-| `trace` | `--id {id\|last\|unknown}` | 4 |
-| `events` | `--name`?, `--since-ms`? | 4 |
+| `trace` | `--trace-id {id\|last\|unknown}` | 4 |
+| `events` | `--name`?, `--since-ms`?, `--last-n`? | 5 |
 | `cgroup` | `--scope`?, `--window-ms`? (+cap error) | 3 |
-| `layerstack` | `--workspace`?, `--window-ms`? (+cap error) | 4 |
-| `raw` | `--kind`?, `--name`?, `--trace`?, `--since-ms`? | 5 |
+| `layerstack` | `--workspace-id`?, `--window-ms`? (+cap error) | 4 |
 | global | `help`, `help <view>`, missing/unknown | 4 |
 
 ---
@@ -692,16 +593,16 @@ source of truth in `layerstack-impl.md` §4 and are not duplicated here.
   spellings in early `README.md` §7 prose (`--window`, `--since`) defer to this
   file.
 - **`get_observability` params** map 1:1 from flags: `view` = subcommand name,
-  `trace` ⇄ `--id`/`--trace`, `name`, `scope`, `workspace`, `window_ms`, `since_ms`, `kind`.
-  `--sandbox-id` is CLI routing, not an op param.
+  `trace_id` ⇄ `--trace-id`, `workspace_id` ⇄ `--workspace-id`, plus `name`, `scope`,
+  `window_ms`, `since_ms`, `last_n`. `--sandbox-id` is CLI routing, not an op param.
 - **Publish is a span, not an event.** `layerstack.publish` is no longer a
   point-in-time event: a real publish is the sync span `layerstack.publish`
   (`attrs{base, revision, layers_added, bytes, no_op}`; `status=error` +
   `attrs.reason="manifest_conflict"` on a rejected publish; the old rejected-publish
   event is gone). One-shot finalization publishes after
   capture and before destroy; standalone destroy still only releases the lease. The
-  cross-trace publish audit therefore moves off `events --name layerstack.publish`
-  to `raw --kind span --name layerstack.publish`; the
+  cross-trace publish audit therefore no longer rides `events` (publish is a span,
+  not an event); each publish shows up inline in its own `trace`, while the
   `events` view still serves `lease.*` and the other domain facts. The capacity
   columns (`base`/`revision`/`layers_added`/`bytes`) survive verbatim as span
   attrs.
@@ -713,10 +614,11 @@ source of truth in `layerstack-impl.md` §4 and are not duplicated here.
   a green ✓). A Ctrl-D that ends a one-shot attributes the teardown tail to the
   originating exec trace by design — the model is a tree, not a DAG.
 - **Read filters own their values.** The daemon-side `RawFilter` holds owned
-  `Option<String>` fields and derives `Default`, so a view folds its filter as
-  `RawFilter { kind: Some("event".into()), ..Default::default() }`; the `events`
-  view reuses `scan()`'s already-parsed `Event` records rather than re-parsing
-  `raw`'s NDJSON lines.
+  `Option<String>` fields and derives `Default`, so the `events` view folds its
+  filter as `RawFilter { name: Some("lease.released".into()), ..Default::default() }`
+  and reuses `scan()`'s already-parsed `Event` records rather than re-parsing the
+  raw NDJSON lines. `--last-n` is not a `RawFilter` field: it is applied after the
+  fold as a newest-first truncation (`last_n`).
 - **Testing**: add catalog/help golden tests mirroring `gateway_cli.rs`
   (`Family\n  Observability`, each operation page) and a per-view request-builder
   test asserting flags map to the right `get_observability` params.

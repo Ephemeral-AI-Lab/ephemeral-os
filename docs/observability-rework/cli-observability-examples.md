@@ -117,7 +117,7 @@ in append order before `d-1`/`d-0`) starts at `61 − 6 = 55 ms`. `workspace.cre
 dropped (C1); `np-0.parent` resolves because it is stamped with the shell span's *minted*
 id (here `d-5`), not a literal slot number (§0).
 
-**Rendered — `sandbox-cli observability trace --sandbox-id eos-abc --id req-7f3`**
+**Rendered — `sandbox-cli observability trace --sandbox-id eos-abc --trace-id req-7f3`**
 
 ```
 trace req-7f3   sandbox eos-abc   wall 4.33s   (call returned at 1.05s)
@@ -175,7 +175,7 @@ In **Phase A** (`np-0` not yet threaded across the fork) the `namespace.runner.s
 row is absent here — it lands under its own trace until `removal-and-phaseb-impl.md`
 Part B carries `(trace, parent)` over the fork.
 
-**Rendered while still running (`--id last`)** — the shell has **no record yet**; the
+**Rendered while still running (`--trace-id last`)** — the shell has **no record yet**; the
 open span merges from the live registry (`cli-observability.md` §4.2):
 
 ```

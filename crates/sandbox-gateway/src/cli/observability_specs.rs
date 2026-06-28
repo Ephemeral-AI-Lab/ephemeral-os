@@ -29,70 +29,113 @@ const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
     }),
 );
 
-const LAYERSTACK_SPEC: CliOperationSpec = CliOperationSpec {
-    name: "layerstack",
-    family: "observability",
-    summary: "Per-layer leasing/booking inventory, and stack series.",
-    description: "Show the active manifest as a per-layer inventory: disk bytes, \
-how many workspaces lease each layer, and which leased layers book each base. \
-Served live from the runtime; does not read the log.",
-    args: &[
-        SANDBOX_ID_ARG,
-        ArgSpec::optional(
-            "workspace",
-            ArgKind::String,
-            "Restrict to one workspace/session: its mounted layers and which other sessions share each.",
-            None,
-            Some(ArgCliSpec {
-                flag: Some("--workspace"),
-                positional: None,
-            }),
-        ),
-        ArgSpec::optional(
-            "window_ms",
-            ArgKind::Integer,
-            "Lookback window in milliseconds for the stack trend (max 600000).",
-            Some("60000"),
-            Some(ArgCliSpec {
-                flag: Some("--window-ms"),
-                positional: None,
-            }),
-        ),
-    ],
-    cli: Some(CliSpec {
-        path: &["observability", "layerstack"],
-        usage: "sandbox-cli observability layerstack --sandbox-id ID [--workspace WS] [--window-ms MS]",
-        examples: &[
-            "sandbox-cli observability layerstack --sandbox-id eos-abc",
-            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace ws-7",
-        ],
-    }),
-    related: &["snapshot", "cgroup"],
-};
-
 const SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
     name: "snapshot",
     family: "observability",
     summary: "Show live sandbox state.",
     description: "Show current state from the runtime registry: sandbox lifecycle \
-state, workspaces (with layer counts), in-flight executions, the latest resource \
-sample per scope, and the layer-stack summary line. Served live; does not read \
-the log.",
+state, workspaces (with layer counts), in-flight executions, and the latest \
+resource sample per scope. Served live; does not read the log.",
     args: &[SANDBOX_ID_ARG],
     cli: Some(CliSpec {
         path: &["observability", "snapshot"],
         usage: "sandbox-cli observability snapshot --sandbox-id ID",
         examples: &["sandbox-cli observability snapshot --sandbox-id eos-abc"],
     }),
-    related: &["layerstack", "cgroup"],
+    related: &["trace", "cgroup"],
+};
+
+const TRACE_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "trace",
+    family: "observability",
+    summary: "Render one flow as a span waterfall.",
+    description: "Fold the log into a span waterfall for one trace: spans nested by \
+parent, offset by start, with attached events inline. Use --trace-id last for the most \
+recent root trace.",
+    args: &[
+        SANDBOX_ID_ARG,
+        ArgSpec::optional(
+            "trace_id",
+            ArgKind::String,
+            "Trace id to render, or 'last' for the most recent root trace.",
+            Some("last"),
+            Some(ArgCliSpec {
+                flag: Some("--trace-id"),
+                positional: None,
+            }),
+        ),
+    ],
+    cli: Some(CliSpec {
+        path: &["observability", "trace"],
+        usage: "sandbox-cli observability trace --sandbox-id ID [--trace-id TRACE|last]",
+        examples: &[
+            "sandbox-cli observability trace --sandbox-id eos-abc --trace-id req-7f3",
+            "sandbox-cli observability trace --sandbox-id eos-abc --trace-id last",
+        ],
+    }),
+    related: &["events", "snapshot"],
+};
+
+const EVENTS_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "events",
+    family: "observability",
+    summary: "List domain-fact events across traces.",
+    description: "Fold the log into a flat, cross-trace stream of point-in-time \
+events (lease, errors, …), newest first. Filter by exact name and/or a \
+start timestamp, and cap to the newest N with --last-n.",
+    args: &[
+        SANDBOX_ID_ARG,
+        ArgSpec::optional(
+            "name",
+            ArgKind::String,
+            "Filter to events with this exact name (e.g. lease.acquired).",
+            None,
+            Some(ArgCliSpec {
+                flag: Some("--name"),
+                positional: None,
+            }),
+        ),
+        ArgSpec::optional(
+            "since_ms",
+            ArgKind::Integer,
+            "Only events at or after this unix-ms timestamp.",
+            None,
+            Some(ArgCliSpec {
+                flag: Some("--since-ms"),
+                positional: None,
+            }),
+        ),
+        ArgSpec::optional(
+            "last_n",
+            ArgKind::Integer,
+            "Keep only the N newest matched events.",
+            None,
+            Some(ArgCliSpec {
+                flag: Some("--last-n"),
+                positional: None,
+            }),
+        ),
+    ],
+    cli: Some(CliSpec {
+        path: &["observability", "events"],
+        usage:
+            "sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]",
+        examples: &[
+            "sandbox-cli observability events --sandbox-id eos-abc",
+            "sandbox-cli observability events --sandbox-id eos-abc --name lease.acquired",
+            "sandbox-cli observability events --sandbox-id eos-abc --last-n 20",
+        ],
+    }),
+    related: &["trace"],
 };
 
 const CGROUP_SPEC: CliOperationSpec = CliOperationSpec {
     name: "cgroup",
     family: "observability",
     summary: "Resource series for a scope (cpu/mem/io + disk).",
-    description: "Resource time series for one scope: cgroup cpu/mem/io counters \
-plus the disk sample (upperdir bytes/files), with deltas computed at read.",
+    description: "Fold the sample log for one scope into a time series with deltas: \
+cgroup counters (cpu/mem/io from /sys/fs/cgroup) plus the disk sample (upperdir \
+bytes/files) carried in the same record.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
@@ -127,8 +170,56 @@ plus the disk sample (upperdir bytes/files), with deltas computed at read.",
     related: &["snapshot"],
 };
 
+const LAYERSTACK_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "layerstack",
+    family: "observability",
+    summary: "Per-layer leasing/booking inventory, and stack series.",
+    description: "Show the active manifest as a per-layer inventory: disk bytes, \
+how many workspaces lease each layer, and which leased layers book each base. \
+Served live from the runtime; does not read the log.",
+    args: &[
+        SANDBOX_ID_ARG,
+        ArgSpec::optional(
+            "workspace_id",
+            ArgKind::String,
+            "Show one workspace's lower layers and private upperdir.",
+            None,
+            Some(ArgCliSpec {
+                flag: Some("--workspace-id"),
+                positional: None,
+            }),
+        ),
+        ArgSpec::optional(
+            "window_ms",
+            ArgKind::Integer,
+            "Lookback window in milliseconds for the stack trend (max 600000).",
+            Some("60000"),
+            Some(ArgCliSpec {
+                flag: Some("--window-ms"),
+                positional: None,
+            }),
+        ),
+    ],
+    cli: Some(CliSpec {
+        path: &["observability", "layerstack"],
+        usage:
+            "sandbox-cli observability layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]",
+        examples: &[
+            "sandbox-cli observability layerstack --sandbox-id eos-abc",
+            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace-id ws-7",
+        ],
+    }),
+    related: &["snapshot", "cgroup"],
+};
+
 const FAMILIES: &[&CliOperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
-const SPECS: &[&CliOperationSpec] = &[&LAYERSTACK_SPEC, &SNAPSHOT_SPEC, &CGROUP_SPEC];
+const SPECS: &[&CliOperationSpec] = &[
+    &SNAPSHOT_SPEC,
+    &TRACE_SPEC,
+    &EVENTS_SPEC,
+    &CGROUP_SPEC,
+    &LAYERSTACK_SPEC,
+];
 
 #[must_use]
 pub fn observability_catalog() -> CliOperationCatalog {

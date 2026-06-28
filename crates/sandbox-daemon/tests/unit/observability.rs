@@ -216,40 +216,6 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
 }
 
 #[tokio::test]
-async fn raw_view_dispatch_returns_filtered_lines() -> TestResult {
-    let root = test_root("raw-view");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    write_log_lines(
-        &server.config,
-        &[
-            r#"{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}"#,
-            r#"{"ts":1719500004320,"kind":"event","trace":"req-7f3","parent":"d-8","name":"lease.released","attrs":{"revision":"r5"}}"#,
-            r#"{"ts":1719500000000,"kind":"sample","scope":"sandbox","cpu_usec":1000}"#,
-        ],
-    )?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
-                "req-raw",
-                json!({ "view": "raw", "kind": "span", "trace": "req-7f3" }),
-            )?,
-            false,
-        )
-        .await;
-
-    assert_eq!(response["view"], "raw");
-    let lines = response["lines"].as_array().expect("lines array");
-    assert_eq!(lines.len(), 1, "only the span line matches kind=span");
-    assert!(lines[0]
-        .as_str()
-        .expect("verbatim line")
-        .contains("daemon.dispatch"));
-    Ok(())
-}
-
-#[tokio::test]
 async fn events_view_dispatch_returns_parsed_events_by_name() -> TestResult {
     let root = test_root("events-view");
     let server = daemon_server(&root, Some("sandbox-1"))?;
@@ -299,7 +265,7 @@ async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
             request_bytes(
                 crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
                 "req-trace",
-                json!({ "view": "trace", "trace": "req-7f3" }),
+                json!({ "view": "trace", "trace_id": "req-7f3" }),
             )?,
             false,
         )
@@ -315,6 +281,69 @@ async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
     let create = &command["children"][0];
     assert_eq!(create["span"]["name"], "workspace_session.create");
     assert_eq!(create["events"][0]["event"]["name"], "lease.acquired");
+    Ok(())
+}
+
+#[tokio::test]
+async fn events_view_dispatch_last_n_keeps_newest_matched() -> TestResult {
+    let root = test_root("events-last-n");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    write_log_lines(
+        &server.config,
+        &[
+            r#"{"ts":1000,"kind":"event","trace":"req-1","parent":"d-1","name":"lease.acquired","attrs":{}}"#,
+            r#"{"ts":2000,"kind":"event","trace":"req-1","parent":"d-2","name":"lease.released","attrs":{}}"#,
+            r#"{"ts":3000,"kind":"event","trace":"req-2","parent":"d-3","name":"lease.acquired","attrs":{}}"#,
+        ],
+    )?;
+
+    let response = server
+        .dispatch_bytes(
+            request_bytes(
+                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                "req-last-n",
+                json!({ "view": "events", "last_n": 2 }),
+            )?,
+            false,
+        )
+        .await;
+
+    let events = response["events"].as_array().expect("events array");
+    assert_eq!(events.len(), 2, "last_n caps the fold to the newest N");
+    // The fold is oldest-first; last_n drops the oldest, keeping ts 2000 and 3000.
+    assert_eq!(events[0]["ts"], 2000);
+    assert_eq!(events[1]["ts"], 3000);
+    Ok(())
+}
+
+#[tokio::test]
+async fn trace_view_dispatch_last_resolves_most_recent_root() -> TestResult {
+    let root = test_root("trace-last");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    write_log_lines(
+        &server.config,
+        &[
+            r#"{"ts":1000,"kind":"span","trace":"req-old","span":"d-0","name":"daemon.dispatch","dur_ms":100.0,"status":"completed","attrs":{}}"#,
+            r#"{"ts":2000,"kind":"span","trace":"req-new","span":"d-1","name":"daemon.dispatch","dur_ms":100.0,"status":"completed","attrs":{}}"#,
+        ],
+    )?;
+
+    let response = server
+        .dispatch_bytes(
+            request_bytes(
+                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                "req-trace-last",
+                json!({ "view": "trace", "trace_id": "last" }),
+            )?,
+            false,
+        )
+        .await;
+
+    // "last" resolves to the root span with the latest start, not a trace named "last".
+    assert_eq!(response["trace"], "req-new");
+    let spans = response["spans"].as_array().expect("spans array");
+    assert_eq!(spans.len(), 1);
+    assert_eq!(spans[0]["span"]["trace"], "req-new");
     Ok(())
 }
 

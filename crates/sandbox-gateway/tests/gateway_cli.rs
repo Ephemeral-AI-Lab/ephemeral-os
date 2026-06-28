@@ -9,7 +9,7 @@ use sandbox_gateway::cli::config::{
 use sandbox_gateway::cli::output::render_response;
 use sandbox_gateway::cli::request_builder::{
     build_request_from_catalog_with_id, manager_catalog_document, observability_catalog_document,
-    runtime_catalog_document, BuildRequestInput,
+    runtime_catalog_document, BuildRequestInput, RequestBuildError,
 };
 use sandbox_protocol::{
     CliOperationCatalogDocument, CliOperationExecutionSpace, CliOperationScope, Request,
@@ -535,7 +535,9 @@ async fn observability_help_renders_grouped_catalog_help() -> TestResult {
     let help = String::from_utf8(stdout)?;
     assert!(help.contains("Sandbox Observability Help"));
     assert!(help.contains("Observability"));
-    assert!(help.contains("layerstack"));
+    for view in ["snapshot", "trace", "events", "cgroup", "layerstack"] {
+        assert!(help.contains(view), "catalog help lists {view}");
+    }
     assert!(help.contains("sandbox-cli observability help OPERATION"));
     assert!(stderr.is_empty());
     Ok(())
@@ -557,8 +559,53 @@ async fn observability_help_layerstack_renders_detail_page() -> TestResult {
     assert!(help.contains("Family\n  Observability"));
     assert!(help.contains("Usage\n  sandbox-cli observability layerstack --sandbox-id ID"));
     assert!(help.contains("--sandbox-id"));
+    assert!(help.contains("--workspace-id"));
     assert!(help.contains("--window-ms"));
     assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn observability_help_snapshot_renders_detail_page() -> TestResult {
+    let help = observability_help_page(&["snapshot"]).await?;
+    assert!(help.contains("snapshot"));
+    assert!(help.contains("Family\n  Observability"));
+    assert!(help.contains("Usage\n  sandbox-cli observability snapshot --sandbox-id ID"));
+    assert!(help.contains("--sandbox-id"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn observability_help_trace_renders_detail_page() -> TestResult {
+    let help = observability_help_page(&["trace"]).await?;
+    assert!(help.contains("trace"));
+    assert!(help.contains("Family\n  Observability"));
+    assert!(help.contains("Usage\n  sandbox-cli observability trace --sandbox-id ID"));
+    assert!(help.contains("--trace-id"));
+    assert!(help.contains("Default: last"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn observability_help_events_renders_detail_page() -> TestResult {
+    let help = observability_help_page(&["events"]).await?;
+    assert!(help.contains("events"));
+    assert!(help.contains("Family\n  Observability"));
+    assert!(help.contains("Usage\n  sandbox-cli observability events --sandbox-id ID"));
+    assert!(help.contains("--name"));
+    assert!(help.contains("--since-ms"));
+    assert!(help.contains("--last-n"));
+    Ok(())
+}
+
+#[tokio::test]
+async fn observability_help_cgroup_renders_detail_page() -> TestResult {
+    let help = observability_help_page(&["cgroup"]).await?;
+    assert!(help.contains("cgroup"));
+    assert!(help.contains("Family\n  Observability"));
+    assert!(help.contains("Usage\n  sandbox-cli observability cgroup --sandbox-id ID"));
+    assert!(help.contains("--scope"));
+    assert!(help.contains("--window-ms"));
     Ok(())
 }
 
@@ -668,6 +715,81 @@ fn observability_requires_sandbox_id() -> TestResult {
     .ok_or("observability request unexpectedly succeeded")?;
 
     assert!(error.message().contains("--sandbox-id"));
+    Ok(())
+}
+
+#[test]
+fn observability_trace_defaults_trace_id_to_last() -> TestResult {
+    let request = build_observability_request("trace", &["--sandbox-id", "eos-abc"])?;
+
+    assert_eq!(request.op, "get_observability");
+    assert_eq!(request.args, json!({ "view": "trace", "trace_id": "last" }));
+    Ok(())
+}
+
+#[test]
+fn observability_trace_maps_explicit_trace_id() -> TestResult {
+    let request = build_observability_request(
+        "trace",
+        &["--sandbox-id", "eos-abc", "--trace-id", "req-7f3"],
+    )?;
+
+    assert_eq!(
+        request.args,
+        json!({ "view": "trace", "trace_id": "req-7f3" })
+    );
+    Ok(())
+}
+
+#[test]
+fn observability_events_maps_name_since_ms_and_last_n() -> TestResult {
+    let request = build_observability_request(
+        "events",
+        &[
+            "--sandbox-id",
+            "eos-abc",
+            "--name",
+            "lease.acquired",
+            "--since-ms",
+            "1719500000000",
+            "--last-n",
+            "20",
+        ],
+    )?;
+
+    assert_eq!(
+        request.args,
+        json!({
+            "view": "events",
+            "name": "lease.acquired",
+            "since_ms": 1_719_500_000_000_u64,
+            "last_n": 20,
+        })
+    );
+    Ok(())
+}
+
+#[test]
+fn observability_layerstack_maps_workspace_id() -> TestResult {
+    let request = build_observability_request(
+        "layerstack",
+        &["--sandbox-id", "eos-abc", "--workspace-id", "ws-7"],
+    )?;
+
+    assert_eq!(
+        request.args,
+        json!({ "view": "layerstack", "workspace_id": "ws-7", "window_ms": 60000 })
+    );
+    Ok(())
+}
+
+#[test]
+fn observability_rejects_unknown_flag_for_view() -> TestResult {
+    let error = build_observability_request("trace", &["--sandbox-id", "eos-abc", "--bogus", "x"])
+        .err()
+        .ok_or("unknown observability flag unexpectedly accepted")?;
+
+    assert!(error.message().contains("unknown flag"));
     Ok(())
 }
 
@@ -901,4 +1023,37 @@ fn runtime_catalog() -> Result<CliOperationCatalogDocument, Box<dyn std::error::
 fn observability_catalog(
 ) -> Result<CliOperationCatalogDocument, Box<dyn std::error::Error + Send + Sync>> {
     Ok(observability_catalog_document()?)
+}
+
+fn build_observability_request(
+    operation: &str,
+    argv: &[&str],
+) -> Result<Request, RequestBuildError> {
+    let catalog = observability_catalog_document()?;
+    build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: CliOperationExecutionSpace::Observability,
+            operation: operation.to_owned(),
+            operation_argv: argv.iter().map(ToString::to_string).collect(),
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )
+}
+
+async fn observability_help_page(
+    operation: &[&str],
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let mut argv = vec!["sandbox-cli", "observability", "help"];
+    argv.extend_from_slice(operation);
+    let exit =
+        sandbox_gateway::cli::output::run_cli_with_writers(argv, &mut stdout, &mut stderr).await;
+
+    assert_eq!(exit, 0);
+    assert!(stderr.is_empty());
+    Ok(String::from_utf8(stdout)?)
 }

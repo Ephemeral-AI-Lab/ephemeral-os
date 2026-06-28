@@ -24,7 +24,6 @@ pub(crate) fn observability_view_response(
         Some("cgroup") => cgroup_view_response(observability, request),
         Some("trace") => trace_view_response(observability, request),
         Some("events") => events_view_response(observability, request),
-        Some("raw") => raw_view_response(observability, request),
         Some(other) => Response::fault(
             error_kind::INVALID_REQUEST,
             format!("unsupported observability view: {other}"),
@@ -41,7 +40,7 @@ fn layerstack_view_response(
     observability: Option<&DaemonObservability>,
     request: &Request,
 ) -> Response {
-    let workspace = match request.optional_string("workspace") {
+    let workspace = match request.optional_string("workspace_id") {
         Ok(workspace) => workspace.filter(|workspace| !workspace.trim().is_empty()),
         Err(response) => return response,
     };
@@ -139,22 +138,32 @@ fn trace_view_response(observability: Option<&DaemonObservability>, request: &Re
     let Some(observability) = observability else {
         return observability_unconfigured();
     };
-    let id = match request.optional_string("trace") {
-        Ok(id) => id.map(|id| id.trim().to_owned()).filter(|id| !id.is_empty()),
+    let id = match request.optional_string("trace_id") {
+        Ok(id) => id
+            .map(|id| id.trim().to_owned())
+            .filter(|id| !id.is_empty()),
         Err(response) => return response,
     };
     let Some(id) = id else {
         return Response::fault(
             error_kind::INVALID_REQUEST,
-            "trace view requires a trace id (--id)".to_owned(),
+            "trace view requires a trace id (--trace-id)".to_owned(),
         );
+    };
+    let id = if id == "last" {
+        observability.latest_root_trace().unwrap_or(id)
+    } else {
+        id
     };
     let spans =
         serde_json::to_value(observability.trace(&id)).unwrap_or_else(|_| Value::Array(Vec::new()));
     Response::ok(json!({ "view": "trace", "trace": id, "spans": spans }))
 }
 
-fn events_view_response(observability: Option<&DaemonObservability>, request: &Request) -> Response {
+fn events_view_response(
+    observability: Option<&DaemonObservability>,
+    request: &Request,
+) -> Response {
     let Some(observability) = observability else {
         return observability_unconfigured();
     };
@@ -162,29 +171,19 @@ fn events_view_response(observability: Option<&DaemonObservability>, request: &R
         Ok(filter) => filter,
         Err(response) => return response,
     };
-    let events = serde_json::to_value(observability.events(filter))
-        .unwrap_or_else(|_| Value::Array(Vec::new()));
-    Response::ok(json!({ "view": "events", "events": events }))
-}
-
-fn raw_view_response(observability: Option<&DaemonObservability>, request: &Request) -> Response {
-    let Some(observability) = observability else {
-        return observability_unconfigured();
-    };
-    let filter = match raw_filter(request) {
-        Ok(filter) => filter,
+    let last_n = match request.optional_u64("last_n") {
+        Ok(last_n) => last_n,
         Err(response) => return response,
     };
-    Response::ok(json!({ "view": "raw", "lines": observability.raw_lines(filter) }))
-}
-
-fn raw_filter(request: &Request) -> Result<RawFilter, Response> {
-    Ok(RawFilter {
-        kind: optional_filter(request, "kind")?,
-        name: optional_filter(request, "name")?,
-        trace: optional_filter(request, "trace")?,
-        since_ms: since_ms(request)?,
-    })
+    let mut events = observability.events(filter);
+    if let Some(last_n) = last_n {
+        let keep = usize::try_from(last_n)
+            .unwrap_or(usize::MAX)
+            .min(events.len());
+        events.drain(..events.len() - keep);
+    }
+    let events = serde_json::to_value(events).unwrap_or_else(|_| Value::Array(Vec::new()));
+    Response::ok(json!({ "view": "events", "events": events }))
 }
 
 fn event_filter(request: &Request) -> Result<RawFilter, Response> {

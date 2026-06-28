@@ -107,6 +107,22 @@ impl Reader {
         build_trace_forest(spans, events)
     }
 
+    /// The id of the most recently started root trace: the trace of the root
+    /// span (one with no `parent`) with the latest start (`ts - dur_ms`), or
+    /// `None` when the log holds no root span. Resolves the `trace --trace-id
+    /// last` sentinel.
+    #[must_use]
+    pub fn latest_root_trace(&self) -> Option<String> {
+        self.scan()
+            .into_iter()
+            .filter_map(|(record, _)| match record {
+                Record::Span(span) if span.parent.is_none() => Some(span),
+                _ => None,
+            })
+            .max_by(|a, b| span_start(a).total_cmp(&span_start(b)))
+            .map(|span| span.trace)
+    }
+
     /// Per-scope sample series with read-time counter deltas, within
     /// `now - window_ms`.
     #[must_use]
