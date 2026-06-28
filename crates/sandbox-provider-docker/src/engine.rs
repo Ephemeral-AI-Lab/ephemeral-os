@@ -14,6 +14,7 @@ use bollard::models::{
     ContainerInspectResponse, ContainerState, ContainerStateStatusEnum, ContainerSummary,
     HostConfig, HostConfigCgroupnsModeEnum, PortBinding,
 };
+use bollard::volume::{CreateVolumeOptions, RemoveVolumeOptions};
 use bollard::Docker;
 use bytes::Bytes;
 use futures_util::StreamExt as _;
@@ -44,11 +45,18 @@ pub(crate) struct ContainerSpec {
     pub(crate) env: Vec<String>,
     pub(crate) labels: HashMap<String, String>,
     pub(crate) binds: Vec<String>,
+    pub(crate) volumes: Vec<VolumeSpec>,
     pub(crate) daemon_port: u16,
     pub(crate) privileged: bool,
     pub(crate) platform: Option<String>,
     pub(crate) memory_bytes: Option<i64>,
     pub(crate) nano_cpus: Option<i64>,
+}
+
+pub(crate) struct VolumeSpec {
+    pub(crate) name: String,
+    pub(crate) target: String,
+    pub(crate) labels: HashMap<String, String>,
 }
 
 /// Result of starting a container and resolving its published daemon port.
@@ -120,8 +128,17 @@ impl DockerEngine {
                     host_port: Some("0".to_owned()),
                 }]),
             );
+            for volume in &spec.volumes {
+                create_volume(&docker, volume).await?;
+            }
+            let mut binds = spec.binds;
+            binds.extend(
+                spec.volumes
+                    .iter()
+                    .map(|volume| format!("{}:{}", volume.name, volume.target)),
+            );
             let host_config = HostConfig {
-                binds: Some(spec.binds),
+                binds: Some(binds),
                 port_bindings: Some(port_bindings),
                 privileged: Some(spec.privileged),
                 cgroupns_mode: Some(HostConfigCgroupnsModeEnum::PRIVATE),
@@ -147,11 +164,15 @@ impl DockerEngine {
                 name: spec.name,
                 platform: spec.platform,
             };
-            docker
-                .create_container(Some(options), config)
-                .await
-                .map(|_| ())
-                .map_err(|error| DockerError::Api(format!("create_container: {error}")))
+            match docker.create_container(Some(options), config).await {
+                Ok(_) => Ok(()),
+                Err(error) => {
+                    for volume in &spec.volumes {
+                        let _ = remove_volume(&docker, &volume.name).await;
+                    }
+                    Err(DockerError::Api(format!("create_container: {error}")))
+                }
+            }
         })
     }
 
@@ -215,6 +236,7 @@ impl DockerEngine {
         self.run_blocking(move |docker| async move {
             let options = RemoveContainerOptions {
                 force: true,
+                v: true,
                 ..Default::default()
             };
             match docker.remove_container(&container, Some(options)).await {
@@ -223,6 +245,10 @@ impl DockerEngine {
                 Err(error) => Err(DockerError::Api(format!("remove_container: {error}"))),
             }
         })
+    }
+
+    pub(crate) fn remove_volume(&self, volume: String) -> Result<(), DockerError> {
+        self.run_blocking(move |docker| async move { remove_volume(&docker, &volume).await })
     }
 
     pub(crate) fn list_recoverable(
@@ -295,6 +321,28 @@ impl DockerEngine {
                 .map_err(|error| DockerError::Api(format!("inspect_container: {error}")))?;
             Ok(inspected.state.as_ref().and_then(container_exit_reason))
         })
+    }
+}
+
+async fn create_volume(docker: &Docker, volume: &VolumeSpec) -> Result<(), DockerError> {
+    let options = CreateVolumeOptions {
+        name: volume.name.clone(),
+        labels: volume.labels.clone(),
+        ..Default::default()
+    };
+    docker
+        .create_volume(options)
+        .await
+        .map(|_| ())
+        .map_err(|error| DockerError::Api(format!("create_volume: {error}")))
+}
+
+async fn remove_volume(docker: &Docker, volume: &str) -> Result<(), DockerError> {
+    let options = RemoveVolumeOptions { force: true };
+    match docker.remove_volume(volume, Some(options)).await {
+        Ok(()) => Ok(()),
+        Err(error) if server_status(&error) == Some(HTTP_NOT_FOUND) => Ok(()),
+        Err(error) => Err(DockerError::Api(format!("remove_volume: {error}"))),
     }
 }
 

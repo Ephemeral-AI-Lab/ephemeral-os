@@ -35,6 +35,9 @@ pub enum ManagerError {
     #[error("sandbox daemon install failed: {message}")]
     DaemonInstallFailed { message: String },
 
+    #[error("workspace setup failed: {message}")]
+    WorkspaceSetupFailed { message: String },
+
     #[error("sandbox daemon forwarding failed: {message}")]
     ForwardingFailed { message: String },
 
@@ -57,6 +60,7 @@ impl ManagerError {
             | Self::DaemonInstallFailed { .. }
             | Self::ForwardingFailed { .. }
             | Self::StorePoisoned => sandbox_protocol::error_kind::INTERNAL_ERROR,
+            Self::WorkspaceSetupFailed { .. } => sandbox_protocol::error_kind::OPERATION_FAILED,
         }
     }
 

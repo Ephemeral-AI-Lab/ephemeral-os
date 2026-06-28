@@ -18,7 +18,7 @@ impl Response {
 
     #[must_use]
     pub fn service_error(error: impl std::fmt::Display) -> Self {
-        Self::fault("operation_failed", error.to_string())
+        Self::fault(crate::error_kind::OPERATION_FAILED, error.to_string())
     }
 
     #[must_use]

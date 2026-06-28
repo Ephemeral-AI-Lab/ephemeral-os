@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use nix::sys::signal::{killpg, Signal};
+use nix::sys::signal::{kill, killpg, Signal};
 use nix::unistd::Pid;
 use rustix::event::{poll, PollFd, PollFlags};
 use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
@@ -181,10 +181,15 @@ pub fn open_pty_pair() -> io::Result<(File, File)> {
 }
 
 pub(crate) fn terminate_pgid(pgid: i32) {
-    if killpg(Pid::from_raw(pgid), Signal::SIGTERM).is_ok() {
-        thread::sleep(Duration::from_millis(50));
-        let _ = killpg(Pid::from_raw(pgid), Signal::SIGKILL);
-    }
+    signal_pgid_and_pid(pgid, Signal::SIGTERM);
+    thread::sleep(Duration::from_millis(100));
+    signal_pgid_and_pid(pgid, Signal::SIGKILL);
+}
+
+fn signal_pgid_and_pid(pgid: i32, signal: Signal) {
+    let pid = Pid::from_raw(pgid);
+    let _ = killpg(pid, signal);
+    let _ = kill(pid, signal);
 }
 
 fn set_nonblocking(file: &File) -> io::Result<()> {

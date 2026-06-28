@@ -111,12 +111,10 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
             fail_if_container_exited(&self.engine, sandbox_id)
         })
         .map_err(|error| {
-            daemon_install_failed(readiness_failure_message(
-                endpoint,
-                sandbox_id,
+            readiness_failed(
                 &error,
-                &self.engine,
-            ))
+                readiness_failure_message(endpoint, sandbox_id, &error, &self.engine),
+            )
         })
     }
 
@@ -138,12 +136,10 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
             fail_if_container_exited(&self.engine, sandbox_id)
         })
         .map_err(|error| {
-            daemon_install_failed(readiness_failure_message(
-                endpoint,
-                sandbox_id,
+            readiness_failed(
                 &error,
-                &self.engine,
-            ))
+                readiness_failure_message(endpoint, sandbox_id, &error, &self.engine),
+            )
         })
     }
 }
@@ -212,6 +208,18 @@ fn readiness_failure_message(
         "daemon at {}:{} for {sandbox_id} is not ready: {error}; container {context}",
         endpoint.host, endpoint.port
     )
+}
+
+fn readiness_failed(error: &str, message: String) -> ManagerError {
+    if is_workspace_setup_failure(error) {
+        ManagerError::WorkspaceSetupFailed { message }
+    } else {
+        daemon_install_failed(message)
+    }
+}
+
+fn is_workspace_setup_failure(message: &str) -> bool {
+    is_fatal_daemon_log(message)
 }
 
 fn fail_on_daemon_logs(
@@ -328,6 +336,20 @@ cli_log("layer-stack storage error: workspace base must be a full copy")
             "layer-stack storage error: workspace base must be a full copy"
         );
         assert!(!error.contains("cli_log"));
+    }
+
+    #[test]
+    fn fatal_workspace_setup_error_maps_to_operation_failed() {
+        let error = readiness_failed(
+            "layer-stack storage error: workspace base must be a full copy",
+            "layer-stack storage error: workspace base must be a full copy (sandbox sbox-1, daemon 127.0.0.1:1234)".to_owned(),
+        );
+
+        assert!(matches!(error, ManagerError::WorkspaceSetupFailed { .. }));
+        assert_eq!(
+            error.protocol_kind(),
+            sandbox_protocol::error_kind::OPERATION_FAILED
+        );
     }
 
     #[test]

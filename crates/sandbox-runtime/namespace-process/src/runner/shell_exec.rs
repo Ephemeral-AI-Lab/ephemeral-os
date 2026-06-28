@@ -33,6 +33,7 @@ pub(crate) fn execute_shell(request: &NamespaceRunnerRequest) -> Result<RunResul
 fn execute_shell_inner(request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
     let argv = shell_argv(request)?;
     let cwd = shell_cwd(request)?;
+    install_termination_signal_handlers()?;
     // Open a handle to /proc before applying the mount mask, so scope-wait can
     // still enumerate same-pgid descendant processes if a custom config hides it.
     let proc_dir = rustix::fs::open(

@@ -1084,6 +1084,7 @@ fn run_build(root: &Path, builder: &str, target: &str, profile: &str) -> Result<
         }
         other => bail!("unsupported builder {other:?}; expected rust-lld, cargo, or cross"),
     };
+    configure_arm64_musl_cc(&mut command, target);
     let status = command
         .current_dir(root)
         .status()
@@ -1092,6 +1093,22 @@ fn run_build(root: &Path, builder: &str, target: &str, profile: &str) -> Result<
         bail!("{builder} build failed for {target} profile {profile} with {status}");
     }
     Ok(())
+}
+
+fn configure_arm64_musl_cc(command: &mut Command, target: &str) {
+    if target != ARM64_TARGET
+        || env::var_os("CC_aarch64-unknown-linux-musl").is_some()
+        || env::var_os("CC_aarch64_unknown_linux_musl").is_some()
+        || command_exists("aarch64-linux-musl-gcc")
+        || !command_exists("clang")
+    {
+        return;
+    }
+    command.env("CC_aarch64_unknown_linux_musl", "clang");
+}
+
+fn command_exists(name: &str) -> bool {
+    Command::new(name).arg("--version").output().is_ok()
 }
 
 fn cargo_build_command(target: &str, profile: &str) -> Command {

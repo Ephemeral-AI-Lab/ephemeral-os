@@ -121,11 +121,7 @@ fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
 }
 
 fn daemon_worker_threads(max_worker_threads: usize) -> usize {
-    std::thread::available_parallelism()
-        .map_or(max_worker_threads, |threads| {
-            threads.get().min(max_worker_threads)
-        })
-        .max(1)
+    max_worker_threads.max(1)
 }
 
 pub(crate) struct DaemonCliConfig {
