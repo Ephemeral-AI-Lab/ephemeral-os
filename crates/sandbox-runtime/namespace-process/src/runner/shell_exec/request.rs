@@ -7,6 +7,22 @@ use std::path::{Component, Path, PathBuf};
 use crate::runner::protocol::NamespaceRunnerRequest;
 use crate::runner::RunnerError;
 
+const HOST_KEYS: &[&str] = &[
+    "PATH",
+    "HOME",
+    "USER",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "TZ",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "no_proxy",
+];
+
 pub(crate) fn shell_argv(request: &NamespaceRunnerRequest) -> Result<Vec<String>, RunnerError> {
     let shell_args = &request.args;
     let Some(command) = shell_args.get("command") else {
@@ -21,17 +37,51 @@ pub(crate) fn shell_argv(request: &NamespaceRunnerRequest) -> Result<Vec<String>
                 "shell command string must not be empty".to_owned(),
             ));
         }
-        return Ok(vec![
-            "/bin/bash".to_owned(),
-            "--noprofile".to_owned(),
-            "--norc".to_owned(),
-            "-c".to_owned(),
-            value.to_owned(),
-        ]);
+        return Ok(shell_argv_for_command(value));
     }
     Err(RunnerError::InvalidRequest(
         "shell execution requires a shell-format command string".to_owned(),
     ))
+}
+
+fn shell_argv_for_command(command: &str) -> Vec<String> {
+    shell_argv_for_command_with_bash(command, Path::new("/bin/bash").exists())
+}
+
+fn shell_argv_for_command_with_bash(command: &str, bash_available: bool) -> Vec<String> {
+    if bash_available {
+        return ["/bin/bash", "--noprofile", "--norc", "-c", command]
+            .map(str::to_owned)
+            .to_vec();
+    }
+    ["/bin/sh", "-c", command].map(str::to_owned).to_vec()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{shell_argv_for_command_with_bash, HOST_KEYS};
+
+    #[test]
+    fn shell_argv_falls_back_to_sh_without_bash() {
+        assert_eq!(
+            shell_argv_for_command_with_bash("echo hi", false),
+            ["/bin/sh", "-c", "echo hi"].map(str::to_owned).to_vec()
+        );
+    }
+
+    #[test]
+    fn command_environment_allows_proxy_vars() {
+        for key in [
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "NO_PROXY",
+            "http_proxy",
+            "https_proxy",
+            "no_proxy",
+        ] {
+            assert!(HOST_KEYS.contains(&key));
+        }
+    }
 }
 
 pub(crate) fn shell_cwd(request: &NamespaceRunnerRequest) -> Result<PathBuf, RunnerError> {
@@ -83,7 +133,6 @@ pub(crate) fn normalize_lexical(path: &Path) -> PathBuf {
 }
 
 pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, String> {
-    const HOST_KEYS: &[&str] = &["PATH", "HOME", "USER", "LANG", "LC_ALL", "TERM", "TZ"];
     const RESTRICTED: &[&str] = &[
         "LD_PRELOAD",
         "LD_LIBRARY_PATH",

@@ -86,7 +86,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
             name,
             image: resolve_image(config, &request.image),
             cmd,
-            env: Vec::new(),
+            env: config.container_env.clone(),
             labels: labels.clone(),
             binds: vec![format!(
                 "{}:{}",

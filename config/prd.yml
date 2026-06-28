@@ -28,3 +28,10 @@ manager:
     daemon_binary_path: dist/sandbox-daemon-linux-arm64
     # Daemon config YAML uploaded into each container.
     daemon_config_yaml_path: config/prd.yml
+    container_env:
+      - HTTP_PROXY=http://http.docker.internal:3128
+      - HTTPS_PROXY=http://http.docker.internal:3128
+      - http_proxy=http://http.docker.internal:3128
+      - https_proxy=http://http.docker.internal:3128
+      - NO_PROXY=localhost,127.0.0.1,::1
+      - no_proxy=localhost,127.0.0.1,::1

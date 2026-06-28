@@ -12,7 +12,9 @@ status: draft
 
 A side-by-side of [Turso's AgentFS](https://github.com/tursodatabase/agentfs) and
 [[ephemeral-os|EphemeralOS]]. They share the copy-on-write-overlay primitive but
-solve **different layers of the stack**.
+solve **different layers of the stack**. For the full field, see the
+[[landscape|Agent Sandbox Landscape]]; for the closest intent competitor, see
+[[container-use|container-use vs EphemeralOS]].
 
 > [!note] Evidence basis
 > EphemeralOS rows are verified against this repo's code. AgentFS rows come from

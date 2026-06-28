@@ -9,6 +9,12 @@ fn config_prd_manager_docker_section_deserializes_and_validates() {
     assert_eq!(docker.readiness_timeout_ms, 60_000);
     assert_eq!(docker.container_workspace_root, PathBuf::from("/workspace"));
     assert_eq!(docker.gateway_instance_id, "eos-gateway");
+    assert!(docker
+        .container_env
+        .contains(&"HTTP_PROXY=http://http.docker.internal:3128".to_owned()));
+    assert!(docker
+        .container_env
+        .contains(&"HTTPS_PROXY=http://http.docker.internal:3128".to_owned()));
     assert!(docker.privileged);
 }
 
@@ -39,6 +45,13 @@ fn validate_rejects_empty_daemon_binary_path() {
     let mut docker = prd_docker();
     docker.daemon_binary_path = PathBuf::new();
     assert_invalid(&docker, "manager.docker.daemon_binary_path");
+}
+
+#[test]
+fn validate_rejects_invalid_container_env_entry() {
+    let mut docker = prd_docker();
+    docker.container_env.push("HTTP_PROXY".to_owned());
+    assert_invalid(&docker, "manager.docker.container_env");
 }
 
 fn prd_docker() -> DockerRuntimeConfig {

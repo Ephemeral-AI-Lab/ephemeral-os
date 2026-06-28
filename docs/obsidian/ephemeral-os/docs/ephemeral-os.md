@@ -146,5 +146,9 @@ than reject) are the main open pieces of the collaboration model.
 
 - [[overlay_mount|Overlay Mount Backing Storage]] — why the overlay scratch root
   must be a disk-backed volume.
-- [[agentfs|AgentFS vs EphemeralOS]] — how the model compares to Turso's
-  SQLite-backed agent filesystem.
+- [[landscape|Agent Sandbox Landscape]] — where EphemeralOS sits among the ~60
+  agent-sandbox projects, organized by reconciliation model.
+- [[container-use|container-use vs EphemeralOS]] — the intent twin: parallel
+  coding agents via git-branch-per-agent instead of a shared OCC base.
+- [[agentfs|AgentFS vs EphemeralOS]] — the mechanism twin: Turso's SQLite-backed
+  CoW agent filesystem.

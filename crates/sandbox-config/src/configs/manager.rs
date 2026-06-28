@@ -8,7 +8,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_non_empty, require_u64_at_least, ConfigFieldError,
+    require_absolute, require_non_empty, require_non_empty_items, require_u64_at_least,
+    ConfigFieldError,
 };
 
 pub const DEFAULT_CONTAINER_WORKSPACE_ROOT: &str = "/workspace";
@@ -44,6 +45,8 @@ pub struct DockerRuntimeConfig {
     pub container_daemon_config_yaml_path: PathBuf,
     /// Default base image when `create_sandbox` is invoked without one.
     pub default_image: Option<String>,
+    /// Environment variables passed to Docker sandbox containers.
+    pub container_env: Vec<String>,
     /// Linux container path the host workspace root is bind-mounted to.
     pub container_workspace_root: PathBuf,
     /// Explicit platform (for example `linux/amd64`) for image/container create.
@@ -71,6 +74,7 @@ impl Default for DockerRuntimeConfig {
             container_daemon_binary_path: PathBuf::from(DEFAULT_CONTAINER_DAEMON_BINARY_PATH),
             container_daemon_config_yaml_path: PathBuf::from(DEFAULT_CONTAINER_DAEMON_CONFIG_PATH),
             default_image: None,
+            container_env: Vec::new(),
             container_workspace_root: PathBuf::from(DEFAULT_CONTAINER_WORKSPACE_ROOT),
             platform: None,
             privileged: true,
@@ -109,6 +113,21 @@ impl DockerRuntimeConfig {
             &self.container_workspace_root,
             "manager.docker.container_workspace_root",
         )?;
+        require_non_empty_items(&self.container_env, "manager.docker.container_env")?;
+        for entry in &self.container_env {
+            let Some((key, _)) = entry.split_once('=') else {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.container_env",
+                    "entries must use NAME=VALUE format",
+                ));
+            };
+            if key.trim().is_empty() {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.container_env",
+                    "entries must use NAME=VALUE format",
+                ));
+            }
+        }
         require_non_empty(
             &self.gateway_instance_id,
             "manager.docker.gateway_instance_id",
