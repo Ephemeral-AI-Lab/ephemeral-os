@@ -96,9 +96,10 @@ pub fn build_request_from_catalog_with_id(
 
 /// Build the wire request for the read-only `observability` space.
 ///
-/// Every view resolves to the single daemon op `get_observability`; the
+/// Sandbox-scoped views resolve to the daemon op `get_observability`; the
 /// operation name becomes the `view` param, and `--sandbox-id` is CLI routing
-/// (it selects the daemon) rather than an op param.
+/// (it selects the daemon) rather than an op param. `snapshot` without
+/// `--sandbox-id` is manager-owned and aggregates ready sandboxes.
 fn build_observability_request(
     view: &str,
     args: Value,
@@ -108,8 +109,19 @@ fn build_observability_request(
         return Err(build_error("observability arguments must be an object"));
     };
     let sandbox_id = match args.remove("sandbox_id") {
-        Some(Value::String(sandbox_id)) if !sandbox_id.trim().is_empty() => sandbox_id,
-        _ => return Err(build_error("observability operations require --sandbox-id")),
+        Some(Value::String(sandbox_id)) if !sandbox_id.trim().is_empty() => Some(sandbox_id),
+        Some(Value::String(_)) => return Err(build_error("--sandbox-id must be non-empty")),
+        Some(_) => return Err(build_error("--sandbox-id must be a string")),
+        None if view == OBSERVABILITY_SNAPSHOT_OP => None,
+        None => return Err(build_error("observability operations require --sandbox-id")),
+    };
+    let Some(sandbox_id) = sandbox_id else {
+        return Ok(Request::new(
+            OBSERVABILITY_SNAPSHOT_OP,
+            request_id,
+            CliOperationScope::system(),
+            Value::Object(args),
+        ));
     };
     args.insert("view".to_owned(), Value::String(view.to_owned()));
     Ok(Request::new(
@@ -121,6 +133,7 @@ fn build_observability_request(
 }
 
 const OBSERVABILITY_OP: &str = "get_observability";
+const OBSERVABILITY_SNAPSHOT_OP: &str = "snapshot";
 
 pub fn resolve_runtime_sandbox_id(
     sandbox_id: Option<String>,

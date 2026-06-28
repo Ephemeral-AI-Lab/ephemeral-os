@@ -11,7 +11,8 @@ use bollard::container::{
     StartContainerOptions, StopContainerOptions, UploadToContainerOptions,
 };
 use bollard::models::{
-    ContainerInspectResponse, ContainerSummary, HostConfig, HostConfigCgroupnsModeEnum, PortBinding,
+    ContainerInspectResponse, ContainerState, ContainerStateStatusEnum, ContainerSummary,
+    HostConfig, HostConfigCgroupnsModeEnum, PortBinding,
 };
 use bollard::Docker;
 use bytes::Bytes;
@@ -269,6 +270,7 @@ impl DockerEngine {
                 }
             }
             let logs = collect_logs(&docker, &container).await;
+            let logs = logs_for_context(&logs);
             if !logs.is_empty() {
                 context.push_str(&format!("; logs: {logs}"));
             }
@@ -280,6 +282,19 @@ impl DockerEngine {
     pub(crate) fn capture_logs(&self, container: String) -> String {
         self.run_blocking(move |docker| async move { Ok(collect_logs(&docker, &container).await) })
             .unwrap_or_default()
+    }
+
+    pub(crate) fn container_exit_reason(
+        &self,
+        container: String,
+    ) -> Result<Option<String>, DockerError> {
+        self.run_blocking(move |docker| async move {
+            let inspected = docker
+                .inspect_container(&container, None)
+                .await
+                .map_err(|error| DockerError::Api(format!("inspect_container: {error}")))?;
+            Ok(inspected.state.as_ref().and_then(container_exit_reason))
+        })
     }
 }
 
@@ -366,9 +381,89 @@ async fn collect_logs(docker: &Docker, container: &str) -> String {
     String::from_utf8_lossy(&buffer).into_owned()
 }
 
+fn container_exit_reason(state: &ContainerState) -> Option<String> {
+    let status = state.status;
+    let stopped = matches!(
+        status,
+        Some(ContainerStateStatusEnum::EXITED | ContainerStateStatusEnum::DEAD)
+    ) || state.dead == Some(true)
+        || (state.running == Some(false)
+            && !matches!(
+                status,
+                Some(ContainerStateStatusEnum::CREATED | ContainerStateStatusEnum::RESTARTING)
+            ));
+    if !stopped {
+        return None;
+    }
+    Some(format!(
+        "container exited before daemon became ready: state={status:?} running={:?} exit_code={:?} error={:?}",
+        state.running,
+        state.exit_code,
+        state.error.as_deref()
+    ))
+}
+
+fn logs_for_context(logs: &str) -> String {
+    logs.lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| parse_cli_log(line.trim()).unwrap_or_else(|| line.to_owned()))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn parse_cli_log(line: &str) -> Option<String> {
+    let encoded = line.strip_prefix("cli_log(")?.strip_suffix(')')?;
+    serde_json::from_str(encoded).ok()
+}
+
 fn server_status(error: &bollard::errors::Error) -> Option<u16> {
     match error {
         bollard::errors::Error::DockerResponseServerError { status_code, .. } => Some(*status_code),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn logs_for_context_decodes_cli_log_lines() {
+        let logs = r#"
+cli_log("ensuring base")
+thread 'main' panicked
+cli_log("workspace base built")
+"#;
+
+        let rendered = logs_for_context(logs);
+
+        assert_eq!(
+            rendered,
+            "ensuring base\nthread 'main' panicked\nworkspace base built"
+        );
+        assert!(!rendered.contains("cli_log("));
+    }
+
+    #[test]
+    fn container_exit_reason_reports_stopped_container() {
+        let state = ContainerState {
+            status: Some(ContainerStateStatusEnum::EXITED),
+            running: Some(false),
+            paused: None,
+            restarting: None,
+            oom_killed: None,
+            dead: None,
+            pid: None,
+            exit_code: Some(134),
+            error: Some(String::new()),
+            started_at: None,
+            finished_at: None,
+            health: None,
+        };
+
+        let reason = container_exit_reason(&state).expect("exited container is fatal");
+
+        assert!(reason.contains("container exited before daemon became ready"));
+        assert!(reason.contains("exit_code=Some(134)"));
     }
 }

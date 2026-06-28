@@ -143,20 +143,20 @@ impl SandboxDaemonClient for FakeClient {
 }
 
 #[derive(Default)]
-struct RecordingTreeClient {
-    invocations: Mutex<Vec<TreeInvocation>>,
+struct RecordingSnapshotClient {
+    invocations: Mutex<Vec<SnapshotInvocation>>,
     failures: Mutex<Vec<String>>,
 }
 
 #[derive(Debug)]
-struct TreeInvocation {
+struct SnapshotInvocation {
     op: String,
     scope: CliOperationScope,
     args: Value,
     timeout: Duration,
 }
 
-impl RecordingTreeClient {
+impl RecordingSnapshotClient {
     fn fail_sandbox(&self, sandbox_id: &str) {
         self.failures
             .lock()
@@ -164,12 +164,12 @@ impl RecordingTreeClient {
             .push(sandbox_id.to_owned());
     }
 
-    fn invocations(&self) -> Vec<TreeInvocation> {
+    fn invocations(&self) -> Vec<SnapshotInvocation> {
         self.invocations
             .lock()
             .expect("invocations lock")
             .iter()
-            .map(|invocation| TreeInvocation {
+            .map(|invocation| SnapshotInvocation {
                 op: invocation.op.clone(),
                 scope: invocation.scope.clone(),
                 args: invocation.args.clone(),
@@ -179,7 +179,7 @@ impl RecordingTreeClient {
     }
 }
 
-impl SandboxDaemonClient for RecordingTreeClient {
+impl SandboxDaemonClient for RecordingSnapshotClient {
     fn invoke_with_timeout(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
@@ -194,7 +194,7 @@ impl SandboxDaemonClient for RecordingTreeClient {
         self.invocations
             .lock()
             .expect("invocations lock")
-            .push(TreeInvocation {
+            .push(SnapshotInvocation {
                 op: request.op.clone(),
                 scope: request.scope.clone(),
                 args: request.args.clone(),
@@ -215,12 +215,12 @@ impl SandboxDaemonClient for RecordingTreeClient {
     }
 }
 
-struct SlowTreeClient {
+struct SlowSnapshotClient {
     active: AtomicUsize,
     max_active: AtomicUsize,
 }
 
-impl SlowTreeClient {
+impl SlowSnapshotClient {
     fn new() -> Self {
         Self {
             active: AtomicUsize::new(0),
@@ -233,7 +233,7 @@ impl SlowTreeClient {
     }
 }
 
-impl SandboxDaemonClient for SlowTreeClient {
+impl SandboxDaemonClient for SlowSnapshotClient {
     fn invoke_with_timeout(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
@@ -378,7 +378,6 @@ fn cli_operation_catalog_contains_only_manager_operations() {
         [
             "create_sandbox",
             "destroy_sandbox",
-            "get_observability_tree",
             "list_sandboxes",
             "inspect_sandbox",
         ]
@@ -571,8 +570,8 @@ fn create_sandbox_rolls_back_runtime_and_store_when_check_fails() {
 }
 
 #[test]
-fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_requests() {
-    let client = Arc::new(RecordingTreeClient::default());
+fn observability_snapshot_aggregates_ready_sandboxes_with_private_daemon_requests() {
+    let client = Arc::new(RecordingSnapshotClient::default());
     let (services, store) = services_with_client(client.clone());
     store
         .insert(sandbox_record(
@@ -596,13 +595,7 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
         ))
         .expect("insert non-ready sandbox");
 
-    let response = dispatch(
-        &services,
-        "get_observability_tree",
-        json!({
-            "resource_window_ms": 999_999,
-        }),
-    );
+    let response = dispatch(&services, "snapshot", json!({}));
 
     let sandboxes = response["sandboxes"].as_array().expect("sandboxes array");
     assert_eq!(sandboxes.len(), 2);
@@ -625,18 +618,15 @@ fn get_observability_tree_aggregates_ready_sandboxes_with_private_daemon_request
     }));
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.args["view"] == "snapshot"));
-    assert!(invocations
-        .iter()
-        .all(|invocation| invocation.args["resource_window_ms"] == 999_999));
+        .all(|invocation| invocation.args == json!({ "view": "snapshot" })));
     assert!(invocations
         .iter()
         .all(|invocation| invocation.timeout == Duration::from_millis(1_500)));
 }
 
 #[test]
-fn get_observability_tree_converts_one_daemon_failure_to_one_unavailable_node() {
-    let client = Arc::new(RecordingTreeClient::default());
+fn observability_snapshot_converts_one_daemon_failure_to_one_unavailable_node() {
+    let client = Arc::new(RecordingSnapshotClient::default());
     client.fail_sandbox("sbox-2");
     let (services, store) = services_with_client(client.clone());
     store
@@ -654,7 +644,7 @@ fn get_observability_tree_converts_one_daemon_failure_to_one_unavailable_node() 
         ))
         .expect("insert ready sandbox");
 
-    let response = dispatch(&services, "get_observability_tree", json!({}));
+    let response = dispatch(&services, "snapshot", json!({}));
 
     assert!(response.get("error").is_none());
     let sandboxes = response["sandboxes"].as_array().expect("sandboxes array");
@@ -667,22 +657,18 @@ fn get_observability_tree_converts_one_daemon_failure_to_one_unavailable_node() 
         .as_str()
         .expect("error text")
         .contains("daemon sbox-2 timed out"));
-    assert!(client.invocations().iter().all(|invocation| invocation
-        .args
-        .as_object()
-        .is_some_and(|args| args.is_empty())));
+    assert!(client
+        .invocations()
+        .iter()
+        .all(|invocation| invocation.args == json!({ "view": "snapshot" })));
 }
 
 #[test]
-fn get_observability_tree_errors_for_explicit_unknown_sandbox_id() {
-    let client = Arc::new(RecordingTreeClient::default());
+fn observability_snapshot_errors_for_explicit_unknown_sandbox_id() {
+    let client = Arc::new(RecordingSnapshotClient::default());
     let (services, _store) = services_with_client(client);
 
-    let response = dispatch(
-        &services,
-        "get_observability_tree",
-        json!({"sandbox_id": "missing"}),
-    );
+    let response = dispatch(&services, "snapshot", json!({"sandbox_id": "missing"}));
 
     assert_eq!(
         response["error"]["kind"],
@@ -695,8 +681,8 @@ fn get_observability_tree_errors_for_explicit_unknown_sandbox_id() {
 }
 
 #[test]
-fn get_observability_tree_returns_unavailable_node_for_explicit_non_ready_sandbox() {
-    let client = Arc::new(RecordingTreeClient::default());
+fn observability_snapshot_returns_unavailable_node_for_explicit_non_ready_sandbox() {
+    let client = Arc::new(RecordingSnapshotClient::default());
     let (services, store) = services_with_client(client.clone());
     store
         .insert(sandbox_record(
@@ -706,11 +692,7 @@ fn get_observability_tree_returns_unavailable_node_for_explicit_non_ready_sandbo
         ))
         .expect("insert non-ready sandbox");
 
-    let response = dispatch(
-        &services,
-        "get_observability_tree",
-        json!({"sandbox_id": "creating"}),
-    );
+    let response = dispatch(&services, "snapshot", json!({"sandbox_id": "creating"}));
 
     let sandboxes = response["sandboxes"].as_array().expect("sandboxes array");
     assert_eq!(sandboxes.len(), 1);
@@ -721,8 +703,8 @@ fn get_observability_tree_returns_unavailable_node_for_explicit_non_ready_sandbo
 }
 
 #[test]
-fn get_observability_tree_bounds_daemon_fanout_concurrency() {
-    let client = Arc::new(SlowTreeClient::new());
+fn observability_snapshot_bounds_daemon_fanout_concurrency() {
+    let client = Arc::new(SlowSnapshotClient::new());
     let (services, store) = services_with_client(client.clone());
     for index in 0..12 {
         let sandbox_id = format!("sbox-{index}");
@@ -735,7 +717,7 @@ fn get_observability_tree_bounds_daemon_fanout_concurrency() {
             .expect("insert ready sandbox");
     }
 
-    let response = dispatch(&services, "get_observability_tree", json!({}));
+    let response = dispatch(&services, "snapshot", json!({}));
 
     assert_eq!(
         response["sandboxes"]

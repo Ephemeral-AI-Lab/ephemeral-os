@@ -15,7 +15,7 @@ pub const DEFAULT_CONTAINER_WORKSPACE_ROOT: &str = "/workspace";
 pub const DEFAULT_CONTAINER_DAEMON_BINARY_PATH: &str = "/eos/bin/sandbox-daemon";
 pub const DEFAULT_CONTAINER_DAEMON_CONFIG_PATH: &str = "/eos/config/daemon.yml";
 pub const DEFAULT_DAEMON_PORT: u16 = 7000;
-pub const DEFAULT_READINESS_TIMEOUT_MS: u64 = 15_000;
+pub const DEFAULT_READINESS_TIMEOUT_MS: u64 = 60_000;
 pub const DEFAULT_GATEWAY_INSTANCE_ID: &str = "eos-gateway";
 
 /// Root `manager` section. Holds one backend sub-section; only `docker` exists

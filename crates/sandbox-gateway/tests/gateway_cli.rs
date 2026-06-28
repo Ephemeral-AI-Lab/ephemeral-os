@@ -628,7 +628,7 @@ async fn observability_help_snapshot_renders_detail_page() -> TestResult {
     let help = observability_help_page(&["snapshot"]).await?;
     assert!(help.contains("snapshot"));
     assert!(help.contains("Family\n  Observability"));
-    assert!(help.contains("Usage\n  sandbox-cli observability snapshot --sandbox-id ID"));
+    assert!(help.contains("Usage\n  sandbox-cli observability snapshot [--sandbox-id ID]"));
     assert!(help.contains("--sandbox-id"));
     Ok(())
 }
@@ -751,7 +751,34 @@ fn observability_snapshot_maps_to_get_observability_view() -> TestResult {
     )?;
 
     assert_eq!(request.op, "get_observability");
+    assert_eq!(
+        request.scope,
+        CliOperationScope::Sandbox {
+            sandbox_id: "eos-abc".to_owned()
+        }
+    );
     assert_eq!(request.args, json!({ "view": "snapshot" }));
+    Ok(())
+}
+
+#[test]
+fn observability_snapshot_without_sandbox_id_maps_to_manager_snapshot() -> TestResult {
+    let catalog = observability_catalog()?;
+    let request = build_request_from_catalog_with_id(
+        BuildRequestInput {
+            execution_space: CliOperationExecutionSpace::Observability,
+            operation: "snapshot".to_owned(),
+            operation_argv: vec![],
+            sandbox_id: None,
+        },
+        &config(None),
+        &catalog,
+        "req-1",
+    )?;
+
+    assert_eq!(request.op, "snapshot");
+    assert_eq!(request.scope, CliOperationScope::System);
+    assert_eq!(request.args, json!({}));
     Ok(())
 }
 

@@ -101,13 +101,14 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
     ) -> Result<(), ManagerError> {
         let timeout = Duration::from_millis(self.engine.config().readiness_timeout_ms);
         let sandbox_id = record.id.as_str();
-        poll_until_ready(endpoint, sandbox_id, timeout).map_err(|error| {
+        poll_until_ready_with_progress(endpoint, sandbox_id, timeout, || {
+            fail_if_container_exited(&self.engine, sandbox_id)
+        })
+        .map_err(|error| {
             let context = self.engine.capture_failure_context(sandbox_id.to_owned());
             daemon_install_failed(format!(
-                "daemon at {}:{} for {sandbox_id} did not become ready within {} ms: {error}; container {context}",
-                endpoint.host,
-                endpoint.port,
-                timeout.as_millis()
+                "daemon at {}:{} for {sandbox_id} is not ready: {error}; container {context}",
+                endpoint.host, endpoint.port
             ))
         })
     }
@@ -121,25 +122,19 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
         let timeout = Duration::from_millis(self.engine.config().readiness_timeout_ms);
         let sandbox_id = record.id.as_str();
         let mut seen_logs = HashSet::new();
-        poll_until_ready_with_progress(
-            endpoint,
-            sandbox_id,
-            timeout,
-            || {
-                emit_container_progress(
-                    &self.engine.capture_logs(sandbox_id.to_owned()),
-                    &mut seen_logs,
-                    progress,
-                );
-            },
-        )
+        poll_until_ready_with_progress(endpoint, sandbox_id, timeout, || {
+            emit_container_progress(
+                &self.engine.capture_logs(sandbox_id.to_owned()),
+                &mut seen_logs,
+                progress,
+            );
+            fail_if_container_exited(&self.engine, sandbox_id)
+        })
         .map_err(|error| {
             let context = self.engine.capture_failure_context(sandbox_id.to_owned());
             daemon_install_failed(format!(
-                "daemon at {}:{} for {sandbox_id} did not become ready within {} ms: {error}; container {context}",
-                endpoint.host,
-                endpoint.port,
-                timeout.as_millis()
+                "daemon at {}:{} for {sandbox_id} is not ready: {error}; container {context}",
+                endpoint.host, endpoint.port
             ))
         })
     }
@@ -149,14 +144,6 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
 /// request until the daemon confirms it is ready for this sandbox (a bare TCP
 /// connect through Docker's proxy is not a reliable readiness signal), or the
 /// deadline elapses.
-fn poll_until_ready(
-    endpoint: &SandboxDaemonEndpoint,
-    sandbox_id: &str,
-    timeout: Duration,
-) -> Result<(), String> {
-    poll_until_ready_with_progress(endpoint, sandbox_id, timeout, || {})
-}
-
 fn poll_until_ready_with_progress<F>(
     endpoint: &SandboxDaemonEndpoint,
     sandbox_id: &str,
@@ -164,12 +151,12 @@ fn poll_until_ready_with_progress<F>(
     mut on_poll: F,
 ) -> Result<(), String>
 where
-    F: FnMut(),
+    F: FnMut() -> Result<(), String>,
 {
     let request_line = readiness_request_line(sandbox_id, &endpoint.auth_token);
     let deadline = Instant::now() + timeout;
     loop {
-        on_poll();
+        on_poll()?;
         let error = match authenticated_exchange(
             &endpoint.host,
             endpoint.port,
@@ -180,11 +167,24 @@ where
             Err(error) => error,
         };
         if Instant::now() >= deadline {
-            on_poll();
-            return Err(error);
+            on_poll()?;
+            return Err(format!(
+                "timed out after {} ms: {error}",
+                timeout.as_millis()
+            ));
         }
         std::thread::sleep(READINESS_POLL);
     }
+}
+
+fn fail_if_container_exited(engine: &DockerEngine, sandbox_id: &str) -> Result<(), String> {
+    if let Some(reason) = engine
+        .container_exit_reason(sandbox_id.to_owned())
+        .map_err(|error| error.to_string())?
+    {
+        return Err(reason);
+    }
+    Ok(())
 }
 
 fn emit_container_progress(logs: &str, seen_logs: &mut HashSet<String>, progress: &ProgressSink) {
@@ -258,5 +258,21 @@ cli_log("copied files")
 
         let events = events.lock().expect("events lock");
         assert_eq!(*events, vec!["ensuring base", "copied files"]);
+    }
+
+    #[test]
+    fn poll_until_ready_stops_when_poll_context_reports_error() {
+        let endpoint = SandboxDaemonEndpoint::new("127.0.0.1", 9, "token");
+        let mut polls = 0;
+
+        let error =
+            poll_until_ready_with_progress(&endpoint, "sbox-1", Duration::from_secs(60), || {
+                polls += 1;
+                Err("container exited before daemon became ready".to_owned())
+            })
+            .expect_err("fatal poll context stops readiness loop");
+
+        assert_eq!(polls, 1);
+        assert_eq!(error, "container exited before daemon became ready");
     }
 }

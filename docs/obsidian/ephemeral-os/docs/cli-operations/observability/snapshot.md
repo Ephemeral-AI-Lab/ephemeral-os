@@ -13,29 +13,64 @@ status: ready
 
 Show live sandbox state.
 
-> Every `observability` operation resolves to the daemon op `get_observability` with the operation name as the `view`; `--sandbox-id` selects which sandbox's daemon to query (it is routing, not an op argument).
+> With `--sandbox-id`, this operation resolves to daemon op `get_observability` with `view: snapshot`; `--sandbox-id` selects which sandbox's daemon to query. Without `--sandbox-id`, the gateway sends a manager `snapshot` request and aggregates ready manager-known sandboxes.
 
 ## Manual
 
 Show current state from the runtime registry: sandbox lifecycle state, workspaces (with layer counts), in-flight executions, and the latest resource sample per scope. Served live; does not read the log.
 
+When `--sandbox-id` is omitted, the manager fans out private daemon snapshot requests to every ready sandbox with a daemon endpoint and returns one `sandboxes` array. Per-sandbox failures are reported as `availability: "unavailable"` nodes instead of failing the whole aggregate response.
+
 | Argument | Flag | Kind | Required | Default | Description |
 |---|---|---|---|---|---|
-| `sandbox_id` | `--sandbox-id` | string | yes | — | Target sandbox id (selects the daemon to query). |
+| `sandbox_id` | `--sandbox-id` | string | no | all ready sandboxes | Target sandbox id. When omitted, the manager aggregates ready sandboxes. |
 
 **Usage**
 
 ```
-sandbox-cli observability snapshot --sandbox-id ID
+sandbox-cli observability snapshot [--sandbox-id ID]
 ```
 
 **Examples**
 
 ```sh
+sandbox-cli observability snapshot
 sandbox-cli observability snapshot --sandbox-id eos-abc
 ```
 
 ## Expected output
+
+Without `--sandbox-id`:
+
+```json
+{
+  "sandboxes": [
+    {
+      "sandbox_id": "eos-abc",
+      "lifecycle_state": "ready",
+      "availability": "available",
+      "sampled_at_unix_ms": 1751240400000,
+      "errors": [],
+      "daemon": { "daemon_pid": 4711, "runtime_dir": "/run/eos/eos-abc" },
+      "resources": { "latest": null, "history": [] },
+      "workspaces": [],
+      "stack": { "layer_count": 2, "layers_bytes": 1048576, "active_leases": 1 }
+    },
+    {
+      "sandbox_id": "eos-def",
+      "lifecycle_state": "ready",
+      "availability": "unavailable",
+      "sampled_at_unix_ms": null,
+      "errors": ["daemon eos-def timed out"],
+      "daemon": { "host": "127.0.0.1", "port": 7123, "daemon_pid": null, "runtime_dir": null },
+      "resources": { "latest": null, "history": [] },
+      "workspaces": []
+    }
+  ]
+}
+```
+
+With `--sandbox-id`:
 
 ```json
 {

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/cli-operations/manager/Management/list_sandboxes.md",
+                "file": "docs/cli-operations/observability/snapshot.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "list_sandboxes"
+              "title": "snapshot"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/cli-operations/manager/Management/list_sandboxes.md",
+                "file": "docs/cli-operations/observability/snapshot.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for list_sandboxes"
+              "title": "Backlinks for snapshot"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/cli-operations/manager/Management/list_sandboxes.md",
+                "file": "docs/cli-operations/observability/snapshot.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from list_sandboxes"
+              "title": "Outgoing links from snapshot"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/cli-operations/manager/Management/list_sandboxes.md",
+                "file": "docs/cli-operations/observability/snapshot.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of list_sandboxes"
+              "title": "Outline of snapshot"
             }
           }
         ]
@@ -185,25 +185,26 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
+    "docs/cli-operations/observability/trace.md",
+    "docs/cli-operations/observability/snapshot.md",
+    "docs/cli-operations/observability/layerstack.md",
+    "docs/cli-operations/observability/events.md",
+    "docs/cli-operations/observability/cgroup.md",
+    "docs/cli-operations/manager/Management/get_observability_tree.md",
     "docs/cli-operations/manager/Management/inspect_sandbox.md",
-    "docs/layerstack/create_sandbox.md",
+    "daily-progress-tracker/2026-06-28.md",
     "docs/cli-operations/manager/Management/list_sandboxes.md",
+    "docs/layerstack/create_sandbox.md",
     "docs/cli-operations/manager/Management/destroy_sandbox.md",
     "docs/cli-operations/manager/Management/create_sandbox.md",
     "docs/layerstack/hash.md",
     "docs/cli-operations/runtime/command/exec_command.md",
     "docs/cli-operations/manager/create_sandbox.md",
-    "docs/cli-operations/manager/Management/get_observability_tree.md",
     "docs/cli-operations/manager/Management",
     "docs/cli-operations/manager/list_sandboxes.md",
     "docs/cli-operations/manager/management",
     "docs/cli-operations/manager/inspect_sandbox.md",
     "docs/cli-operations/manager/destroy_sandbox.md",
-    "docs/cli-operations/observability/trace.md",
-    "docs/cli-operations/observability/layerstack.md",
-    "docs/cli-operations/observability/events.md",
-    "docs/cli-operations/observability/cgroup.md",
-    "daily-progress-tracker/2026-06-28.md",
     "index.md"
   ]
 }

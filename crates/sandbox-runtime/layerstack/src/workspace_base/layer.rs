@@ -348,7 +348,7 @@ fn copy_file_with_hash(
         let cap = (remaining.min(buffer.len() as u64)) as usize;
         let count = input.read(&mut buffer[..cap]).map_err(map_source_error)?;
         if count == 0 {
-            break;
+            return Err(CopyFileError::SourceUnreadable);
         }
         output
             .write_all(&buffer[..count])

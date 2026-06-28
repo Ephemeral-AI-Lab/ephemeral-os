@@ -6,6 +6,7 @@ fn config_prd_manager_docker_section_deserializes_and_validates() {
     docker.validate().expect("prd manager.docker config is valid");
 
     assert_eq!(docker.daemon_port, 7000);
+    assert_eq!(docker.readiness_timeout_ms, 60_000);
     assert_eq!(docker.container_workspace_root, PathBuf::from("/workspace"));
     assert_eq!(docker.gateway_instance_id, "eos-gateway");
     assert!(docker.privileged);

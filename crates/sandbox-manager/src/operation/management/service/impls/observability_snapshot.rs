@@ -6,7 +6,8 @@ use serde_json::{json, Map, Value};
 
 use crate::operation::ManagerServices;
 use crate::{
-    ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState,
+    ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord,
+    SandboxState,
 };
 
 const MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS: usize = 8;
@@ -15,20 +16,18 @@ const MAX_NODE_ERROR_BYTES: usize = 4_096;
 const PRIVATE_DAEMON_OBSERVABILITY_OP: &str = "get_observability";
 
 #[derive(Clone, Debug)]
-pub(crate) struct TreeOptions {
+pub(crate) struct SnapshotOptions {
     pub(crate) sandbox_id: Option<SandboxId>,
-    pub(crate) resource_window_ms: Option<u64>,
 }
 
-pub(crate) fn get_observability_tree(
+pub(crate) fn observability_snapshot(
     services: &ManagerServices,
-    options: TreeOptions,
+    options: SnapshotOptions,
     request_id: &str,
 ) -> Result<Vec<Value>, ManagerError> {
     let records = selected_records(services, options.sandbox_id.as_ref())?;
     Ok(aggregate_records(
         records,
-        options,
         Arc::clone(&services.daemon_client),
         request_id,
     ))
@@ -54,7 +53,6 @@ fn selected_records(
 
 fn aggregate_records(
     records: Vec<SandboxRecord>,
-    options: TreeOptions,
     daemon_client: Arc<dyn SandboxDaemonClient>,
     request_id: &str,
 ) -> Vec<Value> {
@@ -66,12 +64,10 @@ fn aggregate_records(
                 .cloned()
                 .map(|record| {
                     let panic_record = record.clone();
-                    let worker_options = options.clone();
                     let worker_client = Arc::clone(&daemon_client);
                     let worker_request_id = request_id.to_owned();
-                    let handle = scope.spawn(move || {
-                        sandbox_node(record, &worker_options, worker_client, &worker_request_id)
-                    });
+                    let handle = scope
+                        .spawn(move || sandbox_node(record, worker_client, &worker_request_id));
                     (panic_record, handle)
                 })
                 .collect::<Vec<_>>();
@@ -92,7 +88,6 @@ fn aggregate_records(
 
 fn sandbox_node(
     record: SandboxRecord,
-    options: &TreeOptions,
     daemon_client: Arc<dyn SandboxDaemonClient>,
     request_id: &str,
 ) -> Value {
@@ -106,7 +101,7 @@ fn sandbox_node(
     let Some(endpoint) = record.daemon.clone() else {
         return unavailable_node(&record, None, "sandbox daemon endpoint is unavailable");
     };
-    let request = private_snapshot_request(&record, options, request_id);
+    let request = private_snapshot_request(&record, request_id);
     match daemon_client.invoke_with_timeout(
         &endpoint,
         request,
@@ -117,16 +112,9 @@ fn sandbox_node(
     }
 }
 
-fn private_snapshot_request(
-    record: &SandboxRecord,
-    options: &TreeOptions,
-    request_id: &str,
-) -> Request {
+fn private_snapshot_request(record: &SandboxRecord, request_id: &str) -> Request {
     let mut args = Map::new();
     args.insert("view".to_owned(), json!("snapshot"));
-    if let Some(resource_window_ms) = options.resource_window_ms {
-        args.insert("resource_window_ms".to_owned(), json!(resource_window_ms));
-    }
     Request::new(
         PRIVATE_DAEMON_OBSERVABILITY_OP,
         format!(

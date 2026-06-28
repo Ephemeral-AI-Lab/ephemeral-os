@@ -8,9 +8,7 @@ use super::{forward::forward_sandbox_request, SandboxManagerRouter};
 
 impl SandboxManagerRouter {
     pub async fn dispatch_request(&self, request: Request) -> Response {
-        let manager_owned = crate::cli_operation_specs()
-            .iter()
-            .any(|spec| spec.name == request.op);
+        let manager_owned = manager_owns_operation(&request.op);
         match (&request.scope, manager_owned) {
             (CliOperationScope::System, true) => self.dispatch_manager_request(request).await,
             (CliOperationScope::System, false) => Response::unknown_op(),
@@ -42,9 +40,7 @@ impl SandboxManagerRouter {
         request: Request,
         progress: ProgressSink,
     ) -> Response {
-        let manager_owned = crate::cli_operation_specs()
-            .iter()
-            .any(|spec| spec.name == request.op);
+        let manager_owned = manager_owns_operation(&request.op);
         match (&request.scope, manager_owned) {
             (CliOperationScope::System, true) => {
                 let services = Arc::clone(&self.services);
@@ -76,4 +72,10 @@ impl SandboxManagerRouter {
             ),
         }
     }
+}
+
+fn manager_owns_operation(op: &str) -> bool {
+    crate::operation::cli_definition::operation_entries()
+        .iter()
+        .any(|entry| entry.spec.name == op)
 }

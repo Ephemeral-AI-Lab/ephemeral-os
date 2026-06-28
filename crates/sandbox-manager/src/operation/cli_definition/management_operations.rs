@@ -8,8 +8,8 @@ use serde_json::{json, Value};
 
 use crate::operation::dispatch::ManagerOperationEntry;
 use crate::operation::management::{
-    create_sandbox, destroy_sandbox, get_observability_tree, inspect_sandbox, list_sandboxes,
-    CreateSandboxInput, TreeOptions,
+    create_sandbox, destroy_sandbox, inspect_sandbox, list_sandboxes, observability_snapshot,
+    CreateSandboxInput, SnapshotOptions,
 };
 use crate::operation::ManagerServices;
 use crate::{ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxId, SandboxRecord};
@@ -87,48 +87,26 @@ const DESTROY_SANDBOX_CLI: CliSpec = CliSpec {
     examples: &["sandbox-cli manager destroy_sandbox --sandbox-id sbox-1"],
 };
 
-const GET_OBSERVABILITY_TREE_SPEC: CliOperationSpec = CliOperationSpec {
-    name: "get_observability_tree",
+const OBSERVABILITY_SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "snapshot",
     family: "management",
     summary: "Aggregate daemon observability snapshots for manager-known sandboxes.",
     description: "Aggregate daemon-local observability snapshots for ready manager-known sandboxes without reading daemon storage from the manager.",
-    args: GET_OBSERVABILITY_TREE_ARGS,
-    cli: Some(GET_OBSERVABILITY_TREE_CLI),
+    args: OBSERVABILITY_SNAPSHOT_ARGS,
+    cli: None,
     related: &["list_sandboxes", "inspect_sandbox"],
 };
 
-const GET_OBSERVABILITY_TREE_ARGS: &[ArgSpec] = &[
-    ArgSpec::optional(
-        "sandbox_id",
-        ArgKind::String,
-        "Optional manager sandbox id. When omitted, all ready sandboxes with daemon endpoints are queried.",
-        None,
-        Some(ArgCliSpec {
-            flag: Some("--sandbox-id"),
-            positional: None,
-        }),
-    ),
-    ArgSpec::optional(
-        "resource_window_ms",
-        ArgKind::Integer,
-        "Optional bounded resource history window in milliseconds.",
-        None,
-        Some(ArgCliSpec {
-            flag: Some("--resource-window-ms"),
-            positional: None,
-        }),
-    ),
-];
-
-const GET_OBSERVABILITY_TREE_CLI: CliSpec = CliSpec {
-    path: &["manager", "get_observability_tree"],
-    usage: "sandbox-cli manager get_observability_tree [--sandbox-id ID] [--resource-window-ms MS]",
-    examples: &[
-        "sandbox-cli manager get_observability_tree",
-        "sandbox-cli manager get_observability_tree --sandbox-id sbox-1",
-        "sandbox-cli manager get_observability_tree --resource-window-ms 60000",
-    ],
-};
+const OBSERVABILITY_SNAPSHOT_ARGS: &[ArgSpec] = &[ArgSpec::optional(
+    "sandbox_id",
+    ArgKind::String,
+    "Optional manager sandbox id. When omitted, all ready sandboxes with daemon endpoints are queried.",
+    None,
+    Some(ArgCliSpec {
+        flag: Some("--sandbox-id"),
+        positional: None,
+    }),
+)];
 
 const LIST_SANDBOXES_SPEC: CliOperationSpec = CliOperationSpec {
     name: "list_sandboxes",
@@ -177,7 +155,6 @@ const FAMILIES: &[&CliOperationFamilySpec] = &[&MANAGEMENT_FAMILY];
 const SPECS: &[&CliOperationSpec] = &[
     &CREATE_SANDBOX_SPEC,
     &DESTROY_SANDBOX_SPEC,
-    &GET_OBSERVABILITY_TREE_SPEC,
     &LIST_SANDBOXES_SPEC,
     &INSPECT_SANDBOX_SPEC,
 ];
@@ -186,8 +163,8 @@ const OPERATIONS: &[ManagerOperationEntry] = &[
     ManagerOperationEntry::new(&CREATE_SANDBOX_SPEC, dispatch_create_sandbox),
     ManagerOperationEntry::new(&DESTROY_SANDBOX_SPEC, dispatch_destroy_sandbox),
     ManagerOperationEntry::new(
-        &GET_OBSERVABILITY_TREE_SPEC,
-        dispatch_get_observability_tree,
+        &OBSERVABILITY_SNAPSHOT_SPEC,
+        dispatch_observability_snapshot,
     ),
     ManagerOperationEntry::new(&LIST_SANDBOXES_SPEC, dispatch_list_sandboxes),
     ManagerOperationEntry::new(&INSPECT_SANDBOX_SPEC, dispatch_inspect_sandbox),
@@ -264,12 +241,12 @@ fn dispatch_list_sandboxes(services: &ManagerServices, _request: &Request) -> Re
     }
 }
 
-fn dispatch_get_observability_tree(services: &ManagerServices, request: &Request) -> Response {
-    let options = match tree_options(request) {
+fn dispatch_observability_snapshot(services: &ManagerServices, request: &Request) -> Response {
+    let options = match snapshot_options(request) {
         Ok(options) => options,
         Err(response) => return response,
     };
-    match get_observability_tree(services, options, &request.request_id) {
+    match observability_snapshot(services, options, &request.request_id) {
         Ok(sandboxes) => Response::ok(json!({ "sandboxes": sandboxes })),
         Err(error) => error.into_response(),
     }
@@ -298,16 +275,13 @@ fn image(request: &Request) -> Result<String, Response> {
     Ok(image)
 }
 
-fn tree_options(request: &Request) -> Result<TreeOptions, Response> {
+fn snapshot_options(request: &Request) -> Result<SnapshotOptions, Response> {
     let sandbox_id = request
         .optional_string("sandbox_id")?
         .map(SandboxId::new)
         .transpose()
         .map_err(ManagerError::into_response)?;
-    Ok(TreeOptions {
-        sandbox_id,
-        resource_window_ms: request.optional_u64("resource_window_ms")?,
-    })
+    Ok(SnapshotOptions { sandbox_id })
 }
 
 fn records_value(records: Vec<SandboxRecord>) -> Value {
