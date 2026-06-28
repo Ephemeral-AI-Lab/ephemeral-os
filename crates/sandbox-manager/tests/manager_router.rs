@@ -133,6 +133,33 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
 }
 
 #[tokio::test]
+async fn manager_router_dispatches_hidden_observability_snapshot_locally() {
+    let (services, store, daemon_client) = services();
+    store
+        .insert(ready_record(
+            "sbox-1",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-1",
+            )),
+        ))
+        .expect("insert sandbox");
+    let router = router(services);
+
+    let response = router
+        .dispatch_request(request("snapshot", CliOperationScope::System, json!({})))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["sandboxes"][0]["sandbox_id"], "sbox-1");
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, "get_observability");
+    assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
+}
+
+#[tokio::test]
 async fn manager_router_rejects_manager_operation_with_sandbox_scope() {
     let (services, _store, _daemon_client) = services();
     let router = router(services);

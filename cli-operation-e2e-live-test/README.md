@@ -89,15 +89,22 @@ All knobs live in `core/config.py` and are overridable from the environment:
 | Variable                      | Default               | What it controls                                   |
 |-------------------------------|-----------------------|----------------------------------------------------|
 | `E2E_IMAGE`                   | `ubuntu:24.04`        | Docker image for `create_sandbox --image`          |
-| `E2E_WORKSPACE_ROOT`          | `/testbed`            | `create_sandbox --workspace-root` (container path) |
+| `E2E_WORKSPACE_VARIANT`       | `testbed`             | variant subfolder under `repo/` (host dir, bind-mounted as workspace root) |
+| `E2E_WORKSPACE_ROOT`          | `repo/<variant>`      | absolute host workspace root (overrides the variant) |
 | `E2E_NETWORK_PROFILE`         | `shared`              | workspace-session profile (`shared` \| `isolated`) |
 | `SANDBOX_GATEWAY_CONFIG_YAML` | `../config/prd.yml`   | daemon/sandbox config YAML used by the gateway      |
 | `E2E_REBUILD_BINARY`          | `1`                   | cold-start with `--rebuild-binary`; `0` to skip     |
 
 ```sh
-E2E_IMAGE=debian:12 E2E_WORKSPACE_ROOT=/work pytest manager
-E2E_REBUILD_BINARY=0 pytest -m smoke      # fastest cold start (no forced daemon rebuild)
+E2E_IMAGE=debian:12 pytest manager                  # different image
+E2E_WORKSPACE_VARIANT=special_case_b pytest manager # different repo/ workspace variant
+E2E_REBUILD_BINARY=0 pytest -m smoke                # fastest cold start (no forced daemon rebuild)
 ```
+
+Workspace variants live under `repo/` — one host directory per variant
+(`repo/testbed`, `repo/special_case_b`, …), bind-mounted into the sandbox as its
+workspace root. `repo/testbed` is the default; add a variant by creating a new
+subfolder.
 
 ## Why no log scraping
 
