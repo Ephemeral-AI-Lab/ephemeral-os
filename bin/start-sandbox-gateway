@@ -120,8 +120,29 @@ export SANDBOX_GATEWAY_AUTH_TOKEN="$auth_token"
 mkdir -p "$(dirname "$pid_file")" "$(dirname "$log_file")" "$(dirname "$token_file")"
 printf '%s\n' "$auth_token" >"$token_file"
 
-nohup "$gateway_bin" serve "$@" >>"$log_file" 2>&1 &
-launcher_pid=$!
+if command -v python3 >/dev/null 2>&1; then
+    launcher_pid=$(
+        GATEWAY_BIN=$gateway_bin LOG_FILE=$log_file python3 - "$@" <<'PY'
+import os
+import subprocess
+import sys
+
+log = open(os.environ["LOG_FILE"], "ab", buffering=0)
+process = subprocess.Popen(
+    ["nohup", os.environ["GATEWAY_BIN"], "serve", *sys.argv[1:]],
+    stdin=subprocess.DEVNULL,
+    stdout=log,
+    stderr=subprocess.STDOUT,
+    start_new_session=True,
+    close_fds=True,
+)
+print(process.pid)
+PY
+    )
+else
+    nohup "$gateway_bin" serve "$@" >>"$log_file" 2>&1 &
+    launcher_pid=$!
+fi
 
 printf 'sandbox-gateway starting in background via launcher pid %s\n' "$launcher_pid"
 printf 'pid file: %s\n' "$pid_file"

@@ -1,0 +1,65 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+
+export PATH="$repo_root/bin:$PATH"
+
+config_yaml=${SANDBOX_GATEWAY_CONFIG_YAML:-$repo_root/config/prd.yml}
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help) exec start-sandbox-gateway --backend docker --config-yaml "$config_yaml" "$@" ;;
+    esac
+done
+
+daemon_artifact_rel=$(
+    sed -n 's/^[[:space:]]*daemon_binary_path:[[:space:]]*//p' "$config_yaml" | sed -n '1p'
+)
+daemon_artifact_rel=${daemon_artifact_rel#\"}
+daemon_artifact_rel=${daemon_artifact_rel%\"}
+daemon_artifact_rel=${daemon_artifact_rel#\'}
+daemon_artifact_rel=${daemon_artifact_rel%\'}
+
+case "$daemon_artifact_rel" in
+    '') printf 'daemon_binary_path not found in %s\n' "$config_yaml" >&2; exit 1 ;;
+    /*) daemon_artifact=$daemon_artifact_rel ;;
+    *) daemon_artifact=$repo_root/$daemon_artifact_rel ;;
+esac
+
+case "${daemon_artifact##*/}" in
+    *-arm64) package_target=aarch64-unknown-linux-musl ;;
+    *-amd64) package_target=x86_64-unknown-linux-musl ;;
+    *) printf 'cannot infer package target from %s\n' "$daemon_artifact" >&2; exit 1 ;;
+esac
+
+needs_package=0
+if [ ! -x "$daemon_artifact" ]; then
+    needs_package=1
+else
+    # ponytail: broad source mtime check; use cargo metadata if false positives matter.
+    newer_source=$(
+        find \
+            "$repo_root/Cargo.toml" \
+            "$repo_root/Cargo.lock" \
+            "$repo_root/crates/sandbox-daemon/Cargo.toml" \
+            "$repo_root/crates/sandbox-daemon/src" \
+            "$repo_root/crates/sandbox-config/Cargo.toml" \
+            "$repo_root/crates/sandbox-config/src" \
+            "$repo_root/crates/sandbox-observability/Cargo.toml" \
+            "$repo_root/crates/sandbox-observability/src" \
+            "$repo_root/crates/sandbox-protocol/Cargo.toml" \
+            "$repo_root/crates/sandbox-protocol/src" \
+            "$repo_root/crates/sandbox-runtime" \
+            -type f \( -name '*.rs' -o -name 'Cargo.toml' -o -name 'Cargo.lock' \) \
+            -newer "$daemon_artifact" \
+            -print -quit
+    )
+    [ -z "$newer_source" ] || needs_package=1
+fi
+
+if [ "$needs_package" -eq 1 ]; then
+    cargo run -p xtask -- package --target "$package_target"
+fi
+
+start-sandbox-gateway --backend docker --config-yaml "$config_yaml" "$@"

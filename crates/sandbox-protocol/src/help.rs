@@ -48,7 +48,7 @@ impl std::fmt::Display for HelpRenderError {
         }
         writeln!(formatter)?;
         writeln!(formatter, "Use:")?;
-        write!(formatter, "  sandbox-cli {space} help")
+        write!(formatter, "  sandbox-cli {space} OPERATION")
     }
 }
 
@@ -77,7 +77,7 @@ pub fn render_catalog_help(catalog: &CliOperationCatalogDocument) -> String {
     output.push_str("Use:\n");
     output.push_str("  sandbox-cli ");
     output.push_str(space);
-    output.push_str(" help OPERATION");
+    output.push_str(" OPERATION");
     trim_trailing_blank_lines(output)
 }
 

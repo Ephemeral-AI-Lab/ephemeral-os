@@ -382,6 +382,25 @@ async fn help_writes_stdout_and_exits_successfully() -> TestResult {
 }
 
 #[tokio::test]
+async fn missing_command_writes_top_level_help() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Usage: sandbox-cli"));
+    assert!(help.contains("Commands:"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
 async fn manager_help_renders_grouped_catalog_help() -> TestResult {
     let mut stdout = Vec::new();
     let mut stderr = Vec::new();
@@ -397,7 +416,26 @@ async fn manager_help_renders_grouped_catalog_help() -> TestResult {
     assert!(help.contains("Sandbox Manager Help"));
     assert!(help.contains("Management"));
     assert!(help.contains("create_sandbox"));
-    assert!(help.contains("sandbox-cli manager help OPERATION"));
+    assert!(help.contains("sandbox-cli manager OPERATION"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn missing_manager_operation_renders_grouped_catalog_help() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "manager"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("Sandbox Manager Help"));
+    assert!(help.contains("create_sandbox"));
     assert!(stderr.is_empty());
     Ok(())
 }
@@ -419,6 +457,26 @@ async fn manager_help_operation_renders_detail_page() -> TestResult {
     assert!(help.contains("Family\n  Management"));
     assert!(help.contains("Usage\n  sandbox-cli manager create_sandbox"));
     assert!(help.contains("Related Operations"));
+    assert!(stderr.is_empty());
+    Ok(())
+}
+
+#[tokio::test]
+async fn manager_required_arg_operation_without_args_renders_detail_page() -> TestResult {
+    let mut stdout = Vec::new();
+    let mut stderr = Vec::new();
+    let exit = sandbox_gateway::cli::output::run_cli_with_writers(
+        ["sandbox-cli", "manager", "create_sandbox"],
+        &mut stdout,
+        &mut stderr,
+    )
+    .await;
+
+    assert_eq!(exit, 0);
+    let help = String::from_utf8(stdout)?;
+    assert!(help.contains("create_sandbox"));
+    assert!(help.contains("Usage\n  sandbox-cli manager create_sandbox"));
+    assert!(help.contains("--workspace-root"));
     assert!(stderr.is_empty());
     Ok(())
 }
@@ -538,7 +596,7 @@ async fn observability_help_renders_grouped_catalog_help() -> TestResult {
     for view in ["snapshot", "trace", "events", "cgroup", "layerstack"] {
         assert!(help.contains(view), "catalog help lists {view}");
     }
-    assert!(help.contains("sandbox-cli observability help OPERATION"));
+    assert!(help.contains("sandbox-cli observability OPERATION"));
     assert!(stderr.is_empty());
     Ok(())
 }
@@ -809,7 +867,7 @@ async fn runtime_help_unknown_operation_reports_suggestions() -> TestResult {
     let error = String::from_utf8(stderr)?;
     assert!(error.contains("unknown runtime operation for help: exec"));
     assert!(error.contains("exec_command"));
-    assert!(error.contains("sandbox-cli runtime help"));
+    assert!(error.contains("sandbox-cli runtime OPERATION"));
     Ok(())
 }
 

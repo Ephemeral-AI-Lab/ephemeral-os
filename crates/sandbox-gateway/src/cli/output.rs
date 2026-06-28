@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::error::ErrorKind;
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, CommandFactory, Parser, Subcommand};
 use serde_json::{json, Value};
 
 use crate::cli::client::GatewayClient;
@@ -35,7 +35,7 @@ struct Cli {
     default_sandbox_id: Option<String>,
 
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -47,7 +47,7 @@ enum Command {
 
 #[derive(Debug, Args)]
 struct OperationCommand {
-    operation: String,
+    operation: Option<String>,
 
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     operation_argv: Vec<String>,
@@ -58,7 +58,7 @@ struct RuntimeCommand {
     #[arg(long = "sandbox-id", value_name = "SANDBOX_ID")]
     sandbox_id: Option<String>,
 
-    operation: String,
+    operation: Option<String>,
 
     #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
     operation_argv: Vec<String>,
@@ -106,7 +106,11 @@ where
         default_sandbox_id: cli.default_sandbox_id,
     };
 
-    match cli.command {
+    let Some(command) = cli.command else {
+        return render_cli_help(stdout);
+    };
+
+    match command {
         Command::Manager(command) => {
             let catalog = match manager_catalog_document() {
                 Ok(catalog) => catalog,
@@ -115,8 +119,14 @@ where
                     return EXIT_USAGE;
                 }
             };
-            if command.operation == "help" {
+            let Some(operation) = command.operation else {
+                return render_help_command(&catalog, &[], stdout, stderr);
+            };
+            if operation == "help" {
                 return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
+            }
+            if command.operation_argv.is_empty() && operation_requires_args(&catalog, &operation) {
+                return render_help_command(&catalog, &[operation], stdout, stderr);
             }
             let config = match discover_config(config_overrides, stderr) {
                 Ok(config) => config,
@@ -128,7 +138,7 @@ where
             );
             let request_input = BuildRequestInput {
                 execution_space: CliOperationExecutionSpace::Manager,
-                operation: command.operation,
+                operation,
                 operation_argv: command.operation_argv,
                 sandbox_id: None,
             };
@@ -136,15 +146,21 @@ where
                 .await
         }
         Command::Runtime(command) => {
-            if command.operation == "help" {
-                let catalog = match runtime_catalog_document() {
-                    Ok(catalog) => catalog,
-                    Err(error) => {
-                        let _ = render_request_error(&error, stderr);
-                        return EXIT_USAGE;
-                    }
-                };
+            let catalog = match runtime_catalog_document() {
+                Ok(catalog) => catalog,
+                Err(error) => {
+                    let _ = render_request_error(&error, stderr);
+                    return EXIT_USAGE;
+                }
+            };
+            let Some(operation) = command.operation else {
+                return render_help_command(&catalog, &[], stdout, stderr);
+            };
+            if operation == "help" {
                 return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
+            }
+            if command.operation_argv.is_empty() && operation_requires_args(&catalog, &operation) {
+                return render_help_command(&catalog, &[operation], stdout, stderr);
             }
             let config = match discover_config(config_overrides, stderr) {
                 Ok(config) => config,
@@ -157,16 +173,9 @@ where
                     return EXIT_USAGE;
                 }
             };
-            let catalog = match runtime_catalog_document() {
-                Ok(catalog) => catalog,
-                Err(error) => {
-                    let _ = render_request_error(&error, stderr);
-                    return EXIT_USAGE;
-                }
-            };
             let request_input = BuildRequestInput {
                 execution_space: CliOperationExecutionSpace::Runtime,
-                operation: command.operation,
+                operation,
                 operation_argv: command.operation_argv,
                 sandbox_id: Some(sandbox_id),
             };
@@ -192,8 +201,14 @@ where
                     return EXIT_USAGE;
                 }
             };
-            if command.operation == "help" {
+            let Some(operation) = command.operation else {
+                return render_help_command(&catalog, &[], stdout, stderr);
+            };
+            if operation == "help" {
                 return render_help_command(&catalog, &command.operation_argv, stdout, stderr);
+            }
+            if command.operation_argv.is_empty() && operation_requires_args(&catalog, &operation) {
+                return render_help_command(&catalog, &[operation], stdout, stderr);
             }
             let config = match discover_config(config_overrides, stderr) {
                 Ok(config) => config,
@@ -205,7 +220,7 @@ where
             );
             let request_input = BuildRequestInput {
                 execution_space: CliOperationExecutionSpace::Observability,
-                operation: command.operation,
+                operation,
                 operation_argv: command.operation_argv,
                 sandbox_id: None,
             };
@@ -213,6 +228,15 @@ where
                 .await
         }
     }
+}
+
+fn render_cli_help<WOut>(stdout: &mut WOut) -> u8
+where
+    WOut: Write,
+{
+    let mut command = Cli::command();
+    let _ = write!(stdout, "{}", command.render_help());
+    EXIT_SUCCESS
 }
 
 fn discover_config<WErr>(
@@ -260,6 +284,14 @@ where
             EXIT_USAGE
         }
     }
+}
+
+fn operation_requires_args(catalog: &CliOperationCatalogDocument, operation: &str) -> bool {
+    catalog
+        .operations
+        .iter()
+        .find(|spec| spec.name == operation)
+        .is_some_and(|spec| spec.args.iter().any(|arg| arg.required))
 }
 
 async fn run_request_from_catalog<WOut, WErr>(

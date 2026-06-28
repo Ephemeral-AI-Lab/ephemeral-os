@@ -354,7 +354,7 @@ fn render_catalog_help_groups_operations_by_family() {
                 .find("read_command_lines")
                 .expect("read command lines operation")
     );
-    assert!(help.contains("sandbox-cli runtime help OPERATION"));
+    assert!(help.contains("sandbox-cli runtime OPERATION"));
 }
 
 #[test]

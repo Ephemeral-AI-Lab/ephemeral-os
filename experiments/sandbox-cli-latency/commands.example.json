@@ -1,7 +1,0 @@
-[
-  {
-    "name": "manager_list_sandboxes",
-    "args": ["manager", "list_sandboxes"],
-    "description": "Gateway round trip through the manager list operation."
-  }
-]
