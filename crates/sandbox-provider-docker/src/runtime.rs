@@ -86,7 +86,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
             name,
             image: resolve_image(config, &request.image),
             cmd,
-            env: config.container_env.clone(),
+            env: container_env(config),
             labels: labels.clone(),
             binds: vec![format!(
                 "{}:{}",
@@ -134,6 +134,14 @@ fn workspace_scratch_root(config: &DockerRuntimeConfig) -> Result<PathBuf, Manag
 
 fn workspace_scratch_volume_name(id: &SandboxId) -> String {
     format!("{}-workspace", id.as_str())
+}
+
+fn container_env(config: &DockerRuntimeConfig) -> Vec<String> {
+    config
+        .container_env
+        .iter()
+        .map(|(name, value)| format!("{name}={value}"))
+        .collect()
 }
 
 fn resolve_image(config: &DockerRuntimeConfig, requested: &str) -> String {

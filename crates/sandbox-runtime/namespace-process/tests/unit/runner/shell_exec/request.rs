@@ -1,4 +1,4 @@
-use super::{normalize_lexical, shell_argv, shell_cwd};
+use super::{command_environment, normalize_lexical, shell_argv, shell_cwd};
 use crate::runner::protocol::NamespaceRunnerRequest;
 use std::path::Path;
 
@@ -40,6 +40,29 @@ fn normalizes_paths_without_touching_fs() {
     assert_eq!(
         normalize_lexical(Path::new("/workspace/./a/../b")),
         Path::new("/workspace/b")
+    );
+}
+
+#[test]
+fn command_environment_forwards_proxy_vars_from_host() {
+    // The Docker provider injects proxy vars into the container (hence the daemon)
+    // environment via manager.docker.container_env. The namespace runner must
+    // forward them so commands like `npm install` reach the registry through the
+    // proxy rather than being stripped by the env allowlist.
+    let key = "HTTPS_PROXY";
+    let previous = std::env::var(key).ok();
+    std::env::set_var(key, "http://proxy.test:3128");
+
+    let env = command_environment(&serde_json::json!({}));
+
+    match previous {
+        Some(value) => std::env::set_var(key, value),
+        None => std::env::remove_var(key),
+    }
+
+    assert_eq!(
+        env.get("HTTPS_PROXY").map(String::as_str),
+        Some("http://proxy.test:3128")
     );
 }
 

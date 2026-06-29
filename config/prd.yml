@@ -28,10 +28,10 @@ manager:
     daemon_binary_path: dist/sandbox-daemon-linux-arm64
     # Daemon config YAML uploaded into each container.
     daemon_config_yaml_path: config/prd.yml
+    # Environment injected into every sandbox container. The Docker CLI injects
+    # these proxy vars from ~/.docker/config.json, but the Engine API used here
+    # does not, so sandboxes need them declared to share Docker Desktop's egress.
     container_env:
-      - HTTP_PROXY=http://http.docker.internal:3128
-      - HTTPS_PROXY=http://http.docker.internal:3128
-      - http_proxy=http://http.docker.internal:3128
-      - https_proxy=http://http.docker.internal:3128
-      - NO_PROXY=localhost,127.0.0.1,::1
-      - no_proxy=localhost,127.0.0.1,::1
+      HTTP_PROXY: http://http.docker.internal:3128
+      HTTPS_PROXY: http://http.docker.internal:3128
+      NO_PROXY: localhost,127.0.0.1,::1

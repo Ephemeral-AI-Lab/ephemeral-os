@@ -3,13 +3,13 @@
 //! The gateway loads this section only under `--backend docker`; it stays an
 //! optional root section so existing daemon configs continue to load.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_non_empty, require_non_empty_items, require_u64_at_least,
-    ConfigFieldError,
+    require_absolute, require_non_empty, require_u64_at_least, ConfigFieldError,
 };
 
 pub const DEFAULT_CONTAINER_WORKSPACE_ROOT: &str = "/workspace";
@@ -45,8 +45,6 @@ pub struct DockerRuntimeConfig {
     pub container_daemon_config_yaml_path: PathBuf,
     /// Default base image when `create_sandbox` is invoked without one.
     pub default_image: Option<String>,
-    /// Environment variables passed to Docker sandbox containers.
-    pub container_env: Vec<String>,
     /// Linux container path the host workspace root is bind-mounted to.
     pub container_workspace_root: PathBuf,
     /// Explicit platform (for example `linux/amd64`) for image/container create.
@@ -63,6 +61,12 @@ pub struct DockerRuntimeConfig {
     pub memory_bytes: Option<i64>,
     /// Optional per-container CPU cap in nano-CPUs.
     pub nano_cpus: Option<i64>,
+    /// Environment variables injected into every sandbox container, as a
+    /// `name -> value` map. The Docker CLI injects proxy settings from
+    /// `~/.docker/config.json` into containers it runs; the Engine API this
+    /// runtime uses does not, so declare them here (for example `HTTP_PROXY`)
+    /// to give sandboxes the same egress path.
+    pub container_env: BTreeMap<String, String>,
 }
 
 impl Default for DockerRuntimeConfig {
@@ -74,7 +78,6 @@ impl Default for DockerRuntimeConfig {
             container_daemon_binary_path: PathBuf::from(DEFAULT_CONTAINER_DAEMON_BINARY_PATH),
             container_daemon_config_yaml_path: PathBuf::from(DEFAULT_CONTAINER_DAEMON_CONFIG_PATH),
             default_image: None,
-            container_env: Vec::new(),
             container_workspace_root: PathBuf::from(DEFAULT_CONTAINER_WORKSPACE_ROOT),
             platform: None,
             privileged: true,
@@ -83,6 +86,7 @@ impl Default for DockerRuntimeConfig {
             readiness_timeout_ms: DEFAULT_READINESS_TIMEOUT_MS,
             memory_bytes: None,
             nano_cpus: None,
+            container_env: BTreeMap::new(),
         }
     }
 }
@@ -113,21 +117,6 @@ impl DockerRuntimeConfig {
             &self.container_workspace_root,
             "manager.docker.container_workspace_root",
         )?;
-        require_non_empty_items(&self.container_env, "manager.docker.container_env")?;
-        for entry in &self.container_env {
-            let Some((key, _)) = entry.split_once('=') else {
-                return Err(ConfigFieldError::new(
-                    "manager.docker.container_env",
-                    "entries must use NAME=VALUE format",
-                ));
-            };
-            if key.trim().is_empty() {
-                return Err(ConfigFieldError::new(
-                    "manager.docker.container_env",
-                    "entries must use NAME=VALUE format",
-                ));
-            }
-        }
         require_non_empty(
             &self.gateway_instance_id,
             "manager.docker.gateway_instance_id",
@@ -138,6 +127,15 @@ impl DockerRuntimeConfig {
             1,
             "manager.docker.readiness_timeout_ms",
         )?;
+        for name in self.container_env.keys() {
+            require_non_empty(name, "manager.docker.container_env")?;
+            if name.contains('=') {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.container_env",
+                    format!("variable name `{name}` must not contain '='"),
+                ));
+            }
+        }
         Ok(())
     }
 }

@@ -9,13 +9,48 @@ fn config_prd_manager_docker_section_deserializes_and_validates() {
     assert_eq!(docker.readiness_timeout_ms, 60_000);
     assert_eq!(docker.container_workspace_root, PathBuf::from("/workspace"));
     assert_eq!(docker.gateway_instance_id, "eos-gateway");
-    assert!(docker
-        .container_env
-        .contains(&"HTTP_PROXY=http://http.docker.internal:3128".to_owned()));
-    assert!(docker
-        .container_env
-        .contains(&"HTTPS_PROXY=http://http.docker.internal:3128".to_owned()));
     assert!(docker.privileged);
+}
+
+#[test]
+fn config_prd_manager_docker_injects_proxy_container_env() {
+    let docker = prd_docker();
+
+    assert_eq!(
+        docker.container_env.get("HTTP_PROXY").map(String::as_str),
+        Some("http://http.docker.internal:3128")
+    );
+    assert_eq!(
+        docker.container_env.get("HTTPS_PROXY").map(String::as_str),
+        Some("http://http.docker.internal:3128")
+    );
+    assert_eq!(
+        docker.container_env.get("NO_PROXY").map(String::as_str),
+        Some("localhost,127.0.0.1,::1")
+    );
+}
+
+#[test]
+fn container_env_defaults_to_empty() {
+    assert!(DockerRuntimeConfig::default().container_env.is_empty());
+}
+
+#[test]
+fn validate_rejects_blank_container_env_name() {
+    let mut docker = prd_docker();
+    docker
+        .container_env
+        .insert(String::new(), "value".to_owned());
+    assert_invalid(&docker, "manager.docker.container_env");
+}
+
+#[test]
+fn validate_rejects_container_env_name_with_equals() {
+    let mut docker = prd_docker();
+    docker
+        .container_env
+        .insert("HTTP=PROXY".to_owned(), "value".to_owned());
+    assert_invalid(&docker, "manager.docker.container_env");
 }
 
 #[test]
@@ -45,13 +80,6 @@ fn validate_rejects_empty_daemon_binary_path() {
     let mut docker = prd_docker();
     docker.daemon_binary_path = PathBuf::new();
     assert_invalid(&docker, "manager.docker.daemon_binary_path");
-}
-
-#[test]
-fn validate_rejects_invalid_container_env_entry() {
-    let mut docker = prd_docker();
-    docker.container_env.push("HTTP_PROXY".to_owned());
-    assert_invalid(&docker, "manager.docker.container_env");
 }
 
 fn prd_docker() -> DockerRuntimeConfig {

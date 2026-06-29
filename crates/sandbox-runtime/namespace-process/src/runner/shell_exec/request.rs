@@ -18,9 +18,11 @@ const HOST_KEYS: &[&str] = &[
     "HTTP_PROXY",
     "HTTPS_PROXY",
     "NO_PROXY",
+    "ALL_PROXY",
     "http_proxy",
     "https_proxy",
     "no_proxy",
+    "all_proxy",
 ];
 
 pub(crate) fn shell_argv(request: &NamespaceRunnerRequest) -> Result<Vec<String>, RunnerError> {
@@ -59,7 +61,7 @@ fn shell_argv_for_command_with_bash(command: &str, bash_available: bool) -> Vec<
 
 #[cfg(test)]
 mod tests {
-    use super::{shell_argv_for_command_with_bash, HOST_KEYS};
+    use super::shell_argv_for_command_with_bash;
 
     #[test]
     fn shell_argv_falls_back_to_sh_without_bash() {
@@ -67,20 +69,6 @@ mod tests {
             shell_argv_for_command_with_bash("echo hi", false),
             ["/bin/sh", "-c", "echo hi"].map(str::to_owned).to_vec()
         );
-    }
-
-    #[test]
-    fn command_environment_allows_proxy_vars() {
-        for key in [
-            "HTTP_PROXY",
-            "HTTPS_PROXY",
-            "NO_PROXY",
-            "http_proxy",
-            "https_proxy",
-            "no_proxy",
-        ] {
-            assert!(HOST_KEYS.contains(&key));
-        }
     }
 }
 
@@ -132,7 +120,7 @@ pub(crate) fn normalize_lexical(path: &Path) -> PathBuf {
     normalized
 }
 
-pub(super) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, String> {
+pub(crate) fn command_environment(args: &serde_json::Value) -> BTreeMap<String, String> {
     const RESTRICTED: &[&str] = &[
         "LD_PRELOAD",
         "LD_LIBRARY_PATH",

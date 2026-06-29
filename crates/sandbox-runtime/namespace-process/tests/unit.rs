@@ -11,7 +11,9 @@ pub(crate) use holder::Handshake;
 pub(crate) use runner::setns::namespace_fd_order_with_types;
 
 #[cfg(target_os = "linux")]
-pub(crate) use runner::shell_exec::request::{normalize_lexical, shell_argv, shell_cwd};
+pub(crate) use runner::shell_exec::request::{
+    command_environment, normalize_lexical, shell_argv, shell_cwd,
+};
 
 mod holder_handshake_tests {
     include!(concat!(
