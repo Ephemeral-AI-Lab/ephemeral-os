@@ -409,6 +409,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         Arc::clone(&env.command),
         Arc::clone(&env.workspace),
         layerstack_service()?,
+        support::test_file_service(),
     );
     let destroy_request = Request::new(
         "destroy_workspace_session",
@@ -921,6 +922,7 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
     Ok(Arc::new(LayerStackService::new(
         root,
         sandbox_observability::Observer::disabled(),
+        support::test_file_service(),
     )?))
 }
 

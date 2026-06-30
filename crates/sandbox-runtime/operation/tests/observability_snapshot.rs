@@ -126,6 +126,7 @@ fn operations_for(
         Arc::<CommandOperationService>::clone(&services.command),
         Arc::clone(&services.workspace),
         layerstack_service()?,
+        support::test_file_service(),
     ))
 }
 
@@ -140,6 +141,7 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
     Ok(Arc::new(LayerStackService::new(
         root,
         Observer::disabled(),
+        support::test_file_service(),
     )?))
 }
 

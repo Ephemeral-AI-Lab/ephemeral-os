@@ -1,3 +1,5 @@
+use std::sync::PoisonError;
+
 use sandbox_observability::record::names;
 
 use crate::layerstack::{
@@ -20,6 +22,8 @@ impl LayerStackService {
 
         let base_version = base.manifest_version;
         let bytes = sandbox_runtime_layerstack::published_layer_bytes(&request.changes);
+        let owner = request.owner;
+        let committed_changes = request.changes.clone();
         let publish_request = sandbox_runtime_layerstack::PublishValidatedChangesRequest {
             base: sandbox_runtime_layerstack::PublishBase {
                 manifest: request.base_manifest,
@@ -37,6 +41,9 @@ impl LayerStackService {
                 operation: "open",
                 error,
             })?;
+        // Serialize the commit with the audit append so two publishes to one
+        // path append in commit order (latest-event-wins stays correct, §13).
+        let _audit_gate = self.audit_gate.lock().unwrap_or_else(PoisonError::into_inner);
         let published = match self.obs.scope(names::LAYERSTACK_PUBLISH, |span| {
             span.attr("base", base_version).attr("bytes", bytes);
             let result = stack.publish_validated_changes(publish_request);
@@ -56,6 +63,12 @@ impl LayerStackService {
             Ok(published) => published,
             Err(error) => return Err(map_publish_error(error)),
         };
+        // After the layer commits: map each resolved line's origin to an owner
+        // string and append one audit event per path (G3 — never before commit).
+        if !published.origin.is_empty() {
+            self.file
+                .record_publish(&owner, &published.origin, &committed_changes);
+        }
         Ok(PublishChangesResult {
             revision: revision_from_manifest(&published.manifest),
             manifest: published.manifest.clone(),

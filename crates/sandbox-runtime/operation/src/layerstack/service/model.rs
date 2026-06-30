@@ -13,6 +13,11 @@ pub struct PublishChangesRequest {
     pub base_manifest: sandbox_runtime_layerstack::Manifest,
     pub protected_drops: Vec<sandbox_runtime_layerstack::LayerProtectedDrop>,
     pub changes: Vec<sandbox_runtime_layerstack::LayerChange>,
+    /// Opaque owner string this publish stamps onto its `Command` lines
+    /// (`workspace_session:<id>` when a workspace was mounted, else
+    /// `operation:<id>`). Not passed to layerstack — mapped to audit events
+    /// above it, after the layer commits.
+    pub owner: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -53,6 +53,8 @@ pub(crate) use model::*;
 #[path = "unit/test_fixture.rs"]
 mod test_fixture;
 
+#[path = "unit/merge.rs"]
+mod merge_tests;
 #[path = "unit/model.rs"]
 mod model_tests;
 #[path = "unit/observe.rs"]

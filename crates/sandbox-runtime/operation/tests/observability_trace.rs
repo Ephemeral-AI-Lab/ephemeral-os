@@ -372,6 +372,7 @@ fn disabled_operations() -> SandboxRuntimeOperations {
         Arc::clone(&services.command),
         Arc::clone(&services.workspace),
         observed_layerstack_service(Observer::disabled()),
+        support::test_file_service(),
     )
 }
 

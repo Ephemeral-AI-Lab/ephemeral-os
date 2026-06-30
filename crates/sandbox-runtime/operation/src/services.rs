@@ -9,6 +9,7 @@ use sandbox_observability::Observer;
 use sandbox_runtime_layerstack::service::StackObservation;
 
 use crate::command::CommandOperationService;
+use crate::file::FileService;
 use crate::layerstack::LayerStackService;
 use crate::observability::RuntimeObservabilitySnapshot;
 use crate::workspace_crate::{session::WorkspaceManager, WorkspaceRuntimeService};
@@ -19,6 +20,7 @@ pub struct SandboxRuntimeOperations {
     pub command: Arc<CommandOperationService>,
     pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
+    pub file: Arc<FileService>,
 }
 
 impl SandboxRuntimeOperations {
@@ -27,11 +29,13 @@ impl SandboxRuntimeOperations {
         command: Arc<CommandOperationService>,
         workspace_session: Arc<WorkspaceSessionService>,
         layerstack: Arc<LayerStackService>,
+        file: Arc<FileService>,
     ) -> Self {
         Self {
             command,
             workspace_session,
             layerstack,
+            file,
         }
     }
 
@@ -41,6 +45,10 @@ impl SandboxRuntimeOperations {
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig, observer: Observer) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
+        let file = Arc::new(
+            FileService::open(file_auditability_dir(&layer_stack_root))
+                .expect("file auditability store initialization failed"),
+        );
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
             WorkspaceManager::new(
                 config
@@ -80,7 +88,7 @@ impl SandboxRuntimeOperations {
         }
         detach_workspace_bind_after_base(&config.workspace.workspace_root);
         let layerstack = Arc::new(
-            LayerStackService::new(layer_stack_root, observer.clone())
+            LayerStackService::new(layer_stack_root, observer.clone(), Arc::clone(&file))
                 .expect("layerstack service initialization failed"),
         );
         let command = Arc::new(CommandOperationService::new(
@@ -91,7 +99,7 @@ impl SandboxRuntimeOperations {
             },
             observer,
         ));
-        Self::new(command, workspace_session, layerstack)
+        Self::new(command, workspace_session, layerstack, file)
     }
 
     #[must_use]
@@ -182,6 +190,17 @@ fn detach_workspace_bind(_workspace_root: &Path) -> Result<WorkspaceBindDetach, 
 fn cli_log(message: impl AsRef<str>) {
     let escaped = serde_json::to_string(message.as_ref()).unwrap_or_else(|_| "\"\"".to_owned());
     eprintln!("cli_log({escaped})");
+}
+
+/// The file-auditability log lives beside the layer stack, under
+/// `<layer_stack_root>/../storage/file_auditability` (C3 spec §7.1) — the only
+/// root this crate can reach from `config.workspace.layer_stack_root`.
+fn file_auditability_dir(layer_stack_root: &Path) -> std::path::PathBuf {
+    layer_stack_root
+        .parent()
+        .unwrap_or(layer_stack_root)
+        .join("storage")
+        .join("file_auditability")
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -233,6 +233,7 @@ fn finalize_one_shot(
                     base_manifest: captured.base_manifest,
                     protected_drops: layer_protected_drops(captured.protected_drops),
                     changes: captured.changes,
+                    owner: format!("workspace_session:{}", handler.workspace_session_id.0),
                 })
                 .ok()
         });

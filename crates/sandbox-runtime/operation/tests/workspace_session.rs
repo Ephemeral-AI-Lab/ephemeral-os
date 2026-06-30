@@ -389,6 +389,7 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
         Arc::clone(&services.command),
         Arc::clone(&services.workspace),
         layerstack_service()?,
+        support::test_file_service(),
     );
 
     let exec_response = sandbox_runtime::dispatch_operation(

@@ -1,10 +1,24 @@
 use crate::model::{LayerChange, LayerPath, Manifest};
 
+use super::merge::{LineRange, Origin};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublishValidatedChangesRequest {
     pub base: PublishBase,
     pub changes: Vec<LayerChange>,
     pub protected_drops: Vec<LayerProtectedDrop>,
+}
+
+/// The bytes a publish commits plus, per resolved path, each final line's
+/// structural [`Origin`]. The owner is **not** here (boundary law): the runtime
+/// above layerstack maps origin to an owner string after the layer commits.
+///
+/// An empty origin range list for a path is *wholesale* attribution — a
+/// non-text clean write or an ignored path with no line-level claims.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedChangeset {
+    pub changes: Vec<LayerChange>,
+    pub origin: Vec<(LayerPath, Vec<(LineRange, Origin)>)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -38,6 +52,9 @@ pub struct PublishValidatedChangesResult {
     pub manifest: Manifest,
     pub route_summary: PublishRouteSummary,
     pub no_op: bool,
+    /// Per committed path, each final line's structural origin. Empty when the
+    /// publish was a no-op (nothing committed, so nothing to attribute).
+    pub origin: Vec<(LayerPath, Vec<(LineRange, Origin)>)>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

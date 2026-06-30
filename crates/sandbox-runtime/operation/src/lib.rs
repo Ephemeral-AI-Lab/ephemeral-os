@@ -4,6 +4,7 @@ pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;
 
 mod cli_definition;
 pub mod command;
+pub mod file;
 pub mod layerstack;
 mod namespace_execution;
 mod observability;

@@ -12,6 +12,7 @@ use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceExe
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
 use sandbox_runtime::command::{CommandOperationService, CommandServiceError};
+use sandbox_runtime::file::FileService;
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_workspace::{
@@ -456,7 +457,24 @@ pub(crate) fn observed_layerstack_service(obs: Observer) -> Arc<LayerStackServic
     std::fs::create_dir_all(&workspace).expect("create layerstack test workspace");
     sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false)
         .expect("build layerstack test base");
-    Arc::new(LayerStackService::new(root, obs).expect("create layerstack test service"))
+    Arc::new(
+        LayerStackService::new(root, obs, test_file_service())
+            .expect("create layerstack test service"),
+    )
+}
+
+/// A fresh file-auditability service over a unique temp directory. Tests that
+/// build a `LayerStackService` or `SandboxRuntimeOperations` pass one of these;
+/// none assert publish-then-blame (that is the live e2e), so a per-call instance
+/// is sufficient.
+pub(crate) fn test_file_service() -> Arc<FileService> {
+    let dir = std::env::temp_dir().join(format!(
+        "operation-service-file-auditability-{}-{}",
+        std::process::id(),
+        unique_suffix()
+    ));
+    let _ = std::fs::remove_dir_all(&dir);
+    Arc::new(FileService::open(dir).expect("create file auditability test service"))
 }
 
 fn test_launch_base_dir() -> PathBuf {

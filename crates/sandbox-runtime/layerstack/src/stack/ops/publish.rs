@@ -8,7 +8,7 @@ use crate::fs::{
 use crate::model::{published_layer_bytes, try_layer_digest, LayerChange, LayerRef, Manifest};
 use crate::stack::layer::write_layer_changes;
 use crate::stack::publish::model::{PublishValidatedChangesRequest, PublishValidatedChangesResult};
-use crate::stack::publish::{plan_publish, validate_source_paths};
+use crate::stack::publish::{plan_publish, resolve_publish_changes};
 use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, LAYER_METADATA_DIR};
 
@@ -29,20 +29,26 @@ impl LayerStack {
         let plan = plan_publish(&self.view, &request)?;
         let _guard = self.writer_lock.exclusive()?;
         let active = self.read_active_manifest_unlocked()?;
-        validate_source_paths(&self.view, &active, &plan)?;
-        let changes = plan.accepted_changes();
-        if changes.is_empty() {
+        let resolved = resolve_publish_changes(&self.view, &active, &request, &plan)?;
+        if resolved.changes.is_empty() {
             return Ok(PublishValidatedChangesResult {
                 manifest: active,
                 route_summary: plan.route_summary(),
                 no_op: true,
+                origin: Vec::new(),
             });
         }
-        let outcome = self.publish_layer_unlocked(&active, changes)?;
+        let outcome = self.publish_layer_unlocked(&active, &resolved.changes)?;
+        let origin = if outcome.created {
+            resolved.origin
+        } else {
+            Vec::new()
+        };
         Ok(PublishValidatedChangesResult {
             manifest: outcome.manifest,
             route_summary: plan.route_summary(),
             no_op: !outcome.created,
+            origin,
         })
     }
 

@@ -16,10 +16,12 @@ pub use model::{
 };
 
 pub use error::LayerStackError;
+pub use stack::publish::merge::{three_way_merge, LineRange, MergeOutcome, Origin};
 pub use stack::publish::model::{
     ContentFingerprint, LayerProtectedDrop, LayerProtectedDropReason, PublishBase,
     PublishBaseRevision, PublishReject, PublishRejectReason, PublishRouteSummary,
-    PublishValidatedChangesRequest, PublishValidatedChangesResult, SourceConflict,
+    PublishValidatedChangesRequest, PublishValidatedChangesResult, ResolvedChangeset,
+    SourceConflict,
 };
 pub use stack::{LayerStack, Lease, MergedView};
 pub use workspace_base::{

@@ -185,11 +185,12 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
+    "docs/layerstack/o1_shared_workspace_base.md",
+    "daily-progress-tracker/2026-06-30.md",
     "docs/layerstack/create_sandbox.md",
     "daily-progress-tracker/2026-06-30.md.tmp.50599.dbcbb2853a63",
     "docs/layerstack/overlay_mount.md",
     "daily-progress-tracker/2026-06-28.md",
-    "daily-progress-tracker/2026-06-30.md",
     "docs/ephemeral-os.md",
     "docs/cli-gateway-manager-runtime.md",
     "note/container-env-proxy.md",

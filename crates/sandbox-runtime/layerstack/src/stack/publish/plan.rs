@@ -18,16 +18,25 @@ pub(crate) struct SourceValidation {
     pub(crate) expected: ContentFingerprint,
 }
 
+/// One accepted change paired with the route it took, so the resolver knows
+/// which writes are source-validated (and thus merge/line-origin eligible)
+/// versus wholesale-owned ignored writes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct AcceptedChange {
+    pub(crate) change: LayerChange,
+    pub(crate) route: RouteKind,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PublishPlan {
-    accepted_changes: Vec<LayerChange>,
+    accepted: Vec<AcceptedChange>,
     source_validations: Vec<SourceValidation>,
     route_summary: PublishRouteSummary,
 }
 
 impl PublishPlan {
-    pub(crate) fn accepted_changes(&self) -> &[LayerChange] {
-        &self.accepted_changes
+    pub(crate) fn accepted(&self) -> &[AcceptedChange] {
+        &self.accepted
     }
 
     pub(crate) fn source_validations(&self) -> &[SourceValidation] {
@@ -51,40 +60,38 @@ pub(crate) fn plan_publish(
     }
 
     let oracle = GitignoreOracle::new(view, &request.base.manifest);
-    let mut accepted_changes = Vec::with_capacity(request.changes.len());
+    let mut accepted = Vec::with_capacity(request.changes.len());
     let mut source_validations = Vec::new();
     let mut route_summary = PublishRouteSummary::default();
 
     for change in &request.changes {
-        match change {
+        let route = match change {
             LayerChange::OpaqueDir { path } => {
-                plan_opaque_dir(
-                    view,
-                    &oracle,
-                    request,
-                    path,
-                    &mut source_validations,
-                    &mut route_summary,
-                )?;
+                plan_opaque_dir(view, &oracle, request, path, &mut source_validations)?
             }
-            _ => match route_change(view, &oracle, request, change)? {
-                RouteKind::Source => {
+            _ => {
+                let route = route_change(view, &oracle, request, change)?;
+                if route == RouteKind::Source {
                     source_validations.push(SourceValidation {
                         path: change.path().clone(),
                         expected: content_fingerprint(view, &request.base.manifest, change.path())?,
                     });
-                    route_summary.source_count += 1;
                 }
-                RouteKind::Ignored => {
-                    route_summary.ignored_count += 1;
-                }
-            },
+                route
+            }
+        };
+        match route {
+            RouteKind::Source => route_summary.source_count += 1,
+            RouteKind::Ignored => route_summary.ignored_count += 1,
         }
-        accepted_changes.push(change.clone());
+        accepted.push(AcceptedChange {
+            change: change.clone(),
+            route,
+        });
     }
 
     Ok(PublishPlan {
-        accepted_changes,
+        accepted,
         source_validations,
         route_summary,
     })
@@ -159,8 +166,7 @@ fn plan_opaque_dir(
     request: &PublishValidatedChangesRequest,
     path: &LayerPath,
     source_validations: &mut Vec<SourceValidation>,
-    route_summary: &mut PublishRouteSummary,
-) -> Result<(), LayerStackError> {
+) -> Result<RouteKind, LayerStackError> {
     if let Some((reason, _)) = forbidden_path(path) {
         return Err(LayerStackError::PublishRejected(Box::new(
             PublishReject::at_path(path.clone(), reason),
@@ -180,19 +186,14 @@ fn plan_opaque_dir(
     }
 
     if descendants.is_empty() {
-        match route_path(oracle, path, true)? {
-            RouteKind::Source => {
-                source_validations.push(SourceValidation {
-                    path: path.clone(),
-                    expected: content_fingerprint(view, &request.base.manifest, path)?,
-                });
-                route_summary.source_count += 1;
-            }
-            RouteKind::Ignored => {
-                route_summary.ignored_count += 1;
-            }
+        let route = route_path(oracle, path, true)?;
+        if route == RouteKind::Source {
+            source_validations.push(SourceValidation {
+                path: path.clone(),
+                expected: content_fingerprint(view, &request.base.manifest, path)?,
+            });
         }
-        return Ok(());
+        return Ok(route);
     }
 
     let mut saw_source = false;
@@ -228,10 +229,9 @@ fn plan_opaque_dir(
         }
     }
 
-    if saw_ignored {
-        route_summary.ignored_count += 1;
+    Ok(if saw_ignored {
+        RouteKind::Ignored
     } else {
-        route_summary.source_count += 1;
-    }
-    Ok(())
+        RouteKind::Source
+    })
 }
