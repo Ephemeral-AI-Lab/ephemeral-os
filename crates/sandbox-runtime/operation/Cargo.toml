@@ -10,6 +10,7 @@ sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-layerstack.workspace = true
 sandbox-observability.workspace = true
 sandbox-protocol.workspace = true
+rustix.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 sandbox-runtime-workspace.workspace = true

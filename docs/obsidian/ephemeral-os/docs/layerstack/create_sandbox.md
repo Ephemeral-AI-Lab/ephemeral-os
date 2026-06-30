@@ -15,9 +15,10 @@ moment the workspace is bound into the sandbox, with the **layerstack base-layer
 build** in the centre, and breaks down the performance work applied at each
 point.
 
-The mental model: `create_sandbox` turns a host workspace directory into an
-immutable, content-addressed **base layer** inside the sandbox, then presents it
-back to commands through an overlay. The base build is the dominant cost of
+The mental model: `create_sandbox` briefly exposes a host workspace directory as
+a read-only bootstrap source, turns it into an immutable, content-addressed
+**base layer** inside the sandbox, unmounts the original bind, then presents the
+base back to commands through an overlay. The base build is the dominant cost of
 creation, and it is bound by **per-file I/O latency across the Docker bind
 mount**, not by CPU.
 
@@ -42,13 +43,14 @@ flowchart TB
         Services["SandboxRuntimeServices::from_config"]
         Ensure["layerstack::ensure_workspace_base"]
         Build["build_base_layer (walk + copy + hash)"]
+        Unmount["unmount /workspace bind"]
     end
 
     Ready["manager stores daemon endpoint → marks Ready"]
 
     CLI --> Gateway --> Router --> Runtime --> Stopped
     Router --> Installer --> Serve --> Services --> Ensure --> Build
-    Build --> Ready
+    Build --> Unmount --> Ready
 ```
 
 1. **CLI → Gateway → Manager.** `bin/sandbox-cli` sends the request to the
@@ -57,11 +59,12 @@ flowchart TB
    `DockerSandboxRuntime::create_sandbox` builds a `ContainerSpec` and creates
    the container **stopped**, so the daemon and config can be installed before
    it serves.
-3. **Bind mount.** The spec binds the host workspace into the container:
-   `host workspace_root → container_workspace_root` (default `/workspace`). On
-   Docker Desktop this surfaces as a **VirtioFS** mount with a `fakeowner` FUSE
-   shim (`/run/host_mark/private … type fakeowner`) — every `open`/`read`/
-   `readdir` on it is a round-trip across the macOS↔Linux-VM boundary.
+3. **Read-only bind mount.** The spec binds the host workspace into the
+   container as `host workspace_root → container_workspace_root:ro` (default
+   `/workspace`). On Docker Desktop this surfaces as a **VirtioFS** mount with a
+   `fakeowner` FUSE shim (`/run/host_mark/private … type fakeowner`) — every
+   `open`/`read`/`readdir` on it is a round-trip across the macOS↔Linux-VM
+   boundary.
 4. **Installer uploads and starts.** `DockerSandboxDaemonInstaller` uploads the
    static `sandbox-daemon` binary and `config/prd.yml`, starts the container,
    and waits for readiness.
@@ -69,8 +72,11 @@ flowchart TB
    `SandboxRuntimeServices::from_config`, which calls
    `layerstack::ensure_workspace_base(layer_stack_root, workspace_root)` **once**
    per sandbox during startup.
-6. **Base layer is built** (next section), then the manager records the daemon
-   endpoint and marks the sandbox `Ready`.
+6. **Base layer is built** (next section), then the daemon unmounts the original
+   `/workspace` bind. If unmount fails, startup fails instead of keeping mutable
+   host access alive.
+7. **Ready.** The manager records the daemon endpoint and marks the sandbox
+   `Ready`.
 
 Implementation paths:
 
@@ -85,21 +91,45 @@ Implementation paths:
 ```mermaid
 flowchart LR
     Host["host workspace_root<br/>(macOS APFS)"]
-    Bind["/workspace<br/>VirtioFS + fakeowner (READ source)"]
+    Bind["/workspace<br/>read-only VirtioFS + fakeowner (bootstrap source)"]
     Stack["/eos/layer-stack<br/>overlay / disk (WRITE target)"]
     Layer["layers/B000001-base<br/>immutable content copy"]
+    ReadyWorkspace["/workspace<br/>runtime overlay after Ready"]
 
     Host -. virtiofs .-> Bind
     Bind -- read+hash+copy --> Stack --> Layer
+    Bind -. unmounted before Ready .-> ReadyWorkspace
+    Layer -- lowerdir --> ReadyWorkspace
 ```
 
-- **Source** = the bind-mounted `/workspace` (VirtioFS, latency-heavy).
+- **Source** = the read-only bind-mounted `/workspace` (VirtioFS,
+  latency-heavy) during daemon startup only.
 - **Target** = `/eos/layer-stack`. Historically a **tmpfs (RAM)** mount; now a
   normal directory on the container **overlay (disk)** — see the storage
   optimization below.
 - The finished `layers/B000001-base` becomes the **lowerdir** of the overlay
   workspace that runtime commands later see; their writes go to a separate
   upperdir under `/eos/workspace` (disk).
+- After the base layer exists, the daemon unmounts the original `/workspace`
+  bind. Runtime sessions use the layerstack overlay; host workspace changes or
+  removal after this point do not feed the sandbox.
+
+## Safe Workspace Bind Unmount
+
+The Docker bind is now `:ro`, and it exists only long enough for
+`ensure_workspace_base` to copy/hash the source tree. Immediately after
+`workspace base built` or `workspace base already exists`, startup calls
+`umount(/workspace)` and logs the result through `cli_log`:
+
+- `unmounting workspace bind /workspace`
+- `workspace bind unmounted /workspace`
+- `workspace bind not mounted /workspace` for host-side tests using plain
+  directories
+- `workspace bind unmount failed /workspace: ...` before startup panic
+
+The daemon also checks that the `/workspace` mountpoint still exists after
+unmount. It does not create the directory as a fallback; a missing mountpoint is
+a startup error because the runtime overlay needs a real target path.
 
 ## Layerstack Base-Layer Build
 

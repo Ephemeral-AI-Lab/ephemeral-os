@@ -1,5 +1,10 @@
+use std::path::Path;
 use std::sync::Arc;
 
+#[cfg(target_os = "linux")]
+use rustix::io::Errno;
+#[cfg(target_os = "linux")]
+use rustix::mount::{unmount, UnmountFlags};
 use sandbox_observability::Observer;
 use sandbox_runtime_layerstack::service::StackObservation;
 
@@ -73,6 +78,7 @@ impl SandboxRuntimeOperations {
                 panic!("layerstack workspace base initialization failed: {error}");
             }
         }
+        detach_workspace_bind_after_base(&config.workspace.workspace_root);
         let layerstack = Arc::new(
             LayerStackService::new(layer_stack_root, observer.clone())
                 .expect("layerstack service initialization failed"),
@@ -114,6 +120,63 @@ impl SandboxRuntimeOperations {
     pub fn layer_stack_root(&self) -> &std::path::Path {
         self.layerstack.layer_stack_root()
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WorkspaceBindDetach {
+    #[cfg(target_os = "linux")]
+    Unmounted,
+    NotMounted,
+}
+
+fn detach_workspace_bind_after_base(workspace_root: &Path) {
+    cli_log(format!(
+        "unmounting workspace bind {}",
+        workspace_root.display()
+    ));
+    match detach_workspace_bind(workspace_root) {
+        #[cfg(target_os = "linux")]
+        Ok(WorkspaceBindDetach::Unmounted) => cli_log(format!(
+            "workspace bind unmounted {}",
+            workspace_root.display()
+        )),
+        Ok(WorkspaceBindDetach::NotMounted) => cli_log(format!(
+            "workspace bind not mounted {}",
+            workspace_root.display()
+        )),
+        Err(error) => {
+            cli_log(format!(
+                "workspace bind unmount failed {}: {error}",
+                workspace_root.display()
+            ));
+            panic!(
+                "workspace bind unmount failed for {}: {error}",
+                workspace_root.display()
+            );
+        }
+    }
+    if !workspace_root.is_dir() {
+        let message = format!(
+            "workspace mountpoint missing after unmount {}",
+            workspace_root.display()
+        );
+        cli_log(&message);
+        panic!("{message}");
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn detach_workspace_bind(workspace_root: &Path) -> Result<WorkspaceBindDetach, std::io::Error> {
+    match unmount(workspace_root, UnmountFlags::empty()) {
+        Ok(()) => Ok(WorkspaceBindDetach::Unmounted),
+        Err(Errno::INVAL) => Ok(WorkspaceBindDetach::NotMounted),
+        Err(error) => Err(std::io::Error::from(error)),
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn detach_workspace_bind(_workspace_root: &Path) -> Result<WorkspaceBindDetach, std::io::Error> {
+    Ok(WorkspaceBindDetach::NotMounted)
 }
 
 fn cli_log(message: impl AsRef<str>) {

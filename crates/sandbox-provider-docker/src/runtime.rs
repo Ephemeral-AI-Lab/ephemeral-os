@@ -97,7 +97,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
             env: container_env(config),
             labels: labels.clone(),
             binds: vec![format!(
-                "{}:{}",
+                "{}:{}:ro",
                 request.workspace_root.display(),
                 config.container_workspace_root.display()
             )],
