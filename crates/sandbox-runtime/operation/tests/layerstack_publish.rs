@@ -58,6 +58,7 @@ impl PublishFixture {
         Ok(sandbox_runtime::layerstack::LayerStackService::new(
             self.root.clone(),
             sandbox_observability::Observer::disabled(),
+            support::test_file_service(),
         )?)
     }
 }
@@ -251,6 +252,7 @@ fn layerstack_service_rejects_invalid_base_revision(
             base_manifest: base,
             protected_drops: Vec::new(),
             changes: Vec::new(),
+            owner: "operation:test".to_owned(),
         })
         .expect_err("invalid base metadata rejects before publish");
 
@@ -283,6 +285,7 @@ fn layerstack_service_preserves_structured_publish_rejection(
                 path: lp(".git/config"),
                 content: b"bad\n".to_vec(),
             }],
+            owner: "operation:test".to_owned(),
         })
         .expect_err("git mutation rejects publish");
 
@@ -320,6 +323,7 @@ fn layerstack_service_empty_changes_return_no_op_revision(
         base_manifest: base.clone(),
         protected_drops: Vec::new(),
         changes: Vec::new(),
+        owner: "operation:test".to_owned(),
     })?;
 
     assert!(result.no_op);
@@ -351,6 +355,7 @@ fn layerstack_service_ignored_only_publish_preserves_route_summary(
             path: lp("out.log"),
             content: b"ignored\n".to_vec(),
         }],
+        owner: "operation:test".to_owned(),
     })?;
 
     assert!(!result.no_op);

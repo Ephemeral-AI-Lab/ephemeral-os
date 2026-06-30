@@ -187,7 +187,7 @@ const READ_COMMAND_LINES: OperationEntry =
 
 const OPERATIONS: &[OperationEntry] = &[EXEC_COMMAND, WRITE_COMMAND_STDIN, READ_COMMAND_LINES];
 
-pub(crate) fn operation_entries() -> &'static [OperationEntry] {
+pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
 }
 

@@ -5,7 +5,7 @@ tags:
   - layerstack
   - performance
   - sandbox
-status: draft
+status: implementation_plan
 updated: 2026-06-30
 ---
 
@@ -226,8 +226,10 @@ layer`, because the copy already happened once before the containers start.
 - GC may remove a base only when no live sandbox record references its
   `root_hash`.
 - Host workspace changes after base build do not affect existing sandboxes.
-- Direct writes to `/eos/layer-stack/base/B000001-base` inside a sandbox must
-  fail.
+- User `exec_command` tests must validate the materialized `/workspace` view,
+  not `/eos` internals.
+- The manager/container-side base mount at
+  `/eos/layer-stack/base/B000001-base` must be read-only.
 
 ## Live E2E Proofs
 
@@ -312,12 +314,19 @@ seconds. The `ephemeral-os` 2-4s number is a target for the optimized
 host-side single-pass copy+hash path, not a result from the raw `rsync` smoke
 test.
 
-### Target: Exec And Mount E2E
+### Target: Exec And Workspace Materialization E2E
 
 The shared-base benchmark must also prove that command execution works and that
-the first command is not paying a hidden workspace copy.
+the first command is not paying a hidden workspace copy. Test the user-visible
+`/workspace` materialization, not `/eos` internals.
+
+Do not assert `test ! -e /eos`: the current runner masks `/eos` with an empty
+read-only tmpfs, so the mountpoint exists even though layerstack descendants are
+not exposed.
 
 ```sh
+echo base-probe > "$workspace/.eos-base-probe"
+
 python3 - <<'PY' >/tmp/eos-o1-ids.txt
 import json
 data = json.load(open("/tmp/eos-o1-create.json"))
@@ -330,23 +339,16 @@ while read -r sandbox_id; do
 
   /usr/bin/time -p \
     bin/sandbox-cli runtime --sandbox-id "$sandbox_id" exec_command \
-      'pwd; test -d /workspace; test -d /eos/layer-stack/base/B000001-base; ls >/dev/null'
-
-  if bin/sandbox-cli runtime --sandbox-id "$sandbox_id" exec_command \
-      'touch /eos/layer-stack/base/B000001-base/.write-test'
-  then
-    echo "shared base was writable in $sandbox_id" >&2
-    exit 1
-  fi
+      'pwd; test -d /workspace; grep -q base-probe /workspace/.eos-base-probe; ls /workspace >/dev/null'
 done < /tmp/eos-o1-ids.txt
 ```
 
 Pass condition:
 
 ```text
-pwd/test/ls command succeeds for every sandbox
+pwd/test/grep/ls command succeeds for every sandbox
+/workspace contains the base workspace content
 exec wall time is near normal runtime exec time, not near base-copy time
-write to B000001-base fails with read-only filesystem or permission denied
 container writable size does not jump by one workspace base after exec
 ```
 
@@ -359,24 +361,88 @@ post-exec container writable <= pre-exec writable + 20MB per sandbox
 
 This catches an implementation that defers the copy until first `exec_command`.
 
-### Safety E2E
+### Target: Exec Layer-Depth Benchmark
 
-After creating two shared-base sandboxes from the same `root_hash`:
+Add one opt-in live E2E benchmark:
+
+```text
+cli-operation-e2e-live-test/runtime/command/test_exec_command_layer_depth_benchmark.py
+```
+
+Purpose: prove the shared base bind does not add measurable command latency as
+layer depth grows.
+
+Default knobs:
+
+```text
+E2E_IMAGE=ephemeral-agent
+E2E_EXEC_BENCH_DEPTHS=1,10,50,100
+E2E_EXEC_BENCH_SAMPLES=5
+```
+
+Test flow:
+
+1. Create one sandbox from a small temp workspace.
+2. Grow layer depth with tiny one-shot write commands. One-shot
+   `exec_command` publishes; persistent workspace sessions do not.
+3. At each target depth, time repeated one-shot read commands such as
+   `test -f README.md && printf ok`.
+4. Log one JSON row per depth:
+
+```json
+{"depth": 50, "samples": 5, "min_ms": 0, "p50_ms": 0, "p95_ms": 0, "max_ms": 0}
+```
+
+Run both shapes on the same host, image, workspace, depth list, and sample
+count:
 
 ```sh
-if bin/sandbox-cli runtime --sandbox-id "$sandbox_a" exec_command \
-    'touch /eos/layer-stack/base/B000001-base/.write-test'
-then
-  echo "shared base was writable" >&2
-  exit 1
-fi
+bin/start-sandbox-docker-gateway --rebuild-binary
+
+E2E_IMAGE=ephemeral-agent \
+E2E_EXEC_BENCH_DEPTHS=1,10,50,100 \
+E2E_EXEC_BENCH_SAMPLES=5 \
+pytest -s \
+  cli-operation-e2e-live-test/runtime/command/test_exec_command_layer_depth_benchmark.py
+```
+
+Pass condition:
+
+```text
+all commands complete with status=ok and exit_code=0
+shared-base p95 at each depth <= same-run O(n) p95 + max(500ms, 15%)
+shared-base writable size does not grow by one base copy during the benchmark
+```
+
+### Safety E2E
+
+After creating two shared-base sandboxes from the same `root_hash`, prove
+`/workspace` materialization is sandbox-local after writes:
+
+```sh
+bin/sandbox-cli runtime --sandbox-id "$sandbox_a" exec_command \
+  'printf sandbox-a > /workspace/.eos-sandbox-local'
+
+bin/sandbox-cli runtime --sandbox-id "$sandbox_a" exec_command \
+  'grep -q sandbox-a /workspace/.eos-sandbox-local'
+
+bin_sandbox_b_result=0
+bin/sandbox-cli runtime --sandbox-id "$sandbox_b" exec_command \
+  'test ! -e /workspace/.eos-sandbox-local' || bin_sandbox_b_result=$?
+test "$bin_sandbox_b_result" -eq 0
 ```
 
 Expected:
 
 ```text
-command fails with read-only filesystem or permission denied
+sandbox A sees its own published workspace delta
+sandbox B does not see sandbox A's workspace delta
 ```
+
+Prove the internal base mount is read-only through manager/container-side
+inspection, not through `exec_command`. Add or extend a manager diagnostic that
+reports the shared base source, target, `root_hash`, and readonly flag; the
+E2E asserts `target=/eos/layer-stack/base` and `readonly=true`.
 
 Then mutate a normal workspace file in sandbox A and prove sandbox B does not
 see it unless the change is explicitly published through the layerstack flow.

@@ -183,8 +183,13 @@
       "bases:Create new base": false
     }
   },
-  "active": "d5fccc8ee65959ed",
+  "active": "7bfb5a3473fb43c0",
   "lastOpenFiles": [
+    "docs/comparision/cubesandbox.md",
+    "docs/comparision/opensandbox.md",
+    "implementation_plan/o1_shared_workspace_base.md",
+    "implementation_plan/daemon-command-syscall-hardening.md",
+    "implementation_plan",
     "docs/layerstack/o1_shared_workspace_base.md",
     "daily-progress-tracker/2026-06-30.md",
     "docs/layerstack/create_sandbox.md",
@@ -211,10 +216,6 @@
     "docs/cli-operations/observability/events.md",
     "docs/cli-operations/observability/snapshot.md",
     "docs/cli-operations/observability/trace.md",
-    "docs/cli-operations/observability/layerstack.md",
-    "docs/cli-operations/observability/cgroup.md",
-    "docs/cli-operations/manager/Management/get_observability_tree.md",
-    "docs/layerstack/hash.md",
     "docs/cli-operations/manager/Management",
     "docs/cli-operations/manager/management"
   ]

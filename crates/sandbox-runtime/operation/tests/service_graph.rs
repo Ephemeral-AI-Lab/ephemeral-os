@@ -6,6 +6,7 @@ use std::sync::Arc;
 use sandbox_observability::Observer;
 use sandbox_protocol::CliOperationExecutionSpace;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService, ExecCommandInput};
+use sandbox_runtime::file::FileService;
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime::{
@@ -35,7 +36,14 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
     Ok(Arc::new(LayerStackService::new(
         root,
         Observer::disabled(),
+        file_service(),
     )?))
+}
+
+fn file_service() -> Arc<FileService> {
+    let dir = temp_root("file-auditability");
+    let _ = std::fs::remove_dir_all(&dir);
+    Arc::new(FileService::open(dir).expect("create file auditability test service"))
 }
 
 fn temp_root(label: &str) -> PathBuf {
@@ -93,6 +101,7 @@ fn service_graph_runtime_operations_exposes_command_lane(
         Arc::clone(&command),
         Arc::clone(&workspace),
         Arc::clone(&layerstack),
+        file_service(),
     );
 
     assert!(Arc::ptr_eq(&operations.command, &command));
@@ -172,7 +181,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "workspace_session"]
+        ["command", "workspace_session", "file"]
     );
     assert_eq!(
         names,
@@ -182,6 +191,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             "read_command_lines",
             "create_workspace_session",
             "destroy_workspace_session",
+            "file_blame",
         ]
     );
     assert!(catalog.operations.iter().all(|spec| spec.cli.is_some()));

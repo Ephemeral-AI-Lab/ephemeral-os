@@ -43,7 +43,10 @@ impl LayerStackService {
             })?;
         // Serialize the commit with the audit append so two publishes to one
         // path append in commit order (latest-event-wins stays correct, §13).
-        let _audit_gate = self.audit_gate.lock().unwrap_or_else(PoisonError::into_inner);
+        let _audit_gate = self
+            .audit_gate
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
         let published = match self.obs.scope(names::LAYERSTACK_PUBLISH, |span| {
             span.attr("base", base_version).attr("bytes", bytes);
             let result = stack.publish_validated_changes(publish_request);

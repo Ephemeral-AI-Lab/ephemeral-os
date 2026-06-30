@@ -556,7 +556,10 @@ fn operations_with_fake(
         Observer::disabled(),
     ));
     Ok(SandboxRuntimeOperations::new(
-        command, workspace, layerstack,
+        command,
+        workspace,
+        layerstack,
+        support::test_file_service(),
     ))
 }
 
@@ -575,6 +578,7 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
     Ok(Arc::new(LayerStackService::new(
         root,
         Observer::disabled(),
+        support::test_file_service(),
     )?))
 }
 

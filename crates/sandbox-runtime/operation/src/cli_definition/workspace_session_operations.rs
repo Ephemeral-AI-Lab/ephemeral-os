@@ -94,7 +94,7 @@ const DESTROY_WORKSPACE_SESSION: OperationEntry =
 
 const OPERATIONS: &[OperationEntry] = &[CREATE_WORKSPACE_SESSION, DESTROY_WORKSPACE_SESSION];
 
-pub(crate) fn operation_entries() -> &'static [OperationEntry] {
+pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
 }
 

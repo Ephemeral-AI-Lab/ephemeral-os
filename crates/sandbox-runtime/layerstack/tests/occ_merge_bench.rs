@@ -22,8 +22,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use sandbox_runtime_layerstack::{
-    build_workspace_base, manifest_root_hash, LayerChange, LayerPath, LayerStack,
-    LayerStackError, Manifest, MergedView, PublishBase, PublishBaseRevision, PublishRejectReason,
+    build_workspace_base, manifest_root_hash, LayerChange, LayerPath, LayerStack, LayerStackError,
+    Manifest, MergedView, PublishBase, PublishBaseRevision, PublishRejectReason,
     PublishValidatedChangesRequest,
 };
 
@@ -66,7 +66,9 @@ impl Fixture {
             std::fs::write(target, bytes).expect("seed workspace file");
         }
         build_workspace_base(&self.root, &self.workspace, false).expect("build base");
-        self.stack().read_active_manifest().expect("read base manifest")
+        self.stack()
+            .read_active_manifest()
+            .expect("read base manifest")
     }
 
     fn stack(&self) -> LayerStack {
@@ -194,13 +196,12 @@ fn diff<'a>(a: &[&'a [u8]], b: &[&'a [u8]]) -> Vec<EditOp> {
         trace.push(v.clone());
         let mut k = -d;
         while k <= d {
-            let mut x = if k == -d
-                || (k != d && v[(k - 1 + off) as usize] < v[(k + 1 + off) as usize])
-            {
-                v[(k + 1 + off) as usize]
-            } else {
-                v[(k - 1 + off) as usize] + 1
-            };
+            let mut x =
+                if k == -d || (k != d && v[(k - 1 + off) as usize] < v[(k + 1 + off) as usize]) {
+                    v[(k + 1 + off) as usize]
+                } else {
+                    v[(k - 1 + off) as usize] + 1
+                };
             let mut y = x - k;
             while x < n && y < m && a[x as usize] == b[y as usize] {
                 x += 1;
@@ -221,10 +222,18 @@ fn diff<'a>(a: &[&'a [u8]], b: &[&'a [u8]]) -> Vec<EditOp> {
         // Edit distance exceeded the cap: fall back to delete-all + insert-all.
         let mut ops = Vec::with_capacity(a.len() + b.len());
         for i in 0..a.len() {
-            ops.push(EditOp { kind: Kind::Del, a: i, b: 0 });
+            ops.push(EditOp {
+                kind: Kind::Del,
+                a: i,
+                b: 0,
+            });
         }
         for j in 0..b.len() {
-            ops.push(EditOp { kind: Kind::Ins, a: 0, b: j });
+            ops.push(EditOp {
+                kind: Kind::Ins,
+                a: 0,
+                b: j,
+            });
         }
         return ops;
     }
@@ -239,8 +248,7 @@ fn backtrack(a: &[&[u8]], b: &[&[u8]], trace: &[Vec<isize>], off: isize) -> Vec<
         let v = &trace[d];
         let d = d as isize;
         let k = x - y;
-        let prev_k = if k == -d
-            || (k != d && v[(k - 1 + off) as usize] < v[(k + 1 + off) as usize])
+        let prev_k = if k == -d || (k != d && v[(k - 1 + off) as usize] < v[(k + 1 + off) as usize])
         {
             k + 1
         } else {
@@ -249,15 +257,27 @@ fn backtrack(a: &[&[u8]], b: &[&[u8]], trace: &[Vec<isize>], off: isize) -> Vec<
         let prev_x = v[(prev_k + off) as usize];
         let prev_y = prev_x - prev_k;
         while x > prev_x && y > prev_y {
-            ops.push(EditOp { kind: Kind::Eq, a: (x - 1) as usize, b: (y - 1) as usize });
+            ops.push(EditOp {
+                kind: Kind::Eq,
+                a: (x - 1) as usize,
+                b: (y - 1) as usize,
+            });
             x -= 1;
             y -= 1;
         }
         if d > 0 {
             if x == prev_x {
-                ops.push(EditOp { kind: Kind::Ins, a: 0, b: (y - 1) as usize });
+                ops.push(EditOp {
+                    kind: Kind::Ins,
+                    a: 0,
+                    b: (y - 1) as usize,
+                });
             } else {
-                ops.push(EditOp { kind: Kind::Del, a: (x - 1) as usize, b: 0 });
+                ops.push(EditOp {
+                    kind: Kind::Del,
+                    a: (x - 1) as usize,
+                    b: 0,
+                });
             }
         }
         x = prev_x;
@@ -318,12 +338,20 @@ fn regions(ops: &[EditOp]) -> Vec<Region> {
                 bi += 1;
             }
             Kind::Del => {
-                let r = open.get_or_insert(Region { b0: bi, b1: bi, repl: Vec::new() });
+                let r = open.get_or_insert(Region {
+                    b0: bi,
+                    b1: bi,
+                    repl: Vec::new(),
+                });
                 r.b1 = bi + 1;
                 bi += 1;
             }
             Kind::Ins => {
-                let r = open.get_or_insert(Region { b0: bi, b1: bi, repl: Vec::new() });
+                let r = open.get_or_insert(Region {
+                    b0: bi,
+                    b1: bi,
+                    repl: Vec::new(),
+                });
                 r.repl.push(op.b);
             }
         }
@@ -384,7 +412,10 @@ fn patch_bytes(base: &[u8], new: &[u8]) -> usize {
 
 #[derive(Debug)]
 enum Merge {
-    Clean { bytes: Vec<u8>, prov: Vec<ProvRange> },
+    Clean {
+        bytes: Vec<u8>,
+        prov: Vec<ProvRange>,
+    },
     Conflict,
     Ineligible,
 }
@@ -407,12 +438,22 @@ fn push_prov(prov: &mut Vec<ProvRange>, next_line: &mut usize, count: usize, ori
             return;
         }
     }
-    prov.push(ProvRange { start_line: *next_line, line_count: count, origin: origin.to_owned() });
+    prov.push(ProvRange {
+        start_line: *next_line,
+        line_count: count,
+        origin: origin.to_owned(),
+    });
     *next_line += count;
 }
 
 /// diff3-style merge. `active_id`/`command_id` label introduced lines.
-fn three_way_merge(base: &[u8], active: &[u8], command: &[u8], active_id: &str, command_id: &str) -> Merge {
+fn three_way_merge(
+    base: &[u8],
+    active: &[u8],
+    command: &[u8],
+    active_id: &str,
+    command_id: &str,
+) -> Merge {
     if !is_text(base) || !is_text(active) || !is_text(command) {
         return Merge::Ineligible;
     }
@@ -492,12 +533,22 @@ fn three_way_merge(base: &[u8], active: &[u8], command: &[u8], active_id: &str, 
             (true, false) => {
                 let count = a_lines.len();
                 out.extend_from_slice(&a_lines);
-                push_prov(&mut prov, &mut next_line, count, &format!("workspace_session:{active_id}"));
+                push_prov(
+                    &mut prov,
+                    &mut next_line,
+                    count,
+                    &format!("workspace_session:{active_id}"),
+                );
             }
             (false, true) => {
                 let count = c_lines.len();
                 out.extend_from_slice(&c_lines);
-                push_prov(&mut prov, &mut next_line, count, &format!("workspace_session:{command_id}"));
+                push_prov(
+                    &mut prov,
+                    &mut next_line,
+                    count,
+                    &format!("workspace_session:{command_id}"),
+                );
             }
             (true, true) => {
                 if a_lines == c_lines {
@@ -523,7 +574,10 @@ fn three_way_merge(base: &[u8], active: &[u8], command: &[u8], active_id: &str, 
         }
     }
 
-    Merge::Clean { bytes: join_lines(&out), prov }
+    Merge::Clean {
+        bytes: join_lines(&out),
+        prov,
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -601,7 +655,9 @@ fn gen_text(lines: usize, seed: u64) -> Vec<u8> {
     let mut out = Vec::new();
     let mut x = seed.wrapping_add(1);
     for i in 0..lines {
-        x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        x = x
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         let _ = writeln!(
             unsafe_str(&mut out),
             "line {i:06} token={:08x} the quick brown fox jumps over lazy dog",
@@ -701,13 +757,19 @@ fn self_check(r: &mut Report) {
             ok = false;
         }
     }
-    r.say(format!("diff self-check round-trips: {}", if ok { "PASS" } else { "FAIL" }));
+    r.say(format!(
+        "diff self-check round-trips: {}",
+        if ok { "PASS" } else { "FAIL" }
+    ));
     assert!(ok, "diff engine must round-trip");
 }
 
 fn publish_full(stack: &mut LayerStack, path: &str, content: &[u8]) {
     stack
-        .publish_layer(&[LayerChange::Write { path: lp(path), content: content.to_vec() }])
+        .publish_layer(&[LayerChange::Write {
+            path: lp(path),
+            content: content.to_vec(),
+        }])
         .expect("publish full layer");
 }
 
@@ -724,8 +786,14 @@ fn b1_small_tiny_edit(r: &mut Report) {
         let m = fi.build_base_with(&[("README.md", base_bytes)]);
         let mut st = fi.stack();
         let t = Instant::now();
-        st.publish_validated_changes(req(m, vec![LayerChange::Write { path: lp("README.md"), content: edited.clone() }]))
-            .expect("publish");
+        st.publish_validated_changes(req(
+            m,
+            vec![LayerChange::Write {
+                path: lp("README.md"),
+                content: edited.clone(),
+            }],
+        ))
+        .expect("publish");
         pub_us.push(t.elapsed().as_nanos());
     }
 
@@ -782,8 +850,14 @@ fn b2_large_one_line(r: &mut Report) {
 
     let mut st = f.stack();
     let t = Instant::now();
-    st.publish_validated_changes(req(m, vec![LayerChange::Write { path: lp("big.txt"), content: edited.clone() }]))
-        .expect("publish");
+    st.publish_validated_changes(req(
+        m,
+        vec![LayerChange::Write {
+            path: lp("big.txt"),
+            content: edited.clone(),
+        }],
+    ))
+    .expect("publish");
     let pub_us = t.elapsed().as_nanos();
 
     let committed = f.layers_bytes();
@@ -808,11 +882,21 @@ fn b3_large_scattered(r: &mut Report) {
     let m = f.build_base_with(&[("big.txt", &base_bytes)]);
     let mut edited = base_bytes.clone();
     for k in 0..40 {
-        edited = replace_line(&edited, 200 + k * 300, &format!("line scattered edit {k}\n"));
+        edited = replace_line(
+            &edited,
+            200 + k * 300,
+            &format!("line scattered edit {k}\n"),
+        );
     }
     let mut st = f.stack();
-    st.publish_validated_changes(req(m, vec![LayerChange::Write { path: lp("big.txt"), content: edited.clone() }]))
-        .expect("publish");
+    st.publish_validated_changes(req(
+        m,
+        vec![LayerChange::Write {
+            path: lp("big.txt"),
+            content: edited.clone(),
+        }],
+    ))
+    .expect("publish");
     let committed = f.layers_bytes();
     let patch = patch_bytes(&base_bytes, &edited);
     let merge = three_way_merge(&base_bytes, &base_bytes, &edited, "ws-active", "ws-cmd");
@@ -868,16 +952,25 @@ fn b5_many_small(r: &mut Report) {
     let count = 500usize;
     let mut seed_files: Vec<(String, Vec<u8>)> = Vec::new();
     for i in 0..count {
-        seed_files.push((format!("src/file_{i:04}.txt"), format!("content of file {i}\nsecond line\n").into_bytes()));
+        seed_files.push((
+            format!("src/file_{i:04}.txt"),
+            format!("content of file {i}\nsecond line\n").into_bytes(),
+        ));
     }
-    let seed_refs: Vec<(&str, &[u8])> = seed_files.iter().map(|(p, b)| (p.as_str(), b.as_slice())).collect();
+    let seed_refs: Vec<(&str, &[u8])> = seed_files
+        .iter()
+        .map(|(p, b)| (p.as_str(), b.as_slice()))
+        .collect();
     let m = f.build_base_with(&seed_refs);
     let mut changes = Vec::new();
     let mut sidecar_total = 0usize;
     for i in 0..count {
         let path = format!("src/file_{i:04}.txt");
         let new = format!("content of file {i}\nsecond line edited\n");
-        changes.push(LayerChange::Write { path: lp(&path), content: new.clone().into_bytes() });
+        changes.push(LayerChange::Write {
+            path: lp(&path),
+            content: new.clone().into_bytes(),
+        });
         let mg = three_way_merge(
             format!("content of file {i}\nsecond line\n").as_bytes(),
             format!("content of file {i}\nsecond line\n").as_bytes(),
@@ -889,7 +982,8 @@ fn b5_many_small(r: &mut Report) {
     }
     let mut st = f.stack();
     let t = Instant::now();
-    st.publish_validated_changes(req(m, changes)).expect("publish many");
+    st.publish_validated_changes(req(m, changes))
+        .expect("publish many");
     let pub_us = t.elapsed().as_nanos();
     let committed = f.layers_bytes();
     r.say(format!(
@@ -911,8 +1005,14 @@ fn b6_mixed_routes(r: &mut Report) {
         .publish_validated_changes(req(
             m,
             vec![
-                LayerChange::Write { path: lp("README.md"), content: b"hello world\n".to_vec() },
-                LayerChange::Write { path: lp("debug.log"), content: b"noise\n".to_vec() },
+                LayerChange::Write {
+                    path: lp("README.md"),
+                    content: b"hello world\n".to_vec(),
+                },
+                LayerChange::Write {
+                    path: lp("debug.log"),
+                    content: b"noise\n".to_vec(),
+                },
             ],
         ))
         .expect("publish mixed");
@@ -940,15 +1040,28 @@ fn b7_overlapping_reject(r: &mut Report) {
     let mut st = f.stack();
     publish_full(&mut st, "f.txt", &active); // another session advances active
     let err = st
-        .publish_validated_changes(req(m, vec![LayerChange::Write { path: lp("f.txt"), content: command.clone() }]))
+        .publish_validated_changes(req(
+            m,
+            vec![LayerChange::Write {
+                path: lp("f.txt"),
+                content: command.clone(),
+            }],
+        ))
         .expect_err("must reject");
     let occ_reject = matches!(
         err,
         LayerStackError::PublishRejected(b) if b.reason == PublishRejectReason::SourceConflict
     );
-    r.say(format!("merge_conflict={is_conflict}  occ_rejects={occ_reject}"));
-    r.jrow(format!("{{\"case\":\"B7\",\"merge_conflict\":{is_conflict},\"occ_rejects\":{occ_reject}}}"));
-    assert!(is_conflict && occ_reject, "B7 must reject overlapping edits");
+    r.say(format!(
+        "merge_conflict={is_conflict}  occ_rejects={occ_reject}"
+    ));
+    r.jrow(format!(
+        "{{\"case\":\"B7\",\"merge_conflict\":{is_conflict},\"occ_rejects\":{occ_reject}}}"
+    ));
+    assert!(
+        is_conflict && occ_reject,
+        "B7 must reject overlapping edits"
+    );
 }
 
 fn b8_nonoverlap_concurrent(r: &mut Report) {
@@ -964,8 +1077,13 @@ fn b8_nonoverlap_concurrent(r: &mut Report) {
     publish_full(&mut st, "f.txt", &active);
 
     // C1: OCC rejects this session's (disjoint) edit -> false conflict.
-    let c1 = st
-        .publish_validated_changes(req(m.clone(), vec![LayerChange::Write { path: lp("f.txt"), content: command.clone() }]));
+    let c1 = st.publish_validated_changes(req(
+        m.clone(),
+        vec![LayerChange::Write {
+            path: lp("f.txt"),
+            content: command.clone(),
+        }],
+    ));
     let c1_rejected = matches!(
         c1,
         Err(LayerStackError::PublishRejected(ref b)) if b.reason == PublishRejectReason::SourceConflict
@@ -976,8 +1094,14 @@ fn b8_nonoverlap_concurrent(r: &mut Report) {
     let merged_ok = if let Merge::Clean { bytes, .. } = &merge {
         let active_manifest = st.read_active_manifest().expect("active");
         let t = Instant::now();
-        st.publish_validated_changes(req(active_manifest, vec![LayerChange::Write { path: lp("f.txt"), content: bytes.clone() }]))
-            .expect("merged publish");
+        st.publish_validated_changes(req(
+            active_manifest,
+            vec![LayerChange::Write {
+                path: lp("f.txt"),
+                content: bytes.clone(),
+            }],
+        ))
+        .expect("merged publish");
         let us = t.elapsed().as_nanos();
         let view = MergedView::new(f.root.clone());
         let mm = st.read_active_manifest().expect("m");
@@ -985,14 +1109,24 @@ fn b8_nonoverlap_concurrent(r: &mut Report) {
         let got = got.unwrap_or_default();
         let has_both = String::from_utf8_lossy(&got).contains("top-changed-by-active")
             && String::from_utf8_lossy(&got).contains("bottom-changed-by-command");
-        r.say(format!("C2 merged publish={:.1}us both_edits_present={has_both}", us as f64 / 1000.0));
+        r.say(format!(
+            "C2 merged publish={:.1}us both_edits_present={has_both}",
+            us as f64 / 1000.0
+        ));
         has_both
     } else {
         false
     };
-    r.say(format!("C1_rejected(false conflict)={c1_rejected}  C2_merged_ok={merged_ok}"));
-    r.jrow(format!("{{\"case\":\"B8\",\"c1_rejected\":{c1_rejected},\"c2_merged_ok\":{merged_ok}}}"));
-    assert!(c1_rejected && merged_ok, "B8: C1 should reject, C2 should merge");
+    r.say(format!(
+        "C1_rejected(false conflict)={c1_rejected}  C2_merged_ok={merged_ok}"
+    ));
+    r.jrow(format!(
+        "{{\"case\":\"B8\",\"c1_rejected\":{c1_rejected},\"c2_merged_ok\":{merged_ok}}}"
+    ));
+    assert!(
+        c1_rejected && merged_ok,
+        "B8: C1 should reject, C2 should merge"
+    );
 }
 
 fn b9_binary_and_friends(r: &mut Report) {
@@ -1023,7 +1157,10 @@ fn b9_binary_and_friends(r: &mut Report) {
     r.jrow(format!(
         "{{\"case\":\"B9\",\"binary_ineligible\":{bin_ineligible},\"min_full\":{min_full},\"min_patch\":{min_patch}}}"
     ));
-    assert!(bin_ineligible && !bad_text, "binary/invalid utf8 must be ineligible");
+    assert!(
+        bin_ineligible && !bad_text,
+        "binary/invalid utf8 must be ineligible"
+    );
 }
 
 fn b10_deep_manifest(r: &mut Report) {
@@ -1035,7 +1172,11 @@ fn b10_deep_manifest(r: &mut Report) {
         let mut st = f.stack();
         // Each publish writes a distinct deep file, growing manifest depth.
         for i in 0..d {
-            publish_full(&mut st, &format!("dir/lvl_{i:04}.txt"), format!("content {i}\n").as_bytes());
+            publish_full(
+                &mut st,
+                &format!("dir/lvl_{i:04}.txt"),
+                format!("content {i}\n").as_bytes(),
+            );
         }
         let m = st.read_active_manifest().expect("m");
         let depth = m.depth();
@@ -1058,7 +1199,8 @@ fn b10_deep_manifest(r: &mut Report) {
         let committed = f.layers_bytes();
         r.say(format!(
             "depth={depth:3}  committed={committed}B  read_deep_p50={:.1}us  project_p50={:.1}us",
-            median_us(read_us.clone()), median_us(proj_us.clone())
+            median_us(read_us.clone()),
+            median_us(proj_us.clone())
         ));
         r.jrow(format!(
             "{{\"case\":\"B10\",\"depth\":{depth},\"committed\":{committed},\"read_us\":{:.2},\"project_us\":{:.2}}}",
@@ -1143,7 +1285,8 @@ fn b12_provenance_correctness(r: &mut Report) {
         std::fs::create_dir_all(&dir).expect("mk dir");
         let scar = dir.join("README.md.json");
         let digest = format!("sha256:{}", sha256_hex(bytes));
-        std::fs::write(&scar, sidecar_json("L42", "README.md", &digest, prov)).expect("write sidecar");
+        std::fs::write(&scar, sidecar_json("L42", "README.md", &digest, prov))
+            .expect("write sidecar");
 
         let text = String::from_utf8_lossy(bytes);
         r.say(format!("merged:\n{}", text.replace('\n', "\\n")));
@@ -1163,7 +1306,9 @@ fn b12_provenance_correctness(r: &mut Report) {
             let got = query_origin(&scar, cl).unwrap_or_default();
             let ok = got.contains("ws-cmd");
             checks.push(ok);
-            r.say(format!("  inserted 'five-C' (line {cl}): origin={got} ok={ok}"));
+            r.say(format!(
+                "  inserted 'five-C' (line {cl}): origin={got} ok={ok}"
+            ));
         }
         let _ = std::fs::remove_dir_all(&dir);
     } else {

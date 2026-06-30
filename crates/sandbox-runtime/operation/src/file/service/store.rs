@@ -108,8 +108,9 @@ impl FileAuditabilityStore {
                 if line.trim().is_empty() {
                     continue;
                 }
-                if let Some(event) =
-                    serde_json::from_str::<Value>(&line).ok().and_then(|value| AuditEvent::from_json(&value))
+                if let Some(event) = serde_json::from_str::<Value>(&line)
+                    .ok()
+                    .and_then(|value| AuditEvent::from_json(&value))
                 {
                     index.insert(event.path.clone(), event);
                 }

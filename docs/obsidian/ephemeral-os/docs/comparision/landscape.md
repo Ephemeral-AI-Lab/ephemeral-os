@@ -32,7 +32,7 @@ flowchart LR
     B --> C["Isolate → git-merge<br/>branch/worktree per agent"]
     C --> D["Converge on shared base<br/>OCC at publish"]
 
-    A -.- A1["E2B · Modal · Daytona<br/>Fly Sprites · Vercel · Runloop<br/>microsandbox · CodeSandbox"]
+    A -.- A1["E2B · CubeSandbox · OpenSandbox<br/>Modal · Daytona · Runloop<br/>microsandbox · CodeSandbox"]
     B -.- B1["AgentFS"]
     C -.- C1["container-use · Conductor · Sculptor<br/>Intent · treebeard · packnplay · agenttier"]
     D -.- D1["EphemeralOS"]
@@ -44,7 +44,7 @@ flowchart LR
 
 | Camp                        | Reconciliation model                            | Isolation primitive                             | Representative projects                                                                                      | EphemeralOS relation                                                            |
 | --------------------------- | ----------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| **Isolation-only infra**    | None — merge is your problem                    | microVM (Firecracker) / gVisor / Kata / libkrun; vendor-run container | E2B, Modal, Daytona, Fly Sprites, Vercel Sandbox, Runloop, microsandbox, CodeSandbox SDK, Morph, K7, BoxLite; **Anthropic managed container** (CMA / code-exec, vendor-run — see [[anthropic-managed-container]]) | Substrate it could sit *beside or on*, not a competitor                         |
+| **Isolation-only infra**    | None — merge is your problem                    | microVM (Firecracker/RustVMM/KVM) / gVisor / Kata / libkrun; vendor-run container | E2B, **CubeSandbox** (E2B-compatible KVM MicroVM — see [[cubesandbox]]), **OpenSandbox** (Docker/K8s sandbox control plane — see [[opensandbox]]), Modal, Daytona, Fly Sprites, Vercel Sandbox, Runloop, microsandbox, CodeSandbox SDK, Morph, K7, BoxLite; **Anthropic managed container** (CMA / code-exec, vendor-run — see [[anthropic-managed-container]]) | Substrate it could sit *beside or on*, not a competitor                         |
 | **Isolate → git-merge**     | Git branch/worktree per agent, merged like a PR | Container (often Dagger/Docker) or worktree     | **container-use**, Conductor, Sculptor, Intent, treebeard, packnplay, agenttier                              | The **intent twin** — same goal, opposite mechanism. See [[container-use]]      |
 | **Isolate → snapshot**      | None — snapshot/diff, no merge                  | CoW filesystem (SQLite/FUSE)                    | **AgentFS**                                                                                                  | The **mechanism twin** — same CoW-FS idea, opposite philosophy. See [[agentfs]] |
 | **Converge on shared base** | OCC at publish against a moving base            | Kernel overlayfs + namespaces                   | **EphemeralOS**                                                                                              | **This is us.** Currently a camp of one                                         |
@@ -78,6 +78,11 @@ in [[container-use]]).
 - [[anthropic-managed-container]] — the first-party, vendor-run member of the
   isolation-only camp: Anthropic's code-execution tool and Managed Agents
   per-session container (with a `self_hosted` BYO-infra option).
+- [[cubesandbox]] — fast E2B-compatible KVM MicroVM sandbox infrastructure; cool
+  execution substrate, not a shared-base reconciliation model.
+- [[opensandbox]] — broad Docker/Kubernetes sandbox platform with SDKs, MCP,
+  egress, credential vault, and secure-runtime hooks; useful checklist, not the
+  EphemeralOS thesis.
 - **treebeard** and **Intent** each share *half* of EphemeralOS's design
   (treebeard: CoW + network gating on worktrees; Intent: a coordinator/merge
   workflow) — candidates if a third head-to-head is ever worth writing.
@@ -87,5 +92,7 @@ in [[container-use]]).
 - [List of coding agent sandboxes, 2026-05 (wincent gist)](https://gist.github.com/wincent/2752d8d97727577050c043e4ff9e386e)
 - [Dagger container-use](https://github.com/dagger/container-use)
 - [Turso AgentFS](https://github.com/tursodatabase/agentfs)
+- [TencentCloud/CubeSandbox](https://github.com/TencentCloud/CubeSandbox)
+- [OpenSandbox](https://github.com/opensandbox-group/OpenSandbox)
 - [Augment: How to run a multi-agent coding workspace (2026)](https://www.augmentcode.com/guides/how-to-run-a-multi-agent-coding-workspace)
 - [andyrewlee/awesome-agent-orchestrators](https://github.com/andyrewlee/awesome-agent-orchestrators)

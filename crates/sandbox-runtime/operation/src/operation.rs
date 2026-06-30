@@ -1,7 +1,8 @@
 use std::sync::OnceLock;
 
 use crate::cli_definition::{
-    command_operations, workspace_session_operations, CliOperationFamilySpec, CliOperationSpec,
+    command_operations, file_operations, workspace_session_operations, CliOperationFamilySpec,
+    CliOperationSpec,
 };
 use crate::services::SandboxRuntimeOperations;
 
@@ -34,6 +35,7 @@ impl OperationEntry {
 const CLI_FAMILIES: &[&CliOperationFamilySpec] = &[
     &command_operations::COMMAND_FAMILY,
     &workspace_session_operations::WORKSPACE_SESSION_FAMILY,
+    &file_operations::FILE_FAMILY,
 ];
 static CLI_SPECS: OnceLock<&'static [&'static CliOperationSpec]> = OnceLock::new();
 
@@ -45,7 +47,7 @@ pub(crate) fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
     CLI_SPECS.get_or_init(|| {
         Box::leak(
             operation_entry_groups()
-                .into_iter()
+                .iter()
                 .flat_map(|entries| entries.iter())
                 .filter_map(|entry| entry.cli_spec())
                 .collect::<Vec<_>>()
@@ -59,7 +61,7 @@ pub(crate) fn dispatch_operation(
     request: &sandbox_protocol::Request,
 ) -> sandbox_protocol::Response {
     operation_entry_groups()
-        .into_iter()
+        .iter()
         .flat_map(|entries| entries.iter())
         .find(|entry| entry.name == request.op)
         .map_or_else(sandbox_protocol::Response::unknown_op, |entry| {
@@ -69,14 +71,17 @@ pub(crate) fn dispatch_operation(
 
 pub(crate) fn known_operation_name(operation: &str) -> Option<&'static str> {
     operation_entry_groups()
-        .into_iter()
+        .iter()
         .flat_map(|entries| entries.iter())
         .find_map(|entry| (entry.name == operation).then_some(entry.name))
 }
 
-fn operation_entry_groups() -> [&'static [OperationEntry]; 2] {
-    [
-        command_operations::operation_entries(),
-        workspace_session_operations::operation_entries(),
-    ]
+const OPERATION_ENTRY_GROUPS: &[&[OperationEntry]] = &[
+    command_operations::operation_entries(),
+    workspace_session_operations::operation_entries(),
+    file_operations::operation_entries(),
+];
+
+fn operation_entry_groups() -> &'static [&'static [OperationEntry]] {
+    OPERATION_ENTRY_GROUPS
 }
