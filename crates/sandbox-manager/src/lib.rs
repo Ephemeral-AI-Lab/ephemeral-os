@@ -15,6 +15,7 @@ pub use daemon_install::{LocalSandboxDaemonInstaller, SandboxDaemonInstaller, St
 pub use error::ManagerError;
 pub use model::{
     SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxState,
+    SharedBaseMount,
 };
 pub use operation::{
     cli_operation_catalog, cli_operation_families, cli_operation_specs, dispatch_operation,

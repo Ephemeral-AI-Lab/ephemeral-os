@@ -34,12 +34,21 @@ impl fmt::Display for SandboxId {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SharedBaseMount {
+    pub source: PathBuf,
+    pub target: PathBuf,
+    pub root_hash: String,
+    pub readonly: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SandboxRecord {
     pub id: SandboxId,
     pub workspace_root: PathBuf,
     pub state: SandboxState,
     pub daemon: Option<SandboxDaemonEndpoint>,
     pub daemon_http: Option<SandboxHttpEndpoint>,
+    pub shared_base: Option<SharedBaseMount>,
 }
 
 impl SandboxRecord {
@@ -51,6 +60,7 @@ impl SandboxRecord {
             state,
             daemon: None,
             daemon_http: None,
+            shared_base: None,
         }
     }
 }

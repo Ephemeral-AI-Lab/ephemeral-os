@@ -13,7 +13,8 @@ use crate::{LAYERS_DIR, STAGING_DIR};
 
 use super::collect::{base_root_hash, format_path_sample, relative_path, BaseEntry};
 
-const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
+pub const WORKSPACE_BASE_LAYER_ID: &str = "B000001-base";
+pub const SHARED_BASE_DIR: &str = "base";
 const PROGRESS_INTERVAL: Duration = Duration::from_secs(1);
 const COPY_BUFFER_BYTES: usize = 1024 * 1024;
 
@@ -24,12 +25,33 @@ const COPY_BUFFER_BYTES: usize = 1024 * 1024;
 /// idle-waiting while the syscalls round-trip.
 const BASE_BUILD_WORKER_THREADS: usize = 32;
 
+pub(super) struct BaseLayerBuild {
+    pub(super) layer_ref: LayerRef,
+    pub(super) root_hash: String,
+    pub(super) bytes: u64,
+}
+
 pub(super) fn build_base_layer(
     stack: &Path,
     workspace: &Path,
-) -> Result<(LayerRef, String), LayerStackError> {
+) -> Result<BaseLayerBuild, LayerStackError> {
+    build_base_layer_under(stack, workspace, LAYERS_DIR)
+}
+
+pub(super) fn build_shared_base_layer(
+    stack: &Path,
+    workspace: &Path,
+) -> Result<BaseLayerBuild, LayerStackError> {
+    build_base_layer_under(stack, workspace, SHARED_BASE_DIR)
+}
+
+fn build_base_layer_under(
+    stack: &Path,
+    workspace: &Path,
+    layer_parent: &str,
+) -> Result<BaseLayerBuild, LayerStackError> {
     let layer_id = WORKSPACE_BASE_LAYER_ID;
-    let layer_dir = stack.join(LAYERS_DIR).join(layer_id);
+    let layer_dir = stack.join(layer_parent).join(layer_id);
     let staging_dir = stack.join(STAGING_DIR).join(format!("{layer_id}.staging"));
     if layer_dir.exists() || staging_dir.exists() {
         return Err(LayerStackError::Storage(format!(
@@ -81,29 +103,31 @@ pub(super) fn build_base_layer(
         stats.emit(stats.summary());
         stats.emit(format!("hashing base manifest entries={}", entries.len()));
         let root_hash = base_root_hash(&mut entries);
+        let bytes = stats.bytes();
         stats.emit(format!("base manifest root_hash={root_hash}"));
         if let Some(parent) = layer_dir.parent() {
             std::fs::create_dir_all(parent)?;
         }
         std::fs::rename(&staging_dir, &layer_dir)?;
         stats.emit(format!("base layer ready at {}", layer_dir.display()));
-        Ok::<String, LayerStackError>(root_hash)
+        Ok::<(String, u64), LayerStackError>((root_hash, bytes))
     })();
-    let root_hash = match result {
-        Ok(root_hash) => root_hash,
+    let (root_hash, bytes) = match result {
+        Ok(result) => result,
         Err(err) => {
             let _ = remove_path(&staging_dir);
             let _ = remove_path(&layer_dir);
             return Err(err);
         }
     };
-    Ok((
-        LayerRef {
+    Ok(BaseLayerBuild {
+        layer_ref: LayerRef {
             layer_id: layer_id.to_owned(),
-            path: format!("{LAYERS_DIR}/{layer_id}"),
+            path: format!("{layer_parent}/{layer_id}"),
         },
         root_hash,
-    ))
+        bytes,
+    })
 }
 
 struct FileTask {
@@ -275,6 +299,10 @@ impl BuildStats {
             self.symlinks.load(Ordering::Relaxed),
             self.bytes.load(Ordering::Relaxed),
         )
+    }
+
+    fn bytes(&self) -> u64 {
+        self.bytes.load(Ordering::Relaxed)
     }
 
     fn record_file(&self, size: u64) {

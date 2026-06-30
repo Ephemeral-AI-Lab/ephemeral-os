@@ -146,7 +146,12 @@ fn runtime_request_construction_rejects_manager_cli_catalog() -> TestResult {
 fn manager_execution_space_uses_system_scope_for_create_sandbox() -> TestResult {
     let request = build_manager_request(
         "create_sandbox",
-        &["--image", "ubuntu:24.04", "--workspace-root", "/testbed"],
+        &[
+            "--image",
+            "ubuntu:24.04",
+            "--workspace-bind-root",
+            "/testbed",
+        ],
     )?;
 
     assert_eq!(request.scope, CliOperationScope::System);
@@ -157,12 +162,52 @@ fn manager_execution_space_uses_system_scope_for_create_sandbox() -> TestResult 
 fn create_sandbox_maps_image_and_workspace_root_args() -> TestResult {
     let request = build_manager_request(
         "create_sandbox",
+        &[
+            "--image",
+            "ubuntu:24.04",
+            "--workspace-bind-root",
+            "/testbed",
+        ],
+    )?;
+
+    assert_eq!(
+        request.args,
+        json!({ "image": "ubuntu:24.04", "workspace_root": "/testbed" })
+    );
+    Ok(())
+}
+
+#[test]
+fn create_sandbox_accepts_legacy_workspace_root_arg() -> TestResult {
+    let request = build_manager_request(
+        "create_sandbox",
         &["--image", "ubuntu:24.04", "--workspace-root", "/testbed"],
     )?;
 
     assert_eq!(
         request.args,
         json!({ "image": "ubuntu:24.04", "workspace_root": "/testbed" })
+    );
+    Ok(())
+}
+
+#[test]
+fn create_sandbox_maps_count_arg() -> TestResult {
+    let request = build_manager_request(
+        "create_sandbox",
+        &[
+            "--image",
+            "ubuntu:24.04",
+            "--workspace-bind-root",
+            "/testbed",
+            "--count",
+            "5",
+        ],
+    )?;
+
+    assert_eq!(
+        request.args,
+        json!({ "image": "ubuntu:24.04", "workspace_root": "/testbed", "count": 5 })
     );
     Ok(())
 }
@@ -476,7 +521,7 @@ async fn manager_required_arg_operation_without_args_renders_detail_page() -> Te
     let help = String::from_utf8(stdout)?;
     assert!(help.contains("create_sandbox"));
     assert!(help.contains("Usage\n  sandbox-cli manager create_sandbox"));
-    assert!(help.contains("--workspace-root"));
+    assert!(help.contains("--workspace-bind-root"));
     assert!(stderr.is_empty());
     Ok(())
 }

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::{Child, Command};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -9,14 +9,14 @@ use sandbox_manager::LocalSandboxDaemonInstaller;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore, StartedDaemon,
+    SandboxState, SandboxStore, SharedBaseMount, StartedDaemon,
 };
 use sandbox_protocol::{ArgKind, CliOperationExecutionSpace, CliOperationScope, Request, Response};
 use serde_json::{json, Value};
 
 #[derive(Default)]
 struct FakeRuntime {
-    created: Mutex<Vec<(String, PathBuf)>>,
+    created: Mutex<Vec<(String, PathBuf, Option<SharedBaseMount>)>>,
     destroyed: Mutex<Vec<String>>,
 }
 
@@ -25,12 +25,15 @@ impl SandboxRuntime for FakeRuntime {
         &self,
         request: &CreateSandboxRequest,
     ) -> Result<CreateSandboxResult, ManagerError> {
-        self.created
-            .lock()
-            .expect("created lock")
-            .push((request.image.clone(), request.workspace_root.clone()));
+        let mut created = self.created.lock().expect("created lock");
+        created.push((
+            request.image.clone(),
+            request.workspace_root.clone(),
+            request.shared_base.clone(),
+        ));
+        let sandbox_id = format!("container-{}", created.len());
         Ok(CreateSandboxResult {
-            id: id("container-1"),
+            id: SandboxId::new(sandbox_id).expect("valid id"),
         })
     }
 
@@ -303,6 +306,42 @@ fn id(value: &str) -> SandboxId {
     SandboxId::new(value).expect("valid sandbox id")
 }
 
+struct TestWorkspace {
+    root: PathBuf,
+    workspace: PathBuf,
+}
+
+impl TestWorkspace {
+    fn new(label: &str) -> Self {
+        let root = std::env::temp_dir().join(format!(
+            "sandbox-manager-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("time after epoch")
+                .as_nanos()
+        ));
+        let workspace = root.join("workspace");
+        std::fs::create_dir_all(&workspace).expect("create test workspace");
+        std::fs::write(workspace.join("README.md"), b"base\n").expect("seed test workspace");
+        Self { root, workspace }
+    }
+
+    fn path(&self) -> &Path {
+        &self.workspace
+    }
+
+    fn path_string(&self) -> String {
+        self.workspace.to_string_lossy().into_owned()
+    }
+}
+
+impl Drop for TestWorkspace {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
 fn endpoint(value: &str) -> SandboxDaemonEndpoint {
     SandboxDaemonEndpoint::new("127.0.0.1", 7000, format!("token-{value}"))
 }
@@ -318,6 +357,7 @@ fn sandbox_record(
         state,
         daemon,
         daemon_http: None,
+        shared_base: None,
     }
 }
 
@@ -412,14 +452,16 @@ fn cli_operation_catalog_contains_only_manager_operations() {
 #[test]
 fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     let (services, runtime, installer, _client) = services();
+    let workspace = TestWorkspace::new("create-list");
+    let workspace_root = workspace.path_string();
 
     let created = dispatch(
         &services,
         "create_sandbox",
-        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+        json!({"image": "ubuntu:24.04", "workspace_root": workspace_root.clone()}),
     );
     assert_eq!(created["id"], "container-1");
-    assert_eq!(created["workspace_root"], "/testbed");
+    assert_eq!(created["workspace_root"].as_str(), Some(workspace_root.as_str()));
     assert_eq!(created["state"], "ready");
     assert_eq!(
         created["daemon"],
@@ -453,10 +495,18 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
             .len(),
         0
     );
-    assert_eq!(
-        runtime.created.lock().expect("created lock").as_slice(),
-        [("ubuntu:24.04".to_owned(), PathBuf::from("/testbed"))]
-    );
+    let created_calls = runtime.created.lock().expect("created lock");
+    assert_eq!(created_calls.len(), 1);
+    assert_eq!(created_calls[0].0, "ubuntu:24.04");
+    assert_eq!(created_calls[0].1.as_path(), workspace.path());
+    let shared_base = created_calls[0]
+        .2
+        .as_ref()
+        .expect("manager create_sandbox always passes shared base");
+    assert_eq!(shared_base.target, PathBuf::from("/eos/layer-stack/base"));
+    assert!(shared_base.readonly);
+    assert!(shared_base.source.ends_with("base"));
+    assert!(!shared_base.root_hash.is_empty());
     assert_eq!(
         runtime.destroyed.lock().expect("destroyed lock").as_slice(),
         ["container-1"]
@@ -480,11 +530,12 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
 fn create_sandbox_rolls_back_runtime_and_store_when_install_fails() {
     let installer = Arc::new(FakeInstaller::failing_install());
     let (services, runtime, store) = services_with_installer(installer);
+    let workspace = TestWorkspace::new("install-fails");
 
     let response = dispatch(
         &services,
         "create_sandbox",
-        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+        json!({"image": "ubuntu:24.04", "workspace_root": workspace.path_string()}),
     );
 
     assert_eq!(
@@ -510,11 +561,12 @@ fn create_sandbox_rolls_back_runtime_and_store_when_install_fails() {
 fn create_sandbox_rolls_back_runtime_and_store_when_start_fails() {
     let installer = Arc::new(FakeInstaller::failing_start());
     let (services, runtime, store) = services_with_installer(installer);
+    let workspace = TestWorkspace::new("start-fails");
 
     let response = dispatch(
         &services,
         "create_sandbox",
-        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+        json!({"image": "ubuntu:24.04", "workspace_root": workspace.path_string()}),
     );
 
     assert_eq!(
@@ -536,11 +588,12 @@ fn create_sandbox_rolls_back_runtime_and_store_when_start_fails() {
 fn create_sandbox_rolls_back_runtime_and_store_when_check_fails() {
     let installer = Arc::new(FakeInstaller::failing_check());
     let (services, runtime, store) = services_with_installer(installer.clone());
+    let workspace = TestWorkspace::new("check-fails");
 
     let response = dispatch(
         &services,
         "create_sandbox",
-        json!({"image": "ubuntu:24.04", "workspace_root": "/testbed"}),
+        json!({"image": "ubuntu:24.04", "workspace_root": workspace.path_string()}),
     );
 
     assert_eq!(

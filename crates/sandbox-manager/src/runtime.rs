@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
-use crate::{ManagerError, SandboxId, SandboxRecord};
+use crate::{ManagerError, SandboxId, SandboxRecord, SharedBaseMount};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateSandboxRequest {
     pub image: String,
     pub workspace_root: PathBuf,
+    pub shared_base: Option<SharedBaseMount>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

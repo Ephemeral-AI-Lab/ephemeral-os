@@ -48,9 +48,19 @@ const CREATE_SANDBOX_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
         "workspace_root",
         ArgKind::Path,
-        "Absolute workspace root mounted inside this sandbox.",
+        "Absolute host workspace directory bind-mounted into this sandbox.",
         Some(ArgCliSpec {
-            flag: Some("--workspace-root"),
+            flag: Some("--workspace-bind-root"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::optional(
+        "count",
+        ArgKind::Integer,
+        "Number of sandboxes to create. Values greater than 1 use a shared read-only workspace base.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--count"),
             positional: None,
         }),
     ),
@@ -58,9 +68,10 @@ const CREATE_SANDBOX_ARGS: &[ArgSpec] = &[
 
 const CREATE_SANDBOX_CLI: CliSpec = CliSpec {
     path: &["manager", "create_sandbox"],
-    usage: "sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH",
+    usage: "sandbox-cli manager create_sandbox --image IMAGE --workspace-bind-root PATH [--count N]",
     examples: &[
-        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed",
+        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed",
+        "sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed --count 5",
     ],
 };
 
@@ -202,15 +213,21 @@ pub(crate) fn dispatch_create_sandbox_with_progress(
         Ok(workspace_root) => workspace_root,
         Err(response) => return response,
     };
+    let count = match count(request) {
+        Ok(count) => count,
+        Err(response) => return response,
+    };
     match create_sandbox(
         services,
         CreateSandboxInput {
             image,
             workspace_root,
+            count,
         },
         progress,
     ) {
-        Ok(record) => Response::ok(record_value(record)),
+        Ok(mut records) if records.len() == 1 => Response::ok(record_value(records.remove(0))),
+        Ok(records) => Response::ok(records_value(records)),
         Err(error) => error.into_response(),
     }
 }
@@ -278,6 +295,14 @@ fn image(request: &Request) -> Result<String, Response> {
     Ok(image)
 }
 
+fn count(request: &Request) -> Result<usize, Response> {
+    let value = request.optional_u64("count")?.unwrap_or(1);
+    if value == 0 {
+        return Err(ManagerError::InvalidSandboxCount { value }.into_response());
+    }
+    usize::try_from(value).map_err(|_| ManagerError::InvalidSandboxCount { value }.into_response())
+}
+
 fn snapshot_options(request: &Request) -> Result<SnapshotOptions, Response> {
     let sandbox_id = request
         .optional_string("sandbox_id")?
@@ -300,6 +325,16 @@ fn record_value(record: SandboxRecord) -> Value {
         "state": record.state.as_str(),
         "daemon": record.daemon.map(endpoint_value),
         "daemon_http": record.daemon_http.map(http_endpoint_value),
+        "shared_base": record.shared_base.map(shared_base_value),
+    })
+}
+
+fn shared_base_value(shared_base: crate::SharedBaseMount) -> Value {
+    json!({
+        "source": shared_base.source.to_string_lossy(),
+        "target": shared_base.target.to_string_lossy(),
+        "root_hash": shared_base.root_hash,
+        "readonly": shared_base.readonly,
     })
 }
 

@@ -13,6 +13,9 @@ pub enum ManagerError {
     #[error("invalid image: {value}")]
     InvalidImage { value: String },
 
+    #[error("invalid sandbox count: {value}")]
+    InvalidSandboxCount { value: u64 },
+
     #[error("sandbox already exists: {id}")]
     DuplicateSandbox { id: SandboxId },
 
@@ -52,6 +55,7 @@ impl ManagerError {
             Self::InvalidSandboxId { .. }
             | Self::InvalidWorkspaceRoot { .. }
             | Self::InvalidImage { .. }
+            | Self::InvalidSandboxCount { .. }
             | Self::DuplicateSandbox { .. }
             | Self::MissingSandbox { .. }
             | Self::InvalidStateTransition { .. }

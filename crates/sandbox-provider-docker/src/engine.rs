@@ -72,6 +72,10 @@ pub(crate) struct StartedContainer {
 pub(crate) struct RecoveredContainer {
     pub(crate) sandbox_id: String,
     pub(crate) host_workspace_root: String,
+    pub(crate) shared_base_source: Option<String>,
+    pub(crate) shared_base_target: Option<String>,
+    pub(crate) shared_base_root_hash: Option<String>,
+    pub(crate) shared_base_readonly: Option<bool>,
     pub(crate) auth_token: String,
     pub(crate) published_port: u16,
     pub(crate) published_http_port: u16,
@@ -400,6 +404,12 @@ fn recovered_from_summary(
     let labels = summary.labels.as_ref()?;
     let sandbox_id = labels.get(labels::SANDBOX_ID)?.clone();
     let host_workspace_root = labels.get(labels::HOST_WORKSPACE_ROOT)?.clone();
+    let shared_base_source = labels.get(labels::SHARED_BASE_SOURCE).cloned();
+    let shared_base_target = labels.get(labels::SHARED_BASE_TARGET).cloned();
+    let shared_base_root_hash = labels.get(labels::SHARED_BASE_ROOT_HASH).cloned();
+    let shared_base_readonly = labels
+        .get(labels::SHARED_BASE_READONLY)
+        .and_then(|value| value.parse::<bool>().ok());
     let auth_token = labels.get(labels::AUTH_TOKEN)?.clone();
     let ports = summary.ports.as_ref()?;
     let published_port = published_summary_port(ports, daemon_port)?;
@@ -407,6 +417,10 @@ fn recovered_from_summary(
     Some(RecoveredContainer {
         sandbox_id,
         host_workspace_root,
+        shared_base_source,
+        shared_base_target,
+        shared_base_root_hash,
+        shared_base_readonly,
         auth_token,
         published_port,
         published_http_port,

@@ -9,6 +9,7 @@ license.workspace = true
 sandbox-manager.workspace = true
 sandbox-config.workspace = true
 sandbox-protocol.workspace = true
+sandbox-runtime-layerstack.workspace = true
 bollard.workspace = true
 bytes.workspace = true
 tar.workspace = true

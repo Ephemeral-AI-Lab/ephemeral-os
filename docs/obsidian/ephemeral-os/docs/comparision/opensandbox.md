@@ -14,8 +14,8 @@ A side-by-side of [OpenSandbox](https://github.com/opensandbox-group/OpenSandbox
 and [[ephemeral-os|EphemeralOS]]. OpenSandbox is useful platform plumbing, but it
 does not occupy EphemeralOS's shared-base/OCC square. It sits in the
 **general-purpose sandbox control-plane** camp: SDKs, lifecycle APIs,
-Docker/Kubernetes runtimes, browser/desktop examples, egress policy, and
-credential injection.
+Docker/Kubernetes runtimes, human/browser inspection surfaces, egress policy,
+and credential injection.
 
 > [!note] Evidence basis
 > EphemeralOS rows are verified against this repo's code. OpenSandbox rows come
@@ -35,27 +35,27 @@ OpenSandbox is broad. EphemeralOS is narrow. The narrowness is the point.
 
 ## Side by side
 
-| Axis | **OpenSandbox** | **EphemeralOS** |
-|---|---|---|
-| **Primary job** | General-purpose sandbox platform for AI applications | Fast command/workspace runtime for external agents over a shared base |
-| **Interface** | Multi-language SDKs, CLI, MCP, OpenAPI-style specs | `sandbox-cli` + newline-delimited JSON protocol |
-| **Main user** | Application/platform developer integrating sandbox lifecycle into a product | Agent or human operator controlling execution from the host |
-| **Agent location** | Not prescribed; SDK controls sandboxes from outside, examples may run tools inside | Agent stays outside; sandbox runs commands and services |
-| **Runtime backend** | Docker and Kubernetes | Docker-backed sandbox today |
-| **Secure runtimes** | Integration hooks for Docker runtime names / K8s `RuntimeClass` (`gVisor`, `Kata`, `Firecracker`-style) | Not a current product axis |
-| **Command/file tools** | Built-in command, filesystem, code interpreter APIs | Command/session surface plus layerstack-backed workspace capture/publish |
-| **Browser/GUI** | Examples for Chrome, Playwright, VNC, VS Code | Not core; add only when sandbox-local browser state is required |
-| **Egress/secrets** | Real egress sidecar and Credential Vault path | Future security layer if untrusted code needs network/secrets |
-| **Multi-agent model** | Many sandboxes; reconciliation is left to the caller | Many workspaces converge through LayerStack publish |
-| **Reconciliation** | No special merge model | OCC/merge at publish time against a moving shared base |
-| **Novelty** | Productized control plane and security feature bundle | Shared overlay LayerStack + publish-time reconciliation |
+| Axis                   | **OpenSandbox**                                                                                         | **EphemeralOS**                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Primary job**        | General-purpose sandbox platform for AI applications                                                    | Fast command/workspace runtime for external agents over a shared base    |
+| **Interface**          | Multi-language SDKs, CLI, MCP, OpenAPI-style specs                                                      | `sandbox-cli` + newline-delimited JSON protocol                          |
+| **Main user**          | Application/platform developer integrating sandbox lifecycle into a product                             | Agent or human operator controlling execution from the host              |
+| **Agent location**     | Not prescribed; SDK controls sandboxes from outside, examples may run tools inside                      | Agent stays outside; sandbox runs commands and services                  |
+| **Runtime backend**    | Docker and Kubernetes                                                                                   | Docker-backed sandbox today                                              |
+| **Secure runtimes**    | Integration hooks for Docker runtime names / K8s `RuntimeClass` (`gVisor`, `Kata`, `Firecracker`-style) | Not a current product axis                                               |
+| **Command/file tools** | Built-in command, filesystem, code interpreter APIs                                                     | Command/session surface plus layerstack-backed workspace capture/publish |
+| **Browser/GUI**        | Chrome/Playwright/VNC/VS Code demos for human inspection or sandbox-local browser state                  | Host-side browser automation through daemon HTTP forwarding              |
+| **Egress/secrets**     | Real egress sidecar and Credential Vault path                                                           | Future security layer if untrusted code needs network/secrets            |
+| **Multi-agent model**  | Many sandboxes; reconciliation is left to the caller                                                    | Many workspaces converge through LayerStack publish                      |
+| **Reconciliation**     | No special merge model                                                                                  | OCC/merge at publish time against a moving shared base                   |
+| **Novelty**            | Productized control plane and security feature bundle                                                   | Shared overlay LayerStack + publish-time reconciliation                  |
 
 ## Where it actually matters
 
 ### Feature platform vs execution thesis
 
 OpenSandbox has a lot: SDKs, CLI, MCP, Docker, Kubernetes, browser examples,
-desktop examples, egress policy, credential vault, and secure-runtime knobs.
+human GUI examples, egress policy, credential vault, and secure-runtime knobs.
 Most of those features are useful, but none is the reason EphemeralOS exists.
 They are platform packaging around ordinary sandbox lifecycle and execution.
 
@@ -89,24 +89,30 @@ But they are not free. OpenSandbox's Credential Vault rides on the egress sideca
 and transparent proxy path. That is a security layer, not a core execution
 primitive.
 
-### SDK and Playwright are mostly noise for EphemeralOS
+### SDK and in-sandbox GUI are mostly noise for EphemeralOS
 
 OpenSandbox's SDKs make sense for product applications. They do not make
 EphemeralOS more agent-native if the agent already runs outside the sandbox and
 can call a CLI. MCP can be an adapter later; a first-class SDK is not needed
 until there are non-agent app developers to serve.
 
-Likewise, in-sandbox Playwright is valuable only when the browser state must be
-part of the sandbox. Otherwise it adds image size, install burden, startup cost,
-and more failure modes.
+Likewise, GUI is for humans. Linux images do not get it for free: a
+VNC/desktop/VS Code path means installing a window stack, browser packages,
+fonts, and a remote-display server inside the sandbox. That is useful for human
+debugging, but it is slow and heavy compared with command execution.
+
+EphemeralOS already has the better default for agents: run the app/server inside
+the sandbox, expose it through daemon HTTP forwarding, and drive one host-side
+Playwright installation against the forwarded URL. In-sandbox Playwright is
+valuable only when the browser state itself must be isolated inside the sandbox.
 
 ## What to borrow
 
 - **Borrow:** egress policy, credential proxy/vault, runtime-class pass-through,
   and a small MCP adapter when the CLI is stable.
-- **Skip:** multi-language SDKs, in-sandbox Playwright as a default, Kubernetes
-  before one-node Docker is excellent, and feature flags for runtimes you cannot
-  test.
+- **Skip:** multi-language SDKs, VNC/VS Code as product features, in-sandbox
+  Playwright as a default, Kubernetes before one-node Docker is excellent, and
+  feature flags for runtimes you cannot test.
 
 ## Sources
 

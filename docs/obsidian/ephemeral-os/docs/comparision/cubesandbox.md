@@ -43,7 +43,7 @@ CubeSandbox is cool infrastructure. EphemeralOS is cool reconciliation.
 | **State model** | MicroVM/template snapshots and CubeCoW clone/rollback | Overlay upperdir diff + immutable content-hashed layers |
 | **Multi-agent model** | Many isolated sandboxes; clone/rollback/fork state | Many workspaces converge onto one shared moving base |
 | **Reconciliation** | Not the center; caller still owns durable merge semantics | Core feature: publish-time OCC/merge |
-| **Browser support** | Playwright/Chromium inside the MicroVM via examples | Not core; should remain opt-in |
+| **Browser support** | Playwright/Chromium inside the MicroVM via examples | Prefer host-side Playwright through daemon HTTP forwarding |
 | **Egress/secrets** | CubeEgress, domain allowlists, credential injection/audit | Future layer, after core exec/file/session path is proven |
 | **Host dependency** | Linux/KVM-style deployment, single-node or clustered | Linux Docker + overlayfs today |
 | **Novelty** | Fast/dense KVM microVM service with E2B compatibility | Shared overlay LayerStack with publish-time convergence |
@@ -59,7 +59,7 @@ That has a cost: the product is pulled toward E2B's mental model. The client API
 is a sandbox service API, not a deep agent-native filesystem/merge substrate.
 For CubeSandbox, that is a good trade. For EphemeralOS, it would blur the point.
 
-## Playwright is useful but not a reason to copy it
+## Browser automation belongs outside by default
 
 CubeSandbox's browser examples make sense when the browser must live inside the
 same isolated MicroVM as the workload. That gives clean state isolation and a
@@ -73,7 +73,14 @@ For EphemeralOS, default in-sandbox Playwright would mostly add burden:
 - more networking and forwarding cases;
 - less focus on fast shell/file/edit loops.
 
-Add it only when a real workflow requires sandbox-local browser state.
+GUI is for humans; agents need protocol surfaces. The cleaner model is: run the
+web app inside the sandbox, expose it through the daemon's HTTP forwarding
+surface, and run Playwright on the host. That keeps one browser/toolchain
+installation outside the sandbox and makes sandbox startup about the workload,
+not browser provisioning.
+
+Install Playwright in the sandbox only when a real workflow requires the browser
+state itself to be sandbox-local.
 
 ## What CubeSandbox genuinely wins at
 
@@ -89,7 +96,7 @@ Add it only when a real workflow requires sandbox-local browser state.
 - Do not chase E2B compatibility unless the goal becomes E2B migration.
 - Do not put the agent into the sandbox.
 - Do not add a multi-language SDK before the CLI protocol is enough.
-- Do not add browser automation as a default workload.
+- Do not add in-sandbox browser automation as a default workload.
 - Do not compete on microVM boot unless EphemeralOS becomes a sandbox provider
   instead of a collaboration substrate.
 

@@ -142,6 +142,7 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
         state: SandboxState::Ready,
         daemon,
         daemon_http: None,
+        shared_base: None,
     }
 }
 

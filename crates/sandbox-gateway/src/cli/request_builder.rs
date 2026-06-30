@@ -263,7 +263,18 @@ fn find_flag_arg<'a>(
     spec.args
         .iter()
         .find(|arg| arg.cli.as_ref().and_then(|cli| cli.flag.as_deref()) == Some(flag))
+        .or_else(|| legacy_flag_arg(spec, flag))
         .ok_or_else(|| build_error(format!("unknown flag for {}: {flag}", spec.name)))
+}
+
+fn legacy_flag_arg<'a>(
+    spec: &'a CliOperationSpecDocument,
+    flag: &str,
+) -> Option<&'a sandbox_protocol::ArgSpecDocument> {
+    if spec.name == "create_sandbox" && flag == "--workspace-root" {
+        return spec.args.iter().find(|arg| arg.name == "workspace_root");
+    }
+    None
 }
 
 fn find_cli_operation_spec<'a>(

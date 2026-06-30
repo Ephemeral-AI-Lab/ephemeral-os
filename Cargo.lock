@@ -1442,6 +1442,7 @@ version = "0.1.0"
 dependencies = [
  "nix 0.29.0",
  "sandbox-protocol",
+ "sandbox-runtime-layerstack",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
@@ -1482,6 +1483,7 @@ dependencies = [
  "sandbox-config",
  "sandbox-manager",
  "sandbox-protocol",
+ "sandbox-runtime-layerstack",
  "serde_json",
  "tar",
  "thiserror 2.0.18",

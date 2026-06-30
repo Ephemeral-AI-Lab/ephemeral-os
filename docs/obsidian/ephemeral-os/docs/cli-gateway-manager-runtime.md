@@ -217,7 +217,7 @@ Implementation paths:
 ```sh
 bin/start-sandbox-docker-gateway --rebuild-binary
 bin/sandbox-cli manager list_sandboxes
-bin/sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root "$PWD"
+bin/sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-bind-root "$PWD"
 bin/sandbox-cli runtime --sandbox-id ID exec_command "pwd"
 ```
 

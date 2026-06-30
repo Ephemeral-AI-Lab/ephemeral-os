@@ -183,15 +183,16 @@
       "bases:Create new base": false
     }
   },
-  "active": "7bfb5a3473fb43c0",
+  "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
-    "docs/comparision/cubesandbox.md",
     "docs/comparision/opensandbox.md",
+    "docs/comparision/landscape.md",
+    "daily-progress-tracker/2026-06-30.md",
+    "docs/comparision/cubesandbox.md",
     "implementation_plan/o1_shared_workspace_base.md",
     "implementation_plan/daemon-command-syscall-hardening.md",
     "implementation_plan",
     "docs/layerstack/o1_shared_workspace_base.md",
-    "daily-progress-tracker/2026-06-30.md",
     "docs/layerstack/create_sandbox.md",
     "daily-progress-tracker/2026-06-30.md.tmp.50599.dbcbb2853a63",
     "docs/layerstack/overlay_mount.md",
@@ -204,7 +205,6 @@
     "roadmap.md",
     "docs/sandbox-operation-note.md",
     "docs/sandbox-operation-note",
-    "docs/comparision/landscape.md",
     "docs/comparision/container-use.md",
     "docs/comparision/anthropic-managed-container.md",
     "docs/comparision/agentfs.md",

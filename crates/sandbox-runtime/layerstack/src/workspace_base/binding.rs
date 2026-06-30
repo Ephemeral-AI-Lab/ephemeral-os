@@ -3,8 +3,10 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::error::LayerStackError;
-use crate::fs::{read_manifest, write_atomic};
+use crate::fs::{layer_digest_path, read_manifest, resolve_layer_path, write_atomic};
 use crate::ACTIVE_MANIFEST_FILE;
+
+use super::layer::WORKSPACE_BASE_LAYER_ID;
 
 pub const WORKSPACE_BINDING_FILE: &str = "workspace.json";
 
@@ -42,7 +44,10 @@ pub fn require_workspace_binding(
     })
 }
 
-pub(super) fn validate_manifest_for_root(stack: &Path) -> Result<(), LayerStackError> {
+pub(super) fn validate_manifest_for_root(
+    stack: &Path,
+    binding: &WorkspaceBinding,
+) -> Result<(), LayerStackError> {
     let manifest_file = stack.join(ACTIVE_MANIFEST_FILE);
     if !manifest_file.exists() {
         return Err(LayerStackError::WorkspaceBinding(format!(
@@ -54,6 +59,39 @@ pub(super) fn validate_manifest_for_root(stack: &Path) -> Result<(), LayerStackE
     if manifest.version <= 0 || manifest.layers.is_empty() {
         return Err(LayerStackError::WorkspaceBinding(format!(
             "active manifest is empty for workspace binding: {}",
+            stack.join(ACTIVE_MANIFEST_FILE).display()
+        )));
+    }
+    let mut saw_base = false;
+    for layer in &manifest.layers {
+        let layer_path = resolve_layer_path(stack, &layer.path);
+        if !layer_path.exists() {
+            return Err(LayerStackError::WorkspaceBinding(format!(
+                "manifest layer path is missing for workspace binding: {}",
+                layer_path.display()
+            )));
+        }
+        if layer.layer_id == WORKSPACE_BASE_LAYER_ID {
+            saw_base = true;
+            let digest_path = layer_digest_path(stack, &layer.layer_id);
+            let digest = std::fs::read_to_string(&digest_path).map_err(|error| {
+                LayerStackError::WorkspaceBinding(format!(
+                    "base layer digest is missing for workspace binding: {}: {error}",
+                    digest_path.display()
+                ))
+            })?;
+            if digest.trim() != binding.base_root_hash {
+                return Err(LayerStackError::WorkspaceBinding(format!(
+                    "base layer digest does not match workspace binding: {} != {}",
+                    digest.trim(),
+                    binding.base_root_hash
+                )));
+            }
+        }
+    }
+    if !saw_base {
+        return Err(LayerStackError::WorkspaceBinding(format!(
+            "active manifest has no base layer for workspace binding: {}",
             stack.join(ACTIVE_MANIFEST_FILE).display()
         )));
     }

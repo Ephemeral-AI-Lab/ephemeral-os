@@ -2,16 +2,17 @@
 //! and recover existing containers by label after a gateway restart.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_config::configs::runtime::RuntimeConfig;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, SandboxDaemonEndpoint,
-    SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxRuntime, SandboxState,
+    SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SharedBaseMount,
 };
 
+use crate::archive::build_shared_base_seed_archive;
 use crate::engine::{ContainerSpec, DockerEngine, DockerError, VolumeSpec};
 use crate::labels;
 use crate::launch::daemon_launch_argv;
@@ -47,9 +48,10 @@ impl DockerSandboxRuntime {
             .map_err(runtime_failed)?;
         let mut records = Vec::with_capacity(recovered.len());
         for container in recovered {
-            let Ok(id) = SandboxId::new(container.sandbox_id) else {
+            let Ok(id) = SandboxId::new(container.sandbox_id.clone()) else {
                 continue;
             };
+            let shared_base = recovered_shared_base(&container);
             let endpoint = SandboxDaemonEndpoint::new(
                 ENDPOINT_HOST,
                 container.published_port,
@@ -64,6 +66,7 @@ impl DockerSandboxRuntime {
                     ENDPOINT_HOST,
                     container.published_http_port,
                 )),
+                shared_base,
             });
         }
         Ok(records)
@@ -76,6 +79,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
         request: &CreateSandboxRequest,
     ) -> Result<CreateSandboxResult, ManagerError> {
         let config = self.engine.config();
+        validate_direct_bind_source(request)?;
         let name = format!("eos-{}", uuid::Uuid::new_v4());
         let id = SandboxId::new(name.clone()).map_err(|error| ManagerError::RuntimeFailed {
             message: format!("generated container name is invalid: {error}"),
@@ -86,8 +90,14 @@ impl SandboxRuntime for DockerSandboxRuntime {
             request.workspace_root.clone(),
             SandboxState::Creating,
         );
-        let labels = build_labels(config, &id, &auth_token, &request.workspace_root);
-        let workspace_scratch_root = workspace_scratch_root(config)?;
+        let labels = build_labels(
+            config,
+            &id,
+            &auth_token,
+            &request.workspace_root,
+            request.shared_base.as_ref(),
+        );
+        let workspace_paths = runtime_workspace_paths(config)?;
         let workspace_scratch_volume = workspace_scratch_volume_name(&id);
         let cmd = daemon_launch_argv(config, &record, &auth_token);
         let spec = ContainerSpec {
@@ -95,15 +105,11 @@ impl SandboxRuntime for DockerSandboxRuntime {
             image: resolve_image(config, &request.image),
             cmd,
             env: container_env(config),
-            labels: labels.clone(),
-            binds: vec![format!(
-                "{}:{}:ro",
-                request.workspace_root.display(),
-                config.container_workspace_root.display()
-            )],
+            labels,
+            binds: container_binds(config, request),
             volumes: vec![VolumeSpec {
-                name: workspace_scratch_volume,
-                target: workspace_scratch_root.to_string_lossy().into_owned(),
+                name: workspace_scratch_volume.clone(),
+                target: workspace_paths.scratch_root.to_string_lossy().into_owned(),
                 labels: build_volume_labels(config, &id),
             }],
             daemon_port: config.daemon_port,
@@ -114,6 +120,34 @@ impl SandboxRuntime for DockerSandboxRuntime {
             nano_cpus: config.nano_cpus,
         };
         self.engine.create_container(spec).map_err(runtime_failed)?;
+        if let Some(shared_base) = &request.shared_base {
+            let archive = build_shared_base_seed_archive(
+                &workspace_paths.layer_stack_root,
+                &config.container_workspace_root,
+                &shared_base.root_hash,
+            )
+            .map_err(|error| ManagerError::RuntimeFailed {
+                message: format!("failed to build shared base seed archive: {error}"),
+            });
+            match archive.and_then(|archive| {
+                self.engine
+                    .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
+                    .map_err(runtime_failed)
+            }) {
+                Ok(()) => {}
+                Err(error) => {
+                    let _ = self
+                        .engine
+                        .remove_container(id.as_str().to_owned())
+                        .map_err(runtime_failed);
+                    let _ = self
+                        .engine
+                        .remove_volume(workspace_scratch_volume)
+                        .map_err(runtime_failed);
+                    return Err(error);
+                }
+            }
+        }
         Ok(CreateSandboxResult { id })
     }
 
@@ -127,7 +161,14 @@ impl SandboxRuntime for DockerSandboxRuntime {
     }
 }
 
-fn workspace_scratch_root(config: &DockerRuntimeConfig) -> Result<PathBuf, ManagerError> {
+struct RuntimeWorkspacePaths {
+    layer_stack_root: PathBuf,
+    scratch_root: PathBuf,
+}
+
+fn runtime_workspace_paths(
+    config: &DockerRuntimeConfig,
+) -> Result<RuntimeWorkspacePaths, ManagerError> {
     let document = sandbox_config::load_path(&config.daemon_config_yaml_path)
         .map_err(runtime_config_failed)?;
     let runtime = document
@@ -138,7 +179,10 @@ fn workspace_scratch_root(config: &DockerRuntimeConfig) -> Result<PathBuf, Manag
         .map_err(|error| ManagerError::RuntimeFailed {
             message: format!("invalid daemon runtime config: {error}"),
         })?;
-    Ok(runtime.workspace.scratch_root)
+    Ok(RuntimeWorkspacePaths {
+        layer_stack_root: runtime.workspace.layer_stack_root,
+        scratch_root: runtime.workspace.scratch_root,
+    })
 }
 
 fn workspace_scratch_volume_name(id: &SandboxId) -> String {
@@ -164,17 +208,49 @@ fn resolve_image(config: &DockerRuntimeConfig, requested: &str) -> String {
     }
 }
 
+fn container_binds(config: &DockerRuntimeConfig, request: &CreateSandboxRequest) -> Vec<String> {
+    if let Some(shared_base) = &request.shared_base {
+        return vec![format!(
+            "{}:{}:{}",
+            shared_base.source.display(),
+            shared_base.target.display(),
+            if shared_base.readonly { "ro" } else { "rw" }
+        )];
+    }
+    vec![format!(
+        "{}:{}:ro",
+        request.workspace_root.display(),
+        config.container_workspace_root.display()
+    )]
+}
+
+fn validate_direct_bind_source(request: &CreateSandboxRequest) -> Result<(), ManagerError> {
+    if request.shared_base.is_some() {
+        return Ok(());
+    }
+    match std::fs::metadata(&request.workspace_root) {
+        Ok(metadata) if metadata.is_dir() => Ok(()),
+        _ => Err(ManagerError::InvalidWorkspaceRoot {
+            value: format!(
+                "{} (must be an existing host directory)",
+                request.workspace_root.display()
+            ),
+        }),
+    }
+}
+
 fn build_labels(
     config: &DockerRuntimeConfig,
     id: &SandboxId,
     auth_token: &str,
-    host_workspace_root: &std::path::Path,
+    host_workspace_root: &Path,
+    shared_base: Option<&SharedBaseMount>,
 ) -> HashMap<String, String> {
     let created_at = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs())
         .unwrap_or_default();
-    HashMap::from([
+    let mut label_map = HashMap::from([
         (labels::SANDBOX_ID.to_owned(), id.as_str().to_owned()),
         (
             labels::GATEWAY_INSTANCE_ID.to_owned(),
@@ -201,7 +277,35 @@ fn build_labels(
             labels::CLEANUP_POLICY.to_owned(),
             labels::CLEANUP_POLICY_REMOVE_ON_DESTROY.to_owned(),
         ),
-    ])
+    ]);
+    if let Some(shared_base) = shared_base {
+        label_map.insert(
+            labels::SHARED_BASE_SOURCE.to_owned(),
+            shared_base.source.to_string_lossy().into_owned(),
+        );
+        label_map.insert(
+            labels::SHARED_BASE_TARGET.to_owned(),
+            shared_base.target.to_string_lossy().into_owned(),
+        );
+        label_map.insert(
+            labels::SHARED_BASE_ROOT_HASH.to_owned(),
+            shared_base.root_hash.clone(),
+        );
+        label_map.insert(
+            labels::SHARED_BASE_READONLY.to_owned(),
+            shared_base.readonly.to_string(),
+        );
+    }
+    label_map
+}
+
+fn recovered_shared_base(container: &crate::engine::RecoveredContainer) -> Option<SharedBaseMount> {
+    Some(SharedBaseMount {
+        source: PathBuf::from(container.shared_base_source.clone()?),
+        target: PathBuf::from(container.shared_base_target.clone()?),
+        root_hash: container.shared_base_root_hash.clone()?,
+        readonly: container.shared_base_readonly?,
+    })
 }
 
 fn build_volume_labels(config: &DockerRuntimeConfig, id: &SandboxId) -> HashMap<String, String> {
@@ -266,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn workspace_scratch_root_reads_daemon_runtime_config() {
+    fn runtime_workspace_paths_read_daemon_runtime_config() {
         let path = temp_config_path();
         fs::write(
             &path,
@@ -288,20 +392,44 @@ runtime:
             ..DockerRuntimeConfig::default()
         };
 
-        let scratch_root = workspace_scratch_root(&config).expect("scratch root loads");
+        let paths = runtime_workspace_paths(&config).expect("runtime paths load");
 
-        assert_eq!(scratch_root, PathBuf::from("/custom/workspace"));
+        assert_eq!(paths.layer_stack_root, PathBuf::from("/eos/layer-stack"));
+        assert_eq!(paths.scratch_root, PathBuf::from("/custom/workspace"));
         let _ = fs::remove_file(path);
     }
 
+    #[test]
+    fn create_sandbox_rejects_missing_direct_bind_source() {
+        let runtime = DockerSandboxRuntime::new(DockerRuntimeConfig::default());
+        let workspace_root =
+            std::env::temp_dir().join(format!("eos-missing-workspace-{}", unique_test_suffix()));
+        let error = runtime
+            .create_sandbox(&CreateSandboxRequest {
+                image: "ubuntu:24.04".to_owned(),
+                workspace_root,
+                shared_base: None,
+            })
+            .expect_err("missing host bind source rejected before docker");
+
+        assert!(matches!(error, ManagerError::InvalidWorkspaceRoot { .. }));
+        assert!(error
+            .to_string()
+            .contains("must be an existing host directory"));
+    }
+
     fn temp_config_path() -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "eos-docker-runtime-config-{}.yml",
+            unique_test_suffix()
+        ))
+    }
+
+    fn unique_test_suffix() -> String {
         let nanos = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("time after epoch")
             .as_nanos();
-        std::env::temp_dir().join(format!(
-            "eos-docker-runtime-config-{nanos}-{}.yml",
-            std::process::id()
-        ))
+        format!("{nanos}-{}", std::process::id())
     }
 }

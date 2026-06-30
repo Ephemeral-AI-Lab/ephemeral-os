@@ -1,8 +1,10 @@
 use std::io::ErrorKind;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::error::LayerStackError;
-use crate::fs::{read_manifest, remove_path, write_layer_digest, write_manifest};
+use crate::fs::{
+    fsync_dir, next_unique, read_manifest, remove_path, write_layer_digest, write_manifest,
+};
 use crate::model::{Manifest, MANIFEST_SCHEMA_VERSION};
 use crate::stack::LayerStack;
 use crate::{ACTIVE_MANIFEST_FILE, LAYERS_DIR, STAGING_DIR};
@@ -11,7 +13,16 @@ use super::binding::{
     read_workspace_binding, validate_manifest_for_root, validate_workspace_binding_paths,
     write_workspace_binding_at, WorkspaceBinding,
 };
-use super::layer::build_base_layer;
+use super::layer::{build_base_layer, build_shared_base_layer, SHARED_BASE_DIR};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SharedWorkspaceBase {
+    pub root_hash: String,
+    pub cache_entry_root: PathBuf,
+    pub base_mount_source: PathBuf,
+    pub bytes: u64,
+    pub built: bool,
+}
 
 pub fn ensure_workspace_base(
     layer_stack_root: impl AsRef<Path>,
@@ -20,7 +31,6 @@ pub fn ensure_workspace_base(
     let stack = layer_stack_root.as_ref();
     let workspace = workspace_root.as_ref();
     if let Some(binding) = read_workspace_binding(stack)? {
-        validate_manifest_for_root(stack)?;
         if Path::new(&binding.workspace_root) != workspace {
             return Err(LayerStackError::WorkspaceBinding(format!(
                 "workspace binding points at a different workspace: {} != {}",
@@ -28,6 +38,14 @@ pub fn ensure_workspace_base(
                 workspace.display()
             )));
         }
+        if Path::new(&binding.layer_stack_root) != stack {
+            return Err(LayerStackError::WorkspaceBinding(format!(
+                "workspace binding points at a different layer stack: {} != {}",
+                binding.layer_stack_root,
+                stack.display()
+            )));
+        }
+        validate_manifest_for_root(stack, &binding)?;
         return Ok((binding, false));
     }
     let built = build_workspace_base(stack, workspace, false)?;
@@ -80,20 +98,100 @@ fn build_workspace_base_from_snapshot(
     let _stack_guard = LayerStack::open(stack.to_path_buf())?;
     reject_existing_base_state(stack)?;
 
-    let (layer_ref, root_hash) = build_base_layer(stack, snapshot)?;
-    write_layer_digest(stack, &layer_ref.layer_id, &root_hash)?;
+    let base_layer = build_base_layer(stack, snapshot)?;
+    write_layer_digest(stack, &base_layer.layer_ref.layer_id, &base_layer.root_hash)?;
 
-    let manifest = Manifest::new(1, vec![layer_ref], MANIFEST_SCHEMA_VERSION)
+    let manifest = Manifest::new(1, vec![base_layer.layer_ref], MANIFEST_SCHEMA_VERSION)
         .map_err(LayerStackError::from)?;
     write_manifest(stack.join(ACTIVE_MANIFEST_FILE), &manifest)?;
 
     let binding = WorkspaceBinding {
         workspace_root: binding_workspace.to_string_lossy().into_owned(),
         layer_stack_root: binding_stack.to_string_lossy().into_owned(),
-        base_root_hash: root_hash,
+        base_root_hash: base_layer.root_hash,
     };
     write_workspace_binding_at(stack, &binding)?;
     Ok(binding)
+}
+
+pub fn build_shared_workspace_base(
+    cache_root: impl AsRef<Path>,
+    workspace_root: impl AsRef<Path>,
+) -> Result<SharedWorkspaceBase, LayerStackError> {
+    let cache = cache_root.as_ref();
+    let workspace = workspace_root.as_ref();
+    if !cache.is_absolute() {
+        return Err(LayerStackError::WorkspaceBinding(format!(
+            "shared base cache root must be absolute: {}",
+            cache.display()
+        )));
+    }
+    if !workspace.is_dir() {
+        return Err(LayerStackError::WorkspaceBinding(format!(
+            "workspace_root does not exist: {}",
+            workspace.display()
+        )));
+    }
+    std::fs::create_dir_all(cache)?;
+    let tmp = cache.join(format!(
+        ".building-{}-{}",
+        std::process::id(),
+        next_unique()
+    ));
+    if tmp.exists() {
+        remove_path(&tmp)?;
+    }
+    std::fs::create_dir_all(&tmp)?;
+    let result = (|| {
+        let base_layer = build_shared_base_layer(&tmp, workspace)?;
+        let root_hash = base_layer.root_hash;
+        let final_root = cache.join(&root_hash);
+        let final_base = final_root.join(SHARED_BASE_DIR);
+        if final_base.join(&base_layer.layer_ref.layer_id).is_dir() {
+            remove_path(&tmp)?;
+            return Ok(SharedWorkspaceBase {
+                root_hash,
+                cache_entry_root: final_root,
+                base_mount_source: final_base,
+                bytes: 0,
+                built: false,
+            });
+        }
+        let _ = std::fs::remove_dir(tmp.join(STAGING_DIR));
+        match std::fs::rename(&tmp, &final_root) {
+            Ok(()) => {
+                fsync_dir(cache)?;
+                Ok(SharedWorkspaceBase {
+                    root_hash,
+                    cache_entry_root: final_root.clone(),
+                    base_mount_source: final_root.join(SHARED_BASE_DIR),
+                    bytes: base_layer.bytes,
+                    built: true,
+                })
+            }
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {
+                remove_path(&tmp)?;
+                if !final_base.join(&base_layer.layer_ref.layer_id).is_dir() {
+                    return Err(LayerStackError::Storage(format!(
+                        "shared base cache entry exists but is invalid: {}",
+                        final_root.display()
+                    )));
+                }
+                Ok(SharedWorkspaceBase {
+                    root_hash,
+                    cache_entry_root: final_root,
+                    base_mount_source: final_base,
+                    bytes: 0,
+                    built: false,
+                })
+            }
+            Err(err) => Err(err.into()),
+        }
+    })();
+    if result.is_err() {
+        let _ = remove_path(&tmp);
+    }
+    result
 }
 
 fn reject_existing_base_state(stack: &Path) -> Result<(), LayerStackError> {

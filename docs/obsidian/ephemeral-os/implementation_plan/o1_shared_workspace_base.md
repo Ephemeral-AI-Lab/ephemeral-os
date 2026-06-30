@@ -180,7 +180,7 @@ Proposed CLI:
 ```sh
 bin/sandbox-cli --progress manager create_sandbox \
   --image ubuntu:24.04 \
-  --workspace-root /path/to/workspace \
+  --workspace-bind-root /path/to/workspace \
   --count 5
 ```
 
@@ -245,7 +245,7 @@ for i in 1 2 3 4 5; do
   /usr/bin/time -p \
     bin/sandbox-cli --progress manager create_sandbox \
       --image ubuntu:24.04 \
-      --workspace-root "$workspace"
+      --workspace-bind-root "$workspace"
 done
 
 docker ps -as --filter label=eos.sandbox_id \
@@ -279,7 +279,7 @@ workspace=/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-agent
 /usr/bin/time -p \
   bin/sandbox-cli --progress manager create_sandbox \
     --image ubuntu:24.04 \
-    --workspace-root "$workspace" \
+    --workspace-bind-root "$workspace" \
     --count 5 \
     > /tmp/eos-o1-create.json
 

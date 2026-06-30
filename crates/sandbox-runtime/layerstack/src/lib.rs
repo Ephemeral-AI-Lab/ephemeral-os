@@ -25,17 +25,18 @@ pub use stack::publish::model::{
 };
 pub use stack::{LayerStack, Lease, MergedView};
 pub use workspace_base::{
-    build_workspace_base, ensure_workspace_base, read_workspace_binding, require_workspace_binding,
-    WorkspaceBinding, WORKSPACE_BINDING_FILE,
+    build_shared_workspace_base, build_workspace_base, ensure_workspace_base,
+    read_workspace_binding, require_workspace_binding, SharedWorkspaceBase, WorkspaceBinding,
+    SHARED_BASE_DIR, WORKSPACE_BASE_LAYER_ID, WORKSPACE_BINDING_FILE,
 };
 
-pub(crate) const LAYERS_DIR: &str = "layers";
+pub const LAYERS_DIR: &str = "layers";
 
-pub(crate) const STAGING_DIR: &str = "staging";
+pub const STAGING_DIR: &str = "staging";
 
 pub const ACTIVE_MANIFEST_FILE: &str = "manifest.json";
 
-pub(crate) const LAYER_METADATA_DIR: &str = ".layer-metadata";
+pub const LAYER_METADATA_DIR: &str = ".layer-metadata";
 
 /// Reset process-wide layerstack registries for isolated tests.
 ///

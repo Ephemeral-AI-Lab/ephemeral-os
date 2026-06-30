@@ -21,18 +21,18 @@ Create a host-side sandbox record, create the runtime sandbox, and start its dae
 | Argument | Flag | Kind | Required | Default | Description |
 |---|---|---|---|---|---|
 | `image` | `--image` | string | yes | — | Container image used to create the sandbox. |
-| `workspace_root` | `--workspace-root` | path | yes | — | Absolute workspace root mounted inside this sandbox. |
+| `workspace_root` | `--workspace-bind-root` | path | yes | — | Absolute host workspace directory bind-mounted into this sandbox. |
 
 **Usage**
 
 ```
-sandbox-cli manager create_sandbox --image IMAGE --workspace-root PATH
+sandbox-cli manager create_sandbox --image IMAGE --workspace-bind-root PATH
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root /testbed
+sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed
 ```
 
 ## Expected output
