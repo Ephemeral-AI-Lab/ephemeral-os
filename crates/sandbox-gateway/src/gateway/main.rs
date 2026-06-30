@@ -11,7 +11,7 @@ use sandbox_gateway::{
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxManagerRouter, SandboxRecord,
-    SandboxRuntime, SandboxStore, TcpSandboxDaemonClient,
+    SandboxRuntime, SandboxStore, StartedDaemon, TcpSandboxDaemonClient,
 };
 use sandbox_provider_docker::{DockerSandboxDaemonInstaller, DockerSandboxRuntime};
 use tokio_util::sync::CancellationToken;
@@ -212,7 +212,7 @@ impl SandboxDaemonInstaller for UnconfiguredDaemonInstaller {
         })
     }
 
-    fn start_daemon(&self, _record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
+    fn start_daemon(&self, _record: &SandboxRecord) -> Result<StartedDaemon, ManagerError> {
         Err(ManagerError::DaemonInstallFailed {
             message: "sandbox daemon installer is not configured".to_owned(),
         })

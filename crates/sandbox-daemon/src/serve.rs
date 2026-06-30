@@ -40,6 +40,8 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         pid_path: config.pid_path,
         tcp_host: config.tcp_host,
         tcp_port: config.tcp_port,
+        http_host: config.http_host,
+        http_port: config.http_port,
         auth_token: config.auth_token,
         sandbox_id: config.sandbox_id,
         cgroup_root: cgroup_root.clone(),
@@ -131,6 +133,8 @@ pub(crate) struct DaemonCliConfig {
     pid_path: PathBuf,
     tcp_host: Option<String>,
     tcp_port: Option<u16>,
+    http_host: Option<String>,
+    http_port: Option<u16>,
     pub(crate) auth_token: Option<String>,
     pub(crate) sandbox_id: Option<String>,
     spawn: bool,
@@ -148,6 +152,8 @@ impl DaemonCliConfig {
         let mut pid_path = server_defaults.pid_path.clone();
         let mut tcp_host = None;
         let mut tcp_port = None;
+        let mut http_host = None;
+        let mut http_port = None;
         let mut auth_token = None;
         let mut sandbox_id = None;
         let mut spawn = false;
@@ -171,12 +177,20 @@ impl DaemonCliConfig {
                             .context("--tcp-port must be an integer 1..65535")?,
                     );
                 }
+                "--http-host" => http_host = Some(required_arg(&mut args, "--http-host")?),
+                "--http-port" => {
+                    http_port = Some(
+                        required_arg(&mut args, "--http-port")?
+                            .parse::<u16>()
+                            .context("--http-port must be an integer 1..65535")?,
+                    );
+                }
                 "--auth-token" => auth_token = Some(required_arg(&mut args, "--auth-token")?),
                 "--sandbox-id" => sandbox_id = Some(required_arg(&mut args, "--sandbox-id")?),
                 "--spawn" => spawn = true,
                 "--help" | "-h" => {
                     println!(
-                        "usage: serve [--spawn] --config-yaml PATH --workspace-root PATH [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN] [--sandbox-id ID]"
+                        "usage: serve [--spawn] --config-yaml PATH --workspace-root PATH [--socket PATH] [--pid-file PATH] [--tcp-host HOST --tcp-port PORT --auth-token TOKEN] [--http-host HOST --http-port PORT] [--sandbox-id ID]"
                     );
                     std::process::exit(0);
                 }
@@ -207,6 +221,8 @@ impl DaemonCliConfig {
             pid_path,
             tcp_host,
             tcp_port,
+            http_host,
+            http_port,
             auth_token: resolved_auth_token,
             sandbox_id: non_empty_sandbox_id(sandbox_id)?,
             spawn,
@@ -231,6 +247,14 @@ impl DaemonCliConfig {
         }
         if let Some(port) = self.tcp_port {
             args.push("--tcp-port".to_owned());
+            args.push(port.to_string());
+        }
+        if let Some(host) = &self.http_host {
+            args.push("--http-host".to_owned());
+            args.push(host.clone());
+        }
+        if let Some(port) = self.http_port {
+            args.push("--http-port".to_owned());
             args.push(port.to_string());
         }
         if let Some(sandbox_id) = &self.sandbox_id {

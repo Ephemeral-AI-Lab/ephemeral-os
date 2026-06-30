@@ -1399,6 +1399,12 @@ name = "sandbox-daemon"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
+ "futures-util",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "sandbox-config",
  "sandbox-observability",
  "sandbox-protocol",
@@ -1409,6 +1415,7 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
+ "uuid",
 ]
 
 [[package]]

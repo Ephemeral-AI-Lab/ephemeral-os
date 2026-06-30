@@ -8,8 +8,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_config::configs::runtime::RuntimeConfig;
 use sandbox_manager::{
-    CreateSandboxRequest, CreateSandboxResult, ManagerError, SandboxDaemonEndpoint, SandboxId,
-    SandboxRecord, SandboxRuntime, SandboxState,
+    CreateSandboxRequest, CreateSandboxResult, ManagerError, SandboxDaemonEndpoint,
+    SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxRuntime, SandboxState,
 };
 
 use crate::engine::{ContainerSpec, DockerEngine, DockerError, VolumeSpec};
@@ -39,7 +39,11 @@ impl DockerSandboxRuntime {
         let config = self.engine.config();
         let recovered = self
             .engine
-            .list_recoverable(config.gateway_instance_id.clone(), config.daemon_port)
+            .list_recoverable(
+                config.gateway_instance_id.clone(),
+                config.daemon_port,
+                config.daemon_http_port,
+            )
             .map_err(runtime_failed)?;
         let mut records = Vec::with_capacity(recovered.len());
         for container in recovered {
@@ -56,6 +60,10 @@ impl DockerSandboxRuntime {
                 workspace_root: PathBuf::from(container.host_workspace_root),
                 state: SandboxState::Ready,
                 daemon: Some(endpoint),
+                daemon_http: Some(SandboxHttpEndpoint::new(
+                    ENDPOINT_HOST,
+                    container.published_http_port,
+                )),
             });
         }
         Ok(records)
@@ -99,6 +107,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
                 labels: build_volume_labels(config, &id),
             }],
             daemon_port: config.daemon_port,
+            daemon_http_port: config.daemon_http_port,
             privileged: config.privileged,
             platform: config.platform.clone(),
             memory_bytes: config.memory_bytes,

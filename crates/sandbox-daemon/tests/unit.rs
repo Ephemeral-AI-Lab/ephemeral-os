@@ -10,6 +10,13 @@ pub(crate) mod cgroup_setup;
 pub(crate) mod observability;
 #[allow(
     dead_code,
+    unused_imports,
+    reason = "test harness path-includes rpc modules and exercises selected private helpers"
+)]
+#[path = "../src/rpc/mod.rs"]
+pub(crate) mod rpc;
+#[allow(
+    dead_code,
     reason = "test harness path-includes private CLI modules and exercises selected helpers"
 )]
 #[path = "../src/runner/mod.rs"]
@@ -20,21 +27,20 @@ mod runner_cli;
 )]
 #[path = "../src/serve.rs"]
 mod serve_cli;
+pub(crate) use rpc::MAX_REQUEST_BYTES;
 #[allow(
     dead_code,
-    unused_imports,
-    reason = "test harness path-includes server modules and exercises selected private helpers"
+    reason = "rpc lifecycle references crate::http; the harness includes it to resolve that path"
 )]
-#[path = "../src/server/mod.rs"]
-pub(crate) mod server;
-pub(crate) use server::MAX_REQUEST_BYTES;
+#[path = "../src/http/mod.rs"]
+pub(crate) mod http;
 
 #[path = "unit/dependency_guard.rs"]
 mod dependency_guard_tests;
 
 mod connection_tests {
-    pub(crate) use crate::server::connection::read_request_line_with_timeout;
-    pub(crate) use crate::server::lifecycle::drain_connection_tasks;
+    pub(crate) use crate::rpc::connection::read_request_line_with_timeout;
+    pub(crate) use crate::rpc::lifecycle::drain_connection_tasks;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/connection.rs"
@@ -42,10 +48,10 @@ mod connection_tests {
 }
 
 mod dispatch_tests {
-    pub(crate) use crate::server::dispatch::{
+    pub(crate) use crate::rpc::dispatch::{
         decode_request, sandbox_daemon_ready_response, strip_tcp_auth, validate_daemon_scope,
     };
-    pub(crate) use crate::server::SandboxDaemonError;
+    pub(crate) use crate::rpc::SandboxDaemonError;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/dispatch.rs"

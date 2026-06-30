@@ -12,7 +12,17 @@ use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
 #[cfg(unix)]
 use nix::unistd::Pid;
 
-use crate::{ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxRecord};
+use crate::{
+    ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxRecord,
+};
+
+/// The endpoints a freshly started daemon publishes: the authenticated JSON-line
+/// RPC endpoint, and the optional unauthenticated HTTP surface beside it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StartedDaemon {
+    pub daemon: SandboxDaemonEndpoint,
+    pub daemon_http: Option<SandboxHttpEndpoint>,
+}
 
 const DAEMON_READY_TIMEOUT: Duration = Duration::from_secs(2);
 const DAEMON_READY_POLL: Duration = Duration::from_millis(20);
@@ -23,7 +33,7 @@ const DAEMON_TCP_HOST: &str = "127.0.0.1";
 pub trait SandboxDaemonInstaller: Send + Sync {
     fn install_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
 
-    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError>;
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<StartedDaemon, ManagerError>;
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
 
@@ -104,7 +114,7 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
         Ok(())
     }
 
-    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<StartedDaemon, ManagerError> {
         let spec = self.launch_spec(record)?;
         let port = reserve_local_port()?;
         let auth_token = uuid::Uuid::new_v4().to_string();
@@ -132,11 +142,10 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
                 record.id
             )));
         }
-        Ok(SandboxDaemonEndpoint::new(
-            DAEMON_TCP_HOST,
-            port,
-            auth_token,
-        ))
+        Ok(StartedDaemon {
+            daemon: SandboxDaemonEndpoint::new(DAEMON_TCP_HOST, port, auth_token),
+            daemon_http: None,
+        })
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {

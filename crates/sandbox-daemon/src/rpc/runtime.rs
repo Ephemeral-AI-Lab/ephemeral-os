@@ -20,6 +20,11 @@ pub struct ServerConfig {
     pub tcp_host: Option<String>,
     /// Optional loopback TCP port; both host+port enable the TCP listener.
     pub tcp_port: Option<u16>,
+    /// Optional HTTP listener host; both host+port enable the daemon HTTP
+    /// surface, a transport separate from the JSON-line RPC listener.
+    pub http_host: Option<String>,
+    /// Optional HTTP listener port.
+    pub http_port: Option<u16>,
     /// TCP-only auth token; popped from each TCP request before dispatch.
     pub auth_token: Option<String>,
     /// Dynamic sandbox identity supplied by the process manager or serve CLI.
@@ -31,6 +36,18 @@ pub struct ServerConfig {
     /// Observability emit gate + rotation policy (`observability` config
     /// section); the emit gate maps into the leaf `ObserverConfig`.
     pub observability: ObservabilityConfig,
+}
+
+impl ServerConfig {
+    /// The HTTP listener bind `(host, port)`, present only when both the host and
+    /// port are configured.
+    #[must_use]
+    pub(crate) fn http_bind(&self) -> Option<(&str, u16)> {
+        match (&self.http_host, self.http_port) {
+            (Some(host), Some(port)) => Some((host.as_str(), port)),
+            _ => None,
+        }
+    }
 }
 
 /// The running sandbox daemon: request dispatch state and shutdown token.

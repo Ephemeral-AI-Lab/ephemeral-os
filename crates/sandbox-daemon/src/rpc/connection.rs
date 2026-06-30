@@ -5,7 +5,7 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWrite
 use tokio::time::timeout;
 
 use super::{error_response, SandboxDaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
-use crate::server::error::SandboxDaemonError;
+use crate::rpc::error::SandboxDaemonError;
 
 impl SandboxDaemonServer {
     /// Handle one accepted connection: read one capped, timed request line, pop

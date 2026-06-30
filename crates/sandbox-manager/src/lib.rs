@@ -11,9 +11,11 @@ mod runtime;
 mod store;
 
 pub use daemon_client::{SandboxDaemonClient, TcpSandboxDaemonClient};
-pub use daemon_install::{LocalSandboxDaemonInstaller, SandboxDaemonInstaller};
+pub use daemon_install::{LocalSandboxDaemonInstaller, SandboxDaemonInstaller, StartedDaemon};
 pub use error::ManagerError;
-pub use model::{SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
+pub use model::{
+    SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxState,
+};
 pub use operation::{
     cli_operation_catalog, cli_operation_families, cli_operation_specs, dispatch_operation,
     dispatch_operation_with_progress, ManagerServices,

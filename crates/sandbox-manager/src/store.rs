@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard};
 
-use crate::{ManagerError, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState};
+use crate::{
+    ManagerError, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord,
+    SandboxState,
+};
 
 #[derive(Debug, Default)]
 pub struct SandboxStore {
@@ -104,16 +107,18 @@ impl SandboxStore {
         Ok(record.clone())
     }
 
-    pub fn update_endpoint(
+    pub fn update_endpoints(
         &self,
         id: &SandboxId,
-        endpoint: Option<SandboxDaemonEndpoint>,
+        daemon: Option<SandboxDaemonEndpoint>,
+        daemon_http: Option<SandboxHttpEndpoint>,
     ) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         let record = records
             .get_mut(id)
             .ok_or_else(|| ManagerError::MissingSandbox { id: id.clone() })?;
-        record.daemon = endpoint;
+        record.daemon = daemon;
+        record.daemon_http = daemon_http;
         Ok(record.clone())
     }
 

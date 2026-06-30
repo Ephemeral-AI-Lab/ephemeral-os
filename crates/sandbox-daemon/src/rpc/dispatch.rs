@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use super::SandboxDaemonServer;
-use crate::server::error::SandboxDaemonError;
+use crate::rpc::error::SandboxDaemonError;
 use sandbox_observability::record::names;
 use sandbox_observability::{SpanStatus, TraceContext};
 use sandbox_protocol::{decode_request_value, error_kind, Request, DAEMON_AUTH_FIELD};

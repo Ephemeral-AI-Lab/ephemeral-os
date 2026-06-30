@@ -9,7 +9,7 @@ use sandbox_gateway::{GatewayConfig, SandboxGatewayServer};
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
-    SandboxRuntime, SandboxState, SandboxStore,
+    SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
 use sandbox_protocol::{error_kind, CliOperationScope, Request, Response, MAX_REQUEST_BYTES};
 use serde_json::{json, Value};
@@ -45,12 +45,15 @@ impl SandboxDaemonInstaller for FakeInstaller {
         Ok(())
     }
 
-    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
-        Ok(SandboxDaemonEndpoint::new(
-            "127.0.0.1",
-            7000,
-            format!("token-{}", record.id.as_str()),
-        ))
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<StartedDaemon, ManagerError> {
+        Ok(StartedDaemon {
+            daemon: SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                format!("token-{}", record.id.as_str()),
+            ),
+            daemon_http: None,
+        })
     }
 
     fn stop_daemon(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -138,6 +141,7 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
         workspace_root: PathBuf::from("/testbed"),
         state: SandboxState::Ready,
         daemon,
+        daemon_http: None,
     }
 }
 
@@ -279,9 +283,7 @@ async fn gateway_streams_create_sandbox_progress_before_final_response() -> Test
     assert!(responses
         .iter()
         .any(|response| response.contains("creating runtime sandbox for /testbed")));
-    let final_response = serde_json::from_str::<Value>(
-        responses.last().expect("final response"),
-    )?;
+    let final_response = serde_json::from_str::<Value>(responses.last().expect("final response"))?;
     assert_eq!(final_response["id"], "container-1");
     assert_eq!(final_response["workspace_root"], "/testbed");
     assert_eq!(final_response["state"], "ready");

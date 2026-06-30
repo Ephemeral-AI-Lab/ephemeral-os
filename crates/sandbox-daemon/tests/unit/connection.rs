@@ -1,7 +1,7 @@
 use tokio::io::AsyncReadExt as _;
 use tokio_util::task::TaskTracker;
 
-use crate::server::SandboxDaemonError;
+use crate::rpc::SandboxDaemonError;
 use crate::MAX_REQUEST_BYTES;
 
 #[tokio::test]

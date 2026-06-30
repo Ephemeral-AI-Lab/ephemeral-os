@@ -9,7 +9,8 @@ use std::time::{Duration, Instant};
 
 use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_manager::{
-    ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxRecord,
+    ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxHttpEndpoint,
+    SandboxRecord, StartedDaemon,
 };
 
 use crate::archive::build_install_archive;
@@ -67,11 +68,13 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
             .map_err(install_error)
     }
 
-    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
-        let daemon_port = self.engine.config().daemon_port;
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<StartedDaemon, ManagerError> {
+        let config = self.engine.config();
+        let daemon_port = config.daemon_port;
+        let daemon_http_port = config.daemon_http_port;
         let started = self
             .engine
-            .start_and_resolve(record.id.as_str().to_owned(), daemon_port)
+            .start_and_resolve(record.id.as_str().to_owned(), daemon_port, daemon_http_port)
             .map_err(|error| {
                 let context = self
                     .engine
@@ -81,11 +84,10 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
                     record.id
                 ))
             })?;
-        Ok(SandboxDaemonEndpoint::new(
-            "127.0.0.1",
-            started.port,
-            started.auth_token,
-        ))
+        Ok(StartedDaemon {
+            daemon: SandboxDaemonEndpoint::new("127.0.0.1", started.port, started.auth_token),
+            daemon_http: Some(SandboxHttpEndpoint::new("127.0.0.1", started.http_port)),
+        })
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {

@@ -12,7 +12,10 @@ use crate::operation::management::{
     CreateSandboxInput, SnapshotOptions,
 };
 use crate::operation::ManagerServices;
-use crate::{ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxId, SandboxRecord};
+use crate::{
+    ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId,
+    SandboxRecord,
+};
 
 pub(crate) const MANAGEMENT_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "management",
@@ -296,10 +299,18 @@ fn record_value(record: SandboxRecord) -> Value {
         "workspace_root": record.workspace_root.to_string_lossy(),
         "state": record.state.as_str(),
         "daemon": record.daemon.map(endpoint_value),
+        "daemon_http": record.daemon_http.map(http_endpoint_value),
     })
 }
 
 fn endpoint_value(endpoint: SandboxDaemonEndpoint) -> Value {
+    json!({
+        "host": endpoint.host,
+        "port": endpoint.port,
+    })
+}
+
+fn http_endpoint_value(endpoint: SandboxHttpEndpoint) -> Value {
     json!({
         "host": endpoint.host,
         "port": endpoint.port,

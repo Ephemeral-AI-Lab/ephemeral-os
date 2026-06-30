@@ -58,6 +58,10 @@ netlink-sys = "0.8"
 bollard = "0.17"
 bytes = "1"
 tar = "0.4"
+hyper = { version = "1", features = ["http1", "server", "client"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http = "1"
+http-body-util = "0.1"
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-config = { path = "crates/sandbox-config" }

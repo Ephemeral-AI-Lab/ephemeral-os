@@ -39,6 +39,7 @@ pub struct SandboxRecord {
     pub workspace_root: PathBuf,
     pub state: SandboxState,
     pub daemon: Option<SandboxDaemonEndpoint>,
+    pub daemon_http: Option<SandboxHttpEndpoint>,
 }
 
 impl SandboxRecord {
@@ -49,6 +50,7 @@ impl SandboxRecord {
             workspace_root,
             state,
             daemon: None,
+            daemon_http: None,
         }
     }
 }
@@ -95,6 +97,24 @@ impl SandboxDaemonEndpoint {
             host: host.into(),
             port,
             auth_token: auth_token.into(),
+        }
+    }
+}
+
+/// The unauthenticated daemon HTTP endpoint published beside `daemon`. Carries
+/// only a host and port; the HTTP surface has no auth token.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SandboxHttpEndpoint {
+    pub host: String,
+    pub port: u16,
+}
+
+impl SandboxHttpEndpoint {
+    #[must_use]
+    pub fn new(host: impl Into<String>, port: u16) -> Self {
+        Self {
+            host: host.into(),
+            port,
         }
     }
 }

@@ -1,9 +1,10 @@
-//! Sandbox daemon server: `AF_UNIX` plus optional loopback TCP, one framed
-//! request per connection, dispatch through sandbox-runtime operations, and
-//! token-driven shutdown.
+//! Sandbox daemon server: an `AF_UNIX` plus optional loopback TCP JSON-line RPC
+//! transport and a separate loopback HTTP transport, each owning its own
+//! listener with no sniffing or multiplexing between them.
 #![forbid(unsafe_code)]
 
+mod http;
 pub(crate) mod observability;
-mod server;
+mod rpc;
 
-pub use server::{SandboxDaemonError, SandboxDaemonServer, ServerConfig};
+pub use rpc::{SandboxDaemonError, SandboxDaemonServer, ServerConfig};

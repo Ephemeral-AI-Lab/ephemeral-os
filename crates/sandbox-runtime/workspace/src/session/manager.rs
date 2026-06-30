@@ -100,6 +100,16 @@ impl WorkspaceManager {
     pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceSessionId) -> PathBuf {
         self.scratch_root.join(&workspace_id.0)
     }
+
+    /// The isolated-network IP of a mounted workspace, when it has one. Shared
+    /// workspaces and workspaces without a veth allocation yield `None`.
+    #[must_use]
+    pub fn isolated_ip(&self, workspace_id: &WorkspaceSessionId) -> Option<std::net::Ipv4Addr> {
+        self.handles
+            .get(workspace_id)
+            .and_then(|workspace| workspace.veth.as_ref())
+            .map(|veth| veth.ns_ip)
+    }
 }
 
 pub(crate) fn validate_workspace_root(workspace_root: &str) -> Result<(), WorkspaceManagerError> {

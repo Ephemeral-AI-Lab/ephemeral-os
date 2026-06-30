@@ -17,7 +17,7 @@ use sandbox_runtime::{
 };
 use serde_json::{json, Map, Value};
 
-use crate::server::ServerConfig;
+use crate::rpc::ServerConfig;
 
 /// The window used to fetch the single newest sample of a scope, independent of
 /// the bounded trend window.

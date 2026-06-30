@@ -9,7 +9,7 @@ use sandbox_manager::LocalSandboxDaemonInstaller;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore,
+    SandboxState, SandboxStore, StartedDaemon,
 };
 use sandbox_protocol::{ArgKind, CliOperationExecutionSpace, CliOperationScope, Request, Response};
 use serde_json::{json, Value};
@@ -86,7 +86,7 @@ impl SandboxDaemonInstaller for FakeInstaller {
         Ok(())
     }
 
-    fn start_daemon(&self, record: &SandboxRecord) -> Result<SandboxDaemonEndpoint, ManagerError> {
+    fn start_daemon(&self, record: &SandboxRecord) -> Result<StartedDaemon, ManagerError> {
         if self.fail_start {
             return Err(ManagerError::DaemonInstallFailed {
                 message: "start stage failed".to_owned(),
@@ -96,11 +96,14 @@ impl SandboxDaemonInstaller for FakeInstaller {
             .lock()
             .expect("started lock")
             .push(record.id.as_str().to_owned());
-        Ok(SandboxDaemonEndpoint::new(
-            "127.0.0.1",
-            7000,
-            format!("token-{}", record.id.as_str()),
-        ))
+        Ok(StartedDaemon {
+            daemon: SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                format!("token-{}", record.id.as_str()),
+            ),
+            daemon_http: None,
+        })
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -314,6 +317,7 @@ fn sandbox_record(
         workspace_root: PathBuf::from("/testbed"),
         state,
         daemon,
+        daemon_http: None,
     }
 }
 

@@ -16,6 +16,7 @@ pub const DEFAULT_CONTAINER_WORKSPACE_ROOT: &str = "/workspace";
 pub const DEFAULT_CONTAINER_DAEMON_BINARY_PATH: &str = "/eos/bin/sandbox-daemon";
 pub const DEFAULT_CONTAINER_DAEMON_CONFIG_PATH: &str = "/eos/config/daemon.yml";
 pub const DEFAULT_DAEMON_PORT: u16 = 7000;
+pub const DEFAULT_DAEMON_HTTP_PORT: u16 = 7001;
 pub const DEFAULT_READINESS_TIMEOUT_MS: u64 = 60_000;
 pub const DEFAULT_GATEWAY_INSTANCE_ID: &str = "eos-gateway";
 
@@ -53,6 +54,9 @@ pub struct DockerRuntimeConfig {
     pub privileged: bool,
     /// Container TCP port the daemon listens on (published to a host port).
     pub daemon_port: u16,
+    /// Container TCP port the daemon HTTP surface listens on (published to a
+    /// separate host port, distinct from the JSON-line RPC `daemon_port`).
+    pub daemon_http_port: u16,
     /// Identifies the owning gateway; recovery filters containers by this label.
     pub gateway_instance_id: String,
     /// Readiness deadline for the authenticated daemon check.
@@ -82,6 +86,7 @@ impl Default for DockerRuntimeConfig {
             platform: None,
             privileged: true,
             daemon_port: DEFAULT_DAEMON_PORT,
+            daemon_http_port: DEFAULT_DAEMON_HTTP_PORT,
             gateway_instance_id: DEFAULT_GATEWAY_INSTANCE_ID.to_owned(),
             readiness_timeout_ms: DEFAULT_READINESS_TIMEOUT_MS,
             memory_bytes: None,
@@ -122,6 +127,11 @@ impl DockerRuntimeConfig {
             "manager.docker.gateway_instance_id",
         )?;
         require_u64_at_least(u64::from(self.daemon_port), 1, "manager.docker.daemon_port")?;
+        require_u64_at_least(
+            u64::from(self.daemon_http_port),
+            1,
+            "manager.docker.daemon_http_port",
+        )?;
         require_u64_at_least(
             self.readiness_timeout_ms,
             1,

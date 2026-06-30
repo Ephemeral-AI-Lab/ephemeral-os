@@ -41,6 +41,25 @@ impl WorkspaceSessionService {
         &self.workspace
     }
 
+    /// Resolve a workspace session to its isolated-network IP.
+    ///
+    /// `Err(NotFound)` means no such session; `Ok(None)` means the session
+    /// exists but has no reachable isolated IP (shared network or no veth);
+    /// `Ok(Some(ip))` is the workspace IP a forwarder can dial.
+    ///
+    /// # Errors
+    /// Returns [`WorkspaceSessionError::NotFound`] for an unknown session, or a
+    /// lock/runtime error when session or workspace state cannot be read.
+    pub fn isolated_ip(
+        &self,
+        workspace_id: &WorkspaceSessionId,
+    ) -> Result<Option<std::net::Ipv4Addr>, WorkspaceSessionError> {
+        if !self.lock_sessions()?.contains_key(workspace_id) {
+            return Err(WorkspaceSessionError::not_found(workspace_id));
+        }
+        Ok(self.workspace.isolated_ip(workspace_id)?)
+    }
+
     #[must_use]
     pub(crate) fn obs(&self) -> &Observer {
         &self.obs

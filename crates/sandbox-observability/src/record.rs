@@ -49,6 +49,8 @@ pub mod proc {
 pub mod names {
     /// Daemon request dispatch span (trace root).
     pub const DAEMON_DISPATCH: &str = "daemon.dispatch";
+    /// Daemon HTTP forward span (trace root; one per forwarded request).
+    pub const DAEMON_HTTP_FORWARD: &str = "daemon_http.forward";
     /// Command execution span.
     pub const COMMAND_EXEC: &str = "command.exec";
     /// Workspace session creation span.

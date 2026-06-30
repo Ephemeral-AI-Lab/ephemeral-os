@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::observability::DaemonObservability;
-use crate::server::{SandboxDaemonServer, ServerConfig};
+use crate::rpc::{SandboxDaemonServer, ServerConfig};
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability::{ObservabilityPaths, Reader, SampleDelta};
 use sandbox_runtime::{
@@ -201,7 +201,7 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
                 "req-cgroup",
                 json!({ "view": "cgroup", "scope": "sandbox" }),
             )?,
@@ -230,7 +230,7 @@ async fn events_view_dispatch_returns_parsed_events_by_name() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
                 "req-events",
                 json!({ "view": "events", "name": "lease.released" }),
             )?,
@@ -263,7 +263,7 @@ async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
                 "req-trace",
                 json!({ "view": "trace", "trace_id": "req-7f3" }),
             )?,
@@ -300,7 +300,7 @@ async fn events_view_dispatch_last_n_keeps_newest_matched() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
                 "req-last-n",
                 json!({ "view": "events", "last_n": 2 }),
             )?,
@@ -331,7 +331,7 @@ async fn trace_view_dispatch_last_resolves_most_recent_root() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::server::dispatch::PRIVATE_OBSERVABILITY_OP,
+                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
                 "req-trace-last",
                 json!({ "view": "trace", "trace_id": "last" }),
             )?,
@@ -440,6 +440,8 @@ fn server_config(root: &Path, sandbox_id: Option<&str>) -> ServerConfig {
         pid_path: root.join("runtime.pid"),
         tcp_host: None,
         tcp_port: None,
+        http_host: None,
+        http_port: None,
         auth_token: None,
         sandbox_id: sandbox_id.map(str::to_owned),
         cgroup_root: None,

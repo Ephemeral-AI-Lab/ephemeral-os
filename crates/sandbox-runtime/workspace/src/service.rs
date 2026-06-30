@@ -52,6 +52,23 @@ impl WorkspaceRuntimeService {
         }
     }
 
+    /// The isolated-network IP of a mounted workspace session, when it has one.
+    /// Reads live session state; shared or veth-less workspaces yield `None`.
+    ///
+    /// # Errors
+    /// Returns an error when the runtime state lock cannot be taken.
+    pub fn isolated_ip(
+        &self,
+        workspace_id: &crate::model::WorkspaceSessionId,
+    ) -> Result<Option<std::net::Ipv4Addr>, WorkspaceError> {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Runtime(_) => {
+                Ok(self.lock_state()?.manager.isolated_ip(workspace_id))
+            }
+            WorkspaceRuntimeBackend::Hooks(_) => Ok(None),
+        }
+    }
+
     pub(crate) fn lock_state(
         &self,
     ) -> Result<MutexGuard<'_, WorkspaceRuntimeState>, WorkspaceError> {

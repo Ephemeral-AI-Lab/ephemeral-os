@@ -7,7 +7,9 @@ This document specifies a narrow publish-time auto-merge policy for
 
 The goal is to keep layerstack's existing full-file layer model while reducing
 false `SourceConflict` rejections when two sessions make non-overlapping text
-edits to the same non-gitignored file.
+edits to the same non-gitignored file. The same publish inputs can also produce
+line-level provenance so callers can ask which workspace session last introduced
+each line.
 
 ## Problem
 
@@ -60,7 +62,14 @@ If the merge is clean, publish a normal full-file `LayerChange::Write` with the
 merged bytes on top of the active manifest. If the merge is not clean, keep the
 current `SourceConflict` rejection behavior.
 
-The persisted layer format does not change.
+The persisted layer format does not change. Layer directories are mounted
+directly as overlay lowerdirs, so each committed layer must remain a concrete
+filesystem tree. A patch-only layer would need to be materialized before every
+overlay mount and projection, which just moves the full-file copy to a less
+predictable path.
+
+Line provenance, when enabled, is stored as layer metadata sidecars. It is not
+embedded in published files and does not affect overlay mounting.
 
 ## Non-Goals
 
@@ -72,6 +81,8 @@ The persisted layer format does not change.
 - Do not shell out to `git`.
 - Do not make ignored-path writes participate in source OCC.
 - Do not publish partial changesets.
+- Do not replace overlay-compatible concrete layers with patch-backed layers.
+- Do not provide character-level or binary-file provenance in the initial design.
 
 ## Current Behavior
 
@@ -277,6 +288,59 @@ This is not a general filesystem transaction. Crash recovery may still need to
 ignore or clean orphan staging/layer artifacts. Visibility is controlled by the
 active manifest.
 
+## Line Provenance And Auditability
+
+Publish may write a provenance sidecar for each resolved text-file write. The
+sidecar answers, for a manifest path, which final line ranges came from the
+original workspace copy, a workspace session, a mixed clean merge, or an unknown
+legacy source.
+
+The publish request must carry the publishing `workspace_session_id`. Layerstack
+uses that id only for metadata attribution; merge correctness still comes from
+the base manifest, active manifest, and captured change bytes.
+
+```text
+publish request { workspace_session_id, base_manifest, changes }
+  -> resolve source writes with OCC / three-way merge
+  -> publish full-file LayerChange::Write
+  -> write provenance sidecar for the same layer path
+```
+
+Suggested sidecar shape:
+
+```json
+{
+  "schema_version": 1,
+  "layer_id": "L42",
+  "path": "README.md",
+  "content_digest": "sha256:...",
+  "ranges": [
+    { "start_line": 1, "line_count": 8, "origin": "original" },
+    { "start_line": 9, "line_count": 2, "origin": "workspace_session:ws-123" },
+    { "start_line": 11, "line_count": 1, "origin": "mixed" }
+  ]
+}
+```
+
+Store sidecars under `.layer-metadata/provenance/<layer_id>/<path>.json` with
+the file content digest inside the sidecar. The `layer_id + path` key preserves
+history when two different sessions produce identical bytes. The digest prevents
+stale metadata from being reported for different file content.
+
+Attribution rules:
+
+- unchanged lines inherit provenance from the base sidecar, or `original` for
+  workspace-base files without sidecars
+- lines introduced only by the publishing command use
+  `workspace_session:<workspace_session_id>`
+- lines introduced by the active side inherit active provenance
+- identical overlapping edits by active and command become `mixed`
+- legacy, oversized, non-UTF-8, binary, or ambiguous inputs become `unknown`
+
+Ignored-path text writes can be attributed wholesale to the publishing session in
+the first rollout. They are not source-validated and should not claim precise
+line inheritance until ignored-path merge semantics exist.
+
 ## Leases And Multi-Layer Manifests
 
 Auto-merge operates on materialized manifest views, not individual layers.
@@ -305,6 +369,28 @@ base snapshot for the captured changes.
 
 Other active leases that are not the publishing command's base are irrelevant to
 merge semantics.
+
+## Rejected Alternative: Patch-Backed Layers
+
+Publishing only a three-way diff looks smaller on disk, but it breaks the
+current layerstack contract:
+
+- workspace sessions receive `layer_paths` and mount those paths directly as
+  overlay lowerdirs
+- `MergedView::project` applies layer directories as concrete filesystem trees
+- `MergedView::read_entry` resolves the first visible concrete file, symlink,
+  directory, or whiteout
+
+A patch layer would not expose the edited file to overlayfs. Layerstack would
+have to synthesize a materialized layer before mount/read/project, store that
+cache durably enough for leases, and include it in digest and cleanup rules. At
+that point the system still owns a full-file materialization, plus a second
+patch format.
+
+Keep patches as an internal merge input only. If disk growth from full-file
+writes becomes measured pressure, add a separate compact-layer design that
+explicitly covers materialization, cache invalidation, lease retention,
+observability bytes, and backwards compatibility.
 
 ## Ignored Paths
 
@@ -355,6 +441,8 @@ Operational counters should count:
 - auto-merge conflict
 - auto-merge ineligible by reason
 - bytes processed
+- provenance sidecars written
+- provenance skipped by reason
 
 ## Error Semantics
 
@@ -409,8 +497,19 @@ Do not add this unless callers need machine-readable distinction between
    The implementation may use a focused dependency or a local algorithm, but
    callers must see only `Clean(Vec<u8>)` or `Conflict`.
 
-5. Keep `publish_layer_unlocked` unchanged except for receiving resolved
-   changes.
+5. Thread `workspace_session_id` from workspace/operation publish requests into
+   layerstack publish metadata.
+
+6. Build provenance ranges for resolved text writes, reusing the same line
+   mapping used by the merge resolver.
+
+7. Write provenance sidecars after the layer id is allocated and before the
+   active manifest is updated. If publish rolls back the layer, remove the
+   sidecar directory with it.
+
+8. Keep layer content staging unchanged. Extend the publish commit path only to
+   stage provenance sidecars beside the layer metadata and roll them back with
+   the layer on failure.
 
 ## Test Plan
 
@@ -450,6 +549,15 @@ Lease tests:
 - auto-merge uses the request base manifest, not the active manifest suffix
 - releasing unrelated leases does not affect merge results
 
+Provenance tests:
+
+- unchanged source lines inherit `original`
+- command-only inserted lines are attributed to `workspace_session_id`
+- active-side merged lines keep active provenance
+- identical overlapping edits become `mixed`
+- rejected publish writes no provenance sidecar
+- legacy or binary inputs report `unknown` rather than a false session id
+
 ## Rollout
 
 1. Land tests that characterize current conservative conflicts.
@@ -467,3 +575,5 @@ Lease tests:
 - Do callers need a machine-readable auto-merge rejection detail, or is
   `SourceConflict` sufficient?
 - Should clean auto-merges be reported in command finalization metadata?
+- Should ignored-path writes get precise provenance later, or is whole-file
+  attribution enough?

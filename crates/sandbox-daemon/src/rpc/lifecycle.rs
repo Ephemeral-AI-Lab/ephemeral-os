@@ -7,7 +7,7 @@ use tokio::sync::Semaphore;
 use tokio_util::task::TaskTracker;
 
 use super::SandboxDaemonServer;
-use crate::server::error::SandboxDaemonError;
+use crate::rpc::error::SandboxDaemonError;
 
 const MAX_CONCURRENT_CONNECTIONS: usize = 256;
 
@@ -66,6 +66,19 @@ impl SandboxDaemonServer {
                 }
                 Ok::<(), std::io::Error>(())
             })
+        };
+
+        let mut http_server = match server.config.http_bind() {
+            Some((host, port)) => {
+                let listener = TcpListener::bind((host, port)).await?;
+                Some(crate::http::spawn(
+                    listener,
+                    Arc::clone(&server.operations),
+                    server.observer(),
+                    server.shutdown.clone(),
+                ))
+            }
+            None => None,
         };
 
         let mut tcp_server = match (&server.config.tcp_host, server.config.tcp_port) {
@@ -147,6 +160,10 @@ impl SandboxDaemonServer {
             }
         }
         drop(tcp_server);
+        if let Some(task) = http_server.as_mut() {
+            let _ = task.await;
+        }
+        drop(http_server);
         // All listener tasks have stopped accepting before the tracked
         // request/connection tasks are allowed to drain.
         drain_connection_tasks(&connection_tasks).await;

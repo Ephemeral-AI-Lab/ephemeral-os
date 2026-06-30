@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use sandbox_manager::{
-    ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxId, SandboxRecord, SandboxState,
+    ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId,
+    SandboxRecord, SandboxState,
 };
 
 #[allow(

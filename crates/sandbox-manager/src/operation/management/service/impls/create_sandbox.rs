@@ -2,8 +2,7 @@ use std::path::PathBuf;
 
 use crate::operation::ManagerServices;
 use crate::{
-    CreateSandboxRequest, ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxRecord,
-    SandboxState,
+    CreateSandboxRequest, ManagerError, ProgressSink, SandboxRecord, SandboxState, StartedDaemon,
 };
 
 pub(crate) struct CreateSandboxInput {
@@ -50,8 +49,8 @@ pub(crate) fn create_sandbox(
         }
     };
     progress.emit("sandbox recorded");
-    let endpoint = match provision_daemon(services, &record, progress) {
-        Ok(endpoint) => endpoint,
+    let started = match provision_daemon(services, &record, progress) {
+        Ok(started) => started,
         Err(error) => {
             progress.emit("destroying failed sandbox");
             rollback(services, &record);
@@ -59,7 +58,11 @@ pub(crate) fn create_sandbox(
             return Err(error);
         }
     };
-    if let Err(error) = services.store.update_endpoint(&id, Some(endpoint)) {
+    if let Err(error) =
+        services
+            .store
+            .update_endpoints(&id, Some(started.daemon), started.daemon_http)
+    {
         progress.emit(error.to_string());
         rollback(services, &record);
         return Err(error);
@@ -85,7 +88,7 @@ fn provision_daemon(
     services: &ManagerServices,
     record: &SandboxRecord,
     progress: &ProgressSink,
-) -> Result<SandboxDaemonEndpoint, ManagerError> {
+) -> Result<StartedDaemon, ManagerError> {
     progress.emit("installing daemon assets");
     if let Err(error) = services.daemon_installer.install_daemon(record) {
         progress.emit(error.to_string());
@@ -94,13 +97,13 @@ fn provision_daemon(
     progress.emit("daemon assets installed");
 
     progress.emit("starting daemon");
-    let endpoint = match services.daemon_installer.start_daemon(record) {
-        Ok(endpoint) => {
+    let started = match services.daemon_installer.start_daemon(record) {
+        Ok(started) => {
             progress.emit(format!(
                 "daemon published on {}:{}",
-                endpoint.host, endpoint.port
+                started.daemon.host, started.daemon.port
             ));
-            endpoint
+            started
         }
         Err(error) => {
             progress.emit(error.to_string());
@@ -109,15 +112,16 @@ fn provision_daemon(
     };
 
     progress.emit("waiting for daemon readiness");
-    if let Err(error) = services
-        .daemon_installer
-        .check_daemon_with_progress(record, &endpoint, progress)
+    if let Err(error) =
+        services
+            .daemon_installer
+            .check_daemon_with_progress(record, &started.daemon, progress)
     {
         progress.emit(error.to_string());
         return Err(error);
     }
     progress.emit("daemon is ready");
-    Ok(endpoint)
+    Ok(started)
 }
 
 fn rollback(services: &ManagerServices, record: &SandboxRecord) {

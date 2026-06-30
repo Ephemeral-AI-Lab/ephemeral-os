@@ -47,6 +47,7 @@ pub(crate) struct ContainerSpec {
     pub(crate) binds: Vec<String>,
     pub(crate) volumes: Vec<VolumeSpec>,
     pub(crate) daemon_port: u16,
+    pub(crate) daemon_http_port: u16,
     pub(crate) privileged: bool,
     pub(crate) platform: Option<String>,
     pub(crate) memory_bytes: Option<i64>,
@@ -59,18 +60,21 @@ pub(crate) struct VolumeSpec {
     pub(crate) labels: HashMap<String, String>,
 }
 
-/// Result of starting a container and resolving its published daemon port.
+/// Result of starting a container and resolving its published daemon ports (the
+/// JSON-line RPC port and the HTTP-surface port).
 pub(crate) struct StartedContainer {
     pub(crate) port: u16,
+    pub(crate) http_port: u16,
     pub(crate) auth_token: String,
 }
 
-/// A container reconstructed from labels + published port during recovery.
+/// A container reconstructed from labels + published ports during recovery.
 pub(crate) struct RecoveredContainer {
     pub(crate) sandbox_id: String,
     pub(crate) host_workspace_root: String,
     pub(crate) auth_token: String,
     pub(crate) published_port: u16,
+    pub(crate) published_http_port: u16,
 }
 
 pub(crate) struct DockerEngine {
@@ -117,17 +121,8 @@ impl DockerEngine {
 
     pub(crate) fn create_container(&self, spec: ContainerSpec) -> Result<(), DockerError> {
         self.run_blocking(move |docker| async move {
-            let port_key = format!("{}/tcp", spec.daemon_port);
-            let mut exposed_ports = HashMap::new();
-            exposed_ports.insert(port_key.clone(), HashMap::new());
-            let mut port_bindings = HashMap::new();
-            port_bindings.insert(
-                port_key,
-                Some(vec![PortBinding {
-                    host_ip: Some("127.0.0.1".to_owned()),
-                    host_port: Some("0".to_owned()),
-                }]),
-            );
+            let (exposed_ports, port_bindings) =
+                publish_loopback_ports(&[spec.daemon_port, spec.daemon_http_port]);
             for volume in &spec.volumes {
                 create_volume(&docker, volume).await?;
             }
@@ -198,6 +193,7 @@ impl DockerEngine {
         &self,
         container: String,
         daemon_port: u16,
+        daemon_http_port: u16,
     ) -> Result<StartedContainer, DockerError> {
         self.run_blocking(move |docker| async move {
             docker
@@ -209,8 +205,13 @@ impl DockerEngine {
                 .await
                 .map_err(|error| DockerError::Api(format!("inspect_container: {error}")))?;
             let port = published_port(&inspected, daemon_port)?;
+            let http_port = published_port(&inspected, daemon_http_port)?;
             let auth_token = label_value(&inspected, labels::AUTH_TOKEN)?;
-            Ok(StartedContainer { port, auth_token })
+            Ok(StartedContainer {
+                port,
+                http_port,
+                auth_token,
+            })
         })
     }
 
@@ -255,6 +256,7 @@ impl DockerEngine {
         &self,
         gateway_instance_id: String,
         daemon_port: u16,
+        daemon_http_port: u16,
     ) -> Result<Vec<RecoveredContainer>, DockerError> {
         self.run_blocking(move |docker| async move {
             let mut filters = HashMap::new();
@@ -277,7 +279,9 @@ impl DockerEngine {
                 .map_err(|error| DockerError::Api(format!("list_containers: {error}")))?;
             Ok(summaries
                 .iter()
-                .filter_map(|summary| recovered_from_summary(summary, daemon_port))
+                .filter_map(|summary| {
+                    recovered_from_summary(summary, daemon_port, daemon_http_port)
+                })
                 .collect())
         })
     }
@@ -391,23 +395,52 @@ fn label_value(inspected: &ContainerInspectResponse, key: &str) -> Result<String
 fn recovered_from_summary(
     summary: &ContainerSummary,
     daemon_port: u16,
+    daemon_http_port: u16,
 ) -> Option<RecoveredContainer> {
     let labels = summary.labels.as_ref()?;
     let sandbox_id = labels.get(labels::SANDBOX_ID)?.clone();
     let host_workspace_root = labels.get(labels::HOST_WORKSPACE_ROOT)?.clone();
     let auth_token = labels.get(labels::AUTH_TOKEN)?.clone();
-    let published_port = summary
-        .ports
-        .as_ref()?
-        .iter()
-        .find(|port| port.private_port == daemon_port)
-        .and_then(|port| port.public_port)?;
+    let ports = summary.ports.as_ref()?;
+    let published_port = published_summary_port(ports, daemon_port)?;
+    let published_http_port = published_summary_port(ports, daemon_http_port)?;
     Some(RecoveredContainer {
         sandbox_id,
         host_workspace_root,
         auth_token,
         published_port,
+        published_http_port,
     })
+}
+
+fn published_summary_port(ports: &[bollard::models::Port], private_port: u16) -> Option<u16> {
+    ports
+        .iter()
+        .find(|port| port.private_port == private_port)
+        .and_then(|port| port.public_port)
+}
+
+type ExposedPorts = HashMap<String, HashMap<(), ()>>;
+type PortBindings = HashMap<String, Option<Vec<PortBinding>>>;
+
+/// Expose each container port and bind it to a random `127.0.0.1` host port.
+/// One helper builds the Docker `exposed_ports` + `port_bindings` maps for every
+/// published daemon port, so the RPC and HTTP ports share one publish path.
+fn publish_loopback_ports(ports: &[u16]) -> (ExposedPorts, PortBindings) {
+    let mut exposed_ports = HashMap::new();
+    let mut port_bindings = HashMap::new();
+    for port in ports {
+        let key = format!("{port}/tcp");
+        exposed_ports.insert(key.clone(), HashMap::new());
+        port_bindings.insert(
+            key,
+            Some(vec![PortBinding {
+                host_ip: Some("127.0.0.1".to_owned()),
+                host_port: Some("0".to_owned()),
+            }]),
+        );
+    }
+    (exposed_ports, port_bindings)
 }
 
 async fn collect_logs(docker: &Docker, container: &str) -> String {
