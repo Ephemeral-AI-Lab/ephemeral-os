@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "roadmap.md",
+                "file": "docs/ephemeral-os.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "roadmap"
+              "title": "ephemeral-os"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "roadmap.md",
+                "file": "note/container-env-proxy.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for roadmap"
+              "title": "Backlinks for container-env-proxy"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "roadmap.md",
+                "file": "note/container-env-proxy.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from roadmap"
+              "title": "Outgoing links from container-env-proxy"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "roadmap.md",
+                "file": "note/container-env-proxy.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of roadmap"
+              "title": "Outline of container-env-proxy"
             }
           }
         ]
@@ -185,17 +185,20 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
-    "index.md",
-    "docs/sandbox-operation-note.md",
     "docs/cli-gateway-manager-runtime.md",
     "docs/layerstack/create_sandbox.md",
+    "docs/ephemeral-os.md",
+    "note/container-env-proxy.md",
+    "index.md",
+    "note",
+    "roadmap.md",
+    "docs/sandbox-operation-note.md",
     "docs/sandbox-operation-note",
     "docs/layerstack/overlay_mount.md",
     "docs/comparision/landscape.md",
     "docs/comparision/container-use.md",
     "docs/comparision/anthropic-managed-container.md",
     "docs/comparision/agentfs.md",
-    "docs/ephemeral-os.md",
     "daily-progress-tracker/2026-06-28.md",
     "docs/cli-operations/manager/Management/destroy_sandbox.md",
     "docs/comparision",
@@ -212,8 +215,6 @@
     "docs/cli-operations/runtime/command/exec_command.md",
     "docs/cli-operations/manager/create_sandbox.md",
     "docs/cli-operations/manager/Management",
-    "docs/cli-operations/manager/list_sandboxes.md",
-    "docs/cli-operations/manager/management",
-    "docs/cli-operations/manager/inspect_sandbox.md"
+    "docs/cli-operations/manager/management"
   ]
 }

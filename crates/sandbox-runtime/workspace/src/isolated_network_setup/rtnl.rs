@@ -105,19 +105,17 @@ pub(super) async fn install_veth_pair(
             .execute()
             .await,
     )?;
-    ignore_unsupported(
-        "set bridge port isolation",
-        handle
-            .link()
-            .set_port(
-                LinkBridgePort::new(host_index)
-                    .isolated(true)
-                    .mcast_flood(false)
-                    .build(),
-            )
-            .execute()
-            .await,
-    )?;
+    handle
+        .link()
+        .set_port(
+            LinkBridgePort::new(host_index)
+                .isolated(true)
+                .mcast_flood(false)
+                .build(),
+        )
+        .execute()
+        .await
+        .map_err(|error| network_error_at("set bridge port isolation", error))?;
     Ok(())
 }
 
@@ -151,22 +149,6 @@ pub(super) fn ignore_not_found(
     result: Result<(), rtnetlink::Error>,
 ) -> Result<(), WorkspaceManagerError> {
     ignore_matching(step, result, &["not found", "no such", "-19"])
-}
-
-fn ignore_unsupported(
-    step: impl Into<String>,
-    result: Result<(), rtnetlink::Error>,
-) -> Result<(), WorkspaceManagerError> {
-    ignore_matching(
-        step,
-        result,
-        &[
-            "operation not supported",
-            "not supported",
-            "no such device",
-            "-19",
-        ],
-    )
 }
 
 fn ignore_matching(

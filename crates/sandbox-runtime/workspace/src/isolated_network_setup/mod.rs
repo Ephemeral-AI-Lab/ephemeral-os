@@ -5,12 +5,8 @@ use crate::session::Rfc1918Egress;
 use crate::session::WorkspaceManagerError;
 
 #[cfg(target_os = "linux")]
-mod netfilter;
-#[cfg(target_os = "linux")]
 mod rtnl;
 
-#[cfg(target_os = "linux")]
-use netfilter::install_static_rules;
 #[cfg(target_os = "linux")]
 use rtnl::{ensure_bridge, ignore_not_found, install_veth_pair, link_index, run_netlink};
 
@@ -20,20 +16,6 @@ pub const BRIDGE_NAME: &str = "eos-shared0";
 pub const GATEWAY: &str = "10.244.0.1";
 #[cfg(target_os = "linux")]
 pub const GATEWAY_ADDR: Ipv4Addr = Ipv4Addr::new(10, 244, 0, 1);
-#[cfg(target_os = "linux")]
-pub const BRIDGE_NETWORK: Ipv4Addr = Ipv4Addr::new(10, 244, 0, 0);
-#[cfg(target_os = "linux")]
-pub const NFT_NAT_TABLE: &str = "eos_iws_nat";
-#[cfg(target_os = "linux")]
-pub const NFT_FILTER_TABLE: &str = "eos_iws_filter";
-#[cfg(target_os = "linux")]
-pub const IMDS_ADDR: Ipv4Addr = Ipv4Addr::new(169, 254, 169, 254);
-#[cfg(target_os = "linux")]
-pub const RFC1918_NETS: [(Ipv4Addr, u8); 3] = [
-    (Ipv4Addr::new(10, 0, 0, 0), 8),
-    (Ipv4Addr::new(172, 16, 0, 0), 12),
-    (Ipv4Addr::new(192, 168, 0, 0), 16),
-];
 pub(crate) const VETH_PREFIX: &str = "eos-iws-";
 
 #[cfg(target_os = "linux")]
@@ -98,20 +80,25 @@ impl IsolatedNetwork {
     }
 
     pub(crate) fn initialize(&mut self) -> Result<(), WorkspaceManagerError> {
-        let rfc1918_egress = self.rfc1918_egress;
+        self.validate_packet_filter_policy()?;
         #[cfg(target_os = "linux")]
         {
             run_netlink(move |handle| async move {
-                let bridge_index = ensure_bridge(&handle).await?;
-                install_static_rules(rfc1918_egress, bridge_index)?;
+                ensure_bridge(&handle).await?;
                 Ok(())
             })?;
         }
-        #[cfg(not(target_os = "linux"))]
-        {
-            let _ = rfc1918_egress;
-        }
         self.initialized = true;
+        Ok(())
+    }
+
+    fn validate_packet_filter_policy(&self) -> Result<(), WorkspaceManagerError> {
+        if self.rfc1918_egress == Rfc1918Egress::Deny {
+            return Err(WorkspaceManagerError::NetworkUnavailable(
+                "rfc1918_egress=deny requires packet filtering; no-install isolated networking supports workspace peer isolation only"
+                    .to_owned(),
+            ));
+        }
         Ok(())
     }
 
@@ -179,4 +166,25 @@ pub(crate) fn network_error_at(
     error: impl std::fmt::Display,
 ) -> WorkspaceManagerError {
     WorkspaceManagerError::NetworkUnavailable(format!("{}: {error}", step.into()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn allow_rfc1918_egress_does_not_require_packet_filter_tools() {
+        let network = IsolatedNetwork::new(Rfc1918Egress::Allow);
+
+        network.validate_packet_filter_policy().unwrap();
+    }
+
+    #[test]
+    fn deny_rfc1918_egress_fails_closed_without_packet_filtering() {
+        let network = IsolatedNetwork::new(Rfc1918Egress::Deny);
+
+        let error = network.validate_packet_filter_policy().unwrap_err();
+
+        assert!(error.to_string().contains("rfc1918_egress=deny"));
+    }
 }

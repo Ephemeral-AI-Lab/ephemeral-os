@@ -8,7 +8,7 @@
 //!
 //! The shared mode keeps the private workspace overlay and holder namespace
 //! stack and joins the host network namespace. The isolated mode adds a
-//! dedicated network boundary with veth and network policy.
+//! dedicated network boundary with veth and bridge-port isolation.
 //! `overlay` holds the filesystem contracts both modes share, while common
 //! lifecycle code owns holder, namespace FD, scratch, and teardown behavior.
 #![forbid(unsafe_code)]

@@ -52,6 +52,12 @@ cargo run -p xtask -- package                  # in-container daemon binary
 cargo run -p xtask -- package --profile release
 ```
 
+## Sandbox tools
+
+- Rebuild the Docker sandbox gateway binary with
+  `bin/start-sandbox-docker-gateway --rebuild-binary`.
+- Use `sandbox-cli` for manual sandbox operations.
+
 Workspace lints (`Cargo.toml`) deny `correctness`/`suspicious` and
 `undocumented_unsafe_blocks`, and warn on `unwrap_used`/`dbg_macro`. Don't
 introduce new violations; justify any `unsafe` with a `// SAFETY:` block.

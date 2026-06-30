@@ -116,8 +116,7 @@ if [ "$show_help" -eq 0 ]; then
     fi
 
     if [ "$rebuild_binary" -eq 1 ]; then
-        cargo run -p xtask -- package --target aarch64-unknown-linux-musl
-        cargo run -p xtask -- package --target x86_64-unknown-linux-musl
+        cargo run -p xtask -- package --target "$package_target"
     elif [ "$needs_package" -eq 1 ]; then
         cargo run -p xtask -- package --target "$package_target"
     fi
@@ -136,7 +135,7 @@ fi
 
 if [ "$show_help" -eq 1 ]; then
     printf 'start-sandbox-docker-gateway options:\n'
-    printf '  --rebuild-binary  force xtask package rebuild of arm64 and amd64 sandbox-daemon\n\n'
+    printf '  --rebuild-binary  force xtask package rebuild of the configured sandbox-daemon target\n\n'
     exec "$gateway_bin" serve "$@"
 fi
 

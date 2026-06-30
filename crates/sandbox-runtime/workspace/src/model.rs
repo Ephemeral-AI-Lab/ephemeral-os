@@ -109,7 +109,7 @@ pub enum NetworkProfile {
     /// stay isolated — this is not the host.
     Shared,
     /// Isolated network: the workspace gets a dedicated network namespace with
-    /// veth and network policy.
+    /// veth and bridge-port isolation.
     Isolated,
 }
 
