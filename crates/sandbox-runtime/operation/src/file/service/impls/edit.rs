@@ -6,7 +6,9 @@
 use sandbox_runtime_layerstack::ManifestFileRead;
 
 use crate::file::service::namespace;
-use crate::file::service::support::{amend_error, apply_edits, resolve_layer_path, MAX_EDIT_BYTES};
+use crate::file::service::support::{
+    amend_error, apply_edits, resolve_layer_path, validate_edits, MAX_EDIT_BYTES,
+};
 use crate::file::{EditInput, EditOutput, FileEntryKind, FileOperationError, FileService};
 use crate::layerstack::LayerStackService;
 use crate::workspace_crate::{FileRunnerOp, FileRunnerResult};
@@ -39,6 +41,7 @@ impl FileService {
                     workspace_session_id.clone(),
                 )?;
                 let path = rel.as_str().to_owned();
+                validate_edits(&input.edits, &path)?;
                 let current = namespace::run_file_op(
                     workspace_session,
                     &handler,
@@ -91,6 +94,7 @@ impl FileService {
                 let workspace_root = layerstack.workspace_root()?;
                 let rel = resolve_layer_path(&workspace_root, &input.path)?;
                 let path = rel.as_str().to_owned();
+                validate_edits(&input.edits, &path)?;
                 let owner = format!("operation:{}", input.request_id);
                 let edits = &input.edits;
                 let mut replacements = 0;

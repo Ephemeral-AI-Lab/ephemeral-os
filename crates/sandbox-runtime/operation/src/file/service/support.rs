@@ -49,10 +49,31 @@ enum LineEnding {
     Cr,
 }
 
+/// Reject malformed edits before the backend read, matching the local-os `edit`
+/// pre-pass: an empty `old_string`, or a raw `old_string == new_string` (a
+/// per-edit no-op), is invalid independent of the file's line endings. A batch
+/// mixing a line-ending-only edit with a real edit passes here and is resolved by
+/// the `current == original` net-no-op check in [`apply_edits`].
+pub(crate) fn validate_edits(edits: &[EditOp], path: &str) -> Result<(), FileOperationError> {
+    for edit in edits {
+        if edit.old_string.is_empty() {
+            return Err(FileOperationError::EditNotFound {
+                path: path.to_owned(),
+                snippet: snippet(&edit.old_string),
+            });
+        }
+        if edit.old_string == edit.new_string {
+            return Err(FileOperationError::NoChanges(path.to_owned()));
+        }
+    }
+    Ok(())
+}
+
 /// Apply ordered exact-string edits to `text`, matching the local-os `edit`
 /// tool: match against line-ending-normalized content, then restore the file's
-/// original dominant line ending. Returns the edited text and total replacement
-/// count.
+/// original dominant line ending. Per-edit malformed input is rejected earlier by
+/// [`validate_edits`]; the final `current == original` check rejects a net no-op.
+/// Returns the edited text and total replacement count.
 pub(crate) fn apply_edits(
     text: &str,
     edits: &[EditOp],
@@ -65,15 +86,6 @@ pub(crate) fn apply_edits(
     for edit in edits {
         let old = normalize_line_endings(&edit.old_string);
         let new = normalize_line_endings(&edit.new_string);
-        if old.is_empty() {
-            return Err(FileOperationError::EditNotFound {
-                path: path.to_owned(),
-                snippet: snippet(&old),
-            });
-        }
-        if old == new {
-            return Err(FileOperationError::NoChanges(path.to_owned()));
-        }
         let count = current.matches(&old).count();
         if count == 0 {
             return Err(FileOperationError::EditNotFound {

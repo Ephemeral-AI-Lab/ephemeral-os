@@ -187,6 +187,17 @@ product decision, not a defect:
 
 Pick one so the behavior is a conscious choice. Not a merge blocker.
 
+**Decision — Option A applied (flagged for review).** A new
+`support.rs::validate_edits` runs the raw `old == new` / `old.is_empty()`
+pre-pass before the backend read in **both** `edit()` branches; `apply_edits`
+drops its per-edit normalized guards and relies on the final `current == original`
+net-no-op check. This aligns two behaviors with `edit.ts`: a batch mixing a
+line-ending-only edit with a real edit is now accepted (regression test
+`sessionless_edit_line_ending_only_edit_mixed_with_real_edit_is_accepted`), and a
+malformed edit against a missing/non-regular/oversized file now returns
+`invalid_request` before the file error rather than after. Reviewers: confirm the
+error-ordering change is desired.
+
 ---
 
 ## P2 — Optional low-cost cleanups (non-blocking)
@@ -242,7 +253,9 @@ P0 (merge blocker):
 
 P1 (decision):
 
-- [ ] `apply_edits` symmetry — Option A (align to `edit.ts`) or Option B (spec note)
+- [x] `apply_edits` symmetry — **Option A applied** (align to `edit.ts`): raw
+      pre-pass in `validate_edits`, run before the read in both `edit()` branches;
+      final `current == original` governs net-no-op. Flagged for review.
 
 P2 (optional):
 

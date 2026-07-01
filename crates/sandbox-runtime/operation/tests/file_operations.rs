@@ -545,6 +545,32 @@ fn sessionless_edit_over_max_edit_bytes_is_file_too_large() {
     }
 }
 
+#[test]
+fn sessionless_edit_line_ending_only_edit_mixed_with_real_edit_is_accepted() {
+    // edit.ts symmetry (P1 Option A): a per-edit no-op is gated on the *raw*
+    // strings, so a line-ending-only edit ("beta\r\n" -> "beta\n", normalized
+    // equal) is allowed when batched with a real edit. The net change is governed
+    // by the final current == original check, not a per-edit normalized guard.
+    let env = env();
+    env.write(write_of("mix.txt", "alpha\nbeta\n", "w"))
+        .expect("write");
+    let out = env
+        .edit(edit_of(
+            "mix.txt",
+            vec![
+                edit_op("alpha", "ALPHA", false),
+                edit_op("beta\r\n", "beta\n", false),
+            ],
+            "e",
+        ))
+        .expect("mixed batch is a net change and is accepted");
+    assert_eq!(out.replacements, 2);
+    assert_eq!(
+        env.read(read_of("mix.txt")).expect("read").content,
+        "ALPHA\nbeta"
+    );
+}
+
 // ---------- path handling ----------
 
 #[test]
