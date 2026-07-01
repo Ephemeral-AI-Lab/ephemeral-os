@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ephemeral-os · console</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <div class="topbar" id="topbar"></div>
+    <div class="body">
+      <div class="rail" id="rail"></div>
+      <div class="center" id="center"></div>
+      <div class="inspector" id="inspector"></div>
+    </div>
+  </div>
+  <div class="overlay" id="overlay" hidden></div>
+
+  <!-- faked agent data -->
+  <script src="data.js"></script>
+  <!-- real UI -->
+  <script src="app.js"></script>
+</body>
+</html>
