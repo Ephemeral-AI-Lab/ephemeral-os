@@ -1,12 +1,13 @@
-//! `record_publish` (C3 spec §9/§13): after a layer commits, map each resolved
-//! line's structural [`Origin`] to an owner string and append one audit event
-//! per path. This is the only place owner strings are minted; `blame` reads
-//! them back verbatim. Best-effort — a dropped event reconciles to `unknown`.
+//! `record_layer_publish` (C3 spec §9/§13): after a layer commits, map each
+//! resolved line's structural [`Origin`] to an owner string and append one audit
+//! event per path. This is the only place owner strings are minted; `blame`
+//! reads them back verbatim. Best-effort — a dropped event reconciles to
+//! `unknown`.
 
 use sandbox_runtime_layerstack::{LayerChange, LayerPath, LineRange, Origin};
 use sha2::{Digest, Sha256};
 
-use super::super::store::{AuditEvent, OwnerRange};
+use super::service::store::{AuditEvent, OwnerRange};
 use crate::file::FileService;
 
 const ORIGINAL_OWNER: &str = "original";
@@ -20,7 +21,7 @@ impl FileService {
     ///
     /// Never fails the publish: a dropped event reconciles to `unknown` on the
     /// next open (the merged bytes cannot reconstruct origin).
-    pub fn record_publish(
+    pub fn record_layer_publish(
         &self,
         owner: &str,
         origin: &[(LayerPath, Vec<(LineRange, Origin)>)],

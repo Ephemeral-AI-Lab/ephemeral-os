@@ -1,5 +1,5 @@
 mod core;
 mod impls;
-mod store;
+pub(super) mod store;
 
 pub use core::{BlameRange, FileService};

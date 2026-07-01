@@ -1,7 +1,7 @@
 //! [`FileService`] core: the struct over the file-auditability store, its
 //! constructor, and the store accessor the operation impls share. The read
-//! (`blame`) and post-commit write (`record_publish`) operations live in
-//! `service/impls/`, mirroring the `workspace_session` and `layerstack` domains.
+//! operation (`blame`) lives in `service/impls/`; publish audit writes live in
+//! `file/audit.rs`.
 
 use std::path::PathBuf;
 

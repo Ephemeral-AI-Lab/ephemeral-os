@@ -70,7 +70,7 @@ impl LayerStackService {
         // string and append one audit event per path (G3 — never before commit).
         if !published.origin.is_empty() {
             self.file
-                .record_publish(&owner, &published.origin, &committed_changes);
+                .record_layer_publish(&owner, &published.origin, &committed_changes);
         }
         Ok(PublishChangesResult {
             revision: revision_from_manifest(&published.manifest),
