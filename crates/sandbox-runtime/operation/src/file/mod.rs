@@ -8,5 +8,8 @@ mod audit;
 mod error;
 mod service;
 
-pub use error::FileError;
-pub use service::{BlameRange, FileService};
+pub use error::{FileEntryKind, FileError, FileOperationError};
+pub use service::{
+    BlameRange, EditInput, EditOp, EditOutput, FileService, ReadInput, ReadOutput, WriteInput,
+    WriteKind, WriteOutput,
+};
