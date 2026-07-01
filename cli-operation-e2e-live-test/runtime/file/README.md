@@ -55,3 +55,8 @@ one JSON line per operation: stdout on success, stderr + exit 1 on an error
 response, so assert on `error.kind` (e.g. `not_found`), never on exit codes.
 Command shapes were smoke-verified live on ubuntu:24.04 (2026-07-02); see
 the Test Runner Instructions section of the test-case doc.
+
+Every live run also writes the latest per-operation timing summary to
+`docs/obsidian/ephemeral-os/testing/file-operation/operation-timing/`. These are
+client-side `sandbox-cli` wall-time metrics grouped by operation; they are not
+pass/fail assertions.

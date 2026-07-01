@@ -19,6 +19,8 @@ import time
 from .config import PROGRESS, REPO_ROOT, SANDBOX_CLI
 
 _log = logging.getLogger("e2e.cli")
+_timing_lock = threading.Lock()
+_timing_records = []
 
 
 class CliError(Exception):
@@ -43,7 +45,9 @@ def cli(*args, timeout=180):
         )
         returncode = proc.returncode
         raw = proc.stdout.strip() or proc.stderr.strip()
-    _log.info("← %s  (exit=%s, %.2fs)", printable, returncode, time.monotonic() - started)
+    elapsed = time.monotonic() - started
+    _record_timing(args, returncode, elapsed)
+    _log.info("← %s  (exit=%s, %.2fs)", printable, returncode, elapsed)
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -103,6 +107,73 @@ def _select_json(stdout, stderr_lines):
         if stripped.startswith("{"):
             return stripped
     return ""
+
+
+def _record_timing(args, returncode, elapsed):
+    scope, operation = _classify_operation(args)
+    with _timing_lock:
+        _timing_records.append(
+            {
+                "scope": scope,
+                "operation": operation,
+                "operation_key": f"{scope}.{operation}",
+                "returncode": returncode,
+                "duration_ms": round(elapsed * 1000.0, 3),
+            }
+        )
+
+
+def _classify_operation(args):
+    args = tuple(map(str, args))
+    if not args:
+        return "unknown", "unknown"
+    if args[0] == "runtime":
+        return "runtime", args[3] if len(args) > 3 else "unknown"
+    if args[0] in {"manager", "observability"}:
+        return args[0], args[1] if len(args) > 1 else "unknown"
+    return args[0], args[1] if len(args) > 1 else "unknown"
+
+
+def operation_timing_records():
+    with _timing_lock:
+        return list(_timing_records)
+
+
+def operation_timing_summary():
+    grouped = {}
+    for record in operation_timing_records():
+        grouped.setdefault(record["operation_key"], []).append(record)
+
+    rows = []
+    for operation_key, records in grouped.items():
+        values = sorted(record["duration_ms"] for record in records)
+        sub_50 = sum(1 for value in values if value < 50.0)
+        rows.append(
+            {
+                "operation": operation_key,
+                "count": len(values),
+                "min_ms": values[0],
+                "p50_ms": round(_percentile(values, 0.50), 3),
+                "p95_ms": round(_percentile(values, 0.95), 3),
+                "max_ms": values[-1],
+                "sub_50ms_count": sub_50,
+                "sub_50ms_pct": round((sub_50 / len(values)) * 100.0, 1),
+                "cli_error_count": sum(
+                    1 for record in records if record["returncode"] != 0
+                ),
+            }
+        )
+    return sorted(rows, key=lambda row: row["operation"])
+
+
+def _percentile(values, quantile):
+    if len(values) == 1:
+        return values[0]
+    rank = (len(values) - 1) * quantile
+    lower = int(rank)
+    upper = min(lower + 1, len(values) - 1)
+    weight = rank - lower
+    return (values[lower] * (1.0 - weight)) + (values[upper] * weight)
 
 
 def manager(operation, *args, **kwargs):

@@ -63,6 +63,7 @@ workspace root. `repo/testbed` is the default.
 | `SANDBOX_GATEWAY_CONFIG_YAML` | `../config/prd.yml` | daemon/sandbox config YAML used by the gateway      |
 | `E2E_REBUILD_BINARY`          | `1`                 | cold-start gateway with `--rebuild-binary`          |
 | `E2E_PROGRESS`                | `0`                 | `1` streams daemon-side op progress live (`--progress`) |
+| `E2E_OP_METRICS_DIR`          | `docs/.../file-operation/operation-timing` | directory for latest per-operation timing artifacts |
 
 ## 5. Metrics & in-flight logs
 
@@ -75,6 +76,11 @@ Enabled by default in `pytest.ini` — no extra flags needed:
 - **Per-test timing** (`--durations=0`): a `slowest durations` table at the end
   with a `setup / call / teardown` breakdown per test, plus the live
   `⏱ <test> — N.NNNs total` line during the run.
+- **Per-operation timing artifacts**: every run that calls `sandbox-cli` writes
+  `latest.md` and `latest.json` under `E2E_OP_METRICS_DIR`. The summary groups
+  client-side CLI wall time by operation and includes count/min/p50/p95/max plus
+  the measured percentage of calls under 50 ms. This is measurement only; the
+  suite does not enforce a timing SLO.
 
 Useful overrides:
 

@@ -1,0 +1,6445 @@
+{
+  "argv": [
+    "/opt/homebrew/bin/pytest",
+    "runtime/file/correctness",
+    "--tb=short",
+    "-q",
+    "--log-cli-level=WARNING"
+  ],
+  "environment": {
+    "E2E_WORKSPACE_ROOT": "/tmp/eos-file-operation-e2e-workspace"
+  },
+  "exitstatus": 0,
+  "generated_at": "2026-07-02T07:49:03+08:00",
+  "record_count": 899,
+  "records": [
+    {
+      "duration_ms": 29.36,
+      "operation": "list_sandboxes",
+      "operation_key": "manager.list_sandboxes",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 521.599,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 42.25,
+      "operation": "create_workspace_session",
+      "operation_key": "runtime.create_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.811,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 28.363,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 47.824,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.519,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.962,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.474,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.138,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.15,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.307,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 52.447,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.136,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.1,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 29.123,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 57.977,
+      "operation": "destroy_workspace_session",
+      "operation_key": "runtime.destroy_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 353.028,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 260.935,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 24.483,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 28.36,
+      "operation": "create_workspace_session",
+      "operation_key": "runtime.create_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 51.781,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.651,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.042,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 63.17,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.196,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.517,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.196,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.603,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.031,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.579,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.786,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.488,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.394,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.495,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.617,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.188,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.602,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.306,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.448,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.247,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.308,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.694,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.939,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.601,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.775,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.895,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.184,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 70.0,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.51,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 52.999,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.746,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.254,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.62,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.055,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 63.039,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.862,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 58.634,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.065,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.265,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.875,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.375,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.434,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.638,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.778,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.787,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.888,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.55,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.302,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.625,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.988,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.644,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.093,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.412,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.681,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.801,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 56.267,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.689,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 66.527,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.357,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.436,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.754,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.033,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.428,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.98,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.983,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.768,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.521,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 64.51,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 52.286,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 64.959,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.516,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.821,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.381,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 51.295,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 59.419,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.544,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.856,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.19,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.137,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.292,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.68,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.072,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.907,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 58.683,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.091,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.252,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.046,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.893,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 58.554,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.107,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 54.668,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.632,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.346,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 67.354,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.748,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.76,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.875,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.601,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.382,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 60.431,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 64.785,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 63.793,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.843,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 55.836,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 57.934,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.606,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.774,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 36.929,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 33.623,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 53.784,
+      "operation": "destroy_workspace_session",
+      "operation_key": "runtime.destroy_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 379.022,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 239.825,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 26.14,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 31.442,
+      "operation": "create_workspace_session",
+      "operation_key": "runtime.create_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.211,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.588,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 65.255,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.515,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 56.537,
+      "operation": "destroy_workspace_session",
+      "operation_key": "runtime.destroy_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.963,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 30.461,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 33.385,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.907,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.295,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 37.454,
+      "operation": "create_workspace_session",
+      "operation_key": "runtime.create_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 58.698,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.032,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 62.744,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.331,
+      "operation": "destroy_workspace_session",
+      "operation_key": "runtime.destroy_workspace_session",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 361.619,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 257.676,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 26.282,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 89.414,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.067,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 33.476,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.844,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.804,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.28,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.502,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.94,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.796,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 381.439,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 232.315,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 24.369,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 52.533,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 37.827,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.996,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.27,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 64.366,
+      "operation": "write_command_stdin",
+      "operation_key": "runtime.write_command_stdin",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.161,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.572,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.613,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.233,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 356.97,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 258.807,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 29.509,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 54.887,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.94,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.883,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.521,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 53.665,
+      "operation": "write_command_stdin",
+      "operation_key": "runtime.write_command_stdin",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.822,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.884,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.236,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.871,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 347.635,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 530.2,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 33.171,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 64.554,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.52,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.413,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.536,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 61.079,
+      "operation": "write_command_stdin",
+      "operation_key": "runtime.write_command_stdin",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.974,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.8,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.198,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.811,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.156,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 339.639,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 261.248,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 29.843,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 60.215,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 51.098,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 294.49,
+      "operation": "write_command_stdin",
+      "operation_key": "runtime.write_command_stdin",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 295.066,
+      "operation": "write_command_stdin",
+      "operation_key": "runtime.write_command_stdin",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 36.54,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 28.876,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.888,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.942,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.272,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.805,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.388,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.936,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.286,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.223,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 368.038,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 509.11,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 30.679,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 1419.497,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 39.731,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 27.773,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.767,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.82,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.623,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.985,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 35.785,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.27,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.335,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.389,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.3,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.406,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.901,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.406,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.33,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.625,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.219,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.475,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.848,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.117,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.463,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.272,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.316,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.35,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.536,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.494,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.718,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.468,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.87,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.126,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.103,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 350.826,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 274.403,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 27.352,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 25.021,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 38.092,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.969,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.038,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.609,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.369,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.713,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.24,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.674,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.907,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.108,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.829,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.115,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.506,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 355.319,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 229.217,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 24.909,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 35.842,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.646,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.835,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.352,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.076,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.908,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 38.611,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.974,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.574,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.982,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.662,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.795,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.334,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 348.6,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 232.409,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 35.618,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.18,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.978,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.052,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 31.071,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.436,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.613,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.426,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.405,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 29.015,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 29.852,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 340.883,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 242.311,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 39.454,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 25.588,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.471,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 39.205,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.859,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.522,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.307,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 41.029,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.504,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.242,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 29.227,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.777,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 358.682,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 519.912,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 38.01,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 46.213,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.195,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.275,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 96.53,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.368,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.844,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.501,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.088,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.029,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.875,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 338.439,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 261.237,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 29.015,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 87.311,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 335.418,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 525.226,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 35.826,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 107.482,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 358.746,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 243.554,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 27.181,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 101.909,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.369,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.657,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 94.24,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 355.57,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 505.459,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 34.882,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 28.347,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 44.343,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.461,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.178,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.288,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.476,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.011,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.018,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.437,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.82,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.891,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.618,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.431,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.831,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.07,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.136,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.485,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.38,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.378,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.475,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.849,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.589,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.407,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.131,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.695,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.017,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.541,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.605,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.206,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.667,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.761,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.407,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.966,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.39,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.101,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.559,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.541,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.121,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.739,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.266,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.193,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.032,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.29,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.657,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.799,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.192,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.683,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.336,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.152,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.112,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.728,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.73,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.795,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.842,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.188,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.429,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.843,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.896,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 52.11,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.823,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.759,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.132,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.831,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.195,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.468,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.765,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.782,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.547,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.678,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.068,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 52.032,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.119,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.872,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 40.789,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.49,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.606,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.726,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.443,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.622,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.503,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.117,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.405,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.724,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.17,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.248,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.918,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.547,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.161,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.171,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.109,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.62,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.24,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.033,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.961,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.253,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.6,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.136,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.507,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.693,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.185,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.014,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.291,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.828,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.648,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.198,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.941,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.503,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.678,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.289,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.909,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.581,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.709,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.06,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.741,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.228,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.762,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.599,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.956,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.398,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.663,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.331,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.576,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.551,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.758,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.435,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.169,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.886,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 40.295,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.334,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.419,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.164,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.483,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.329,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.699,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.861,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.846,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.465,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.578,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.966,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.337,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.603,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.79,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.588,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.351,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.421,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.247,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.821,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.822,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.204,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.974,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.549,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 49.242,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.254,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.599,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.036,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.885,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.236,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.372,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.938,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.31,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.86,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.043,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.522,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.919,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.737,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.995,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.069,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.397,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.358,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.391,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.658,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.086,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.538,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.847,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.697,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 50.67,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.601,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.133,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.521,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.853,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.512,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 38.285,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 30.788,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.224,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.47,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.506,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.516,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.0,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.003,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.928,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.286,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.943,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 38.27,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.29,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.448,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.512,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.375,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.317,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.076,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.626,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.269,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.039,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.281,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.288,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.715,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.75,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.088,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.239,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 24.623,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.462,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 24.999,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 24.531,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.793,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.387,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 35.028,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.719,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.974,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.577,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.585,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.15,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.877,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 36.914,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.343,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.029,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.47,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.657,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.335,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.529,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.697,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.457,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.509,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.882,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.67,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.624,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.47,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.633,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.37,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.147,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.786,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.116,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.706,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.138,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 405.582,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 224.368,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 31.879,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 34.982,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.152,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.272,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 40.454,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.318,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.807,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.429,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.839,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.821,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.335,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.052,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.83,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 40.83,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.817,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.338,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.283,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.368,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.533,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.566,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.38,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.093,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.208,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.182,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.737,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.895,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.414,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.017,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.197,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.935,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.437,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.387,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.524,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.172,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.788,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.769,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.91,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.786,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.342,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.954,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.814,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.019,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.993,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.573,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.04,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.7,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.425,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.426,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.576,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.524,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.045,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.781,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.503,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.595,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.932,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.083,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.429,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.56,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.174,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.26,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.017,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.041,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.421,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.023,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.271,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.242,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.693,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.095,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.157,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.124,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.153,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.432,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.282,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.833,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.052,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.251,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.848,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.479,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.377,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.424,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.895,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.278,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.602,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.137,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.043,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.285,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.848,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.406,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.799,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.919,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.724,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.491,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.638,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.973,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.931,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.152,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.593,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.962,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.87,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.066,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.303,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.468,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.5,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.697,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.611,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.898,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.929,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.312,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.448,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.414,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.09,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.69,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.475,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.846,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.552,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.92,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.928,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.512,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 48.563,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.243,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.427,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.587,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.107,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.912,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.081,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.11,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.866,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.632,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.297,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.413,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.804,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.991,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.438,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.351,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.201,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.656,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.227,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.823,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.065,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.821,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.355,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.843,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.242,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.506,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.755,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 43.396,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.139,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.531,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.141,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.212,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.876,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.873,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.615,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.163,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.146,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.635,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.481,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 37.48,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 368.486,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 534.276,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 32.292,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 5645.761,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.979,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 37.668,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 45.312,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 4273.197,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 36.819,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 45.719,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 37.032,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.512,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 419.226,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 233.308,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 25.063,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 1759.386,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 36.174,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 30.14,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.853,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.417,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.514,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.048,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.655,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.246,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.08,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.695,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.921,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.378,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.765,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.378,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.181,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.232,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.509,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.633,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.902,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.456,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.184,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.33,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.868,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.571,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.47,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.428,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.611,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.456,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.185,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.511,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.87,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.171,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.017,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.874,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.447,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.479,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.412,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 42.203,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 27.577,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.714,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 35.438,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 34.686,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 36.466,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.028,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.399,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.72,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.227,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.146,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.988,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.622,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.688,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.984,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.85,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.521,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.952,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.411,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.752,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.024,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.599,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.173,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.179,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 362.302,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 280.306,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 28.605,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 38.397,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.695,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.024,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 90.649,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.929,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.39,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 41.041,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.718,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.141,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 96.182,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 37.133,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.933,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 44.344,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.885,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.692,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 93.762,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.627,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.274,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 47.041,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.685,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.778,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 108.41,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.072,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.773,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 46.805,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.583,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.803,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 96.369,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.929,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.621,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.839,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.411,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.56,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 34.592,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 364.917,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 277.504,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 27.107,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 34.13,
+      "operation": "file_edit",
+      "operation_key": "runtime.file_edit",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.026,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 28.01,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.145,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.372,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.739,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 32.208,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 346.552,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 267.881,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 29.904,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 34.66,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 25.987,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.031,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 92.598,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 35.677,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.758,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.7,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 371.808,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 551.179,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 37.68,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 34.593,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 33.034,
+      "operation": "file_write",
+      "operation_key": "runtime.file_write",
+      "returncode": 1,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.626,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 27.962,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 316.317,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 520.249,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 36.714,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 99.511,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 31.318,
+      "operation": "file_read",
+      "operation_key": "runtime.file_read",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 29.153,
+      "operation": "file_blame",
+      "operation_key": "runtime.file_blame",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 30.998,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 350.952,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 222.973,
+      "operation": "create_sandbox",
+      "operation_key": "manager.create_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    },
+    {
+      "duration_ms": 28.014,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 83.549,
+      "operation": "exec_command",
+      "operation_key": "runtime.exec_command",
+      "returncode": 0,
+      "scope": "runtime"
+    },
+    {
+      "duration_ms": 26.199,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 31.353,
+      "operation": "layerstack",
+      "operation_key": "observability.layerstack",
+      "returncode": 0,
+      "scope": "observability"
+    },
+    {
+      "duration_ms": 353.706,
+      "operation": "destroy_sandbox",
+      "operation_key": "manager.destroy_sandbox",
+      "returncode": 0,
+      "scope": "manager"
+    }
+  ],
+  "schema_version": 1,
+  "summary": [
+    {
+      "cli_error_count": 0,
+      "count": 27,
+      "max_ms": 551.179,
+      "min_ms": 222.973,
+      "operation": "manager.create_sandbox",
+      "p50_ms": 261.248,
+      "p95_ms": 533.053,
+      "sub_50ms_count": 0,
+      "sub_50ms_pct": 0.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 27,
+      "max_ms": 419.226,
+      "min_ms": 316.317,
+      "operation": "manager.destroy_sandbox",
+      "p50_ms": 355.57,
+      "p95_ms": 398.339,
+      "sub_50ms_count": 0,
+      "sub_50ms_pct": 0.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 1,
+      "max_ms": 29.36,
+      "min_ms": 29.36,
+      "operation": "manager.list_sandboxes",
+      "p50_ms": 29.36,
+      "p95_ms": 29.36,
+      "sub_50ms_count": 1,
+      "sub_50ms_pct": 100.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 64,
+      "max_ms": 39.731,
+      "min_ms": 24.369,
+      "operation": "observability.layerstack",
+      "p50_ms": 30.433,
+      "p95_ms": 37.65,
+      "sub_50ms_count": 64,
+      "sub_50ms_pct": 100.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 4,
+      "max_ms": 42.25,
+      "min_ms": 28.36,
+      "operation": "runtime.create_workspace_session",
+      "p50_ms": 34.448,
+      "p95_ms": 41.531,
+      "sub_50ms_count": 4,
+      "sub_50ms_pct": 100.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 4,
+      "max_ms": 57.977,
+      "min_ms": 53.331,
+      "operation": "runtime.destroy_workspace_session",
+      "p50_ms": 55.16,
+      "p95_ms": 57.761,
+      "sub_50ms_count": 0,
+      "sub_50ms_pct": 0.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 24,
+      "max_ms": 5645.761,
+      "min_ms": 51.098,
+      "operation": "runtime.exec_command",
+      "p50_ms": 93.18,
+      "p95_ms": 1708.403,
+      "sub_50ms_count": 0,
+      "sub_50ms_pct": 0.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 207,
+      "max_ms": 36.466,
+      "min_ms": 24.531,
+      "operation": "runtime.file_blame",
+      "p50_ms": 29.67,
+      "p95_ms": 33.272,
+      "sub_50ms_count": 207,
+      "sub_50ms_pct": 100.0
+    },
+    {
+      "cli_error_count": 0,
+      "count": 61,
+      "max_ms": 4273.197,
+      "min_ms": 34.13,
+      "operation": "runtime.file_edit",
+      "p50_ms": 44.174,
+      "p95_ms": 47.041,
+      "sub_50ms_count": 60,
+      "sub_50ms_pct": 98.4
+    },
+    {
+      "cli_error_count": 15,
+      "count": 291,
+      "max_ms": 63.793,
+      "min_ms": 24.999,
+      "operation": "runtime.file_read",
+      "p50_ms": 29.928,
+      "p95_ms": 37.082,
+      "sub_50ms_count": 282,
+      "sub_50ms_pct": 96.9
+    },
+    {
+      "cli_error_count": 2,
+      "count": 184,
+      "max_ms": 70.0,
+      "min_ms": 32.613,
+      "operation": "runtime.file_write",
+      "p50_ms": 49.471,
+      "p95_ms": 62.79,
+      "sub_50ms_count": 97,
+      "sub_50ms_pct": 52.7
+    },
+    {
+      "cli_error_count": 0,
+      "count": 5,
+      "max_ms": 295.066,
+      "min_ms": 53.665,
+      "operation": "runtime.write_command_stdin",
+      "p50_ms": 64.366,
+      "p95_ms": 294.951,
+      "sub_50ms_count": 0,
+      "sub_50ms_pct": 0.0
+    }
+  ]
+}
