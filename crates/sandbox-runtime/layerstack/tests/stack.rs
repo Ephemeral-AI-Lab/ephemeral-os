@@ -4,7 +4,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION;
 use sandbox_runtime_layerstack::{
     build_workspace_base, ensure_workspace_base, LayerChange, LayerPath, LayerStack,
-    LayerStackError, MergedView, WorkspaceBinding, ACTIVE_MANIFEST_FILE, WORKSPACE_BINDING_FILE,
+    LayerStackError, ManifestFileRead, MergedView, WorkspaceBinding, ACTIVE_MANIFEST_FILE,
+    WORKSPACE_BINDING_FILE,
 };
 use serde_json::json;
 
@@ -140,6 +141,52 @@ fn build_workspace_base_writes_manifest_with_canonical_atomic_path(
     Ok(())
 }
 
+#[test]
+fn read_classified_parent_whiteout_never_resolves_lower_layer(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // A lower layer holds dir/f.txt while an upper layer whiteouts the whole
+    // `dir`. A classified read of dir/f.txt must be Absent (blocked by the parent
+    // whiteout), never resolved to the lower-layer object.
+    let fixture = Fixture::new("read_classified_whiteout");
+    let lower = fixture.root.join("layers/L000001-lower");
+    let upper = fixture.root.join("layers/L000002-upper");
+    std::fs::create_dir_all(lower.join("dir"))?;
+    std::fs::write(lower.join("dir/f.txt"), "lower\n")?;
+    std::fs::create_dir_all(&upper)?;
+    std::fs::write(upper.join(".wh.dir"), b"")?;
+    write_manifest(&fixture, &["L000002-upper", "L000001-lower"])?;
+
+    let stack = LayerStack::open(fixture.root.clone())?;
+    assert!(matches!(
+        stack.read_classified(&LayerPath::parse("dir/f.txt")?, usize::MAX)?,
+        ManifestFileRead::Absent
+    ));
+    Ok(())
+}
+
+#[test]
+fn read_classified_opaque_parent_never_resolves_lower_layer(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // An upper-layer opaque marker over `dir` hides everything below it. A
+    // classified read of the lower layer's dir/f.txt must be Absent, never the
+    // lower-layer object.
+    let fixture = Fixture::new("read_classified_opaque");
+    let lower = fixture.root.join("layers/L000001-lower");
+    let upper = fixture.root.join("layers/L000002-upper");
+    std::fs::create_dir_all(lower.join("dir"))?;
+    std::fs::write(lower.join("dir/f.txt"), "lower\n")?;
+    std::fs::create_dir_all(upper.join("dir"))?;
+    std::fs::write(upper.join("dir/.wh..wh..opq"), b"")?;
+    write_manifest(&fixture, &["L000002-upper", "L000001-lower"])?;
+
+    let stack = LayerStack::open(fixture.root.clone())?;
+    assert!(matches!(
+        stack.read_classified(&LayerPath::parse("dir/f.txt")?, usize::MAX)?,
+        ManifestFileRead::Absent
+    ));
+    Ok(())
+}
+
 fn publish_text(
     stack: &mut LayerStack,
     path: &str,
@@ -149,6 +196,25 @@ fn publish_text(
         path: LayerPath::parse(path)?,
         content: content.as_bytes().to_vec(),
     }])?;
+    Ok(())
+}
+
+fn write_manifest(
+    fixture: &Fixture,
+    layer_ids: &[&str],
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let layers: Vec<_> = layer_ids
+        .iter()
+        .map(|id| json!({ "layer_id": id, "path": format!("layers/{id}") }))
+        .collect();
+    std::fs::write(
+        fixture.root.join(ACTIVE_MANIFEST_FILE),
+        serde_json::to_string_pretty(&json!({
+            "schema_version": MANIFEST_SCHEMA_VERSION,
+            "version": 1,
+            "layers": layers,
+        }))?,
+    )?;
     Ok(())
 }
 

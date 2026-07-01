@@ -13,12 +13,14 @@ use std::thread;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use sandbox_observability::{Observer, SpanRegistry};
+use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::file::{
     EditInput, EditOp, FileEntryKind, FileOperationError, FileService, ReadInput, ReadOutput,
     WriteInput,
 };
 use sandbox_runtime::layerstack::{LayerStackService, ManifestReadWindow};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
+use sandbox_runtime::{CommandOperationService, SandboxRuntimeOperations};
 use sandbox_runtime_layerstack::LayerPath;
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceTarget};
 use sandbox_runtime_namespace_process::runner::protocol::NsFds;
@@ -26,6 +28,7 @@ use sandbox_runtime_workspace::{
     run_result_err, run_result_ok, CreateWorkspaceRequest, FileRunnerEntryKind, FileRunnerError,
     FileRunnerOp, FileRunnerResult, NetworkProfile, WorkspaceSessionId,
 };
+use serde_json::json;
 
 use support::{
     fake_workspace_runtime, workspace_handle, FakeLauncher, FakeRunnerScript, FakeWorkspaceService,
@@ -73,7 +76,12 @@ fn env() -> Env {
     write_fixture(&workspace.join("binary.dat"), &[0xff, 0xfe, 0x00, b'x']);
     write_fixture(&workspace.join("big.txt"), big_file(5000).as_bytes());
     write_fixture(&workspace.join("wide.txt"), &vec![b'x'; 300_000]);
+    write_fixture(
+        &workspace.join("huge.txt"),
+        &vec![b'x'; 4 * 1024 * 1024 + 1],
+    );
     std::os::unix::fs::symlink("readme.txt", workspace.join("link.txt")).expect("symlink");
+    std::os::unix::fs::symlink("sub", workspace.join("linkdir")).expect("symlink dir");
 
     sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false).expect("build base");
     let file = Arc::new(FileService::open(temp("audit")).expect("audit store"));
@@ -313,6 +321,24 @@ fn sessionless_read_symlink_is_not_regular_not_followed() {
     }
 }
 
+#[test]
+fn sessionless_read_symlink_parent_is_not_followed() {
+    let env = env();
+    // linkdir -> sub is a symlinked parent directory. Classification treats a
+    // symlink ancestor as blocking and never joins through it, so the read
+    // surfaces as not_found (via Absent), never invalid_request or the target.
+    assert!(matches!(
+        env.read(read_of("linkdir/nested.txt")),
+        Err(FileOperationError::NotFound(_))
+    ));
+    assert!(matches!(
+        env.layerstack
+            .read_current_window(&layer_path("linkdir/nested.txt"), 1, 10, MAX_OUTPUT_BYTES)
+            .expect("read window"),
+        ManifestReadWindow::Absent
+    ));
+}
+
 // ---------- sessionless write ----------
 
 #[test]
@@ -506,6 +532,19 @@ fn sessionless_edit_invalid_utf8_is_rejected() {
     ));
 }
 
+#[test]
+fn sessionless_edit_over_max_edit_bytes_is_file_too_large() {
+    let env = env();
+    // huge.txt is one byte over MAX_EDIT_BYTES (4 MiB); the classify pass in
+    // amend_path must reject it as FileTooLarge before loading the whole file.
+    match env.edit(edit_of("huge.txt", vec![edit_op("x", "y", false)], "r")) {
+        Err(FileOperationError::FileTooLarge { limit, .. }) => {
+            assert_eq!(limit, 4 * 1024 * 1024);
+        }
+        other => panic!("expected FileTooLarge, got {other:?}"),
+    }
+}
+
 // ---------- path handling ----------
 
 #[test]
@@ -541,6 +580,46 @@ fn path_dot_components_normalize() {
         env.read(read_of("./readme.txt")).expect("dot read").path,
         "readme.txt"
     );
+}
+
+// ---------- dispatch (parse-time validation) ----------
+
+#[test]
+fn dispatch_file_read_limit_out_of_range_is_invalid_request() {
+    let env = env();
+    let operations = dispatch_operations(&env);
+    // The 1..=2000 limit range is enforced only at the dispatch/parse seam, which
+    // the direct-ReadInput tests bypass; both out-of-range bounds must reject.
+    for limit in [0_i64, 2001] {
+        let response = sandbox_runtime::dispatch_operation(
+            &operations,
+            &runtime_request("file_read", json!({ "path": "readme.txt", "limit": limit })),
+        )
+        .into_json_value();
+        assert_eq!(
+            response["error"]["kind"], "invalid_request",
+            "limit {limit} must be invalid_request, got {response}"
+        );
+    }
+}
+
+fn dispatch_operations(env: &Env) -> SandboxRuntimeOperations {
+    let command = Arc::new(CommandOperationService::new(
+        Arc::clone(&env.workspace_session),
+        Arc::clone(&env.layerstack),
+        sandbox_runtime::command::CommandConfig::default(),
+        Observer::disabled(),
+    ));
+    SandboxRuntimeOperations::new(
+        command,
+        Arc::clone(&env.workspace_session),
+        Arc::clone(&env.layerstack),
+        Arc::clone(&env.file),
+    )
+}
+
+fn runtime_request(op: &str, args: serde_json::Value) -> Request {
+    Request::new(op, "req-test", CliOperationScope::system(), args)
 }
 
 // ---------- layerstack helpers ----------

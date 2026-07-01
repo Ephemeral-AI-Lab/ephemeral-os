@@ -44,6 +44,49 @@ pub mod launcher {
         }
 
         #[test]
+        fn file_op_result_over_cap_surfaces_as_error() {
+            // A file-op runner that emits more than MAX_RUNNER_RESULT_BYTES must be
+            // failed, not buffered without bound or deadlocked: the drainer reads
+            // past the cap so the writer never blocks, then reports the overflow.
+            let (result_read, result_write) = result_pipe().expect("result pipe");
+            let writer = thread::spawn(move || {
+                let mut file = File::from(result_write);
+                let chunk = vec![b'x'; 64 * 1024];
+                let mut written = 0;
+                while written <= MAX_RUNNER_RESULT_BYTES {
+                    file.write_all(&chunk).expect("write oversized result");
+                    written += chunk.len();
+                }
+            });
+            let child = Command::new("sh")
+                .arg("-c")
+                .arg("true")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()
+                .expect("spawn child");
+            let mut runner = ForkRunnerChild {
+                child,
+                result_read,
+                mode_flag: Some("--file-op"),
+                setup_timeout_s: 5.0,
+            };
+
+            let error = runner
+                .wait_completion()
+                .expect_err("oversized result envelope must error");
+            writer.join().expect("writer thread");
+
+            assert!(
+                error
+                    .to_string()
+                    .contains(&format!("exceeds {MAX_RUNNER_RESULT_BYTES} bytes")),
+                "expected over-cap error, got {error}"
+            );
+        }
+
+        #[test]
         fn zero_status_without_valid_result_is_completion_error() {
             let (result_read, result_write) = result_pipe().expect("result pipe");
             drop(result_write);

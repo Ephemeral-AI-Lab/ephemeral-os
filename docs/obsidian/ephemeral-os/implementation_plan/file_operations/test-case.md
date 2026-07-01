@@ -312,3 +312,20 @@ the full automated matrix manually.
 - [ ] Session edit is visible with `workspace_session_id` and invisible to
       sessionless read before capture.
 - [ ] Ordered multi-edit applies against evolving content.
+
+### Session-Only Cases (Linux; not unit-testable on darwin)
+
+These run through the Linux-gated setns file-op body behind the live namespace
+runner, so the darwin unit harness cannot exercise them (the canned `run_file_op`
+hook proves the operation-layer wiring, not the in-namespace rejection). They are
+proven only here; record a transcript for each.
+
+- [ ] Session write updates an existing executable file and preserves its mode.
+- [ ] Session write to an in-session directory is rejected as invalid request /
+      not regular.
+- [ ] Session write to an in-session symlink is rejected as invalid request /
+      not regular; the symlink is not followed.
+- [ ] Session write to an in-session symlink parent is rejected as invalid
+      request; no symlink-parent traversal.
+- [ ] Session edit to an in-session symlink or symlink parent is rejected as
+      invalid request; no symlink traversal.
