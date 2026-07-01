@@ -1,6 +1,7 @@
 mod core;
 pub(crate) mod dto;
 mod impls;
+pub(crate) mod namespace;
 pub(super) mod store;
 pub(crate) mod support;
 

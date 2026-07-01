@@ -30,4 +30,8 @@ pub use model::{
     ReadonlySnapshotHandle, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
     WorkspaceHandle, WorkspaceSessionId,
 };
+pub use sandbox_runtime_namespace_process::runner::file_op::{
+    decode_file_op_payload, run_result_err, run_result_ok, FileRunnerEntryKind, FileRunnerError,
+    FileRunnerOp, FileRunnerResult,
+};
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

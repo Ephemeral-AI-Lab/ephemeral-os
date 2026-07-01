@@ -5,11 +5,13 @@
 
 use sandbox_runtime_layerstack::ManifestFileRead;
 
+use crate::file::service::namespace;
 use crate::file::service::support::{amend_error, resolve_layer_path};
 use crate::file::{
     FileEntryKind, FileOperationError, FileService, WriteInput, WriteKind, WriteOutput,
 };
 use crate::layerstack::LayerStackService;
+use crate::workspace_crate::{FileRunnerOp, FileRunnerResult};
 use crate::workspace_session::WorkspaceSessionService;
 
 impl FileService {
@@ -28,11 +30,39 @@ impl FileService {
         input: WriteInput,
     ) -> Result<WriteOutput, FileOperationError> {
         match &input.workspace_session_id {
-            Some(_workspace_session_id) => {
-                let _ = workspace_session;
-                Err(FileOperationError::WorkspaceSession(
-                    "session file operations require the namespace runner (M4)".to_owned(),
-                ))
+            Some(workspace_session_id) => {
+                let (rel, handler) = namespace::resolve_session_path(
+                    workspace_session,
+                    &input.path,
+                    workspace_session_id.clone(),
+                )?;
+                let path = rel.as_str().to_owned();
+                let write = namespace::run_file_op(
+                    workspace_session,
+                    &handler,
+                    &path,
+                    FileRunnerOp::Write {
+                        rel: path.clone(),
+                        content: input.content,
+                    },
+                )?;
+                match write {
+                    FileRunnerResult::Write {
+                        existed,
+                        bytes_written,
+                    } => Ok(WriteOutput {
+                        kind: if existed {
+                            WriteKind::Update
+                        } else {
+                            WriteKind::Create
+                        },
+                        path,
+                        bytes_written,
+                    }),
+                    _ => Err(FileOperationError::WorkspaceSession(
+                        "namespace write returned an unexpected result".to_owned(),
+                    )),
+                }
             }
             None => {
                 let workspace_root = layerstack.workspace_root()?;

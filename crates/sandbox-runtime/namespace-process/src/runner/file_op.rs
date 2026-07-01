@@ -88,9 +88,22 @@ pub enum FileRunnerError {
 #[must_use]
 pub fn run_file_op(request: &NamespaceRunnerRequest) -> RunResult {
     match crate::runner::setns::run_file_op_setns(request) {
-        Ok(result) => envelope("result", to_value(&result)),
-        Err(error) => envelope("error", to_value(&error)),
+        Ok(result) => run_result_ok(&result),
+        Err(error) => run_result_err(&error),
     }
+}
+
+/// Encode a successful file-op result as a runner [`RunResult`] (exit code 0).
+#[must_use]
+pub fn run_result_ok(result: &FileRunnerResult) -> RunResult {
+    envelope("result", to_value(result))
+}
+
+/// Encode a file-op error as a runner [`RunResult`] (exit code 0; the launcher
+/// inspects the payload, not the exit code).
+#[must_use]
+pub fn run_result_err(error: &FileRunnerError) -> RunResult {
+    envelope("error", to_value(error))
 }
 
 /// Decode a runner result payload into the file-op outcome, or `None` when the

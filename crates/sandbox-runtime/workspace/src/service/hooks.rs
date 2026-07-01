@@ -1,3 +1,6 @@
+use sandbox_runtime_namespace_process::runner::file_op::FileRunnerOp;
+use sandbox_runtime_namespace_process::runner::protocol::RunResult;
+
 use crate::error::WorkspaceError;
 use crate::model::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
@@ -6,6 +9,13 @@ use crate::model::{
 
 #[doc(hidden)]
 pub struct WorkspaceRuntimeHooks {
+    #[expect(
+        clippy::type_complexity,
+        reason = "hook signatures stay explicit by policy"
+    )]
+    pub run_file_op: Box<
+        dyn Fn(&WorkspaceHandle, FileRunnerOp) -> Result<RunResult, WorkspaceError> + Send + Sync,
+    >,
     pub create_workspace: Box<
         dyn Fn(CreateWorkspaceRequest) -> Result<WorkspaceHandle, WorkspaceError> + Send + Sync,
     >,

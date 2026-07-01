@@ -63,6 +63,8 @@ pub mod names {
     pub const NAMESPACE_EXEC_RUN_SHELL: &str = "namespace.exec.run_shell";
     /// Namespace overlay-mount span (sync).
     pub const NAMESPACE_EXEC_MOUNT_OVERLAY: &str = "namespace.exec.mount_overlay";
+    /// Namespace file-op span (sync request/result).
+    pub const NAMESPACE_EXEC_FILE_OP: &str = "namespace.exec.file_op";
     /// Namespace-process child spawn span (cross-process).
     pub const NAMESPACE_RUNNER_SPAWN_CHILD: &str = "namespace.runner.spawn_child";
     /// Layerstack publish span.

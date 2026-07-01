@@ -10,6 +10,8 @@ use crate::session::WorkspaceManagerError;
 use sandbox_observability::record::names;
 #[cfg(target_os = "linux")]
 use sandbox_runtime_namespace_execution::NamespaceTarget;
+use sandbox_runtime_namespace_process::runner::protocol::RunResult;
+use serde_json::Value;
 
 #[cfg(target_os = "linux")]
 use super::fds::{expect_line, write_all_fd};
@@ -43,6 +45,37 @@ impl NamespaceRuntime {
                 .scope(names::NAMESPACE_EXEC_MOUNT_OVERLAY, |_span| {
                     mount.wait().map_err(setup_error)
                 })
+        }
+    }
+
+    /// Run a file operation inside a mounted session's namespaces (peer of
+    /// [`Self::mount_overlay`]): `setns` into the live overlay via a per-op runner
+    /// and return the raw runner [`RunResult`]. Does not mount and does not
+    /// mutate the host `upperdir`.
+    pub(crate) fn run_file_op(
+        &self,
+        handle: &MountedWorkspace,
+        cgroup_procs_path: Option<PathBuf>,
+        args: Value,
+    ) -> Result<RunResult, WorkspaceManagerError> {
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (&self.engine, &self.obs, handle, cgroup_procs_path, args);
+            Err(WorkspaceManagerError::SetupFailed {
+                step: "namespace file runner is only supported on linux".to_owned(),
+            })
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
+            let id = self.engine.allocate_id();
+            let execution = self
+                .engine
+                .run_file_op(NamespaceTarget::from(entry), id, args, cgroup_procs_path)
+                .map_err(setup_error)?;
+            self.obs.scope(names::NAMESPACE_EXEC_FILE_OP, |_span| {
+                execution.wait().map_err(setup_error)
+            })
         }
     }
 

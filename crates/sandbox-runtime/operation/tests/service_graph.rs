@@ -77,6 +77,11 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
                     })
                 },
             ),
+            run_file_op: Box::new(|_handle, _op| {
+                Err(WorkspaceError::Setup {
+                    step: "not configured".to_owned(),
+                })
+            }),
             latest_snapshot: Box::new(|| {
                 Err(WorkspaceError::SnapshotAcquire {
                     source: "not configured".to_owned(),

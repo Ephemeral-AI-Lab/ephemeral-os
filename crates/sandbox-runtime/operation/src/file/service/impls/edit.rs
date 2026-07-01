@@ -5,9 +5,11 @@
 
 use sandbox_runtime_layerstack::ManifestFileRead;
 
+use crate::file::service::namespace;
 use crate::file::service::support::{amend_error, apply_edits, resolve_layer_path, MAX_EDIT_BYTES};
 use crate::file::{EditInput, EditOutput, FileEntryKind, FileOperationError, FileService};
 use crate::layerstack::LayerStackService;
+use crate::workspace_crate::{FileRunnerOp, FileRunnerResult};
 use crate::workspace_session::WorkspaceSessionService;
 
 impl FileService {
@@ -30,11 +32,60 @@ impl FileService {
             return Err(FileOperationError::NoEdits);
         }
         match &input.workspace_session_id {
-            Some(_workspace_session_id) => {
-                let _ = workspace_session;
-                Err(FileOperationError::WorkspaceSession(
-                    "session file operations require the namespace runner (M4)".to_owned(),
-                ))
+            Some(workspace_session_id) => {
+                let (rel, handler) = namespace::resolve_session_path(
+                    workspace_session,
+                    &input.path,
+                    workspace_session_id.clone(),
+                )?;
+                let path = rel.as_str().to_owned();
+                let current = namespace::run_file_op(
+                    workspace_session,
+                    &handler,
+                    &path,
+                    FileRunnerOp::ReadFile {
+                        rel: path.clone(),
+                        max_bytes: MAX_EDIT_BYTES,
+                    },
+                )?;
+                let bytes = match current {
+                    FileRunnerResult::ReadFile {
+                        existed, bytes_b64, ..
+                    } => {
+                        if !existed {
+                            return Err(FileOperationError::NotFound(path));
+                        }
+                        namespace::decode_read_file_bytes(&bytes_b64, &path)?
+                    }
+                    _ => {
+                        return Err(FileOperationError::WorkspaceSession(
+                            "namespace read-file returned an unexpected result".to_owned(),
+                        ))
+                    }
+                };
+                let text = String::from_utf8(bytes)
+                    .map_err(|_| FileOperationError::NotUtf8(path.clone()))?;
+                let (edited, replacements) = apply_edits(&text, &input.edits, &path)?;
+                let write = namespace::run_file_op(
+                    workspace_session,
+                    &handler,
+                    &path,
+                    FileRunnerOp::Write {
+                        rel: path.clone(),
+                        content: edited,
+                    },
+                )?;
+                match write {
+                    FileRunnerResult::Write { bytes_written, .. } => Ok(EditOutput {
+                        path,
+                        edits_applied: input.edits.len(),
+                        replacements,
+                        bytes_written,
+                    }),
+                    _ => Err(FileOperationError::WorkspaceSession(
+                        "namespace write returned an unexpected result".to_owned(),
+                    )),
+                }
             }
             None => {
                 let workspace_root = layerstack.workspace_root()?;

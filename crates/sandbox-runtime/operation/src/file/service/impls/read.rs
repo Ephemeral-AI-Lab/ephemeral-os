@@ -2,9 +2,11 @@
 //! layerstack snapshot; session reads run a namespace read-window against the
 //! session's mounted workspace. Never mounts, publishes, or mutates.
 
+use crate::file::service::namespace;
 use crate::file::service::support::{effective_read_window, resolve_layer_path, MAX_OUTPUT_BYTES};
 use crate::file::{FileEntryKind, FileOperationError, FileService, ReadInput, ReadOutput};
 use crate::layerstack::{LayerStackService, ManifestReadWindow};
+use crate::workspace_crate::{FileRunnerOp, FileRunnerResult};
 use crate::workspace_session::WorkspaceSessionService;
 
 impl FileService {
@@ -22,11 +24,56 @@ impl FileService {
         input: ReadInput,
     ) -> Result<ReadOutput, FileOperationError> {
         match &input.workspace_session_id {
-            Some(_workspace_session_id) => {
-                let _ = workspace_session;
-                Err(FileOperationError::WorkspaceSession(
-                    "session file operations require the namespace runner (M4)".to_owned(),
-                ))
+            Some(workspace_session_id) => {
+                let (rel, handler) = namespace::resolve_session_path(
+                    workspace_session,
+                    &input.path,
+                    workspace_session_id.clone(),
+                )?;
+                let path = rel.as_str().to_owned();
+                let (offset, limit) = effective_read_window(input.offset, input.limit);
+                let read = namespace::run_file_op(
+                    workspace_session,
+                    &handler,
+                    &path,
+                    FileRunnerOp::ReadWindow {
+                        rel: path.clone(),
+                        offset,
+                        limit,
+                        output_cap: MAX_OUTPUT_BYTES,
+                    },
+                )?;
+                match read {
+                    FileRunnerResult::ReadWindow {
+                        existed,
+                        content,
+                        start_line,
+                        num_lines,
+                        total_lines,
+                        bytes_read,
+                        total_bytes,
+                        next_offset,
+                        truncated,
+                    } => {
+                        if !existed {
+                            return Err(FileOperationError::NotFound(path));
+                        }
+                        Ok(ReadOutput {
+                            path,
+                            content,
+                            start_line,
+                            num_lines,
+                            total_lines,
+                            bytes_read,
+                            total_bytes,
+                            next_offset,
+                            truncated,
+                        })
+                    }
+                    _ => Err(FileOperationError::WorkspaceSession(
+                        "namespace read returned an unexpected result".to_owned(),
+                    )),
+                }
             }
             None => {
                 let workspace_root = layerstack.workspace_root()?;

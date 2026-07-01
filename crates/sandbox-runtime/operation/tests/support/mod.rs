@@ -17,7 +17,7 @@ use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef, LeaseId,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp, LayerStackSnapshotRef, LeaseId,
     NetworkProfile, ReadonlySnapshotHandle, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
@@ -38,6 +38,8 @@ pub(crate) struct FakeWorkspaceService {
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     capture_calls: Mutex<Vec<WorkspaceSessionId>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
+    run_file_op_results: Mutex<VecDeque<Result<RunResult, WorkspaceError>>>,
+    run_file_op_calls: Mutex<Vec<(WorkspaceSessionId, FileRunnerOp)>>,
 }
 
 /// A scripted command outcome (kept for the suites that script per yield). It is
@@ -169,6 +171,40 @@ impl FakeWorkspaceService {
             .clone()
     }
 
+    pub(crate) fn push_run_file_op_result(&self, result: Result<RunResult, WorkspaceError>) {
+        self.run_file_op_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
+    }
+
+    pub(crate) fn run_file_op_calls(&self) -> Vec<(WorkspaceSessionId, FileRunnerOp)> {
+        self.run_file_op_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+
+    fn run_file_op(
+        &self,
+        handle: &WorkspaceHandle,
+        op: FileRunnerOp,
+    ) -> Result<RunResult, WorkspaceError> {
+        self.run_file_op_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push((handle.id.clone(), op));
+        self.run_file_op_results
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .unwrap_or_else(|| {
+                Err(WorkspaceError::Command {
+                    message: "run_file_op result not configured".to_owned(),
+                })
+            })
+    }
+
     fn create_workspace(
         &self,
         request: CreateWorkspaceRequest,
@@ -247,6 +283,10 @@ pub(crate) fn fake_workspace_runtime(
             destroy_workspace: Box::new({
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            run_file_op: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, op| fake.run_file_op(handle, op)
             }),
             latest_snapshot: Box::new(move || fake.latest_snapshot()),
         },

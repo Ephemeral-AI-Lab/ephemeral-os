@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+base64.workspace = true
 sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-layerstack.workspace = true
 sandbox-observability.workspace = true
