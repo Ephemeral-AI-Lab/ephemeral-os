@@ -257,13 +257,28 @@ P1 (decision):
       pre-pass in `validate_edits`, run before the read in both `edit()` branches;
       final `current == original` governs net-no-op. Flagged for review.
 
-P2 (optional):
+P2 (optional) — **consciously deferred this pass** (non-blocking; not required by
+the Definition of done). Rationale per item below; none is a merge blocker and
+none currently trips a lint (the dead `pub` items are part of the crate's public
+API surface, so they raise no `dead_code` warning).
 
-- [ ] Dedupe windowing helper across crates
-- [ ] Factor shared `read_classified` / `read_entry_limited` walk
-- [ ] Remove dead `RunnerPlacement::cgroup()` + `Default`
-- [ ] setns: `0o0777` mode mask, post-open `fstat`, propagate parent `fsync`
-- [ ] `read_current_window` dead `TooLarge` arm
+- [ ] Dedupe windowing helper across crates — MED-complexity refactor across the
+      layerstack ↔ namespace-process boundary that must stay byte-identical for
+      read symmetry; deferred to keep this pass additive and low-risk.
+- [ ] Factor shared `read_classified` / `read_entry_limited` walk — MED refactor
+      of the classification code just brought under test (P0-2/P0-3); deferred to
+      avoid churning it in the same pass that adds its first coverage.
+- [ ] Remove dead `RunnerPlacement::cgroup()` + `Default` — the spec's suggested
+      swap does **not** typecheck: `cgroup()` takes `PathBuf`, but both engine
+      call sites (`engine.rs:112,174`) hold `Option<PathBuf>` and use the struct
+      literal. Wiring it in needs an API-design call (change the signature, or
+      `map_or_else(none, cgroup)`); left for the reviewer.
+- [ ] setns: `0o0777` mode mask, post-open `fstat`, propagate parent `fsync` —
+      Linux-gated setns body; cannot be exercised on the darwin dev host, and the
+      review found the current code containment-sound. Defense-in-depth only;
+      deferred rather than shipped unverified.
+- [ ] `read_current_window` dead `TooLarge` arm — sound on 64-bit (the arm is
+      unreachable); cosmetic only, deferred.
 
 Nice-to-have coverage (non-blocking):
 
