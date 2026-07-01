@@ -35,7 +35,7 @@ pub const MAX_RUNNER_RESULT_BYTES: usize = 8 * 1024 * 1024;
 /// launcher writes the freshly spawned ns-runner pid into. This is not file-op
 /// logic — `exec_command` and session file ops pass a cgroup; overlay mount
 /// passes none.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct RunnerPlacement {
     pub cgroup_procs_path: Option<PathBuf>,
 }
@@ -45,13 +45,6 @@ impl RunnerPlacement {
     pub fn none() -> Self {
         Self {
             cgroup_procs_path: None,
-        }
-    }
-
-    #[must_use]
-    pub fn cgroup(cgroup_procs_path: PathBuf) -> Self {
-        Self {
-            cgroup_procs_path: Some(cgroup_procs_path),
         }
     }
 }

@@ -268,11 +268,11 @@ API surface, so they raise no `dead_code` warning).
 - [ ] Factor shared `read_classified` / `read_entry_limited` walk — MED refactor
       of the classification code just brought under test (P0-2/P0-3); deferred to
       avoid churning it in the same pass that adds its first coverage.
-- [ ] Remove dead `RunnerPlacement::cgroup()` + `Default` — the spec's suggested
-      swap does **not** typecheck: `cgroup()` takes `PathBuf`, but both engine
-      call sites (`engine.rs:112,174`) hold `Option<PathBuf>` and use the struct
-      literal. Wiring it in needs an API-design call (change the signature, or
-      `map_or_else(none, cgroup)`); left for the reviewer.
+- [x] Remove dead `RunnerPlacement::cgroup()` + `Default` — **done**, but by
+      deleting the dead constructor and the unused `Default` derive rather than
+      the review's suggested wire-in (which did not typecheck: `cgroup()` takes
+      `PathBuf` while both engine call sites hold `Option<PathBuf>` and keep the
+      struct literal). `RunnerPlacement::none()` and the `pub` field are retained.
 - [ ] setns: `0o0777` mode mask, post-open `fstat`, propagate parent `fsync` —
       Linux-gated setns body; cannot be exercised on the darwin dev host, and the
       review found the current code containment-sound. Defense-in-depth only;
