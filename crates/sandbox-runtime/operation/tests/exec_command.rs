@@ -12,7 +12,7 @@ use sandbox_runtime::command::{
 };
 use sandbox_runtime::{LayerStackService, NamespaceExecutionId, SandboxRuntimeOperations};
 use sandbox_runtime_namespace_execution::{
-    NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild,
+    NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild, RunnerPlacement,
 };
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NamespaceRunnerRequest};
 use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
@@ -681,7 +681,7 @@ impl NsRunnerLauncher for BlockingNsLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
-        cgroup_procs_path: Option<PathBuf>,
+        placement: RunnerPlacement,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         if let Some(sender) = self
             .spawn_entered
@@ -697,15 +697,27 @@ impl NsRunnerLauncher for BlockingNsLauncher {
             .recv()
             .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
         self.inner
-            .spawn_pty(request, transcript_path, cancelled, cgroup_procs_path)
+            .spawn_pty(request, transcript_path, cancelled, placement)
     }
 
     fn spawn_overlay_mount(
         &self,
         request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        self.inner.spawn_overlay_mount(request, setup_timeout_s)
+        self.inner
+            .spawn_overlay_mount(request, placement, setup_timeout_s)
+    }
+
+    fn spawn_file_op(
+        &self,
+        request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        self.inner
+            .spawn_file_op(request, placement, setup_timeout_s)
     }
 }
 

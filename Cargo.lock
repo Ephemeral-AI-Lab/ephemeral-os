@@ -1539,6 +1539,7 @@ dependencies = [
 name = "sandbox-runtime-namespace-process"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "libc",
  "nix 0.29.0",
  "rustix 0.38.44",

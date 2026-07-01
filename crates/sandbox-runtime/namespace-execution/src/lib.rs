@@ -12,7 +12,7 @@ mod types;
 pub use engine::NamespaceExecutionEngine;
 pub use error::NamespaceExecutionError;
 pub use execution::{ExecutionHandle, InteractiveExecution};
-pub use launcher::{NsRunnerLauncher, RunnerChild};
+pub use launcher::{NsRunnerLauncher, RunnerChild, RunnerPlacement, MAX_RUNNER_RESULT_BYTES};
 pub use promise::{CompletionPromise, CompletionWaiter};
 pub use pty::{open_pty_pair, PtyMaster};
 pub use registry::ExecutionRegistry;

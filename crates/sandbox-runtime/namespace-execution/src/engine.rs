@@ -6,12 +6,14 @@ use std::sync::Arc;
 use std::thread;
 
 use sandbox_observability::{SpanStatus, TerminalHook, TraceContext};
-use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
+use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 use serde_json::Value;
 
 use crate::error::NamespaceExecutionError;
 use crate::execution::{ExecutionHandle, InteractiveExecution};
-use crate::launcher::{ForkRunnerLauncher, NsRunnerLauncher, RunnerChild, MOUNT_OVERLAY_MODE_FLAG};
+use crate::launcher::{
+    ForkRunnerLauncher, NsRunnerLauncher, RunnerChild, RunnerPlacement, MOUNT_OVERLAY_MODE_FLAG,
+};
 use crate::promise::CompletionPromise;
 use crate::registry::ExecutionRegistry;
 use crate::shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
@@ -107,7 +109,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
                 request,
                 transcript_path,
                 Arc::clone(&cancelled),
-                cgroup_procs_path,
+                RunnerPlacement { cgroup_procs_path },
             )
         })?;
         let promise = Arc::new(CompletionPromise::new());
@@ -136,8 +138,11 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
     ) -> Result<ExecutionHandle<()>, NamespaceExecutionError> {
         let request = build_request(&target, &id, serde_json::json!({}), None, None);
         let child = self.reserve_spawn(&id, || {
-            self.launcher
-                .spawn_overlay_mount(request, self.setup_timeout_s)
+            self.launcher.spawn_overlay_mount(
+                request,
+                RunnerPlacement::none(),
+                self.setup_timeout_s,
+            )
         })?;
         let promise = Arc::new(CompletionPromise::new());
         self.spawn_watcher(
@@ -147,6 +152,37 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             Arc::new(AtomicBool::new(false)),
             Some(MOUNT_OVERLAY_MODE_FLAG),
             |_| Ok(()),
+        );
+        Ok(ExecutionHandle::new(id, promise))
+    }
+
+    /// Launch a file operation in the session namespaces. Peer of
+    /// [`Self::mount_overlay`]: the same request/result runner launch, but the
+    /// output is the runner's raw [`RunResult`] payload (the encoded file-op
+    /// result or error), so the exit code is not treated as a mount failure.
+    pub fn run_file_op(
+        &self,
+        target: NamespaceTarget,
+        id: NamespaceExecutionId,
+        args: Value,
+        cgroup_procs_path: Option<PathBuf>,
+    ) -> Result<ExecutionHandle<RunResult>, NamespaceExecutionError> {
+        let request = build_request(&target, &id, args, None, None);
+        let child = self.reserve_spawn(&id, || {
+            self.launcher.spawn_file_op(
+                request,
+                RunnerPlacement { cgroup_procs_path },
+                self.setup_timeout_s,
+            )
+        })?;
+        let promise = Arc::new(CompletionPromise::new());
+        self.spawn_watcher(
+            id.clone(),
+            child,
+            Arc::clone(&promise),
+            Arc::new(AtomicBool::new(false)),
+            None,
+            |outcome| Ok(outcome.into_result()),
         );
         Ok(ExecutionHandle::new(id, promise))
     }

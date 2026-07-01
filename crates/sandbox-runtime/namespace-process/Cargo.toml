@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+base64.workspace = true
 serde.workspace = true
 sandbox-runtime-overlay.workspace = true
 sandbox-observability.workspace = true

@@ -19,6 +19,7 @@ use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest
 
 use sandbox_runtime_namespace_execution::{
     open_pty_pair, NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild,
+    RunnerPlacement,
 };
 
 /// A controllable completion cell the test drives. `complete`/`fail`/`cancel`
@@ -167,6 +168,7 @@ struct FakeLauncherState {
     completions: Vec<Arc<FakeCompletion>>,
     scripts: VecDeque<FakeRunnerScript>,
     overlay_mount_setup_timeouts: Vec<f64>,
+    file_op_setup_timeouts: Vec<f64>,
 }
 
 /// A fake `NsRunnerLauncher`: records each request, hands back a `FakeRunnerChild`
@@ -221,6 +223,11 @@ impl FakeLauncher {
         self.lock().overlay_mount_setup_timeouts.clone()
     }
 
+    #[must_use]
+    pub fn file_op_setup_timeouts(&self) -> Vec<f64> {
+        self.lock().file_op_setup_timeouts.clone()
+    }
+
     /// Complete the most recently spawned execution.
     pub fn complete_latest(&self, result: RunResult) {
         if let Some(completion) = self.latest_completion() {
@@ -267,10 +274,13 @@ impl NsRunnerLauncher for FakeLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
-        cgroup_procs_path: Option<PathBuf>,
+        placement: RunnerPlacement,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
-        let (completion, script) =
-            self.record(&request, transcript_path.clone(), cgroup_procs_path);
+        let (completion, script) = self.record(
+            &request,
+            transcript_path.clone(),
+            placement.cgroup_procs_path,
+        );
         if let Some(error) = script.spawn_error {
             return Err(error);
         }
@@ -312,11 +322,33 @@ impl NsRunnerLauncher for FakeLauncher {
     fn spawn_overlay_mount(
         &self,
         request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        let (completion, _script) = self.record(&request, None, None);
-        let mut state = self.lock();
-        state.overlay_mount_setup_timeouts.push(setup_timeout_s);
+        let (completion, _script) = self.record(&request, None, placement.cgroup_procs_path);
+        self.lock()
+            .overlay_mount_setup_timeouts
+            .push(setup_timeout_s);
+        Ok(Box::new(FakeRunnerChild {
+            completion,
+            _slave: None,
+        }))
+    }
+
+    fn spawn_file_op(
+        &self,
+        request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        let (completion, script) = self.record(&request, None, placement.cgroup_procs_path);
+        self.lock().file_op_setup_timeouts.push(setup_timeout_s);
+        if let Some(error) = script.spawn_error {
+            return Err(error);
+        }
+        if let Some(result) = script.completion {
+            completion.complete(result);
+        }
         Ok(Box::new(FakeRunnerChild {
             completion,
             _slave: None,

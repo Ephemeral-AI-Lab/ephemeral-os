@@ -12,7 +12,7 @@ use std::sync::{Arc, Condvar, Mutex};
 
 use sandbox_observability::{SpanStatus, TerminalHook};
 
-use crate::launcher::{NsRunnerLauncher, RunnerChild};
+use crate::launcher::{NsRunnerLauncher, RunnerChild, RunnerPlacement};
 use crate::pty::{open_pty_pair, PtyMaster};
 use crate::{
     NamespaceExecutionError, NamespaceExecutionId, NamespaceTarget, RunnerOutcome, ShellOperation,
@@ -244,7 +244,7 @@ impl NsRunnerLauncher for FakeLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
-        _cgroup_procs_path: Option<PathBuf>,
+        _placement: RunnerPlacement,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         let (completion, script) = self.record(&request, transcript_path.clone());
         if let Some(error) = script.spawn_error {
@@ -281,11 +281,31 @@ impl NsRunnerLauncher for FakeLauncher {
     fn spawn_overlay_mount(
         &self,
         request: NamespaceRunnerRequest,
+        _placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         let (completion, _script) = self.record(&request, None);
         let mut state = self.lock();
         state.overlay_mount_setup_timeouts.push(setup_timeout_s);
+        Ok(Box::new(FakeRunnerChild {
+            completion,
+            _slave: None,
+        }))
+    }
+
+    fn spawn_file_op(
+        &self,
+        request: NamespaceRunnerRequest,
+        _placement: RunnerPlacement,
+        _setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        let (completion, script) = self.record(&request, None);
+        if let Some(error) = script.spawn_error {
+            return Err(error);
+        }
+        if let Some(result) = script.completion {
+            completion.complete(result);
+        }
         Ok(Box::new(FakeRunnerChild {
             completion,
             _slave: None,

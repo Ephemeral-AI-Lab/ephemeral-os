@@ -72,6 +72,13 @@ impl RunnerOutcome {
     pub fn payload(&self) -> &Value {
         &self.result.payload
     }
+
+    /// Consume the outcome, yielding the runner's raw result. Used by the file-op
+    /// launch whose output is the result payload itself, not a shell transcript.
+    #[must_use]
+    pub fn into_result(self) -> RunResult {
+        self.result
+    }
 }
 
 pub trait ShellOperation: Send + 'static {

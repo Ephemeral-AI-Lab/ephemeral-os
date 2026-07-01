@@ -9,6 +9,7 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+pub mod file_op;
 pub mod protocol;
 pub mod setns;
 pub(crate) mod shell_exec;

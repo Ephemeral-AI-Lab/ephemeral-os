@@ -3,8 +3,11 @@
 use std::path::PathBuf;
 
 use super::RunnerError;
+use crate::runner::file_op::{FileRunnerError, FileRunnerResult};
 use crate::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
+#[cfg(target_os = "linux")]
+mod file_op;
 #[cfg(target_os = "linux")]
 mod mount_overlay;
 #[cfg(target_os = "linux")]
@@ -23,6 +26,26 @@ pub(crate) fn run_setns(request: &NamespaceRunnerRequest) -> Result<RunResult, R
 #[cfg(not(target_os = "linux"))]
 pub(crate) fn run_setns(_request: &NamespaceRunnerRequest) -> Result<RunResult, RunnerError> {
     Err(RunnerError::Unsupported)
+}
+
+/// Run a file operation inside the session's user+mount namespaces. File-op
+/// outcomes (including not-found and not-regular) are returned as values; only a
+/// `setns` or transport failure becomes [`FileRunnerError::Io`].
+#[cfg(target_os = "linux")]
+pub(crate) fn run_file_op_setns(
+    request: &NamespaceRunnerRequest,
+) -> Result<FileRunnerResult, FileRunnerError> {
+    file_op::run_file_op_setns(request)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub(crate) fn run_file_op_setns(
+    _request: &NamespaceRunnerRequest,
+) -> Result<FileRunnerResult, FileRunnerError> {
+    Err(FileRunnerError::Io {
+        path: String::new(),
+        message: "namespace file runner is only supported on linux".to_owned(),
+    })
 }
 
 /// Mount the overlay inside an existing workspace mount namespace.

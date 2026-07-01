@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use anyhow::{anyhow, Context, Result};
 use sandbox_config::configs::runner::RunnerConfig;
 
+mod file_op;
 pub(crate) mod mount_overlay;
 mod shell;
 
@@ -32,8 +33,9 @@ fn dispatch_runner_mode(
     runner_config: &RunnerConfig,
 ) -> Result<sandbox_runtime_namespace_process::runner::protocol::RunResult> {
     match operation {
+        NsRunnerOperation::Shell => shell::run(request),
         NsRunnerOperation::MountOverlay => mount_overlay::run(request, runner_config),
-        NsRunnerOperation::Run => shell::run(request),
+        NsRunnerOperation::FileOp => file_op::run(request),
     }
 }
 
@@ -54,8 +56,9 @@ fn runner_config_from_document(doc: &sandbox_config::ConfigDocument) -> Result<R
 
 #[derive(Clone, Copy)]
 enum NsRunnerOperation {
-    Run,
+    Shell,
     MountOverlay,
+    FileOp,
 }
 
 pub(crate) struct RunnerCliConfig {
@@ -79,7 +82,9 @@ impl RunnerCliConfig {
         let mut args = args.into_iter();
         while let Some(arg) = args.next() {
             match arg.as_str() {
+                "--shell" => set_mode(NsRunnerOperation::Shell)?,
                 "--mount-overlay" => set_mode(NsRunnerOperation::MountOverlay)?,
+                "--file-op" => set_mode(NsRunnerOperation::FileOp)?,
                 "--request-fd" => {
                     request_fd = Some(
                         args.next()
@@ -98,7 +103,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: sandbox-daemon ns-runner [--mount-overlay] [--request-fd FD] [--result-fd FD]"
+                        "usage: sandbox-daemon ns-runner (--shell | --mount-overlay | --file-op) --request-fd FD --result-fd FD"
                     );
                     std::process::exit(0);
                 }
@@ -114,10 +119,15 @@ impl RunnerCliConfig {
         }
         let request_fd = request_fd.ok_or_else(|| anyhow!("ns-runner requires --request-fd FD"))?;
         let result_fd = result_fd.ok_or_else(|| anyhow!("ns-runner requires --result-fd FD"))?;
+        let mode = mode.ok_or_else(|| {
+            anyhow!(
+                "ns-runner requires exactly one mode flag: --shell | --mount-overlay | --file-op"
+            )
+        })?;
         Ok(Self {
             request_fd,
             result_fd,
-            mode: mode.unwrap_or(NsRunnerOperation::Run),
+            mode,
         })
     }
 }

@@ -20,8 +20,41 @@ use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest
 use crate::error::NamespaceExecutionError;
 use crate::pty::{open_pty_pair, terminate_pgid, PtyMaster};
 
+pub(crate) const SHELL_MODE_FLAG: &str = "--shell";
 pub(crate) const MOUNT_OVERLAY_MODE_FLAG: &str = "--mount-overlay";
+pub(crate) const FILE_OP_MODE_FLAG: &str = "--file-op";
 const SETUP_WAIT_POLL: Duration = Duration::from_millis(1);
+
+/// Cap on the encoded ns-runner result envelope drained from `result_fd`. A
+/// request/result runner that would emit more is failed rather than buffered
+/// without bound (a `ReadFile` payload is base64, so this is well above
+/// `MAX_EDIT_BYTES`).
+pub const MAX_RUNNER_RESULT_BYTES: usize = 8 * 1024 * 1024;
+
+/// Shared launch placement policy: the optional workspace `cgroup.procs` path the
+/// launcher writes the freshly spawned ns-runner pid into. This is not file-op
+/// logic — `exec_command` and session file ops pass a cgroup; overlay mount
+/// passes none.
+#[derive(Debug, Clone, Default)]
+pub struct RunnerPlacement {
+    pub cgroup_procs_path: Option<PathBuf>,
+}
+
+impl RunnerPlacement {
+    #[must_use]
+    pub fn none() -> Self {
+        Self {
+            cgroup_procs_path: None,
+        }
+    }
+
+    #[must_use]
+    pub fn cgroup(cgroup_procs_path: PathBuf) -> Self {
+        Self {
+            cgroup_procs_path: Some(cgroup_procs_path),
+        }
+    }
+}
 
 pub trait NsRunnerLauncher: Send + Sync {
     fn spawn_pty(
@@ -29,12 +62,20 @@ pub trait NsRunnerLauncher: Send + Sync {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
-        cgroup_procs_path: Option<PathBuf>,
+        placement: RunnerPlacement,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError>;
 
     fn spawn_overlay_mount(
         &self,
         request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
+
+    fn spawn_file_op(
+        &self,
+        request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
 }
@@ -67,10 +108,10 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         request: NamespaceRunnerRequest,
         transcript_path: Option<PathBuf>,
         cancelled: Arc<AtomicBool>,
-        cgroup_procs_path: Option<PathBuf>,
+        placement: RunnerPlacement,
     ) -> Result<(Box<dyn RunnerChild>, PtyMaster), NamespaceExecutionError> {
         let request_bytes = encode_request(&request)?;
-        let (mut spawned, master) = spawn_locked(None, |command| {
+        let (mut spawned, master) = spawn_locked(Some(SHELL_MODE_FLAG), |command| {
             let (master, slave) = open_pty_pair().map_err(spawn_error)?;
             command
                 .stdin(Stdio::from(slave.try_clone().map_err(spawn_error)?))
@@ -79,7 +120,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             install_pgid_leader_hook(command);
             Ok(master)
         })?;
-        place_child_in_cgroup(spawned.child.id(), cgroup_procs_path.as_deref());
+        place_child_in_cgroup(spawned.child.id(), placement.cgroup_procs_path.as_deref());
         let pgid = spawned.pgid;
         let cancel: Box<dyn Fn() + Send + Sync> = Box::new(move || {
             cancelled.store(true, Ordering::Release);
@@ -101,23 +142,46 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
     fn spawn_overlay_mount(
         &self,
         request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        let request_bytes = encode_request(&request)?;
-        let (spawned, ()) = spawn_locked(Some(MOUNT_OVERLAY_MODE_FLAG), |command| {
-            command
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null());
-            install_pgid_leader_hook(command);
-            Ok(())
-        })?;
-        Ok(Box::new(spawned.into_child(
-            &request_bytes,
-            Some(MOUNT_OVERLAY_MODE_FLAG),
-            setup_timeout_s,
-        )?))
+        spawn_request_result(MOUNT_OVERLAY_MODE_FLAG, request, placement, setup_timeout_s)
     }
+
+    fn spawn_file_op(
+        &self,
+        request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        spawn_request_result(FILE_OP_MODE_FLAG, request, placement, setup_timeout_s)
+    }
+}
+
+/// Shared launch for the non-interactive request/result runner modes
+/// (`--mount-overlay`, `--file-op`): null stdio, cgroup placement, and the
+/// setup-timeout wait that drains `result_fd` concurrently.
+fn spawn_request_result(
+    mode_flag: &'static str,
+    request: NamespaceRunnerRequest,
+    placement: RunnerPlacement,
+    setup_timeout_s: f64,
+) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+    let request_bytes = encode_request(&request)?;
+    let (spawned, ()) = spawn_locked(Some(mode_flag), |command| {
+        command
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        install_pgid_leader_hook(command);
+        Ok(())
+    })?;
+    place_child_in_cgroup(spawned.child.id(), placement.cgroup_procs_path.as_deref());
+    Ok(Box::new(spawned.into_child(
+        &request_bytes,
+        Some(mode_flag),
+        setup_timeout_s,
+    )?))
 }
 
 impl SpawnedRunner {
@@ -182,18 +246,71 @@ fn spawn_locked<R>(
 
 impl RunnerChild for ForkRunnerChild {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
-        let status = match self.mode_flag {
-            Some(mode_flag) => {
-                wait_for_child_with_timeout(&mut self.child, mode_flag, self.setup_timeout_s)?
+        match self.mode_flag {
+            Some(mode_flag) => self.wait_request_result(mode_flag),
+            None => {
+                let status = self.child.wait().map_err(spawn_error)?;
+                let bytes = read_result_fd(&self.result_read).unwrap_or_default();
+                if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
+                    return Ok(result);
+                }
+                synthesize_result(status)
             }
-            None => self.child.wait().map_err(spawn_error)?,
-        };
-        let bytes = read_result_fd(&self.result_read).unwrap_or_default();
+        }
+    }
+}
+
+impl ForkRunnerChild {
+    /// Wait on a request/result runner. The result fd is drained on a separate
+    /// thread that starts before the child wait, so a large payload cannot fill
+    /// the pipe and deadlock a child that blocks on the final write; the drain is
+    /// capped at [`MAX_RUNNER_RESULT_BYTES`].
+    fn wait_request_result(
+        &mut self,
+        mode_flag: &'static str,
+    ) -> Result<RunResult, NamespaceExecutionError> {
+        let result_read = self.result_read.try_clone().map_err(spawn_error)?;
+        let drain = thread::spawn(move || drain_result_fd(result_read, MAX_RUNNER_RESULT_BYTES));
+        let wait = wait_for_child_with_timeout(&mut self.child, mode_flag, self.setup_timeout_s);
+        let drained = drain.join().map_err(|_| {
+            NamespaceExecutionError::Spawn("ns-runner result drain thread panicked".to_owned())
+        })?;
+        let status = wait?;
+        let bytes = drained?;
         if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
             return Ok(result);
         }
         synthesize_result(status)
     }
+}
+
+/// Read `result_fd` to EOF, capping the buffered envelope at `cap`. Reading
+/// continues past the cap (discarding) so the child never blocks on a full pipe;
+/// the overflow is reported once the fd closes.
+fn drain_result_fd(result_read: OwnedFd, cap: usize) -> Result<Vec<u8>, NamespaceExecutionError> {
+    let mut file = File::from(result_read);
+    let mut bytes = Vec::new();
+    let mut chunk = [0_u8; 64 * 1024];
+    let mut over_cap = false;
+    loop {
+        let read = file.read(&mut chunk).map_err(spawn_error)?;
+        if read == 0 {
+            break;
+        }
+        if !over_cap && bytes.len() + read > cap {
+            over_cap = true;
+            bytes = Vec::new();
+        }
+        if !over_cap {
+            bytes.extend_from_slice(&chunk[..read]);
+        }
+    }
+    if over_cap {
+        return Err(NamespaceExecutionError::Spawn(format!(
+            "ns-runner result exceeds {cap} bytes"
+        )));
+    }
+    Ok(bytes)
 }
 
 fn ns_runner_command(
