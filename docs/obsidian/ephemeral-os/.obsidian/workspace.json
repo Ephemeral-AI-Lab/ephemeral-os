@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/file_operations_read_write_edit.md",
+                "file": "Chalkboards — meetings and the conversation that never forgets.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "file_operations_read_write_edit"
+              "title": "Chalkboards — meetings and the conversation that never forgets"
             }
           }
         ]
@@ -183,17 +183,29 @@
       "bases:Create new base": false
     }
   },
-  "active": "d5fccc8ee65959ed",
+  "active": "7bfb5a3473fb43c0",
   "lastOpenFiles": [
+    "note/container-env-proxy.md",
+    "implementation_plan/file_operations/test-case.md",
+    "road_to_fully_autnomous_agent_system/spec.md",
+    "implementation_plan/file_operations/side_daemon_cli_spec.md",
+    "implementation_plan/file_operations/impl_plan_and_progress_tracker.md",
+    "implementation_plan/file_operations/fix_spec.md",
+    "implementation_plan/file_operations/live_smoke_evidence.md",
+    "implementation_plan/file_operations/spec.md",
+    "docs/daemon/daemon-cli.md",
+    "docs/cli-gateway-manager-runtime.md",
+    "docs/daemon",
+    "docs/Untitled.md",
+    "implementation_plan/file_operations/acceptance_criteria.md",
     "implementation_plan/daemon-command-syscall-hardening.md",
-    "testing/file-operation/test-case.md",
-    "implementation_plan/file_operations_read_write_edit.md",
+    "implementation_plan/file_operations",
+    "implementation_plan/o1_shared_workspace_base.md",
+    "Chalkboards — meetings and the conversation that never forgets.md",
     "testing/file-operation",
     "testing/Untitled.md",
     "testing",
-    "implementation_plan/o1_shared_workspace_base.md",
     "road_to_fully_autnomous_agent_system/ui.md",
-    "road_to_fully_autnomous_agent_system/spec.md",
     "road_to_fully_autnomous_agent_system/ui/arbor.html",
     "road_to_fully_autnomous_agent_system/ui/arbor-app.js",
     "road_to_fully_autnomous_agent_system/ui/arbor-data.js",
@@ -201,9 +213,6 @@
     "road_to_fully_autnomous_agent_system/ui/index.html",
     "road_to_fully_autnomous_agent_system/ui/app.js",
     "road_to_fully_autnomous_agent_system/Begin of the dream.md",
-    "road_to_fully_autnomous_agent_system/ui/data.js",
-    "road_to_fully_autnomous_agent_system/ui/styles.css",
-    "Chalkboards — meetings and the conversation that never forgets.md",
     "The Window — watching a mind think.md",
     "The World — a body of facts.md",
     "daily-progress-tracker/2026-06-30.md",
@@ -211,15 +220,6 @@
     "docs/comparision/landscape.md",
     "docs/comparision/cubesandbox.md",
     "docs/layerstack/o1_shared_workspace_base.md",
-    "docs/layerstack/create_sandbox.md",
-    "docs/layerstack/overlay_mount.md",
-    "daily-progress-tracker/2026-06-28.md",
-    "docs/ephemeral-os.md",
-    "docs/cli-gateway-manager-runtime.md",
-    "note/container-env-proxy.md",
-    "index.md",
-    "roadmap.md",
-    "docs/sandbox-operation-note.md",
-    "docs/comparision/container-use.md"
+    "docs/layerstack/create_sandbox.md"
   ]
 }
