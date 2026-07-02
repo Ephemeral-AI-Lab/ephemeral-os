@@ -490,3 +490,215 @@
 - Wall time: 12703.256 ms
 - Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-034746`.
 
+## squash-20260703-035234 START — 2026-07-03T03:52:34+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035234`.
+
+## squash-20260703-035234 FINAL — 2026-07-03T03:52:49+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 14987.106 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035234`.
+
+## squash-20260703-035254 START — 2026-07-03T03:52:54+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035254`.
+
+## squash-20260703-035254 FINAL — 2026-07-03T03:53:07+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 12571.917 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035254`.
+
+## squash-20260703-035709 START — 2026-07-03T03:57:09+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035709`.
+
+## squash-20260703-035709 FINAL — 2026-07-03T03:57:21+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 12461.573 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035709`.
+
+## squash-20260703-035738 START — 2026-07-03T03:57:38+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035738`.
+
+## squash-20260703-035738 FINAL — 2026-07-03T03:57:51+08:00
+- Command/tier: `/opt/homebrew/bin/pytest manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01] manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 12436.772 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-035738`.
+
+## squash-20260703-040142 START — 2026-07-03T04:01:42+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-040142`.
+
+## squash-20260703-040142 FINAL — 2026-07-03T04:01:58+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE] -q`
+- Cases run/passed/failed/skipped: 3/2/1/0
+- Wall time: 15258.257 ms
+- Description: suite completed with pytest exit status `1`; LOAD-499 passed, LOAD-LARGE exposed that the initial 64MiB exec-generated blob exceeded the current 8MiB one-shot capture ceiling and was not published into the layer stack; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-040142`.
+
+## squash-20260703-040413 START — 2026-07-03T04:04:13+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-040413`.
+
+## squash-20260703-040413 FINAL — 2026-07-03T04:04:26+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 13106.403 ms
+- Description: suite completed with pytest exit status `0`; after constraining LOAD-LARGE to the supported 8MiB capture ceiling, LOAD-499 and LOAD-LARGE both passed correctness, space, time, and teardown; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-040413`.
+
+## squash-20260703-040432 START — 2026-07-03T04:04:32+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-040432`.
+
+## squash-20260703-040432 FINAL — 2026-07-03T04:04:46+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 13095.880 ms
+- Description: suite completed with pytest exit status `0`; second consecutive targeted proof for LOAD-499 and LOAD-LARGE was green with no skips, confirming the new load cases after the 8MiB fixture fix; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-040432`.
+## squash-20260703-041310 START — 2026-07-03T04:13:10+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041310`.
+
+## squash-20260703-041310 FINAL — 2026-07-03T04:13:32+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q`
+- Cases run/passed/failed/skipped: 3/1/2/0
+- Wall time: 21797.729 ms
+- Description: suite completed with pytest exit status `1`; diagnostic run showed that executing the HTTP helper from `/workspace` pins a mapped workspace file, causing both combined load cases to classify the block as leased; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041310`.
+
+## squash-20260703-041421 START — 2026-07-03T04:14:21+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041421`.
+
+## squash-20260703-041421 FINAL — 2026-07-03T04:14:42+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q`
+- Cases run/passed/failed/skipped: 3/2/1/0
+- Wall time: 21337.380 ms
+- Description: suite completed with pytest exit status `1`; LOAD-LARGE-HTTP passed after moving the helper out of `/workspace`, while LOAD-499-HTTP exposed that the `/tmp` helper layer reduced the squashed run count and left a top helper layer; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041421`.
+
+## squash-20260703-041652 START — 2026-07-03T04:16:52+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041652`.
+
+## squash-20260703-041652 FINAL — 2026-07-03T04:17:13+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q`
+- Cases run/passed/failed/skipped: 3/2/1/0
+- Wall time: 21160.714 ms
+- Description: suite completed with pytest exit status `1`; `/run` avoided the helper layer and workspace pin, but LOAD-499-HTTP still used the existing live-server contract where squash reclaims lower layers and leaves the active top layer, so the replaced-layer assertion was too strict; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041652`.
+
+## squash-20260703-041751 START — 2026-07-03T04:17:51+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041751`.
+
+## squash-20260703-041751 FINAL — 2026-07-03T04:18:12+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 21509.252 ms
+- Description: suite completed with pytest exit status `0`; first green proof for LOAD-499-HTTP and LOAD-LARGE-HTTP after using `/run/eos_squash_http` and asserting the established live-server collapse shape; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041751`.
+
+## squash-20260703-041820 START — 2026-07-03T04:18:20+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041820`.
+
+## squash-20260703-041820 FINAL — 2026-07-03T04:18:42+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP] cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP] -q`
+- Cases run/passed/failed/skipped: 3/3/0/0
+- Wall time: 21548.935 ms
+- Description: suite completed with pytest exit status `0`; second consecutive green proof for combined load-plus-HTTP cases, with LOAD-499-HTTP `T_http_disconnect=13.454ms` and LOAD-LARGE-HTTP `T_http_disconnect=11.365ms`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-041820`.
+## squash-20260703-043217 START — 2026-07-03T04:32:17+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043217`.
+
+## squash-20260703-043217 FINAL — 2026-07-03T04:32:36+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q`
+- Cases run/passed/failed/skipped: 2/1/1/0
+- Wall time: 19417.036 ms
+- Description: suite completed with pytest exit status `1`; LOAD-COMBO-HTTP exposed that the shared large publish helper treated a still-running `exec_command` as failure instead of waiting on its `command_session_id`; fixed `_publish` to wait for running large writes; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043217`.
+## squash-20260703-043312 START — 2026-07-03T04:33:12+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043312`.
+
+## squash-20260703-043312 FINAL — 2026-07-03T04:33:31+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q`
+- Cases run/passed/failed/skipped: 2/1/1/0
+- Wall time: 18622.367 ms
+- Description: suite completed with pytest exit status `1`; after the `_publish` wait fix, the default combo still killed the sandbox daemon during the second 2MiB `yes|head` large overwrite after a live squash, while round 1 itself had `T_http_disconnect=11.040ms`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043312`.
+
+## squash-20260703-043423 START — 2026-07-03T04:34:23+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043423`.
+
+## squash-20260703-043423 FINAL — 2026-07-03T04:34:38+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q`
+- Cases run/passed/failed/skipped: 2/1/1/0
+- Wall time: 14792.689 ms
+- Description: suite completed with pytest exit status `1`; reduced 32-session run reproduced the same second-round `yes|head` large overwrite daemon failure, showing the trigger was the large writer under live remount load rather than the 200-session count; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043423`.
+
+## squash-20260703-043452 START — 2026-07-03T04:34:52+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043452`.
+
+## squash-20260703-043452 FINAL — 2026-07-03T04:35:22+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q`
+- Cases run/passed/failed/skipped: 2/2/0/0
+- Wall time: 30570.903 ms
+- Description: suite completed with pytest exit status `0`; reduced 32-session/16KiB-large diagnostic passed, confirming the multi-round HTTP/session/remount logic was sound before replacing the combo large writer with a `dd`-based real-file writer; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043452`.
+
+## squash-20260703-043621 START — 2026-07-03T04:36:21+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043621`.
+
+## squash-20260703-043621 FINAL — 2026-07-03T04:37:06+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q`
+- Cases run/passed/failed/skipped: 2/2/0/0
+- Wall time: 45118.955 ms
+- Description: suite completed with pytest exit status `0`; first green proof for default LOAD-COMBO-HTTP after switching combo large edits to `dd`, covering 200 sessions, 4 HTTP servers, 8 commands, 3 squash rounds, and 6x2MiB large edits; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043621`.
+
+## squash-20260703-043711 START — 2026-07-03T04:37:11+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043711`.
+
+## squash-20260703-043711 FINAL — 2026-07-03T04:37:56+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -q`
+- Cases run/passed/failed/skipped: 2/2/0/0
+- Wall time: 45433.605 ms
+- Description: suite completed with pytest exit status `0`; second consecutive green proof for default LOAD-COMBO-HTTP with `T_http_disconnect=15.762ms`, max `T_squash=822.585ms`, and 3/3 squash rounds passing correctness, space, and time axes; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043711`.

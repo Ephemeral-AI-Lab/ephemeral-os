@@ -39,6 +39,11 @@ This suite mirrors all catalog IDs under `manager/management/squash/` and writes
 | MED-20 | medium | quiesce at 100 tasks |
 | HTTP-01 | medium | running HTTP server migrates live |
 | HTTP-02 | medium | workspace-cwd HTTP server resumes leased |
+| LOAD-499 | hard | 499-layer stack squashes in-cap |
+| LOAD-LARGE | hard | large file squash |
+| LOAD-499-HTTP | hard | 499-layer stack with HTTP disconnect |
+| LOAD-LARGE-HTTP | hard | large file squash with HTTP disconnect |
+| LOAD-COMBO-HTTP | hard | multi-block active workspace HTTP load |
 | HRD-01 | hard | B3 replay: multi-block plan, mixed classification, reclaim cascade |
 | HRD-02 | hard | B4 replay: two generations, re-squash of S |
 | HRD-03 | hard | B5 replay: every hard path in one sweep |
@@ -101,5 +106,25 @@ writes.
 
 `HTTP-01` and `HTTP-02` are additional medium-tier probes outside the original
 50-case source catalog. Both start the service and client through
-`sandbox-cli runtime exec_command`, record `T_http_disconnect`, and enforce the
-same correctness, space, time, and teardown verdict axes.
+`sandbox-cli runtime exec_command`. `T_http_disconnect` is the largest observed
+silent gap on a persistent `/ticks` HTTP stream that emits numbered lines every
+1ms. The cases enforce the same correctness, space, time, and teardown verdict
+axes.
+
+## Extra Load Cases
+
+`LOAD-499` publishes 499 tiny layers, proves the stack can be mounted, squashes
+it, and verifies the first and last files remain readable. `LOAD-LARGE`
+publishes one configurable large blob (`SQUASH_LARGE_FILE_KIB`, default 8MiB)
+between small layers and verifies the byte count after squash.
+
+`LOAD-499-HTTP` keeps the 499 tiny data-layer fixture, runs the HTTP helper
+from `/run` during squash, and records `T_http_disconnect` as the maximum
+observed stream silence. `LOAD-LARGE-HTTP` does the same around the large-file
+fixture.
+
+`LOAD-COMBO-HTTP` combines repeated small-file publishes, small overwrites,
+real 2MiB large overwrites written with `dd`, 200 active workspace sessions,
+background commands, four HTTP servers, and three squash rounds. Environment
+knobs with the `SQUASH_COMBO_` prefix can scale those counts up to the bounded
+fixture limits.

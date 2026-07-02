@@ -53,6 +53,11 @@ CASES = [
     {"id": "MED-20", "tier": "medium", "title": "quiesce at 100 tasks", "scenario": "many_tasks"},
     {"id": "HTTP-01", "tier": "medium", "title": "running HTTP server migrates live", "scenario": "http_migrate"},
     {"id": "HTTP-02", "tier": "medium", "title": "workspace-cwd HTTP server resumes leased", "scenario": "http_pinned"},
+    {"id": "LOAD-499", "tier": "hard", "title": "499-layer stack squashes in-cap", "scenario": "load_499"},
+    {"id": "LOAD-LARGE", "tier": "hard", "title": "large file squash", "scenario": "large_file"},
+    {"id": "LOAD-499-HTTP", "tier": "hard", "title": "499-layer stack with HTTP disconnect", "scenario": "load_499_http"},
+    {"id": "LOAD-LARGE-HTTP", "tier": "hard", "title": "large file squash with HTTP disconnect", "scenario": "large_file_http"},
+    {"id": "LOAD-COMBO-HTTP", "tier": "hard", "title": "multi-block active workspace HTTP load", "scenario": "load_combo_http"},
     {"id": "HRD-01", "tier": "hard", "title": "B3 replay mixed classification", "scenario": "mixed"},
     {"id": "HRD-02", "tier": "hard", "title": "B4 replay two generations", "scenario": "generations"},
     {"id": "HRD-03", "tier": "hard", "title": "B5 replay hard path convergence", "scenario": "mixed"},
@@ -77,13 +82,19 @@ CASES = [
 
 CASE_BY_ID = {case["id"]: case for case in CASES}
 TIMED_CASES = {
-    "MED-04", "MED-18", "MED-20", "HTTP-01", "HTTP-02",
+    "MED-04", "MED-18", "MED-20", "HTTP-01", "HTTP-02", "LOAD-499", "LOAD-LARGE",
+    "LOAD-499-HTTP", "LOAD-LARGE-HTTP", "LOAD-COMBO-HTTP",
     "HRD-11", "HRD-13", "HRD-14", "HRD-15", "HRD-20"
 }
 CASE_E2E_BUDGET_MS = {
     "MED-18": 1_800_000,
     "HTTP-01": 30_000,
     "HTTP-02": 30_000,
+    "LOAD-499": 1_800_000,
+    "LOAD-LARGE": 600_000,
+    "LOAD-499-HTTP": 1_800_000,
+    "LOAD-LARGE-HTTP": 600_000,
+    "LOAD-COMBO-HTTP": 1_800_000,
     "HRD-12": 1_800_000,
     "HRD-20": 1_800_000,
 }
@@ -91,18 +102,27 @@ CASE_SQUASH_BUDGET_MS = {
     "MED-18": 15_000,
     "HTTP-01": 5_000,
     "HTTP-02": 5_000,
+    "LOAD-499": 60_000,
+    "LOAD-LARGE": 120_000,
+    "LOAD-499-HTTP": 60_000,
+    "LOAD-LARGE-HTTP": 120_000,
+    "LOAD-COMBO-HTTP": 180_000,
     "HRD-11": 20_000,
 }
 FILE_WRITE_PUBLISH_LIMIT_BYTES = 16 * 1024
+MAX_EXEC_CAPTURE_KIB = 8 * 1024
 HTTP_CLIENT_SECONDS = 3.0
 HTTP_DISCONNECT_BUDGET_MS = 1_500
 CASE_DISCONNECT_BUDGET_MS = {
     "HTTP-01": HTTP_DISCONNECT_BUDGET_MS,
     "HTTP-02": HTTP_DISCONNECT_BUDGET_MS,
+    "LOAD-499-HTTP": HTTP_DISCONNECT_BUDGET_MS,
+    "LOAD-LARGE-HTTP": HTTP_DISCONNECT_BUDGET_MS,
+    "LOAD-COMBO-HTTP": HTTP_DISCONNECT_BUDGET_MS,
 }
 HTTP_HELPER_SOURCE = r"""
 use std::env;
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::time::{Duration, Instant};
 
@@ -121,17 +141,46 @@ fn server() {
     println!("PORT={}", listener.local_addr().expect("addr").port());
     std::io::stdout().flush().ok();
     for stream in listener.incoming() {
-        if let Ok(mut stream) = stream {
-            let mut request = [0_u8; 1024];
-            let _ = stream.read(&mut request);
-            let body = b"http-ok\n";
-            let header = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            let _ = stream.write_all(header.as_bytes());
-            let _ = stream.write_all(body);
+        if let Ok(stream) = stream {
+            std::thread::spawn(move || handle_stream(stream));
         }
+    }
+}
+
+fn handle_stream(mut stream: TcpStream) {
+    stream.set_nodelay(true).ok();
+    let mut request = [0_u8; 1024];
+    let Ok(size) = stream.read(&mut request) else {
+        return;
+    };
+    let request = String::from_utf8_lossy(&request[..size]);
+    if request.starts_with("GET /ticks ") {
+        tick_stream(stream);
+        return;
+    }
+    let body = b"http-ok\n";
+    let header = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    let _ = stream.write_all(header.as_bytes());
+    let _ = stream.write_all(body);
+}
+
+fn tick_stream(mut stream: TcpStream) {
+    let header = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n";
+    if stream.write_all(header.as_bytes()).is_err() {
+        return;
+    }
+    let started = Instant::now();
+    let mut seq = 0_u64;
+    loop {
+        let line = format!("{} {}\n", seq, started.elapsed().as_micros());
+        if stream.write_all(line.as_bytes()).is_err() || stream.flush().is_err() {
+            return;
+        }
+        seq += 1;
+        std::thread::sleep(Duration::from_millis(1));
     }
 }
 
@@ -139,32 +188,56 @@ fn client(args: &[String]) {
     let port = args.get(2).and_then(|v| v.parse::<u16>().ok()).expect("port");
     let seconds = args.get(3).and_then(|v| v.parse::<f64>().ok()).unwrap_or(3.0);
     let deadline = Instant::now() + Duration::from_secs_f64(seconds);
-    let mut last_ok: Option<Instant> = None;
-    let mut max_gap_ms = 0.0_f64;
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(2)).expect("connect");
+    stream.set_nodelay(true).ok();
+    stream.set_read_timeout(Some(Duration::from_secs(2))).ok();
+    stream
+        .write_all(b"GET /ticks HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+        .expect("request");
+    let mut reader = BufReader::new(stream);
+    let mut in_body = false;
+    let mut last_tick: Option<Instant> = None;
+    let mut max_silence_ms = 0.0_f64;
     let mut ok_count = 0_u64;
     let mut failures = 0_u64;
     let mut ready = false;
     while Instant::now() < deadline {
-        if http_get(port, Duration::from_millis(250)) {
-            let now = Instant::now();
-            if let Some(last) = last_ok {
-                max_gap_ms = max_gap_ms.max(now.duration_since(last).as_secs_f64() * 1000.0);
+        let mut line = String::new();
+        match reader.read_line(&mut line) {
+            Ok(0) | Err(_) => {
+                failures += 1;
+                if let Some(last) = last_tick {
+                    max_silence_ms = max_silence_ms.max(last.elapsed().as_secs_f64() * 1000.0);
+                }
+                break;
             }
-            last_ok = Some(now);
-            ok_count += 1;
-            if !ready {
-                println!("CLIENT_READY");
-                std::io::stdout().flush().ok();
-                ready = true;
-            }
-        } else {
-            failures += 1;
+            Ok(_) => {}
         }
-        std::thread::sleep(Duration::from_millis(50));
+        if !in_body {
+            if line == "\r\n" {
+                in_body = true;
+            }
+            continue;
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        let now = Instant::now();
+        if let Some(last) = last_tick {
+            max_silence_ms = max_silence_ms.max(now.duration_since(last).as_secs_f64() * 1000.0);
+        }
+        last_tick = Some(now);
+        ok_count += 1;
+        if !ready {
+            println!("CLIENT_READY");
+            std::io::stdout().flush().ok();
+            ready = true;
+        }
     }
     println!(
-        "CLIENT_STATS {{\"failures\":{},\"max_gap_ms\":{:.3},\"ok_count\":{}}}",
-        failures, max_gap_ms, ok_count
+        "CLIENT_STATS {{\"failures\":{},\"max_silence_ms\":{:.3},\"ok_count\":{}}}",
+        failures, max_silence_ms, ok_count
     );
 }
 
@@ -343,7 +416,13 @@ def make_workspace(case_id):
 
 
 def prepare_workspace_for_case(case, workspace):
-    if case.get("scenario") in {"http_migrate", "http_pinned"}:
+    if case.get("scenario") in {
+        "http_migrate",
+        "http_pinned",
+        "load_499_http",
+        "large_file_http",
+        "load_combo_http",
+    }:
         _compile_http_helper(Path(workspace))
 
 
@@ -536,8 +615,22 @@ def _publish(rec, sandbox_id, name, content=None, kib=4):
     else:
         command = f"sh -eu -c 'mkdir -p data; printf %s {json.dumps(content)} > data/{name}.txt'"
     result = runtime(rec, sandbox_id, "exec_command", command, timeout=240)
-    assert result.ok and result.json.get("exit_code") == 0, result.json
-    return result.json
+    return _finish_exec_payload(rec, sandbox_id, result, timeout_s=240)
+
+
+def _publish_large_zero_file(rec, sandbox_id, name, kib):
+    path = json.dumps(f"data/{name}.txt")
+    command = f"sh -eu -c 'mkdir -p data; dd if=/dev/zero of={path} bs=1024 count={kib} status=none'"
+    result = runtime(rec, sandbox_id, "exec_command", command, timeout=240)
+    return _finish_exec_payload(rec, sandbox_id, result, timeout_s=240)
+
+
+def _finish_exec_payload(rec, sandbox_id, result, *, timeout_s):
+    payload = result.json or {}
+    if result.ok and payload.get("status") == "running":
+        payload = _wait_command(rec, sandbox_id, payload["command_session_id"], timeout_s=timeout_s)
+    assert result.ok and payload.get("exit_code") == 0, payload
+    return payload
 
 
 def _publish_small_file(rec, sandbox_id, name, content, size):
@@ -1070,11 +1163,12 @@ def _scenario_http_server(case, rec, sandbox_factory, *, cwd, expected):
         _space_neutral(rec, before, after, tolerance=0.10)
 
 
-def _install_http_helper(rec, sandbox_id):
+def _install_http_helper(rec, sandbox_id, target="/tmp/eos_squash_http"):
+    quoted = json.dumps(target)
     result = _exec(
         rec,
         sandbox_id,
-        "cp /workspace/eos_squash_http /tmp/eos_squash_http && chmod 755 /tmp/eos_squash_http",
+        f"cp /workspace/eos_squash_http {quoted} && chmod 755 {quoted}",
         timeout=60,
     )
     assert result.get("status") == "ok" and result.get("exit_code") == 0, result
@@ -1106,22 +1200,22 @@ def _http_server_command(cwd, binary):
     return f"cd {cwd} && {binary} server"
 
 
-def _http_probe(rec, sandbox_id, port):
+def _http_probe(rec, sandbox_id, port, binary="/tmp/eos_squash_http"):
     result = _exec(
         rec,
         sandbox_id,
-        f"cd /tmp && /tmp/eos_squash_http probe {port}",
+        f"cd /tmp && {binary} probe {port}",
         timeout=60,
     )
     assert result.get("status") == "ok" and result.get("exit_code") == 0, result
     return result.get("output", "").strip()
 
 
-def _start_http_client(rec, sandbox_id, port):
+def _start_http_client(rec, sandbox_id, port, binary="/tmp/eos_squash_http"):
     result = _exec(
         rec,
         sandbox_id,
-        _http_client_command(port),
+        _http_client_command(port, binary),
         yield_ms=100,
         timeout_ms=10_000,
         timeout=60,
@@ -1130,8 +1224,8 @@ def _start_http_client(rec, sandbox_id, port):
     return result["command_session_id"]
 
 
-def _http_client_command(port):
-    return f"cd /tmp && /tmp/eos_squash_http client {port} {HTTP_CLIENT_SECONDS}"
+def _http_client_command(port, binary="/tmp/eos_squash_http"):
+    return f"cd /tmp && {binary} client {port} {HTTP_CLIENT_SECONDS}"
 
 
 def _http_client_stats(output):
@@ -1143,9 +1237,75 @@ def _http_client_stats(output):
 
 def _record_http_stats(rec, stats):
     rec.write_json("http-client.json", stats)
-    rec.add_timer("T_http_disconnect", stats["max_gap_ms"], "harness")
+    rec.add_timer("T_http_disconnect", stats["max_silence_ms"], "harness")
     assert stats["ok_count"] >= 3, stats
-    assert stats["max_gap_ms"] <= HTTP_DISCONNECT_BUDGET_MS, stats
+    assert stats["max_silence_ms"] <= HTTP_DISCONNECT_BUDGET_MS, stats
+
+
+def _squash_with_http_ticks(rec, sandbox_id, session, *, binary="/tmp/eos_squash_http", timeout=900):
+    server_id = None
+    client_id = None
+    client_done = None
+    try:
+        server_id, port = _start_http_server(rec, sandbox_id, session, "/tmp", binary)
+        assert _http_probe(rec, sandbox_id, port, binary) == "http-ok"
+        before = snapshot(rec, sandbox_id, "S0")
+        client_id = _start_http_client(rec, sandbox_id, port, binary)
+        _wait_command_output(rec, sandbox_id, client_id, "CLIENT_READY", timeout_s=5)
+        result = _squash(rec, sandbox_id, timeout=timeout)
+        after = snapshot(rec, sandbox_id, "S2")
+        assert _http_probe(rec, sandbox_id, port, binary) == "http-ok"
+        client_done = _wait_command(rec, sandbox_id, client_id, timeout_s=10)
+        _record_http_stats(rec, _http_client_stats(client_done.get("output", "")))
+        return before, after, result
+    finally:
+        if client_id and (client_done is None or client_done.get("status") == "running"):
+            _try_interrupt_command(rec, sandbox_id, client_id)
+        if server_id:
+            _try_interrupt_command(rec, sandbox_id, server_id)
+
+
+def _squash_with_http_fleet(rec, sandbox_id, sessions, *, binary, servers, round_index, timeout=900):
+    server_records = []
+    client_records = []
+    client_done = {}
+    try:
+        for idx in range(servers):
+            session = sessions[idx % len(sessions)]
+            server_id, port = _start_http_server(rec, sandbox_id, session, "/tmp", binary)
+            server_records.append({"server_id": server_id, "port": port, "index": idx})
+            assert _http_probe(rec, sandbox_id, port, binary) == "http-ok"
+        before = snapshot(rec, sandbox_id, f"S0-r{round_index}")
+        for server in server_records:
+            client_id = _start_http_client(rec, sandbox_id, server["port"], binary)
+            client_records.append({**server, "client_id": client_id})
+        for client in client_records:
+            _wait_command_output(rec, sandbox_id, client["client_id"], "CLIENT_READY", timeout_s=5)
+        result = _squash(rec, sandbox_id, timeout=timeout)
+        after = snapshot(rec, sandbox_id, f"S2-r{round_index}")
+        for server in server_records:
+            assert _http_probe(rec, sandbox_id, server["port"], binary) == "http-ok"
+        stats = []
+        for client in client_records:
+            done = _wait_command(rec, sandbox_id, client["client_id"], timeout_s=10)
+            client_done[client["client_id"]] = done
+            stat = _http_client_stats(done.get("output", ""))
+            stat.update({"server_index": client["index"], "round": round_index})
+            stats.append(stat)
+        rec.write_json(f"http-clients-round-{round_index}.json", stats)
+        max_silence = max(stat["max_silence_ms"] for stat in stats)
+        previous = rec.timers.get("T_http_disconnect", {}).get("ms", 0.0)
+        rec.add_timer("T_http_disconnect", max(previous, max_silence), "harness")
+        assert all(stat["ok_count"] >= 3 for stat in stats), stats
+        assert max_silence <= HTTP_DISCONNECT_BUDGET_MS, stats
+        return before, after, result, stats
+    finally:
+        for client in client_records:
+            done = client_done.get(client["client_id"])
+            if done is None or done.get("status") == "running":
+                _try_interrupt_command(rec, sandbox_id, client["client_id"])
+        for server in server_records:
+            _try_interrupt_command(rec, sandbox_id, server["server_id"])
 
 
 def _scenario_pin(case, rec, sandbox_factory):
@@ -1771,6 +1931,299 @@ def _scenario_deep(case, rec, sandbox_factory):
     _teardown_contract(rec, sandbox_id)
     rec.axis("correctness", True, f"{count}-layer chain squashed with live witness")
     rec.axis("space", True, "deep-chain disk snapshots recorded", metrics={"before": before["disk"], "after": after["disk"]})
+
+
+def _scenario_load_499(case, rec, sandbox_factory):
+    sandbox_id = sandbox_factory(rec)
+    count = int(os.environ.get("SQUASH_LOAD_STACKS", "499"))
+    assert 3 <= count <= 499, count
+    _publish_small_files_concurrent(rec, sandbox_id, (f"load-{idx}" for idx in range(count)))
+    probe = _create_session(rec, sandbox_id)
+    _destroy_session(rec, sandbox_id, probe)
+    before = snapshot(rec, sandbox_id, "S0")
+    result = _squash(rec, sandbox_id, timeout=900)
+    after = snapshot(rec, sandbox_id, "S2")
+    blocks = _assert_contract(result, 1)
+    assert blocks[0]["replaced_layers"] == "reclaimed", result
+    assert len(blocks[0]["replaced_layer_ids"]) >= count, blocks
+    session = _create_session(rec, sandbox_id)
+    try:
+        read = _exec(
+            rec,
+            sandbox_id,
+            f"test -f data/load-0.txt && test -f data/load-{count - 1}.txt && echo ok",
+            session=session,
+        )
+        assert read.get("output", "").strip() == "ok", read
+    finally:
+        _destroy_session(rec, sandbox_id, session)
+    _teardown_contract(rec, sandbox_id)
+    rec.axis("correctness", True, f"{count}-layer stack mounted, squashed, and remained readable")
+    space_passed = len(after["disk"].get("layer_dirs", [])) < len(before["disk"].get("layer_dirs", []))
+    rec.axis(
+        "space",
+        space_passed,
+        f"layer dirs {len(before['disk'].get('layer_dirs', []))}->{len(after['disk'].get('layer_dirs', []))}",
+        metrics={"before": before["disk"], "after": after["disk"], "layers": count},
+    )
+    assert space_passed, rec.axes["space"]["details"]
+
+
+def _scenario_load_499_http(case, rec, sandbox_factory):
+    sandbox_id = sandbox_factory(rec)
+    count = int(os.environ.get("SQUASH_LOAD_STACKS", "499"))
+    assert 3 <= count <= 499, count
+    _publish_small_files_concurrent(rec, sandbox_id, (f"load-{idx}" for idx in range(count)))
+    _install_http_helper(rec, sandbox_id, target="/run/eos_squash_http")
+    session = _create_session(rec, sandbox_id)
+    try:
+        before, after, result = _squash_with_http_ticks(
+            rec, sandbox_id, session, binary="/run/eos_squash_http"
+        )
+        blocks = _assert_contract(result, 1)
+        assert blocks[0]["replaced_layers"] == "reclaimed", result
+        assert len(before["disk"].get("layer_dirs", [])) >= count, before["disk"]
+        assert len(blocks[0]["replaced_layer_ids"]) >= count - 1, blocks
+        read = _exec(
+            rec,
+            sandbox_id,
+            f"test -f data/load-0.txt && test -f data/load-{count - 1}.txt && echo ok",
+            session=session,
+        )
+        assert read.get("output", "").strip() == "ok", read
+    finally:
+        _destroy_session(rec, sandbox_id, session)
+    _teardown_contract(rec, sandbox_id)
+    disconnect_ms = rec.timers["T_http_disconnect"]["ms"]
+    rec.axis(
+        "correctness",
+        True,
+        f"{count}-layer stack collapsed with HTTP max silence {disconnect_ms:.3f}ms",
+        metrics={"layers": count, "T_http_disconnect_ms": disconnect_ms},
+    )
+    space_passed = len(after["disk"].get("layer_dirs", [])) < len(before["disk"].get("layer_dirs", []))
+    rec.axis(
+        "space",
+        space_passed,
+        f"layer dirs {len(before['disk'].get('layer_dirs', []))}->{len(after['disk'].get('layer_dirs', []))}",
+        metrics={"before": before["disk"], "after": after["disk"], "layers": count},
+    )
+    assert space_passed, rec.axes["space"]["details"]
+
+
+def _scenario_large_file(case, rec, sandbox_factory):
+    sandbox_id = sandbox_factory(rec)
+    large_kib = int(os.environ.get("SQUASH_LARGE_FILE_KIB", str(MAX_EXEC_CAPTURE_KIB)))
+    assert 1 <= large_kib <= MAX_EXEC_CAPTURE_KIB, (
+        f"SQUASH_LARGE_FILE_KIB must be 1..{MAX_EXEC_CAPTURE_KIB}; "
+        "one-shot exec capture currently publishes files up to 8MiB"
+    )
+    large_bytes = large_kib * 1024
+    _publish(rec, sandbox_id, "large-head", kib=1)
+    _publish(rec, sandbox_id, "large-blob", content="large-blob\n", kib=large_kib)
+    _publish(rec, sandbox_id, "large-tail", kib=1)
+    before = snapshot(rec, sandbox_id, "S0")
+    result = _squash(rec, sandbox_id, timeout=900)
+    after = snapshot(rec, sandbox_id, "S2")
+    blocks = _assert_contract(result, 1)
+    assert blocks[0]["replaced_layers"] == "reclaimed", result
+    session = _create_session(rec, sandbox_id)
+    try:
+        read = _exec(
+            rec,
+            sandbox_id,
+            f"test \"$(wc -c < data/large-blob.txt)\" = \"{large_bytes}\" && cat data/large-tail.txt >/dev/null && echo ok",
+            session=session,
+            timeout=240,
+        )
+        assert read.get("output", "").strip() == "ok", read
+    finally:
+        _destroy_session(rec, sandbox_id, session)
+    _teardown_contract(rec, sandbox_id)
+    rec.axis("correctness", True, f"{large_kib}KiB file survived squash", metrics={"large_bytes": large_bytes})
+    _space_neutral(rec, before, after, tolerance=0.10)
+
+
+def _scenario_large_file_http(case, rec, sandbox_factory):
+    sandbox_id = sandbox_factory(rec)
+    large_kib = int(os.environ.get("SQUASH_LARGE_FILE_KIB", str(MAX_EXEC_CAPTURE_KIB)))
+    assert 1 <= large_kib <= MAX_EXEC_CAPTURE_KIB, (
+        f"SQUASH_LARGE_FILE_KIB must be 1..{MAX_EXEC_CAPTURE_KIB}; "
+        "one-shot exec capture currently publishes files up to 8MiB"
+    )
+    large_bytes = large_kib * 1024
+    _publish(rec, sandbox_id, "large-head", kib=1)
+    _publish(rec, sandbox_id, "large-blob", content="large-blob\n", kib=large_kib)
+    _publish(rec, sandbox_id, "large-tail", kib=1)
+    _install_http_helper(rec, sandbox_id, target="/run/eos_squash_http")
+    session = _create_session(rec, sandbox_id)
+    try:
+        before, after, result = _squash_with_http_ticks(
+            rec, sandbox_id, session, binary="/run/eos_squash_http"
+        )
+        blocks = _assert_contract(result, 1)
+        assert blocks[0]["replaced_layers"] == "reclaimed", result
+        read = _exec(
+            rec,
+            sandbox_id,
+            f"test \"$(wc -c < data/large-blob.txt)\" = \"{large_bytes}\" && cat data/large-tail.txt >/dev/null && echo ok",
+            session=session,
+            timeout=240,
+        )
+        assert read.get("output", "").strip() == "ok", read
+    finally:
+        _destroy_session(rec, sandbox_id, session)
+    _teardown_contract(rec, sandbox_id)
+    disconnect_ms = rec.timers["T_http_disconnect"]["ms"]
+    rec.axis(
+        "correctness",
+        True,
+        f"{large_kib}KiB file squashed with HTTP max silence {disconnect_ms:.3f}ms",
+        metrics={"large_bytes": large_bytes, "T_http_disconnect_ms": disconnect_ms},
+    )
+    _space_neutral(rec, before, after, tolerance=0.10)
+
+
+def _scenario_load_combo_http(case, rec, sandbox_factory):
+    sandbox_id = sandbox_factory(rec)
+    rounds = int(os.environ.get("SQUASH_COMBO_ROUNDS", "3"))
+    sessions_target = int(os.environ.get("SQUASH_COMBO_SESSIONS", "200"))
+    http_servers = int(os.environ.get("SQUASH_COMBO_HTTP_SERVERS", "4"))
+    command_count = int(os.environ.get("SQUASH_COMBO_COMMANDS", "8"))
+    small_per_round = int(os.environ.get("SQUASH_COMBO_SMALL_PER_ROUND", "24"))
+    small_edits = int(os.environ.get("SQUASH_COMBO_SMALL_EDITS", "8"))
+    large_per_round = int(os.environ.get("SQUASH_COMBO_LARGE_PER_ROUND", "2"))
+    large_kib = int(os.environ.get("SQUASH_COMBO_LARGE_KIB", "2048"))
+    assert 1 <= rounds <= 8, rounds
+    assert 1 <= sessions_target <= 256, sessions_target
+    assert 1 <= http_servers <= min(16, sessions_target), http_servers
+    assert 0 <= command_count <= sessions_target, command_count
+    assert 1 <= small_per_round <= 100, small_per_round
+    assert 0 <= small_edits <= small_per_round, small_edits
+    assert 1 <= large_per_round <= 8, large_per_round
+    assert 1 <= large_kib <= MAX_EXEC_CAPTURE_KIB, large_kib
+
+    _publish_small_files_concurrent(rec, sandbox_id, (f"combo-seed-{idx}" for idx in range(4)))
+    _install_http_helper(rec, sandbox_id, target="/run/eos_squash_http")
+    sessions = []
+    runners = []
+    all_http_stats = []
+    before_first = None
+    after_last = None
+    block_count = 0
+    replaced_count = 0
+    tranche = max(http_servers, (sessions_target + rounds - 1) // rounds)
+    try:
+        for round_index in range(1, rounds + 1):
+            _publish_small_files_concurrent(
+                rec,
+                sandbox_id,
+                (f"combo-r{round_index}-small-{idx}" for idx in range(small_per_round)),
+            )
+            for idx in range(small_edits):
+                _publish(
+                    rec,
+                    sandbox_id,
+                    f"combo-edit-{idx}",
+                    content=f"small-edit-{round_index}-{idx}\n",
+                    kib=0,
+                )
+            for idx in range(large_per_round):
+                _publish_large_zero_file(rec, sandbox_id, f"combo-large-{idx}", large_kib)
+            target = min(sessions_target, len(sessions) + tranche)
+            while len(sessions) < target:
+                sessions.append(_create_session(rec, sandbox_id))
+            while len(runners) < min(command_count, len(sessions)):
+                runner = _exec(
+                    rec,
+                    sandbox_id,
+                    "cd /tmp && while :; do sleep 1; done",
+                    session=sessions[len(runners)],
+                    yield_ms=300,
+                    timeout_ms=120_000,
+                    timeout=60,
+                )
+                assert runner.get("status") == "running", runner
+                runners.append(runner["command_session_id"])
+            before, after, result, stats = _squash_with_http_fleet(
+                rec,
+                sandbox_id,
+                sessions[-http_servers:],
+                binary="/run/eos_squash_http",
+                servers=http_servers,
+                round_index=round_index,
+            )
+            if before_first is None:
+                before_first = before
+            after_last = after
+            blocks = _assert_contract(result)
+            assert blocks, result
+            block_count += len(blocks)
+            replaced_count += sum(len(block["replaced_layer_ids"]) for block in blocks)
+            all_http_stats.extend(stats)
+    finally:
+        for runner in runners:
+            _try_interrupt_command(rec, sandbox_id, runner)
+        docker(rec, sandbox_id, "sh", "-c", "pkill -f 'while :; do sleep 1; done' 2>/dev/null || true")
+        for session in reversed(sessions):
+            _destroy_session(rec, sandbox_id, session)
+
+    final = _squash(rec, sandbox_id, timeout=900)
+    _assert_contract(final)
+    after_final = snapshot(rec, sandbox_id, "S2-final")
+    verify = _create_session(rec, sandbox_id)
+    try:
+        checks = [
+            f"test -f data/combo-r{rounds}-small-{small_per_round - 1}.txt",
+            f"test \"$(cat data/combo-edit-0.txt)\" = \"small-edit-{rounds}-0\"",
+            f"test \"$(wc -c < data/combo-large-0.txt)\" = \"{large_kib * 1024}\"",
+            "cat data/combo-seed-0.txt >/dev/null",
+            "echo ok",
+        ]
+        read = _exec(rec, sandbox_id, " && ".join(checks), session=verify, timeout=240)
+        assert read.get("output", "").strip() == "ok", read
+    finally:
+        _destroy_session(rec, sandbox_id, verify)
+    _teardown_contract(rec, sandbox_id)
+
+    disconnect_ms = rec.timers["T_http_disconnect"]["ms"]
+    summary = {
+        "rounds": rounds,
+        "active_sessions": sessions_target,
+        "http_servers": http_servers,
+        "background_commands": command_count,
+        "small_layers": rounds * small_per_round,
+        "small_edits": rounds * small_edits,
+        "large_edits": rounds * large_per_round,
+        "large_kib_each": large_kib,
+        "squash_blocks": block_count,
+        "replaced_layers": replaced_count,
+        "T_http_disconnect_ms": disconnect_ms,
+    }
+    rec.write_json("combo-summary.json", {**summary, "http_stats": all_http_stats})
+    rec.axis(
+        "correctness",
+        True,
+        (
+            f"{rounds} squash rounds across {sessions_target} active sessions, "
+            f"{http_servers} HTTP servers, and {command_count} commands"
+        ),
+        metrics=summary,
+    )
+    before_dirs = len((before_first or after_last)["disk"].get("layer_dirs", []))
+    after_dirs = len(after_final["disk"].get("layer_dirs", []))
+    rec.axis(
+        "space",
+        after_dirs < before_dirs and after_final["disk"].get("staging_entries", 0) == 0,
+        f"layer dirs {before_dirs}->{after_dirs}; staging empty",
+        metrics={
+            "before_layer_dirs": before_dirs,
+            "after_layer_dirs": after_dirs,
+            "before_layers_bytes": (before_first or after_last)["disk"].get("layers_bytes"),
+            "after_layers_bytes": after_final["disk"].get("layers_bytes"),
+        },
+    )
+    assert rec.axes["space"]["pass"], rec.axes["space"]["details"]
 
 
 def _scenario_gate(case, rec, sandbox_factory):

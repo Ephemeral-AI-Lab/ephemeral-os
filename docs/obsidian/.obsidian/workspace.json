@@ -185,6 +185,7 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/squash/performance_parallelization_handoff.md",
     "ephemeral-os/implementation_plan/finalize-policy/adversarial_review_prompt.md",
     "ephemeral-os/implementation_plan/finalize-policy/spec.md",
     "ephemeral-os/implementation_plan/finalize-policy",
@@ -217,7 +218,6 @@
     "ephemeral-os/implementation_plan/file_operations/side_daemon_cli_spec.md",
     "ephemeral-os/implementation_plan/file_operations/impl_plan_and_progress_tracker.md",
     "ephemeral-os/implementation_plan/file_operations/Untitled.md",
-    "ephemeral-os/docs/daemon/daemon-cli.md",
     "ephemeral-os/docs/daemon",
     "ephemeral-os/docs/Untitled",
     "ephemeral-os/implementation_plan/file_operations",
