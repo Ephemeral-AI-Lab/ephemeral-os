@@ -42,14 +42,20 @@ fn read_command_window(
         ),
         Some(Err(_)) => (CommandStatus::Error, None, elapsed),
     };
-    command_output(
+    let mut output = command_output(
         window,
         Some(command_session_id.clone()),
         status,
         exit_code,
         elapsed,
         command_total_time_seconds,
-    )
+    );
+    output.workspace_session_id = Some(command.workspace_session_id.clone());
+    output.publish_rejected = command
+        .finalize_outcome
+        .get()
+        .map(|outcome| outcome.publish_reject_class);
+    output
 }
 
 fn empty_terminal_output(command_session_id: NamespaceExecutionId) -> CommandOutput {

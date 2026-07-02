@@ -72,7 +72,7 @@ fn span_records_on_drop_with_attrs_and_status() {
     let obs = observer(&path, proc::DAEMON, true);
     obs.with_context(ctx("req-1", None), || {
         let span = obs.span("command.exec");
-        span.attr("op", "exec").attr("one_shot", true);
+        span.attr("op", "exec").attr("session_created", true);
         span.status(SpanStatus::Error);
     });
 
@@ -84,7 +84,7 @@ fn span_records_on_drop_with_attrs_and_status() {
     assert_eq!(span.parent, None, "root span");
     assert_eq!(span.status, SpanStatus::Error);
     assert_eq!(span.attrs["op"], "exec");
-    assert_eq!(span.attrs["one_shot"], true);
+    assert_eq!(span.attrs["session_created"], true);
     assert!(
         span.dur_ms >= 0.0,
         "start = ts - dur_ms reconstructs a non-negative start"

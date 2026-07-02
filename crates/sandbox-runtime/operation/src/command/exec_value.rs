@@ -1,5 +1,6 @@
 use std::cell::Cell;
 use std::path::PathBuf;
+use std::sync::{Arc, OnceLock};
 use std::time::Instant;
 
 use sandbox_runtime_namespace_execution::{
@@ -8,12 +9,16 @@ use sandbox_runtime_namespace_execution::{
 
 use super::contract::CommandTerminalResult;
 use crate::workspace_crate::WorkspaceSessionId;
+use crate::workspace_session::FinalizeOutcome;
 
 /// The per-execution value the engine registry holds for a command. The engine
 /// forwards (`is_finished`/`output_len`/`completion`/`write_stdin`/`cancel`/
 /// `resolved`) are reached through `value.exec`; this type only adds what the
 /// command layer owns beyond `InteractiveExecution`: the transcript window, the
-/// elapsed-time clocks, and the streaming snapshot offset.
+/// elapsed-time clocks, the streaming snapshot offset, and the finalize-outcome
+/// slot set at attach (§2.5). Dropping the value — retention eviction or engine
+/// teardown — removes the command's scratch directory alongside the pty fd the
+/// wrapped execution holds.
 pub struct CommandExecValue {
     pub(crate) exec: InteractiveExecution<CommandTerminalResult>,
     transcript_path: PathBuf,
@@ -21,6 +26,7 @@ pub struct CommandExecValue {
     started_at: Instant,
     pub(crate) operation_name: &'static str,
     next_snapshot_offset: Cell<u64>,
+    pub(crate) finalize_outcome: Arc<OnceLock<FinalizeOutcome>>,
 }
 
 impl CommandExecValue {
@@ -31,6 +37,7 @@ impl CommandExecValue {
         workspace_session_id: WorkspaceSessionId,
         started_at: Instant,
         operation_name: &'static str,
+        finalize_outcome: Arc<OnceLock<FinalizeOutcome>>,
     ) -> Self {
         Self {
             exec,
@@ -39,6 +46,7 @@ impl CommandExecValue {
             started_at,
             operation_name,
             next_snapshot_offset: Cell::new(0),
+            finalize_outcome,
         }
     }
 
@@ -67,5 +75,13 @@ impl CommandExecValue {
         limit: usize,
     ) -> Result<CommandTranscriptWindow, String> {
         required_transcript_window(Some(&self.transcript_path), start, limit)
+    }
+}
+
+impl Drop for CommandExecValue {
+    fn drop(&mut self) {
+        if let Some(command_dir) = self.transcript_path.parent() {
+            let _ = std::fs::remove_dir_all(command_dir);
+        }
     }
 }

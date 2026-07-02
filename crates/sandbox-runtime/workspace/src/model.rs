@@ -100,8 +100,8 @@ impl From<sandbox_runtime_layerstack::Lease> for LayerStackSnapshotRef {
 /// network namespace or gets a dedicated, isolated one. Every workspace is
 /// otherwise isolated (private overlay plus mount/pid/user namespaces)
 /// regardless of this value. It does not encode lifecycle length, publication
-/// behavior, or whether the caller is running a one-shot operation; those
-/// decisions belong to the runtime or operation layer that owns the handle.
+/// behavior, or a finalize policy; those decisions belong to the runtime or
+/// operation layer that owns the handle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NetworkProfile {
     /// Shared network: the workspace joins the host network namespace (host

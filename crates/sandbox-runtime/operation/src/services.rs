@@ -62,11 +62,6 @@ impl SandboxRuntimeOperations {
             ),
             layer_stack_root.clone(),
         ));
-        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_root(
-            workspace_runtime,
-            config.cgroup_root.clone(),
-            observer.clone(),
-        ));
         cli_log(format!(
             "ensuring workspace base for {}",
             config.workspace.workspace_root.display()
@@ -91,9 +86,14 @@ impl SandboxRuntimeOperations {
             LayerStackService::new(layer_stack_root, observer.clone(), Arc::clone(&file))
                 .expect("layerstack service initialization failed"),
         );
+        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_root(
+            workspace_runtime,
+            Arc::clone(&layerstack),
+            config.cgroup_root.clone(),
+            observer.clone(),
+        ));
         let command = Arc::new(CommandOperationService::new(
             Arc::clone(&workspace_session),
-            Arc::clone(&layerstack),
             crate::command::CommandConfig {
                 scratch_root: config.namespace_execution.scratch_root,
             },

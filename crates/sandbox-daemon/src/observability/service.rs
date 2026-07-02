@@ -248,6 +248,7 @@ fn workspace_value(
         "workspace_id": scope,
         "lifecycle_state": "active",
         "network_profile": workspace.network.as_str(),
+        "finalize_policy": workspace.finalize_policy.as_str(),
         "layers": {
             "base_root_hash": workspace.base_root_hash,
             "layer_count": workspace.layer_count,

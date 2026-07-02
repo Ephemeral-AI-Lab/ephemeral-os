@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use sandbox_observability::{LayerBytes, LayerStackBytes};
+use sandbox_runtime::workspace_session::FinalizePolicy;
 use sandbox_runtime::{
     LayerStatus, NetworkProfile, RuntimeWorkspaceSnapshot, StackObservation, WorkspaceSessionId,
 };
@@ -15,6 +16,7 @@ fn workspace(id: &str, layer_ids: &[&str]) -> RuntimeWorkspaceSnapshot {
     RuntimeWorkspaceSnapshot {
         workspace_id: WorkspaceSessionId(id.to_owned()),
         network: NetworkProfile::Shared,
+        finalize_policy: FinalizePolicy::NoOp,
         workspace_root: PathBuf::from("/workspace").join(id),
         upperdir: None,
         workdir: None,

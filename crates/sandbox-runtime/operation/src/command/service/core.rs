@@ -1,18 +1,11 @@
-use std::sync::{Arc, PoisonError};
+use std::sync::Arc;
 
 use sandbox_observability::{Observer, SpanRegistry};
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceExecutionId};
 
 use crate::command::{CommandConfig, CommandExecValue};
-use crate::layerstack::LayerStackService;
 use crate::namespace_execution::RuntimeNamespaceExecutionSnapshot;
-use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkProfile,
-    WorkspaceSessionId,
-};
-use crate::workspace_session::{
-    WorkspaceSessionError, WorkspaceSessionHandler, WorkspaceSessionService,
-};
+use crate::workspace_session::WorkspaceSessionService;
 
 const MAX_ACTIVE_COMMANDS: usize = 256;
 
@@ -20,7 +13,6 @@ const COMMAND_ENGINE_SETUP_TIMEOUT_S: f64 = 30.0;
 
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
-    layerstack: Arc<LayerStackService>,
     config: CommandConfig,
     engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
     exec_spans: Arc<SpanRegistry<NamespaceExecutionId>>,
@@ -31,7 +23,6 @@ impl CommandOperationService {
     #[must_use]
     pub fn new(
         workspace: Arc<WorkspaceSessionService>,
-        layerstack: Arc<LayerStackService>,
         config: CommandConfig,
         obs: Observer,
     ) -> Self {
@@ -41,7 +32,7 @@ impl CommandOperationService {
             MAX_ACTIVE_COMMANDS,
             COMMAND_ENGINE_SETUP_TIMEOUT_S,
         ));
-        Self::with_engine(workspace, layerstack, config, engine, exec_spans, obs)
+        Self::with_engine(workspace, config, engine, exec_spans, obs)
     }
 
     /// Build a command service over a caller-supplied engine and the exec span
@@ -53,7 +44,6 @@ impl CommandOperationService {
     #[must_use]
     pub fn with_engine(
         workspace: Arc<WorkspaceSessionService>,
-        layerstack: Arc<LayerStackService>,
         config: CommandConfig,
         engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
         exec_spans: Arc<SpanRegistry<NamespaceExecutionId>>,
@@ -61,7 +51,6 @@ impl CommandOperationService {
     ) -> Self {
         Self {
             workspace,
-            layerstack,
             config,
             engine,
             exec_spans,
@@ -105,76 +94,8 @@ impl CommandOperationService {
         &self.exec_spans
     }
 
-    pub(crate) fn destroy_workspace_session_with_admission(
-        &self,
-        workspace_session_id: WorkspaceSessionId,
-        grace_s: Option<f64>,
-    ) -> WorkspaceDestroyOutcome {
-        let gate = self.workspace.session_gate(&workspace_session_id);
-        let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
-        let mut active_command_session_ids = self.engine.live_values(|command| {
-            (command.workspace_session_id == workspace_session_id)
-                .then(|| command.exec.id().clone())
-        });
-        active_command_session_ids.sort();
-        if !active_command_session_ids.is_empty() {
-            return WorkspaceDestroyOutcome::ActiveCommands {
-                active_command_session_ids,
-            };
-        }
-        let handler = match self.workspace.resolve_session(workspace_session_id) {
-            Ok(handler) => handler,
-            Err(error) => return WorkspaceDestroyOutcome::Failed(error),
-        };
-        match self
-            .workspace
-            .destroy_session(handler, DestroyWorkspaceRequest { grace_s })
-        {
-            Ok(result) => WorkspaceDestroyOutcome::Destroyed(Box::new(result)),
-            Err(error) => WorkspaceDestroyOutcome::Failed(error),
-        }
-    }
-
-    pub(crate) fn resolve_workspace_session(
-        &self,
-        workspace_session_id: WorkspaceSessionId,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        self.workspace.resolve_session(workspace_session_id)
-    }
-
-    pub(super) fn create_one_shot_workspace_session(
-        &self,
-    ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        self.workspace
-            .create_workspace_session(CreateWorkspaceRequest {
-                network: NetworkProfile::Shared,
-            })
-    }
-
-    pub(super) fn destroy_one_shot_workspace_session(
-        &self,
-        handler: WorkspaceSessionHandler,
-    ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
-        self.workspace
-            .destroy_session(handler, DestroyWorkspaceRequest::default())
-    }
-
+    #[must_use]
     pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
-
-    pub(super) fn layerstack_handle(&self) -> &Arc<LayerStackService> {
-        &self.layerstack
-    }
-}
-
-/// The result of a guarded workspace-session destroy. The command service holds
-/// the per-session admission gate across the active-command check and the
-/// destroy, so the CLI layer only formats the outcome it returns.
-pub(crate) enum WorkspaceDestroyOutcome {
-    ActiveCommands {
-        active_command_session_ids: Vec<NamespaceExecutionId>,
-    },
-    Destroyed(Box<DestroyWorkspaceResult>),
-    Failed(WorkspaceSessionError),
 }

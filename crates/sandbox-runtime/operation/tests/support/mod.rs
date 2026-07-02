@@ -14,7 +14,9 @@ use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest
 use sandbox_runtime::command::{CommandOperationService, CommandServiceError};
 use sandbox_runtime::file::FileService;
 use sandbox_runtime::layerstack::LayerStackService;
-use sandbox_runtime::workspace_session::WorkspaceSessionService;
+use sandbox_runtime::workspace_session::{
+    CreateSessionRequest, FinalizePolicy, WorkspaceSessionService,
+};
 use sandbox_runtime_workspace::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp, LayerStackSnapshotRef, LeaseId,
@@ -353,14 +355,11 @@ pub(crate) fn build_services_with_launch_driver_and_cgroup_root(
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::with_cgroup_root(
         fake_workspace_runtime(fake),
+        test_layerstack_service(),
         cgroup_root,
         Observer::disabled(),
     ));
-    let command = Arc::new(build_command_service(
-        &workspace,
-        test_layerstack_service(),
-        &launch_driver,
-    ));
+    let command = Arc::new(build_command_service(&workspace, &launch_driver));
     TestServices { workspace, command }
 }
 
@@ -371,13 +370,10 @@ pub(crate) fn build_services_with_launch_driver_and_layerstack(
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(
         fake_workspace_runtime(fake),
+        layerstack,
         Observer::disabled(),
     ));
-    let command = Arc::new(build_command_service(
-        &workspace,
-        layerstack,
-        &launch_driver,
-    ));
+    let command = Arc::new(build_command_service(&workspace, &launch_driver));
     TestServices { workspace, command }
 }
 
@@ -387,7 +383,6 @@ pub(crate) fn build_services_with_launch_driver_and_layerstack(
 /// every span/event a no-op for suites that do not assert on observability.
 pub(crate) fn build_command_service(
     workspace: &Arc<WorkspaceSessionService>,
-    layerstack: Arc<LayerStackService>,
     launch_driver: &FakeLaunchDriver,
 ) -> CommandOperationService {
     let obs = Observer::disabled();
@@ -400,7 +395,6 @@ pub(crate) fn build_command_service(
     ));
     CommandOperationService::with_engine(
         Arc::clone(workspace),
-        layerstack,
         test_command_config(),
         engine,
         exec_spans,
@@ -411,8 +405,8 @@ pub(crate) fn build_command_service(
 /// Build a full service set over one shared, caller-supplied `Observer` (enabled
 /// in trace tests so the emitted spans/events land in one log). The one
 /// `exec_spans` registry backs both the engine and the launch path, and the
-/// layerstack service shares the same observer, so a one-shot finalize publish
-/// records under the same trace.
+/// layerstack service shares the same observer, so a finalize publish records
+/// under the same trace.
 pub(crate) fn build_observed_services(
     fake: Arc<FakeWorkspaceService>,
     launch_driver: Arc<FakeLaunchDriver>,
@@ -420,6 +414,7 @@ pub(crate) fn build_observed_services(
 ) -> TestServices {
     let workspace = Arc::new(WorkspaceSessionService::new(
         fake_workspace_runtime(fake),
+        observed_layerstack_service(obs.clone()),
         obs.clone(),
     ));
     let exec_spans = Arc::new(SpanRegistry::new(obs.clone()));
@@ -431,7 +426,6 @@ pub(crate) fn build_observed_services(
     ));
     let command = Arc::new(CommandOperationService::with_engine(
         Arc::clone(&workspace),
-        observed_layerstack_service(obs.clone()),
         test_command_config(),
         engine,
         exec_spans,
@@ -440,7 +434,20 @@ pub(crate) fn build_observed_services(
     TestServices { workspace, command }
 }
 
-pub(crate) fn create_request() -> CreateWorkspaceRequest {
+pub(crate) fn create_request() -> CreateSessionRequest {
+    create_request_with_policy(FinalizePolicy::NoOp)
+}
+
+pub(crate) fn create_request_with_policy(finalize_policy: FinalizePolicy) -> CreateSessionRequest {
+    CreateSessionRequest {
+        network: NetworkProfile::Shared,
+        finalize_policy,
+    }
+}
+
+/// The workspace-crate request the fake runtime records for one
+/// operation-level `create_request()`.
+pub(crate) fn raw_create_request() -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
         network: NetworkProfile::Shared,
     }

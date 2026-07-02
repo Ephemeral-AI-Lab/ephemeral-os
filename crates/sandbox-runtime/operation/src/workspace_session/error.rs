@@ -1,5 +1,7 @@
 use thiserror::Error;
 
+use sandbox_runtime_namespace_execution::NamespaceExecutionId;
+
 use crate::workspace_crate::{WorkspaceError, WorkspaceSessionId};
 
 #[derive(Debug, Error)]
@@ -18,6 +20,18 @@ pub enum WorkspaceSessionError {
     #[error("workspace session not found: {workspace_session_id:?}")]
     NotFound {
         workspace_session_id: WorkspaceSessionId,
+    },
+
+    #[error("workspace session has active command sessions: {workspace_session_id:?}")]
+    ActiveCommands {
+        workspace_session_id: WorkspaceSessionId,
+        active_command_session_ids: Vec<NamespaceExecutionId>,
+    },
+
+    #[error("workspace session finalization failed for {workspace_session_id:?}: {error}")]
+    FinalizationFailed {
+        workspace_session_id: WorkspaceSessionId,
+        error: String,
     },
 
     #[error(

@@ -6,7 +6,6 @@ mod service;
 pub use contract::{CommandConfig, CommandTerminalResult};
 pub use error::CommandServiceError;
 pub use exec_value::CommandExecValue;
-pub(crate) use service::WorkspaceDestroyOutcome;
 pub use service::{
     CommandOperationService, CommandOutput, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,

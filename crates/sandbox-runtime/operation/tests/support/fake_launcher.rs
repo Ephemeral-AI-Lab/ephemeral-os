@@ -235,6 +235,22 @@ impl FakeLauncher {
         }
     }
 
+    /// Complete the spawned execution recorded for `request_id` (parked
+    /// children only; completing an already-completed child is a no-op).
+    pub fn complete_request(&self, request_id: &str, result: RunResult) {
+        let completion = {
+            let state = self.lock();
+            state
+                .request_ids
+                .iter()
+                .position(|recorded| recorded == request_id)
+                .and_then(|index| state.completions.get(index).map(Arc::clone))
+        };
+        if let Some(completion) = completion {
+            completion.complete(result);
+        }
+    }
+
     /// Fail the most recently spawned execution's `wait_completion`.
     pub fn fail_latest_wait(&self, detail: impl Into<String>) {
         if let Some(completion) = self.latest_completion() {

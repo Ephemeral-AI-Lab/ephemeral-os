@@ -25,8 +25,8 @@ use sandbox_runtime_layerstack::LayerPath;
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceTarget};
 use sandbox_runtime_namespace_process::runner::protocol::NsFds;
 use sandbox_runtime_workspace::{
-    run_result_err, run_result_ok, CreateWorkspaceRequest, FileRunnerEntryKind, FileRunnerError,
-    FileRunnerOp, FileRunnerResult, NetworkProfile, WorkspaceSessionId,
+    run_result_err, run_result_ok, FileRunnerEntryKind, FileRunnerError, FileRunnerOp,
+    FileRunnerResult, NetworkProfile, WorkspaceSessionId,
 };
 use serde_json::json;
 
@@ -92,6 +92,7 @@ fn env() -> Env {
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_session = Arc::new(WorkspaceSessionService::new(
         fake_workspace_runtime(Arc::clone(&fake)),
+        Arc::clone(&layerstack),
         Observer::disabled(),
     ));
     Env {
@@ -144,9 +145,7 @@ impl Env {
             NetworkProfile::Shared,
         )));
         self.workspace_session
-            .create_workspace_session(CreateWorkspaceRequest {
-                network: NetworkProfile::Shared,
-            })
+            .create_workspace_session(support::create_request())
             .expect("session created")
             .workspace_session_id
     }
@@ -635,7 +634,6 @@ fn dispatch_file_read_limit_out_of_range_is_invalid_request() {
 fn dispatch_operations(env: &Env) -> SandboxRuntimeOperations {
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&env.workspace_session),
-        Arc::clone(&env.layerstack),
         sandbox_runtime::command::CommandConfig::default(),
         Observer::disabled(),
     ));

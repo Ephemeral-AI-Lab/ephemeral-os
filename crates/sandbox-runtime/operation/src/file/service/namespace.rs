@@ -29,14 +29,16 @@ pub(crate) fn resolve_session_path(
 }
 
 /// Run one file op in the session namespace, mapping runner errors to
-/// [`FileOperationError`] with `rel` as the error path.
+/// [`FileOperationError`] with `rel` as the error path. The handler is
+/// resolved fresh inside the session's admission gate by
+/// [`WorkspaceSessionService::run_file_op`]; only the session id crosses.
 pub(crate) fn run_file_op(
     workspace_session: &WorkspaceSessionService,
     handler: &WorkspaceSessionHandler,
     rel: &str,
     op: FileRunnerOp,
 ) -> Result<FileRunnerResult, FileOperationError> {
-    match workspace_session.run_file_op(handler, op) {
+    match workspace_session.run_file_op(&handler.workspace_session_id, op) {
         Ok(Ok(result)) => Ok(result),
         Ok(Err(error)) => Err(map_runner_error(rel, error)),
         Err(error) => Err(FileOperationError::WorkspaceSession(error.to_string())),

@@ -3,12 +3,11 @@ use serde_json::{json, Value};
 use crate::cli_definition::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
-use crate::command::WorkspaceDestroyOutcome;
 use crate::operation::OperationEntry;
-use crate::workspace_crate::{
-    CreateWorkspaceRequest, DestroyWorkspaceResult, NetworkProfile, WorkspaceSessionId,
+use crate::workspace_crate::{DestroyWorkspaceResult, NetworkProfile, WorkspaceSessionId};
+use crate::workspace_session::{
+    CreateSessionRequest, FinalizePolicy, WorkspaceSessionError, WorkspaceSessionHandler,
 };
-use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionHandler};
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{Request, Response};
 
@@ -16,14 +15,14 @@ pub(crate) const WORKSPACE_SESSION_FAMILY: CliOperationFamilySpec = CliOperation
     id: "workspace_session",
     title: "Workspace Session",
     summary: "Create and destroy runtime workspace sessions.",
-    description: "Create and destroy user-owned runtime workspace sessions.",
+    description: "Create and destroy runtime workspace sessions.",
 };
 
 const CREATE_SPEC: CliOperationSpec = CliOperationSpec {
     name: "create_workspace_session",
     family: "workspace_session",
     summary: "Create a runtime workspace session.",
-    description: "Create a user-owned runtime workspace session. When network profile is omitted, the runtime creates a shared-network workspace.",
+    description: "Create a runtime workspace session with finalize policy no_op: the session lives until destroy_workspace_session. When network profile is omitted, the runtime creates a shared-network workspace.",
     args: CREATE_ARGS,
     cli: Some(CliSpec {
         path: &["runtime", "create_workspace_session"],
@@ -52,7 +51,7 @@ const DESTROY_SPEC: CliOperationSpec = CliOperationSpec {
     name: "destroy_workspace_session",
     family: "workspace_session",
     summary: "Destroy a runtime workspace session.",
-    description: "Destroy a user-owned runtime workspace session by workspace_session_id when no commands are active in that session.",
+    description: "Destroy a runtime workspace session by workspace_session_id, always discarding unpublished changes regardless of the session's finalize policy. Refuses while the session's command ledger is non-empty, reporting active_command_session_ids. Sessions whose finalization failed remain destroyable through this operation.",
     args: DESTROY_ARGS,
     cli: Some(CliSpec {
         path: &["runtime", "destroy_workspace_session"],
@@ -106,11 +105,12 @@ fn dispatch_create_workspace_session(
         Ok(network) => network,
         Err(response) => return response,
     };
-    workspace_session_handler_response(
-        operations
-            .workspace_session
-            .create_workspace_session(CreateWorkspaceRequest { network }),
-    )
+    workspace_session_handler_response(operations.workspace_session.create_workspace_session(
+        CreateSessionRequest {
+            network,
+            finalize_policy: FinalizePolicy::NoOp,
+        },
+    ))
 }
 
 fn dispatch_destroy_workspace_session(
@@ -122,16 +122,15 @@ fn dispatch_destroy_workspace_session(
         Err(response) => return response,
     };
     match operations
-        .command
-        .destroy_workspace_session_with_admission(input.workspace_session_id, input.grace_s)
+        .workspace_session
+        .guarded_destroy(input.workspace_session_id, input.grace_s)
     {
-        WorkspaceDestroyOutcome::ActiveCommands {
+        Ok(result) => Response::ok(destroy_workspace_session_value(result)),
+        Err(WorkspaceSessionError::ActiveCommands {
             active_command_session_ids,
-        } => active_command_rejection(&active_command_session_ids),
-        WorkspaceDestroyOutcome::Destroyed(result) => {
-            Response::ok(destroy_workspace_session_value(*result))
-        }
-        WorkspaceDestroyOutcome::Failed(error) => workspace_session_error_response(error),
+            ..
+        }) => active_command_rejection(&active_command_session_ids),
+        Err(error) => workspace_session_error_response(error),
     }
 }
 
@@ -197,6 +196,7 @@ fn create_workspace_session_value(handler: WorkspaceSessionHandler) -> Value {
     json!({
         "workspace_session_id": handler.workspace_session_id.0,
         "network_profile": handler.handle.network.as_str(),
+        "finalize_policy": FinalizePolicy::NoOp.as_str(),
     })
 }
 

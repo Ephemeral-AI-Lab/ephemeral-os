@@ -55,7 +55,10 @@ impl CommandOperationService {
             let window = command.transcript_window(start, usize::MAX);
             command.advance_snapshot_offset(window.next_offset);
             let elapsed = command.elapsed_seconds();
-            command_output(window, None, CommandStatus::Running, None, elapsed, elapsed)
+            let mut output =
+                command_output(window, None, CommandStatus::Running, None, elapsed, elapsed);
+            output.workspace_session_id = Some(command.workspace_session_id.clone());
+            output
         });
         match output {
             Some(mut output) => {
@@ -77,9 +80,20 @@ impl CommandOperationService {
             let start = command.take_snapshot_offset();
             let window = command.transcript_window(start, usize::MAX);
             let elapsed = command.elapsed_seconds();
-            (result, window, elapsed)
+            let workspace_session_id = command.workspace_session_id.clone();
+            let publish_rejected = command
+                .finalize_outcome
+                .get()
+                .map(|outcome| outcome.publish_reject_class);
+            (
+                result,
+                window,
+                elapsed,
+                workspace_session_id,
+                publish_rejected,
+            )
         });
-        let Some((result, window, elapsed)) = read else {
+        let Some((result, window, elapsed, workspace_session_id, publish_rejected)) = read else {
             return command_not_found(command_session_id);
         };
         let result = match result {
@@ -92,14 +106,17 @@ impl CommandOperationService {
         let has_more_output = window.output_truncated;
         let returned_command_session_id =
             (include_terminal_command_session_id || has_more_output).then_some(command_session_id);
-        Ok(command_output(
+        let mut output = command_output(
             window,
             returned_command_session_id,
             command_status(result.status),
             Some(result.exit_code),
             elapsed,
             result.command_total_time_seconds,
-        ))
+        );
+        output.workspace_session_id = Some(workspace_session_id);
+        output.publish_rejected = publish_rejected;
+        Ok(output)
     }
 }
 

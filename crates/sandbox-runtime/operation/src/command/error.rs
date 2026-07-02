@@ -34,15 +34,6 @@ pub enum CommandServiceError {
         command_session_id: NamespaceExecutionId,
         error: String,
     },
-
-    #[error(
-        "one-shot workspace cleanup failed for {command_session_id:?}: command error: {command_error}; cleanup error: {cleanup_error}"
-    )]
-    OneShotSessionCleanupFailed {
-        command_session_id: NamespaceExecutionId,
-        command_error: Box<CommandServiceError>,
-        cleanup_error: String,
-    },
 }
 
 impl From<crate::layerstack::LayerStackServiceError> for CommandServiceError {

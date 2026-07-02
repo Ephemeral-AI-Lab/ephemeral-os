@@ -11,6 +11,7 @@ use crate::observability::DaemonObservability;
 use crate::rpc::{SandboxDaemonServer, ServerConfig};
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability::{ObservabilityPaths, Reader, SampleDelta};
+use sandbox_runtime::workspace_session::FinalizePolicy;
 use sandbox_runtime::{
     NamespaceExecutionId, NetworkProfile, RuntimeNamespaceExecutionSnapshot,
     RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, WorkspaceSessionId,
@@ -253,7 +254,7 @@ async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
     write_log_lines(
         &server.config,
         &[
-            r#"{"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"one_shot":true}}"#,
+            r#"{"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"finalize_policy":"publish_then_destroy","session_created":true}}"#,
             r#"{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}"#,
             r#"{"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed","attrs":{}}"#,
             r#"{"ts":1719500000009,"kind":"event","trace":"req-7f3","parent":"d-2","name":"lease.acquired","attrs":{"revision":"r5"}}"#,
@@ -403,6 +404,7 @@ fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeW
     RuntimeWorkspaceSnapshot {
         workspace_id: WorkspaceSessionId(workspace_id.to_owned()),
         network: NetworkProfile::Shared,
+        finalize_policy: FinalizePolicy::NoOp,
         workspace_root: PathBuf::from("/workspace").join(workspace_id),
         upperdir,
         workdir: Some(PathBuf::from("/workspace").join(workspace_id).join("work")),

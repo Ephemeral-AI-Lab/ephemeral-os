@@ -35,7 +35,7 @@ fn exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInput {
     }
 }
 
-fn one_shot_exec_input() -> ExecCommandInput {
+fn implicit_exec_input() -> ExecCommandInput {
     ExecCommandInput {
         workspace_session_id: None,
         cmd: "printf ok".to_owned(),
@@ -44,7 +44,7 @@ fn one_shot_exec_input() -> ExecCommandInput {
     }
 }
 
-fn one_shot_exec_input_await_completion() -> ExecCommandInput {
+fn implicit_exec_input_await_completion() -> ExecCommandInput {
     ExecCommandInput {
         workspace_session_id: None,
         cmd: "printf ok".to_owned(),
@@ -135,33 +135,39 @@ fn exec_command_rejects_empty_command_before_workspace_resolution() {
 }
 
 #[test]
-fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_completion() {
+fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session_on_completion() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
-        "one-shot-session",
+        "implicit-session",
         "lease-1",
-        PathBuf::from("/workspace/one-shot"),
+        PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
-        "one-shot done\n",
+        "implicit done\n",
     )));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input_await_completion())
-        .expect("one-shot command completes");
+        .exec_command(implicit_exec_input_await_completion())
+        .expect("implicit-session command completes");
 
     assert_eq!(output.status, CommandStatus::Ok);
     assert_eq!(output.exit_code, Some(0));
-    assert_eq!(output.output, "one-shot done");
+    assert_eq!(output.output, "implicit done");
     assert!(output.command_session_id.is_none());
-    assert_eq!(fake.create_requests(), vec![create_request()]);
+    assert_eq!(
+        output.workspace_session_id,
+        Some(WorkspaceSessionId("implicit-session".to_owned())),
+        "the response names the implicit session even though it is already finalized"
+    );
+    assert_eq!(output.publish_rejected, None);
+    assert_eq!(fake.create_requests(), vec![support::raw_create_request()]);
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+        vec![WorkspaceSessionId("implicit-session".to_owned())]
     );
 }
 
@@ -169,9 +175,9 @@ fn exec_command_without_workspace_session_creates_and_destroys_one_shot_on_compl
 fn exec_command_terminal_output_returns_command_session_id_when_more_output_remains() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
-        "one-shot-session",
+        "implicit-session",
         "lease-1",
-        PathBuf::from("/workspace/one-shot"),
+        PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -181,8 +187,8 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
 
     let output = env
         .command
-        .exec_command(one_shot_exec_input_await_completion())
-        .expect("one-shot command completes");
+        .exec_command(implicit_exec_input_await_completion())
+        .expect("implicit-session command completes");
 
     let command_session_id = output
         .command_session_id
@@ -199,14 +205,14 @@ fn exec_command_terminal_output_returns_command_session_id_when_more_output_rema
 }
 
 #[test]
-fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completion() {
+fn exec_command_without_workspace_session_keeps_implicit_session_until_terminal_completion() {
     use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
-        "one-shot-session",
+        "implicit-session",
         "lease-1",
-        PathBuf::from("/workspace/one-shot"),
+        PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -217,8 +223,8 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
 
     let command_session_id = env
         .command
-        .exec_command(one_shot_exec_input())
-        .expect("one-shot command starts")
+        .exec_command(implicit_exec_input())
+        .expect("implicit-session command starts")
         .command_session_id
         .expect("running command session id is returned");
     assert!(fake.destroy_calls().is_empty());
@@ -240,14 +246,14 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
             stdin: "input\n".to_owned(),
             yield_time_ms: Some(250),
         })
-        .expect("one-shot command completes after stdin write");
+        .expect("implicit-session command completes after stdin write");
 
     assert_eq!(output.status, CommandStatus::Ok);
     assert_eq!(output.exit_code, Some(0));
     assert_eq!(output.command_session_id, Some(command_session_id.clone()));
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+        vec![WorkspaceSessionId("implicit-session".to_owned())]
     );
     let lines = env.command.read_command_lines(ReadCommandLinesInput {
         command_session_id,
@@ -258,12 +264,12 @@ fn exec_command_without_workspace_session_keeps_one_shot_until_terminal_completi
 }
 
 #[test]
-fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure() {
+fn exec_command_without_workspace_session_destroys_implicit_session_after_spawn_failure() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
-        "one-shot-session",
+        "implicit-session",
         "lease-1",
-        PathBuf::from("/workspace/one-shot"),
+        PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -275,23 +281,24 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_spawn_failure(
 
     let error = env
         .command
-        .exec_command(one_shot_exec_input())
-        .expect_err("one-shot spawn failure rejects exec");
+        .exec_command(implicit_exec_input())
+        .expect_err("implicit-session spawn failure rejects exec");
 
     assert!(matches!(error, CommandServiceError::CommandIo { .. }));
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+        vec![WorkspaceSessionId("implicit-session".to_owned())]
     );
 }
 
 #[test]
-fn exec_command_without_workspace_session_destroys_one_shot_after_launch_material_failure() {
+fn exec_command_without_workspace_session_destroys_implicit_session_after_launch_material_failure()
+{
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle_without_launch(
-        "one-shot-session",
+        "implicit-session",
         "lease-1",
-        PathBuf::from("/workspace/one-shot"),
+        PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
     )));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
@@ -299,8 +306,8 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_launch_materia
 
     let error = env
         .command
-        .exec_command(one_shot_exec_input())
-        .expect_err("missing launch material rejects one-shot exec");
+        .exec_command(implicit_exec_input())
+        .expect_err("missing launch material rejects implicit-session exec");
 
     assert!(matches!(
         error,
@@ -310,7 +317,7 @@ fn exec_command_without_workspace_session_destroys_one_shot_after_launch_materia
     assert!(launch_driver.recorded_requests().is_empty());
     assert_eq!(
         fake.destroy_calls(),
-        vec![WorkspaceSessionId("one-shot-session".to_owned())]
+        vec![WorkspaceSessionId("implicit-session".to_owned())]
     );
 }
 
@@ -358,6 +365,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
     let obs = sandbox_observability::Observer::disabled();
     let workspace = Arc::new(sandbox_runtime::WorkspaceSessionService::new(
         support::fake_workspace_runtime(Arc::clone(&fake)),
+        layerstack_service()?,
         obs.clone(),
     ));
     let exec_spans = Arc::new(sandbox_observability::SpanRegistry::new(obs.clone()));
@@ -382,7 +390,6 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
     let command = Arc::new(
         sandbox_runtime::command::CommandOperationService::with_engine(
             Arc::clone(&workspace),
-            layerstack_service()?,
             config,
             engine,
             exec_spans,

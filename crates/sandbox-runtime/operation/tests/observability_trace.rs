@@ -27,7 +27,7 @@ use support::{
     TestServices,
 };
 
-fn one_shot_await() -> ExecCommandInput {
+fn implicit_await() -> ExecCommandInput {
     ExecCommandInput {
         workspace_session_id: None,
         cmd: "printf ok".to_owned(),
@@ -55,17 +55,17 @@ fn parked_exec_input(workspace_session_id: WorkspaceSessionId) -> ExecCommandInp
 }
 
 #[test]
-fn case_a_one_shot_exec_writes_parent_waterfall() {
+fn case_a_implicit_exec_writes_parent_waterfall() {
     let log = TempLog::new("case-a");
     let obs = enabled_observer(&log.path);
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
-        "one-shot-session",
+        "implicit-session",
         "lease-1",
-        PathBuf::from("/workspace/one-shot"),
+        PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
     )));
-    fake.push_capture_result(Ok(matching_capture("one-shot-session")));
+    fake.push_capture_result(Ok(matching_capture("implicit-session")));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
     let services = build_observed_services(Arc::clone(&fake), launch_driver, obs.clone());
@@ -75,8 +75,8 @@ fn case_a_one_shot_exec_writes_parent_waterfall() {
         dispatch.attr("op", "exec_command");
         let output = services
             .command
-            .exec_command(one_shot_await())
-            .expect("one-shot command completes");
+            .exec_command(implicit_await())
+            .expect("implicit-session command completes");
         assert_eq!(output.status, CommandStatus::Ok);
     });
 
@@ -88,10 +88,12 @@ fn case_a_one_shot_exec_writes_parent_waterfall() {
 
     let exec = span(&records, names::COMMAND_EXEC);
     assert_eq!(parent(exec), Some(id(dispatch)));
-    assert_eq!(exec["attrs"]["one_shot"], true);
+    assert_eq!(exec["attrs"]["session_created"], true);
+    assert_eq!(exec["attrs"]["finalize_policy"], "publish_then_destroy");
 
     let create = span(&records, names::WORKSPACE_SESSION_CREATE);
     assert_eq!(parent(create), Some(id(exec)));
+    assert_eq!(create["attrs"]["finalize_policy"], "publish_then_destroy");
 
     let acquired = event(&records, names::LEASE_ACQUIRED);
     assert_eq!(
@@ -111,12 +113,20 @@ fn case_a_one_shot_exec_writes_parent_waterfall() {
         "the shell span folds the child exit code"
     );
 
+    let finalize = span(&records, names::WORKSPACE_SESSION_FINALIZE);
+    assert_eq!(
+        parent(finalize),
+        Some(id(exec)),
+        "the finalize runner nests under command.exec"
+    );
+    assert_eq!(
+        finalize["attrs"]["published"], false,
+        "an empty capture skips publish"
+    );
     let capture = span(&records, names::WORKSPACE_SESSION_CAPTURE_CHANGES);
-    assert_eq!(parent(capture), Some(id(exec)));
-    let publish = span(&records, names::LAYERSTACK_PUBLISH);
-    assert_eq!(parent(publish), Some(id(exec)));
+    assert_eq!(parent(capture), Some(id(finalize)));
     let destroy = span(&records, names::WORKSPACE_SESSION_DESTROY);
-    assert_eq!(parent(destroy), Some(id(exec)));
+    assert_eq!(parent(destroy), Some(id(finalize)));
 
     let released = event(&records, names::LEASE_RELEASED);
     assert_eq!(
@@ -128,7 +138,11 @@ fn case_a_one_shot_exec_writes_parent_waterfall() {
     // The raw filters that back the lease stream and publish audit views.
     assert_eq!(raw(&log.path, "event", names::LEASE_ACQUIRED).len(), 1);
     assert_eq!(raw(&log.path, "event", names::LEASE_RELEASED).len(), 1);
-    assert_eq!(raw(&log.path, "span", names::LAYERSTACK_PUBLISH).len(), 1);
+    assert_eq!(
+        raw(&log.path, "span", names::LAYERSTACK_PUBLISH).len(),
+        0,
+        "an empty capture never reaches the layerstack publish path"
+    );
 }
 
 #[test]
@@ -156,19 +170,21 @@ fn persistent_session_exec_writes_only_command_exec_and_run_shell() {
 
     let records = read_records(&log.path);
     let exec = span(&records, names::COMMAND_EXEC);
-    assert_eq!(exec["attrs"]["one_shot"], false);
+    assert_eq!(exec["attrs"]["session_created"], false);
+    assert_eq!(exec["attrs"]["finalize_policy"], "no_op");
     let run_shell = span(&records, names::NAMESPACE_EXEC_RUN_SHELL);
     assert_eq!(parent(run_shell), Some(id(exec)));
 
     for absent in [
         names::WORKSPACE_SESSION_CREATE,
+        names::WORKSPACE_SESSION_FINALIZE,
         names::WORKSPACE_SESSION_CAPTURE_CHANGES,
         names::LAYERSTACK_PUBLISH,
         names::WORKSPACE_SESSION_DESTROY,
     ] {
         assert!(
             find_span(&records, absent).is_none(),
-            "{absent} must not appear for a persistent-session exec"
+            "{absent} must not appear for a no_op-session exec"
         );
     }
     assert!(find_event(&records, names::LEASE_ACQUIRED).is_none());
@@ -228,7 +244,7 @@ fn launch_failure_writes_no_run_shell_span() {
         let _dispatch = obs.span(names::DAEMON_DISPATCH);
         services
             .command
-            .exec_command(one_shot_await())
+            .exec_command(implicit_await())
             .expect_err("spawn failure surfaces");
     });
 
@@ -291,15 +307,15 @@ fn disabled_observability_runs_identically_and_writes_nothing() {
         let _dispatch = obs.span(names::DAEMON_DISPATCH);
         services
             .command
-            .exec_command(one_shot_await())
-            .expect("one-shot command completes with observability disabled")
+            .exec_command(implicit_await())
+            .expect("implicit-session command completes with observability disabled")
     });
 
     assert_eq!(output.status, CommandStatus::Ok);
     assert_eq!(
         fake.destroy_calls(),
         vec![WorkspaceSessionId("disabled-session".to_owned())],
-        "the one-shot still tears down with observability disabled"
+        "the implicit session still tears down with observability disabled"
     );
     assert!(!log.path.exists(), "disabled observability writes no log");
 }
@@ -335,7 +351,7 @@ fn sink_error_does_not_surface_to_command_result() {
         let _dispatch = obs.span(names::DAEMON_DISPATCH);
         services
             .command
-            .exec_command(one_shot_await())
+            .exec_command(implicit_await())
             .expect("a sink error never fails the command")
     });
 

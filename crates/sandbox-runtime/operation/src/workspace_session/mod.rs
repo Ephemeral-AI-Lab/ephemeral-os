@@ -3,5 +3,6 @@ mod service;
 
 pub use error::WorkspaceSessionError;
 pub use service::{
-    SweptDisposition, SweptSession, WorkspaceSessionHandler, WorkspaceSessionService,
+    AdmittedCommand, CreateSessionRequest, FinalizeOutcome, FinalizePolicy, SessionExecutionToken,
+    SweptDisposition, SweptSession, TokenSlot, WorkspaceSessionHandler, WorkspaceSessionService,
 };

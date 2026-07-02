@@ -6,18 +6,25 @@ use serde_json::json;
 use crate::workspace_crate::{CreateWorkspaceRequest, DestroyWorkspaceRequest};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
-use super::super::model::{WorkspaceSession, WorkspaceSessionHandler};
+use super::super::model::{CreateSessionRequest, WorkspaceSession, WorkspaceSessionHandler};
 
 impl WorkspaceSessionService {
     pub fn create_workspace_session(
         &self,
-        request: CreateWorkspaceRequest,
+        request: CreateSessionRequest,
     ) -> Result<WorkspaceSessionHandler, WorkspaceSessionError> {
-        self.obs().scope(names::WORKSPACE_SESSION_CREATE, |_span| {
-            let handle = self.workspace().create_workspace(request)?;
+        self.obs().scope(names::WORKSPACE_SESSION_CREATE, |span| {
+            span.attr("finalize_policy", request.finalize_policy.as_str());
+            let handle = self.workspace().create_workspace(CreateWorkspaceRequest {
+                network: request.network,
+            })?;
             let workspace_session_id = handle.id.clone();
             let cgroup_path = self.prepare_workspace_cgroup(&workspace_session_id);
-            let session = WorkspaceSession::from_handle(handle.clone(), cgroup_path.clone());
+            let session = WorkspaceSession::from_handle(
+                handle.clone(),
+                cgroup_path.clone(),
+                request.finalize_policy,
+            );
             let handler = session.handler();
 
             let insert_result = self.lock_sessions().and_then(|mut sessions| {

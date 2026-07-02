@@ -1,28 +1,34 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
+use std::time::{Duration, Instant};
 
 use sandbox_observability::Observer;
 use sandbox_protocol::{CliOperationScope, Request};
-use sandbox_runtime::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
+use sandbox_runtime::command::ExecCommandInput;
+use sandbox_runtime::workspace_session::{
+    FinalizePolicy, WorkspaceSessionError, WorkspaceSessionService,
+};
 use sandbox_runtime::{CommandOperationService, LayerStackService, SandboxRuntimeOperations};
+use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use sandbox_runtime_workspace::{
-    BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, NetworkProfile, WorkspaceError, WorkspaceHandle, WorkspaceSessionId,
+    DestroyWorkspaceRequest, FileRunnerOp, NetworkProfile, WorkspaceError, WorkspaceHandle,
+    WorkspaceSessionId,
 };
 use serde_json::json;
 
 mod support;
-use support::FakeWorkspaceService;
+use support::{FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield};
 
 fn manager_with(fake: &Arc<FakeWorkspaceService>) -> WorkspaceSessionService {
     WorkspaceSessionService::new(
         support::fake_workspace_runtime(Arc::clone(fake)),
+        support::observed_layerstack_service(Observer::disabled()),
         Observer::disabled(),
     )
 }
 
-fn create_request() -> CreateWorkspaceRequest {
+fn create_request() -> sandbox_runtime::workspace_session::CreateSessionRequest {
     support::create_request()
 }
 
@@ -43,26 +49,31 @@ fn workspace_handle_with_profile(
     )
 }
 
-fn capture_result(
-    handle: &WorkspaceHandle,
-    version: i64,
-    root_hash: &str,
-) -> CapturedWorkspaceChanges {
-    CapturedWorkspaceChanges {
-        workspace_session_id: handle.id.clone(),
-        base_revision: BaseRevision {
-            version,
-            root_hash: root_hash.to_owned(),
-            layer_count: handle.snapshot.layer_paths.len(),
-        },
-        base_manifest: handle.snapshot.manifest.clone(),
-        changed_paths: Vec::new(),
-        changed_path_kinds: Default::default(),
-        protected_drops: Vec::new(),
-        stats: None,
-        changes: Vec::new(),
-        metadata_path_count: 0,
+fn exec_input(workspace_session_id: Option<WorkspaceSessionId>, yield_ms: u64) -> ExecCommandInput {
+    ExecCommandInput {
+        workspace_session_id,
+        cmd: "printf ok".to_owned(),
+        timeout_ms: None,
+        yield_time_ms: Some(yield_ms),
     }
+}
+
+fn ok_run_result() -> RunResult {
+    RunResult {
+        exit_code: 0,
+        payload: json!({ "status": "ok" }),
+    }
+}
+
+fn wait_until(deadline: Duration, mut condition: impl FnMut() -> bool) -> bool {
+    let stop_at = Instant::now() + deadline;
+    while Instant::now() < stop_at {
+        if condition() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    condition()
 }
 
 #[test]
@@ -157,7 +168,7 @@ fn workspace_session_successful_destroy_removes_session() {
 }
 
 #[test]
-fn workspace_session_rejects_stale_handler_before_raw_capture() {
+fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     let manager = manager_with(&fake);
@@ -168,73 +179,424 @@ fn workspace_session_rejects_stale_handler_before_raw_capture() {
     manager
         .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
         .expect("test operation succeeds");
-
-    let error = manager
-        .capture_session_changes(
-            &handler,
-            CaptureChangesRequest {
-                include_stats: false,
-            },
-        )
+    let duplicate = manager
+        .destroy_session(handler, DestroyWorkspaceRequest::default())
         .expect_err("test operation fails");
 
-    assert!(matches!(error, WorkspaceSessionError::NotFound { .. }));
-    assert!(fake.capture_calls().is_empty());
-}
-
-#[test]
-fn workspace_session_uses_canonical_handle_for_capture() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "lease-1");
-    fake.push_create_result(Ok(handle.clone()));
-    fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
-    let manager = manager_with(&fake);
-    let mut handler = manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-    handler.handle.id = WorkspaceSessionId("fabricated".to_owned());
-
-    manager
-        .capture_session_changes(
-            &handler,
-            CaptureChangesRequest {
-                include_stats: false,
-            },
-        )
-        .expect("test operation succeeds");
-
+    assert!(matches!(duplicate, WorkspaceSessionError::NotFound { .. }));
     assert_eq!(
-        fake.capture_calls(),
+        fake.destroy_calls(),
         vec![WorkspaceSessionId("workspace-1".to_owned())]
     );
 }
 
-#[test]
-fn workspace_session_capture_updates_handler_snapshot_consistently() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    let handle = workspace_handle("workspace-1", "lease-1");
-    fake.push_create_result(Ok(handle.clone()));
-    fake.push_capture_result(Ok(capture_result(&handle, 2, "root-2")));
-    let manager = manager_with(&fake);
-    let handler = manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
+// ---------------------------------------------------------------------------
+// Finalize-policy matrix (§5): the completion edge is the only trigger.
+// ---------------------------------------------------------------------------
 
-    manager
-        .capture_session_changes(
-            &handler,
-            CaptureChangesRequest {
-                include_stats: false,
+#[test]
+fn no_op_session_survives_command_completion() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "done\n",
+    )));
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    fake.push_create_result(Ok(workspace_handle("ws-noop", "lease-1")));
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+
+    let output = env
+        .command
+        .exec_command(exec_input(Some(workspace_session_id.clone()), 250))
+        .expect("session command completes");
+
+    assert_eq!(
+        output.workspace_session_id,
+        Some(workspace_session_id.clone())
+    );
+    assert!(fake.destroy_calls().is_empty());
+    assert!(fake.capture_calls().is_empty());
+    assert!(env.workspace.resolve_session(workspace_session_id).is_ok());
+}
+
+#[test]
+fn publish_then_destroy_session_finalizes_when_last_command_completes() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "done\n",
+    )));
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    fake.push_create_result(Ok(workspace_handle("ws-ptd", "lease-1")));
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(support::create_request_with_policy(
+            FinalizePolicy::PublishThenDestroy,
+        ))
+        .expect("session create succeeds")
+        .workspace_session_id;
+
+    let output = env
+        .command
+        .exec_command(exec_input(Some(workspace_session_id.clone()), 250))
+        .expect("session command completes");
+
+    assert_eq!(
+        output.workspace_session_id,
+        Some(workspace_session_id.clone())
+    );
+    assert!(
+        wait_until(Duration::from_secs(5), || !fake.destroy_calls().is_empty()),
+        "publish_then_destroy finalizes once the ledger drains"
+    );
+    assert_eq!(fake.destroy_calls(), vec![workspace_session_id.clone()]);
+    assert_eq!(fake.capture_calls(), vec![workspace_session_id.clone()]);
+    let missing = env
+        .workspace
+        .resolve_session(workspace_session_id)
+        .expect_err("finalized session is gone");
+    assert!(matches!(missing, WorkspaceSessionError::NotFound { .. }));
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+}
+
+#[test]
+fn rider_command_defers_finalization_until_last_completion() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-rider", "lease-1")));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    let launcher = launch_driver.launcher();
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let first = env
+        .command
+        .exec_command(exec_input(None, 0))
+        .expect("implicit session command starts");
+    let workspace_session_id = first
+        .workspace_session_id
+        .clone()
+        .expect("exec_command returns the session id");
+    let rider = env
+        .command
+        .exec_command(exec_input(Some(workspace_session_id.clone()), 0))
+        .expect("rider attaches to the running session");
+    assert_eq!(
+        rider.workspace_session_id,
+        Some(workspace_session_id.clone())
+    );
+
+    let rider_id = rider.command_session_id.expect("rider is running");
+    launcher.complete_request(&rider_id.0, ok_run_result());
+    assert!(
+        !wait_until(Duration::from_millis(300), || {
+            !fake.destroy_calls().is_empty()
+        }),
+        "rider completion must not finalize while the first command runs"
+    );
+    assert!(env
+        .workspace
+        .resolve_session(workspace_session_id.clone())
+        .is_ok());
+
+    let first_id = first.command_session_id.expect("first command is running");
+    launcher.complete_request(&first_id.0, ok_run_result());
+    assert!(
+        wait_until(Duration::from_secs(5), || !fake.destroy_calls().is_empty()),
+        "last completion drains the ledger and finalizes"
+    );
+    assert_eq!(fake.destroy_calls(), vec![workspace_session_id.clone()]);
+    let missing = env
+        .workspace
+        .resolve_session(workspace_session_id)
+        .expect_err("finalized session is gone");
+    assert!(matches!(missing, WorkspaceSessionError::NotFound { .. }));
+}
+
+#[test]
+fn sweep_remount_does_not_finalize_idle_publish_then_destroy_session() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-sweep", "lease-1")));
+    let env = support::build_services(Arc::clone(&fake));
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(support::create_request_with_policy(
+            FinalizePolicy::PublishThenDestroy,
+        ))
+        .expect("session create succeeds")
+        .workspace_session_id;
+
+    for swept_id in env.workspace.session_ids() {
+        let _ = env.workspace.remount_session(&swept_id);
+    }
+
+    assert!(
+        env.workspace.resolve_session(workspace_session_id).is_ok(),
+        "an idle publish_then_destroy session survives the remount sweep"
+    );
+    assert!(fake.destroy_calls().is_empty());
+    assert!(fake.capture_calls().is_empty());
+}
+
+#[test]
+fn sync_op_racing_last_completion_blocks_on_gate_and_gets_not_found() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-race", "lease-1")));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "done\n",
+    )));
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let (entered, release) = fake.park_next_destroy();
+
+    let output = env
+        .command
+        .exec_command(exec_input(None, 0))
+        .expect("implicit session command starts");
+    let workspace_session_id = output
+        .workspace_session_id
+        .expect("exec_command returns the session id");
+    entered
+        .recv_timeout(Duration::from_secs(5))
+        .expect("finalize reached the destroy hook under the gate");
+
+    let file_op_workspace = Arc::clone(&env.workspace);
+    let file_op_id = workspace_session_id.clone();
+    let file_op = std::thread::spawn(move || {
+        file_op_workspace.run_file_op(
+            &file_op_id,
+            FileRunnerOp::ReadFile {
+                rel: "f.txt".to_owned(),
+                max_bytes: 16,
             },
         )
-        .expect("test operation succeeds");
+    });
+    std::thread::sleep(Duration::from_millis(200));
+    assert!(
+        fake.run_file_op_calls().is_empty(),
+        "the file op must wait on the session gate while finalize holds it"
+    );
 
-    let resolved = manager
-        .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
-        .expect("test operation succeeds");
-    assert_eq!(resolved.handle.snapshot.manifest_version, 2);
-    assert_eq!(resolved.handle.snapshot.root_hash, "root-2");
+    release.send(()).expect("release the parked destroy");
+    let result = file_op.join().expect("file op thread");
+    assert!(matches!(
+        result,
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+    assert!(
+        fake.run_file_op_calls().is_empty(),
+        "a sync op racing the last completion never runs against the finalized session"
+    );
+    assert_eq!(env.workspace.gate_entry_count(), 0);
 }
+
+#[test]
+fn launch_failure_completes_under_the_held_guard_without_deadlock() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-launch-fail", "lease-1")));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_spawn_error(
+        sandbox_runtime::command::CommandServiceError::InvalidCommand {
+            message: "scripted spawn failure".to_owned(),
+        },
+    );
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let (result_tx, result_rx) = mpsc::channel();
+    let command = Arc::clone(&env.command);
+    std::thread::spawn(move || {
+        let _ = result_tx.send(command.exec_command(exec_input(None, 0)));
+    });
+
+    let result = result_rx
+        .recv_timeout(Duration::from_secs(10))
+        .expect("launch-failure completion must not deadlock on the admission gate");
+    assert!(matches!(
+        result,
+        Err(sandbox_runtime::command::CommandServiceError::CommandIo { .. })
+    ));
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("ws-launch-fail".to_owned())],
+        "the failed launch completes through the ordinary trigger and finalizes"
+    );
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+}
+
+#[test]
+fn completion_against_a_missing_session_is_a_silent_no_op() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-faulty", "lease-1")));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+    let launcher = launch_driver.launcher();
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+    let output = env
+        .command
+        .exec_command(exec_input(Some(workspace_session_id.clone()), 0))
+        .expect("command starts");
+    let command_session_id = output.command_session_id.expect("command is running");
+
+    let lease_errors = env.workspace.destroy_faulty_session(&workspace_session_id);
+    assert!(lease_errors.is_empty());
+    assert_eq!(fake.destroy_calls(), vec![workspace_session_id.clone()]);
+
+    launcher.complete_request(&command_session_id.0, ok_run_result());
+    assert!(
+        wait_until(Duration::from_secs(5), || {
+            env.workspace.gate_entry_count() == 0
+        }),
+        "the late completion no-ops against the missing session and leaves no gate entry"
+    );
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![workspace_session_id.clone()],
+        "the late completion never destroys again"
+    );
+}
+
+#[test]
+fn guarded_destroy_accepts_a_finalize_failed_session() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-stuck", "lease-1")));
+    fake.push_destroy_result(Err(WorkspaceError::Setup {
+        step: "finalize destroy failed".to_owned(),
+    }));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "done\n",
+    )));
+    let env = support::build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let _ = env
+        .command
+        .exec_command(exec_input(None, 250))
+        .expect("implicit session command completes");
+    assert!(
+        wait_until(Duration::from_secs(5), || !fake.destroy_calls().is_empty()),
+        "finalize attempts the destroy"
+    );
+    let workspace_session_id = WorkspaceSessionId("ws-stuck".to_owned());
+    assert!(
+        env.workspace
+            .resolve_session(workspace_session_id.clone())
+            .is_ok(),
+        "a failed finalize leaves the session resolvable for recovery"
+    );
+
+    let result = env
+        .workspace
+        .guarded_destroy(workspace_session_id.clone(), None)
+        .expect("guarded destroy recovers a finalize_failed session");
+    assert_eq!(result.workspace_session_id, workspace_session_id);
+    assert_eq!(fake.destroy_calls().len(), 2);
+    let missing = env
+        .workspace
+        .resolve_session(workspace_session_id)
+        .expect_err("recovered session is gone");
+    assert!(matches!(missing, WorkspaceSessionError::NotFound { .. }));
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+}
+
+#[test]
+fn gates_map_does_not_grow_on_dead_id_touches() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let env = support::build_services(Arc::clone(&fake));
+    let dead = WorkspaceSessionId("ws-dead".to_owned());
+
+    let file_op = env.workspace.run_file_op(
+        &dead,
+        FileRunnerOp::ReadFile {
+            rel: "f.txt".to_owned(),
+            max_bytes: 16,
+        },
+    );
+    assert!(matches!(
+        file_op,
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+
+    let destroy = env.workspace.guarded_destroy(dead.clone(), None);
+    assert!(matches!(
+        destroy,
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+
+    let admission = env.command.exec_command(exec_input(Some(dead.clone()), 0));
+    assert!(admission.is_err());
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+
+    let swept = env.workspace.remount_session(&dead);
+    assert_eq!(
+        swept.disposition,
+        sandbox_runtime::workspace_session::SweptDisposition::SessionGone
+    );
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+
+    assert!(env.workspace.destroy_faulty_session(&dead).is_empty());
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+}
+
+#[test]
+fn sessions_map_stays_free_while_destroy_io_runs() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("ws-io", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("ws-other", "lease-2")));
+    let env = support::build_services(Arc::clone(&fake));
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+    let other_id = env
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("second session create succeeds")
+        .workspace_session_id;
+
+    let (entered, release) = fake.park_next_destroy();
+    let destroy_workspace = Arc::clone(&env.workspace);
+    let destroy_id = workspace_session_id.clone();
+    let destroyer = std::thread::spawn(move || destroy_workspace.guarded_destroy(destroy_id, None));
+    entered
+        .recv_timeout(Duration::from_secs(5))
+        .expect("destroy reached the workspace hook");
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let read_workspace = Arc::clone(&env.workspace);
+    let read_id = other_id.clone();
+    std::thread::spawn(move || {
+        let resolved = read_workspace.resolve_session(read_id).is_ok();
+        let ids = read_workspace.session_ids();
+        let _ = done_tx.send((resolved, ids));
+    });
+    let (resolved, ids) = done_rx
+        .recv_timeout(Duration::from_secs(2))
+        .expect("sessions map reads must not block behind destroy I/O");
+    assert!(resolved);
+    assert!(ids.contains(&other_id));
+
+    release.send(()).expect("release the parked destroy");
+    destroyer
+        .join()
+        .expect("destroy thread")
+        .expect("guarded destroy succeeds");
+}
+
+// ---------------------------------------------------------------------------
+// CLI dispatch surface.
+// ---------------------------------------------------------------------------
 
 #[test]
 fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal_json(
@@ -254,14 +616,10 @@ fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal
         json!({
             "workspace_session_id": "workspace-1",
             "network_profile": "shared",
+            "finalize_policy": "no_op",
         })
     );
-    assert_eq!(
-        fake.create_requests(),
-        vec![CreateWorkspaceRequest {
-            network: NetworkProfile::Shared,
-        }]
-    );
+    assert_eq!(fake.create_requests(), vec![support::raw_create_request()]);
     Ok(())
 }
 
@@ -290,13 +648,8 @@ fn workspace_session_create_operation_accepts_isolated_profile(
         json!({
             "workspace_session_id": "workspace-1",
             "network_profile": "isolated",
+            "finalize_policy": "no_op",
         })
-    );
-    assert_eq!(
-        fake.create_requests(),
-        vec![CreateWorkspaceRequest {
-            network: NetworkProfile::Isolated,
-        }]
     );
     Ok(())
 }
@@ -405,6 +758,10 @@ fn workspace_session_destroy_operation_rejects_active_commands_without_raw_destr
     )
     .into_json_value();
     assert_eq!(exec_response["command_session_id"], "namespace_execution_1");
+    assert_eq!(
+        exec_response["workspace_session_id"],
+        workspace_session_id.0
+    );
 
     let destroy_response = sandbox_runtime::dispatch_operation(
         &operations,
@@ -497,8 +854,10 @@ fn workspace_session_destroy_operation_failure_retains_session(
 #[test]
 fn workspace_session_files_do_not_import_command_service() {
     let core = include_str!("../src/workspace_session/service/core.rs");
-    let capture_session_changes =
-        include_str!("../src/workspace_session/service/impls/capture_session_changes.rs");
+    let admission = include_str!("../src/workspace_session/service/impls/admission.rs");
+    let finalize_session =
+        include_str!("../src/workspace_session/service/impls/finalize_session.rs");
+    let guarded_destroy = include_str!("../src/workspace_session/service/impls/guarded_destroy.rs");
     let create_workspace_session =
         include_str!("../src/workspace_session/service/impls/create_workspace_session.rs");
     let destroy_session = include_str!("../src/workspace_session/service/impls/destroy_session.rs");
@@ -509,7 +868,9 @@ fn workspace_session_files_do_not_import_command_service() {
 
     for source in [
         core,
-        capture_session_changes,
+        admission,
+        finalize_session,
+        guarded_destroy,
         create_workspace_session,
         destroy_session,
         resolve_session,
@@ -522,37 +883,17 @@ fn workspace_session_files_do_not_import_command_service() {
     }
 }
 
-#[test]
-fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
-    let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
-    let manager = manager_with(&fake);
-    let handler = manager
-        .create_workspace_session(create_request())
-        .expect("test operation succeeds");
-
-    manager
-        .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
-        .expect("test operation succeeds");
-    let duplicate = manager
-        .destroy_session(handler, DestroyWorkspaceRequest::default())
-        .expect_err("test operation fails");
-
-    assert!(matches!(duplicate, WorkspaceSessionError::NotFound { .. }));
-    assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("workspace-1".to_owned())]
-    );
-}
-
 fn operations_with_fake(
     fake: &Arc<FakeWorkspaceService>,
 ) -> Result<SandboxRuntimeOperations, Box<dyn std::error::Error + Send + Sync>> {
-    let workspace = Arc::new(manager_with(fake));
     let layerstack = layerstack_service()?;
+    let workspace = Arc::new(WorkspaceSessionService::new(
+        support::fake_workspace_runtime(Arc::clone(fake)),
+        Arc::clone(&layerstack),
+        Observer::disabled(),
+    ));
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        Arc::clone(&layerstack),
         sandbox_runtime::command::CommandConfig::default(),
         Observer::disabled(),
     ));

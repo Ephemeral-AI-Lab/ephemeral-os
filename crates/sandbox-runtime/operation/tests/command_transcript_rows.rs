@@ -292,7 +292,7 @@ fn command_transcript_rows_report_running_status_for_active_command() {
         NetworkProfile::Shared,
     )));
     let driver = Arc::new(FakeLaunchDriver::new());
-    driver.push_outcome(ScriptedCommandYield::Running("one-shot row\n".to_owned()));
+    driver.push_outcome(ScriptedCommandYield::Running("implicit row\n".to_owned()));
     let env = build_services_with_launch_driver(fake, Arc::clone(&driver));
     let handler = env
         .workspace

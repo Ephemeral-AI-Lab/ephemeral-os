@@ -8,11 +8,13 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use sandbox_runtime::command::{CommandExecValue, CommandTerminalResult};
+use sandbox_runtime::workspace_session::FinalizeOutcome;
 use sandbox_runtime::WorkspaceSessionId;
 use sandbox_runtime_namespace_execution::{
     open_pty_pair, CompletionPromise, ExecutionHandle, InteractiveExecution, NamespaceExecutionId,
     PtyMaster,
 };
+use std::sync::OnceLock;
 
 struct Fixture {
     command: CommandExecValue,
@@ -43,6 +45,7 @@ fn fixture(suffix: &str) -> Fixture {
         WorkspaceSessionId("workspace-session".to_owned()),
         Instant::now(),
         "exec_command",
+        Arc::new(OnceLock::<FinalizeOutcome>::new()),
     );
     Fixture {
         command,

@@ -215,10 +215,10 @@ fn admission_gate_serializes_destroy_against_file_ops() {
         .expect("destroy reached the workspace hook while holding the gate");
 
     let file_op_workspace = Arc::clone(&services.workspace);
-    let file_op_handler = handler.clone();
+    let file_op_id = handler.workspace_session_id.clone();
     let file_op = std::thread::spawn(move || {
         file_op_workspace.run_file_op(
-            &file_op_handler,
+            &file_op_id,
             sandbox_runtime_workspace::FileRunnerOp::ReadFile {
                 rel: "f.txt".to_owned(),
                 max_bytes: 16,
@@ -233,15 +233,22 @@ fn admission_gate_serializes_destroy_against_file_ops() {
 
     release.send(()).expect("release the parked destroy");
     let _ = destroyer.join().expect("destroy thread");
-    let _ = file_op.join().expect("file op thread");
-    assert_eq!(
-        fake.run_file_op_calls().len(),
-        1,
-        "the file op proceeded only after the gate was released"
+    let file_op_result = file_op.join().expect("file op thread");
+    assert!(
+        matches!(
+            file_op_result,
+            Err(sandbox_runtime::workspace_session::WorkspaceSessionError::NotFound { .. })
+        ),
+        "a file op racing the destroy resolves inside the gate and loses cleanly"
+    );
+    assert!(
+        fake.run_file_op_calls().is_empty(),
+        "the file op never runs against the destroyed session"
     );
 
     let swept = services
         .workspace
         .remount_session(&WorkspaceSessionId("ws-never-existed".to_owned()));
     assert_eq!(swept.disposition, SweptDisposition::SessionGone);
+    assert_eq!(services.workspace.gate_entry_count(), 0);
 }

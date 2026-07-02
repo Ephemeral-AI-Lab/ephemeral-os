@@ -18,9 +18,10 @@ use sandbox_runtime_workspace::{
     WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
-fn workspace_session() -> Arc<WorkspaceSessionService> {
+fn workspace_session(layerstack: &Arc<LayerStackService>) -> Arc<WorkspaceSessionService> {
     Arc::new(WorkspaceSessionService::new(
         noop_workspace_runtime(),
+        Arc::clone(layerstack),
         Observer::disabled(),
     ))
 }
@@ -94,11 +95,10 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
 #[test]
 fn service_graph_runtime_operations_exposes_command_lane(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let workspace = workspace_session();
     let layerstack = layerstack_service()?;
+    let workspace = workspace_session(&layerstack);
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
-        Arc::clone(&layerstack),
         CommandConfig::default(),
         Observer::disabled(),
     ));
@@ -237,8 +237,10 @@ fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
 
     for helper in [
         "resolve_session",
-        "capture_session_changes",
-        "destroy_workspace_session_with_admission",
+        "admit_command",
+        "with_gated_session",
+        "guarded_destroy",
+        "finalize_session",
         "publish_changes",
         "process_store",
         "transcript",
@@ -308,7 +310,7 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
 
     let adapter = include_str!("../src/cli_definition/workspace_session_operations.rs");
     assert!(adapter.contains(".create_workspace_session("));
-    assert!(adapter.contains(".destroy_workspace_session_with_admission("));
+    assert!(adapter.contains(".guarded_destroy("));
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 

@@ -1,9 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
 use crate::error::NamespaceExecutionError;
 use crate::shell::NamespaceExecutionTerminalStatus;
 use crate::types::NamespaceExecutionId;
+
+/// Default cap on retained terminal entries. Marking an entry terminal evicts
+/// the oldest terminal entry beyond the cap, dropping its value (which closes
+/// the pty master fd and releases whatever the value's own `Drop` owns). A
+/// drain against an evicted id observes a missing entry.
+pub const MAX_TERMINAL_ENTRIES: usize = 512;
 
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,
@@ -13,6 +19,8 @@ pub struct ExecutionRegistry<V> {
 struct RegistryState<V> {
     entries: HashMap<NamespaceExecutionId, Entry<V>>,
     active: usize,
+    terminal_order: VecDeque<NamespaceExecutionId>,
+    max_terminal: usize,
 }
 
 struct Entry<V> {
@@ -36,9 +44,18 @@ impl<V> ExecutionRegistry<V> {
             inner: Mutex::new(RegistryState {
                 entries: HashMap::new(),
                 active: 0,
+                terminal_order: VecDeque::new(),
+                max_terminal: MAX_TERMINAL_ENTRIES,
             }),
             max_active,
         }
+    }
+
+    /// Override the terminal-entry retention cap (defaults to
+    /// [`MAX_TERMINAL_ENTRIES`]). An over-cap backlog is trimmed on the next
+    /// terminal transition, not immediately.
+    pub fn set_terminal_retention(&self, max_terminal: usize) {
+        self.lock().max_terminal = max_terminal;
     }
 
     pub fn try_reserve(&self, id: &NamespaceExecutionId) -> Result<(), NamespaceExecutionError> {
@@ -74,13 +91,26 @@ impl<V> ExecutionRegistry<V> {
         _status: NamespaceExecutionTerminalStatus,
         _exit: Option<i64>,
     ) {
-        let mut state = self.lock();
-        if let Some(entry) = state.entries.get_mut(id) {
-            if !entry.terminal {
-                entry.terminal = true;
-                state.active = state.active.saturating_sub(1);
+        let mut evicted = Vec::new();
+        {
+            let mut state = self.lock();
+            if let Some(entry) = state.entries.get_mut(id) {
+                if !entry.terminal {
+                    entry.terminal = true;
+                    state.active = state.active.saturating_sub(1);
+                    state.terminal_order.push_back(id.clone());
+                    while state.terminal_order.len() > state.max_terminal {
+                        let Some(oldest) = state.terminal_order.pop_front() else {
+                            break;
+                        };
+                        if let Some(entry) = state.entries.remove(&oldest) {
+                            evicted.push(entry);
+                        }
+                    }
+                }
             }
         }
+        drop(evicted);
     }
 
     pub fn with_value<R>(&self, id: &NamespaceExecutionId, f: impl FnOnce(&V) -> R) -> Option<R> {

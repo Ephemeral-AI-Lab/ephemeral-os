@@ -63,6 +63,12 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         NamespaceExecutionId(format!("namespace_execution_{next_id}"))
     }
 
+    /// Override the registry's terminal-entry retention cap (defaults to
+    /// [`crate::registry::MAX_TERMINAL_ENTRIES`]).
+    pub fn set_terminal_retention(&self, max_terminal: usize) {
+        self.registry.set_terminal_retention(max_terminal);
+    }
+
     #[must_use]
     pub fn is_live(&self, id: &NamespaceExecutionId) -> bool {
         self.registry.is_live(id)

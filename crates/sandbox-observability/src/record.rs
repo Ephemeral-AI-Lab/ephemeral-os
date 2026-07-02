@@ -55,10 +55,19 @@ pub mod names {
     pub const COMMAND_EXEC: &str = "command.exec";
     /// Workspace session creation span.
     pub const WORKSPACE_SESSION_CREATE: &str = "workspace_session.create";
-    /// Workspace session change-capture span (one-shot finalize tail).
+    /// Workspace session change-capture span (finalize tail).
     pub const WORKSPACE_SESSION_CAPTURE_CHANGES: &str = "workspace_session.capture_changes";
-    /// Workspace session teardown span (one-shot finalize tail).
+    /// Workspace session teardown span (finalize tail).
     pub const WORKSPACE_SESSION_DESTROY: &str = "workspace_session.destroy";
+    /// Workspace session finalize-policy runner span (completion tail).
+    pub const WORKSPACE_SESSION_FINALIZE: &str = "workspace_session.finalize";
+    /// A finalize publish was rejected; unpublished changes were discarded.
+    pub const WORKSPACE_SESSION_FINALIZE_PUBLISH_FAILED: &str =
+        "workspace_session.finalize.publish_failed";
+    /// A finalize run failed to complete; the session is left for guarded destroy.
+    pub const WORKSPACE_SESSION_FINALIZE_FAILED: &str = "workspace_session.finalize_failed";
+    /// Cleanup of a fresh session after a pre-admission command failure failed.
+    pub const WORKSPACE_SESSION_CLEANUP_FAILED: &str = "workspace_session.cleanup_failed";
     /// Namespace shell-exec span (async; recorded at child-exit).
     pub const NAMESPACE_EXEC_RUN_SHELL: &str = "namespace.exec.run_shell";
     /// Namespace overlay-mount span (sync).
@@ -110,7 +119,7 @@ pub struct Span {
     pub dur_ms: f64,
     /// Closed cross-cutting outcome.
     pub status: SpanStatus,
-    /// Open domain facts: `exit_code`, `op`, `one_shot`, ….
+    /// Open domain facts: `exit_code`, `op`, `finalize_policy`, ….
     pub attrs: Attrs,
 }
 

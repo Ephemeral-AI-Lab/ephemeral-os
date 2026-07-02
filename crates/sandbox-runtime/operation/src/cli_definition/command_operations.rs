@@ -23,8 +23,8 @@ pub(crate) const COMMAND_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec
 const EXEC_COMMAND_SPEC: CliOperationSpec = CliOperationSpec {
     name: "exec_command",
     family: "command",
-    summary: "Start a command in a workspace.",
-    description: "Start a shell command in a workspace session. With workspace_session_id, run inside that existing caller-owned (persistent) session, which the caller created and destroys. Without it, exec_command creates a one-shot exec-owned (ephemeral) shared-network workspace and destroys it when the command reaches terminal state. If the command is still running after the initial wait, the response includes a command_session_id usable with read_command_lines or write_command_stdin; a still-running command stays terminable through write_command_stdin (Ctrl-C or Ctrl-D).",
+    summary: "Start a command in a workspace session.",
+    description: "Start a shell command in a workspace session. With workspace_session_id, run inside that existing session. Without it, exec_command creates a session with finalize policy publish_then_destroy. A session finalizes per its policy when its last running command reaches terminal state: publish_then_destroy captures and publishes the session's changes to the layerstack, then destroys the session; no_op keeps the session alive until destroy_workspace_session. Explicit destroy_workspace_session always discards unpublished changes. File operations and remounts run under the session's admission gate and neither extend nor trigger the session lifecycle. If the command is still running after the initial wait, the response includes a command_session_id usable with read_command_lines or write_command_stdin; a still-running command stays terminable through write_command_stdin (Ctrl-C or Ctrl-D).",
     args: EXEC_COMMAND_ARGS,
     cli: Some(EXEC_COMMAND_CLI),
     related: &["write_command_stdin", "read_command_lines"],
@@ -34,7 +34,7 @@ const EXEC_COMMAND_ARGS: &[ArgSpec] = &[
     ArgSpec::optional(
         "workspace_session_id",
         ArgKind::String,
-        "Existing workspace session id to run inside. Omit to run in a one-shot workspace.",
+        "Existing workspace session id to run inside. Omit to create a session with finalize policy publish_then_destroy.",
         None,
         Some(ArgCliSpec {
             flag: Some("--workspace-session-id"),
@@ -295,6 +295,13 @@ fn command_output_value(output: CommandOutput) -> Value {
     });
     if let Some(command_session_id) = output.command_session_id {
         value["command_session_id"] = Value::String(command_session_id.0);
+    }
+    if let Some(workspace_session_id) = output.workspace_session_id {
+        value["workspace_session_id"] = Value::String(workspace_session_id.0);
+    }
+    if let Some(reject_class) = output.publish_rejected {
+        value["publish_rejected"] = Value::Bool(true);
+        value["publish_reject_class"] = Value::String(reject_class.to_owned());
     }
     value
 }

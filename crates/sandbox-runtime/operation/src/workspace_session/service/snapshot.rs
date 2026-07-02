@@ -30,6 +30,7 @@ impl WorkspaceSessionService {
                 RuntimeWorkspaceSnapshot {
                     workspace_id: session.workspace_session_id.clone(),
                     network: session.handle.network,
+                    finalize_policy: session.finalize_policy,
                     workspace_root: session.handle.workspace_root.clone(),
                     upperdir,
                     workdir,

@@ -1,3 +1,6 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+
 use sandbox_runtime_namespace_execution::{
     ExecutionRegistry, NamespaceExecutionError, NamespaceExecutionId,
     NamespaceExecutionTerminalStatus,
@@ -56,4 +59,58 @@ fn abort_releases_a_reservation() {
     registry
         .try_reserve(&id(2))
         .expect("slot freed after abort");
+}
+
+struct DropProbe(Arc<AtomicUsize>);
+
+impl Drop for DropProbe {
+    fn drop(&mut self) {
+        self.0.fetch_add(1, Ordering::SeqCst);
+    }
+}
+
+#[test]
+fn terminal_retention_evicts_oldest_terminal_entry_and_drops_its_value() {
+    let drops = Arc::new(AtomicUsize::new(0));
+    let registry = ExecutionRegistry::new(8);
+    registry.set_terminal_retention(2);
+    for n in 1..=4 {
+        registry.try_reserve(&id(n)).expect("slot");
+        registry.attach(&id(n), DropProbe(Arc::clone(&drops)));
+        registry.complete(&id(n), NamespaceExecutionTerminalStatus::Ok, Some(0));
+    }
+
+    assert_eq!(
+        drops.load(Ordering::SeqCst),
+        2,
+        "the two oldest terminal values were dropped"
+    );
+    assert!(
+        !registry.is_completed(&id(1)) && !registry.is_completed(&id(2)),
+        "evicted entries are gone entirely"
+    );
+    assert!(registry.with_value(&id(1), |_| ()).is_none());
+    assert!(registry.is_completed(&id(3)) && registry.is_completed(&id(4)));
+    assert!(registry.with_value(&id(4), |_| ()).is_some());
+}
+
+#[test]
+fn terminal_retention_never_evicts_live_entries() {
+    let drops = Arc::new(AtomicUsize::new(0));
+    let registry = ExecutionRegistry::new(8);
+    registry.set_terminal_retention(1);
+    registry.try_reserve(&id(1)).expect("slot");
+    registry.attach(&id(1), DropProbe(Arc::clone(&drops)));
+    registry.try_reserve(&id(2)).expect("slot");
+    registry.attach(&id(2), DropProbe(Arc::clone(&drops)));
+    registry.try_reserve(&id(3)).expect("slot");
+    registry.attach(&id(3), DropProbe(Arc::clone(&drops)));
+
+    registry.complete(&id(2), NamespaceExecutionTerminalStatus::Ok, Some(0));
+    registry.complete(&id(3), NamespaceExecutionTerminalStatus::Ok, Some(0));
+
+    assert!(registry.is_live(&id(1)), "live entries are never evicted");
+    assert_eq!(drops.load(Ordering::SeqCst), 1, "only id 2 was evicted");
+    assert!(!registry.is_completed(&id(2)));
+    assert!(registry.is_completed(&id(3)));
 }

@@ -7,7 +7,9 @@ use crate::command::{CommandOutput, CommandStatus};
 
 /// Build the merged `CommandOutput` DTO from a transcript window plus the
 /// status/exit/timing projection. `command_session_id` is `Some` for running
-/// reads and terminal reads that still have output to drain.
+/// reads and terminal reads that still have output to drain. The
+/// `workspace_session_id` and `publish_rejected` fields start `None`; the
+/// yield/read paths populate them from the command's `CommandExecValue`.
 #[must_use]
 pub(crate) fn command_output(
     window: CommandTranscriptWindow,
@@ -20,6 +22,7 @@ pub(crate) fn command_output(
     let output = render_transcript_text(&window.output);
     CommandOutput {
         command_session_id,
+        workspace_session_id: None,
         status,
         exit_code,
         wall_time_seconds,
@@ -29,6 +32,7 @@ pub(crate) fn command_output(
         total_lines: window.total_lines,
         original_token_count: estimate_token_count(output.len()),
         output,
+        publish_rejected: None,
     }
 }
 

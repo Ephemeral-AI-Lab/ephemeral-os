@@ -4,5 +4,7 @@ mod model;
 mod snapshot;
 
 pub use core::WorkspaceSessionService;
-pub use impls::{SweptDisposition, SweptSession};
-pub use model::WorkspaceSessionHandler;
+pub use impls::{
+    AdmittedCommand, SessionExecutionToken, SweptDisposition, SweptSession, TokenSlot,
+};
+pub use model::{CreateSessionRequest, FinalizeOutcome, FinalizePolicy, WorkspaceSessionHandler};
