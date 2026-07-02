@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, PoisonError};
 use std::time::Instant;
 
 use sandbox_observability::record::names;
@@ -31,14 +31,22 @@ impl CommandOperationService {
                     message: "cmd must be non-empty".to_owned(),
                 });
             }
-            let existing_lifecycle_guard = input
+            let existing_gate = input
                 .workspace_session_id
-                .is_some()
-                .then(|| self.lock_session_lifecycle());
+                .as_ref()
+                .map(|id| self.workspace_handle().session_gate(id));
+            let existing_admission = existing_gate
+                .as_ref()
+                .map(|gate| gate.lock().unwrap_or_else(PoisonError::into_inner));
             let workspace = self.resolve_exec_workspace(&input)?;
             span.attr("one_shot", workspace.one_shot);
-            let lifecycle_guard =
-                existing_lifecycle_guard.unwrap_or_else(|| self.lock_session_lifecycle());
+            let one_shot_gate = self
+                .workspace_handle()
+                .session_gate(&workspace.workspace_session_id);
+            let admission_guard = match existing_admission {
+                Some(guard) => guard,
+                None => one_shot_gate.lock().unwrap_or_else(PoisonError::into_inner),
+            };
 
             let id = self.engine().allocate_id();
 
@@ -108,7 +116,7 @@ impl CommandOperationService {
                     "exec_command",
                 ),
             );
-            drop(lifecycle_guard);
+            drop(admission_guard);
 
             self.wait_for_command_yield(id.clone(), input.yield_time_ms.unwrap_or(1000), false)
         })
@@ -218,6 +226,8 @@ fn finalize_one_shot(
     layerstack: Arc<crate::layerstack::LayerStackService>,
     handler: WorkspaceSessionHandler,
 ) {
+    let gate = workspace.session_gate(&handler.workspace_session_id);
+    let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
     let _ = workspace
         .capture_session_changes(
             &handler,

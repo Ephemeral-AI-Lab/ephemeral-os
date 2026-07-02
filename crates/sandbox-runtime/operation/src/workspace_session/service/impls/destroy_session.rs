@@ -24,6 +24,8 @@ impl WorkspaceSessionService {
             match self.workspace().destroy_workspace(handle, request) {
                 Ok(result) => {
                     sessions.remove(&handler.workspace_session_id);
+                    drop(sessions);
+                    self.drop_session_gate(&handler.workspace_session_id);
                     if let Some(cgroup_path) = &cgroup_path {
                         let _ = std::fs::remove_dir(cgroup_path);
                     }

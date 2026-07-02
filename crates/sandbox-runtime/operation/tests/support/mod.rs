@@ -40,6 +40,11 @@ pub(crate) struct FakeWorkspaceService {
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
     run_file_op_results: Mutex<VecDeque<Result<RunResult, WorkspaceError>>>,
     run_file_op_calls: Mutex<Vec<(WorkspaceSessionId, FileRunnerOp)>>,
+    // Admission-gate test hook: while held closed, the destroy hook parks
+    // inside the gate so a concurrent entrypoint's serialization is
+    // observable deterministically.
+    destroy_barrier: Mutex<Option<std::sync::mpsc::Receiver<()>>>,
+    destroy_entered: Mutex<Option<std::sync::mpsc::Sender<()>>>,
 }
 
 /// A scripted command outcome (kept for the suites that script per yield). It is
@@ -253,6 +258,22 @@ impl FakeWorkspaceService {
             .lock()
             .expect("test operation succeeds")
             .push(handle.id.clone());
+        if let Some(entered) = self
+            .destroy_entered
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = entered.send(());
+        }
+        if let Some(barrier) = self
+            .destroy_barrier
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = barrier.recv();
+        }
         self.destroy_results
             .lock()
             .expect("test operation succeeds")
@@ -264,6 +285,27 @@ impl FakeWorkspaceService {
         Err(WorkspaceError::SnapshotAcquire {
             source: "latest snapshot not configured".to_owned(),
         })
+    }
+}
+
+impl FakeWorkspaceService {
+    /// Park the next destroy inside the admission gate: `entered` fires when
+    /// the destroy hook is reached, and the destroy returns only when the
+    /// test drops or signals the `release` sender.
+    pub(crate) fn park_next_destroy(
+        &self,
+    ) -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        *self
+            .destroy_entered
+            .lock()
+            .expect("test operation succeeds") = Some(entered_tx);
+        *self
+            .destroy_barrier
+            .lock()
+            .expect("test operation succeeds") = Some(release_rx);
+        (entered_rx, release_tx)
     }
 }
 

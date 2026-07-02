@@ -97,6 +97,10 @@ impl WorkspaceManager {
         }
     }
 
+    pub(crate) fn handle(&self, workspace_id: &WorkspaceSessionId) -> Option<&MountedWorkspace> {
+        self.handles.get(workspace_id)
+    }
+
     pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceSessionId) -> PathBuf {
         self.scratch_root.join(&workspace_id.0)
     }

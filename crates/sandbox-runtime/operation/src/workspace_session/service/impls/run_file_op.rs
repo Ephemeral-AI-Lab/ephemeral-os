@@ -1,6 +1,8 @@
 use crate::workspace_crate::{
     decode_file_op_payload, FileRunnerError, FileRunnerOp, FileRunnerResult, WorkspaceError,
 };
+use std::sync::PoisonError;
+
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::model::WorkspaceSessionHandler;
@@ -20,6 +22,8 @@ impl WorkspaceSessionService {
         handler: &WorkspaceSessionHandler,
         op: FileRunnerOp,
     ) -> Result<Result<FileRunnerResult, FileRunnerError>, WorkspaceSessionError> {
+        let gate = self.session_gate(&handler.workspace_session_id);
+        let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
         let cgroup_procs_path = handler
             .cgroup_path
             .as_ref()

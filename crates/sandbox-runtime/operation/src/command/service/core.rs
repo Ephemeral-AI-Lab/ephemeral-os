@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, PoisonError};
 
 use sandbox_observability::{Observer, SpanRegistry};
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceExecutionId};
@@ -25,10 +25,7 @@ pub struct CommandOperationService {
     engine: Arc<NamespaceExecutionEngine<CommandExecValue>>,
     exec_spans: Arc<SpanRegistry<NamespaceExecutionId>>,
     obs: Observer,
-    session_lifecycle_lock: Mutex<()>,
 }
-
-pub(crate) type SessionLifecycleGuard<'a> = MutexGuard<'a, ()>;
 
 impl CommandOperationService {
     #[must_use]
@@ -69,7 +66,6 @@ impl CommandOperationService {
             engine,
             exec_spans,
             obs,
-            session_lifecycle_lock: Mutex::new(()),
         }
     }
 
@@ -109,18 +105,13 @@ impl CommandOperationService {
         &self.exec_spans
     }
 
-    pub(crate) fn lock_session_lifecycle(&self) -> SessionLifecycleGuard<'_> {
-        self.session_lifecycle_lock
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-    }
-
     pub(crate) fn destroy_workspace_session_with_admission(
         &self,
         workspace_session_id: WorkspaceSessionId,
         grace_s: Option<f64>,
     ) -> WorkspaceDestroyOutcome {
-        let _session_lifecycle = self.lock_session_lifecycle();
+        let gate = self.workspace.session_gate(&workspace_session_id);
+        let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
         let mut active_command_session_ids = self.engine.live_values(|command| {
             (command.workspace_session_id == workspace_session_id)
                 .then(|| command.exec.id().clone())
@@ -178,8 +169,8 @@ impl CommandOperationService {
 }
 
 /// The result of a guarded workspace-session destroy. The command service holds
-/// the session-lifecycle lock across the active-command check and the destroy,
-/// so the CLI layer only formats the outcome it returns.
+/// the per-session admission gate across the active-command check and the
+/// destroy, so the CLI layer only formats the outcome it returns.
 pub(crate) enum WorkspaceDestroyOutcome {
     ActiveCommands {
         active_command_session_ids: Vec<NamespaceExecutionId>,

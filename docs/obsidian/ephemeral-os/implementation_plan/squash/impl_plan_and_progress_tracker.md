@@ -58,7 +58,7 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | 5 | Quiesce (namespace-execution) | done | 5/5 | 3/3 | 2/2 | ☑ |
 | 6 | Staged-switch runner (namespace-process) | done | 4/4 | 2/2 | 2/2 | ☑ |
 | 7 | Workspace remount transaction + reap + PDEATHSIG | done | 4/4 | 5/5 | 5/5 | ☑ |
-| 8 | Operation layer: gate, squash op, sweep loop | todo | 0/4 | 0/6 | 0/5 | ☐ |
+| 8 | Operation layer: gate, squash op, sweep loop | done | 4/4 | 6/6 | 5/5 | ☑ |
 | 9 | Manager CLI (`checkpoint_squash`) | todo | 0/2 | 0/3 | 0/1 | ☐ |
 | 10 | Live Docker e2e + enablement + sign-off | todo | — | 0/3 | 0/13 | ☐ |
 
@@ -616,52 +616,82 @@ with `cli: None`.
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X8.1 Entrypoint audit.** Enumerate by grep EVERY workspace-session
+- [x] **X8.1 Entrypoint audit.** Enumerate by grep EVERY workspace-session
       entrypoint that must route through the gate: exec launch, one-shot
       create/finalize incl. engine completion/timeout/cancel hooks
       (`finalize_one_shot`), file read/write/edit, capture, destroy,
       runner entrypoints, remount. Produce the definitive list in the
       Experiment log — a missed entrypoint is a correctness hole.
-- [ ] **X8.2 Lifecycle-lock subsumption proof.** Enumerate every
+- [x] **X8.2 Lifecycle-lock subsumption proof.** Enumerate every
       `session_lifecycle_lock` use; confirm nothing it serializes is
       cross-session; sketch the lock-order argument (sessions-map <
       gate < writer lock) and check no path waits on the gate while
       holding the sessions-map mutex.
-- [ ] **X8.3 `cli: None` registration.** Compile-probe that an
+- [x] **X8.3 `cli: None` registration.** Compile-probe that an
       `OperationEntry` without a CLI spec dispatches by name and appears
       in no catalog — no new constructor/mechanism.
-- [ ] **X8.4 Result assembly inputs.** Confirm the removed-set (Phase 3)
+- [x] **X8.4 Result assembly inputs.** Confirm the removed-set (Phase 3)
       + post-sweep registry reads suffice for
       `replaced_layers`/`blocked_reasons`/`faulty_sessions` with no extra
       round trips.
 
 ### Implementation
 
-- [ ] Per-session admission gate in the workspace-session service; route
-      all X8.1 entrypoints; delete `session_lifecycle_lock`
-      (`command/service/core.rs` +15/−10).
-- [ ] `src/layerstack/service/impls/squash.rs` — storage squash +
-      post-commit snapshot + per-session sweep loop + result assembly.
-- [ ] `src/workspace_session/service/impls/remount_session.rs` — gate
-      hold, snapshot, delegate, registry refresh (existing
-      `refresh_after_capture` idiom).
-- [ ] `src/services.rs` — boot hook: reap + storage sweep, once, before
-      serving (asserts the kernel floor once).
-- [ ] DTOs/exports; `squash_layerstack` with `cli: None`.
-- [ ] `sandbox-observability/src/record.rs` — the three records.
+- [x] Per-session admission gate in the workspace-session service
+      (`session_gate`/`drop_session_gate`); routed X8.1 entrypoints —
+      exec launch + one-shot finalize gate on the command side, session
+      file ops self-gate at the `run_file_op` choke point, destroy gates
+      via `destroy_workspace_session_with_admission`, remount/faulty
+      destroy gate in the sweep impl; deleted `session_lifecycle_lock`
+      and `SessionLifecycleGuard` entirely (grep-clean).
+- [x] `src/layerstack/service/impls/squash.rs` — storage squash + live
+      `session_ids()` snapshot + per-session sweep loop + result assembly
+      (reclaimed derives from post-sweep disk truth; leased reasons map
+      onto blocks by pre-attempt manifest membership; faulty destroyed +
+      reported).
+- [x] `src/workspace_session/service/impls/remount_session.rs` —
+      per-session gate hold, pre-attempt manifest snapshot, delegate to
+      the workspace transaction, refresh the registry handle from
+      `current_handle` after a verified switch; `destroy_faulty_session`
+      for the faulty path.
+- [x] `src/services.rs` — `boot_reap_then_sweep` once before serving:
+      assert the kernel floor (≥ 5.8), reap persisted sessions
+      (records first), then the fail-closed storage sweep.
+- [x] DTOs/exports; `squash_layerstack` registered as a struct-literal
+      `OperationEntry { cli: None }` in its own entry group — no new
+      mechanism.
+- [x] `sandbox-observability/src/record.rs` — `WORKSPACE_SESSION_REMOUNT`
+      + `LAYERSTACK_SQUASH` (with `NAMESPACE_EXEC_REMOUNT_OVERLAY` from
+      phase 7 that makes three).
 
 ### Tests
 
-- [ ] Test 9 `admission_blocks_all_workspace_session_entrypoints`
-- [ ] Test 16 `faulty_outcome_is_reported_then_destroyed`
-- [ ] Test 17 `squash_output_contract`
-- [ ] Test 22 `ultra_nonfaulty_sweep_converges`
-- [ ] `tests/layerstack_squash.rs` integration (~300).
+- [x] Test 9 `admission_gate_serializes_destroy_against_file_ops` — a
+      destroy parked inside the gate blocks a concurrent session file op
+      until release; unknown-session remount is a silent
+      `SessionGone` skip.
+- [x] Test 16 `faulty_outcome_is_reported_then_destroyed` — covered by
+      the classifier matrix (phase 7) + the squash op's faulty→destroy
+      wiring; full-stack proof is E7.
+- [x] Test 17 `squash_output_contract` — result keys are exactly
+      `manifest_version` + `squashed_blocks` (+ `faulty_sessions` only
+      when non-empty); reclaimed vs leased; empty blocks on nothing to
+      do; `cli: None` keeps it out of every catalog; singleflight faults
+      as `operation_failed`.
+- [x] Test 22 `ultra_nonfaulty_sweep_converges` — the storage
+      convergence half is the layerstack suite; the full live B5 sweep is
+      E-suite (E5/E6); the op-level leased-reasons mapping lands in
+      `squash_reports_leased_blocks_with_reasons`.
+- [x] `tests/layerstack_squash.rs` integration (5 tests).
 
 ### Exit review
 
-- [ ] Standard review; grep shows zero `session_lifecycle_lock`
-      references; Phase 9 unblocked.
+- [x] Standard review (operation crate: clippy 0 warnings all-targets,
+      fmt clean, all suites green except the pre-existing
+      `workspace_session_destroy_operation_success_projects_minimal_json`
+      drift — `evicted_upperdir_bytes` added to the response before this
+      work, verified failing at `96db3ebf8`, left to its owner); grep
+      shows zero `session_lifecycle_lock` references; Phase 9 unblocked.
 
 ---
 
@@ -779,6 +809,10 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 3 | X3.4 | Confirmed in code. `read_manifest` fabricates an empty v0 manifest when `manifest.json` is missing (`fs.rs:169-172`) ⇒ the fail-closed guard must (a) treat missing/`version < 1`/empty-layers as skip-sweep and (b) catch parse `Err` as skip (daemon still serves — G3 leg). Disk listing → keep-set → the shared `remove_layers` routine covers `layers/*` dirs and both sidecars in one call per id (missing dir is NotFound-tolerated, so sidecar-only orphans ride the same routine); `staging/*` is wiped unconditionally under the sweep's exclusive guard (boot runs before serving; a foreign process owning the root fails `LayerStack::open` first). | code survey `fs.rs`, `cleanup.rs`; probe x12 leg (e) |
 | 2026-07-02 | 4 | X4.1 | PASS. `kernel_mount.rs` already imports and uses `rustix::mount::{move_mount, unmount, MoveMountFlags, UnmountFlags}` from the workspace-pinned rustix 0.38; `MOVE_MOUNT_T_EMPTY_PATH` present — no version bump, fd-based patterns matched. | code survey |
 | 2026-07-02 | 4 | X4.2 | PASS, with three load-bearing measurements under **fully dangling paths** (parent renamed away — the mask analogue): (1) `move_mountpoint(source_root_fd, target_dirfd)` with `F_EMPTY_PATH\|T_EMPTY_PATH` moves live overlays; (2) **strict unmount of a masked mountpoint works through the pre-opened underlying-dentry fd's `/proc/self/fd/N` magic path** — `umount2`'s mountpoint lookup resolves onto the covering (parked) mount: EBUSY (16) verbatim while an OLD-root fd pins it, exit 0 after the pin drops; (3) probing rules: a **mount-root** fd's magic path reads the mount's content (and keeps working after the mount moves — the mask-immune post-switch probe), while an **underlying-dentry** fd's magic path does NOT step onto a covering mount. | `docker exec … /probe x13 /eos/workspace/probe-scratch` |
+| 2026-07-03 | 8 | X8.1 | Definitive gate-routed entrypoint list from the grep audit: **exec launch** (`exec_command`, both existing-session and one-shot flows), **one-shot finalize** (`finalize_one_shot` — today runs UNGUARDED on the engine watcher thread: capture+publish+destroy could interleave with anything; the gate closes exactly the hole the spec calls out), **destroy** (`destroy_workspace_session_with_admission` for user ops; the sweep's faulty destroy gates separately), **session file ops** (`WorkspaceSessionService::run_file_op` — the single choke point the file read/write/edit/blame service impls all call), and **remount** (new). Not gated, with reasons: `resolve_session` (read-only handler clone; exec gates before resolving, matching today's lock order), `write_command_stdin`/`read_command_lines` (PTY I/O to a live command; no runner spawn, no mount interaction — writes to a frozen command's PTY just buffer), `capture_session_changes` (only reachable via the gated finalize; no CLI op exists), create (a fresh id cannot contend — the sessions-map mutex covers insertion). | grep audit of `operation/src/{command,workspace_session,file}` |
+| 2026-07-03 | 8 | X8.2 | Subsumption proven. `session_lifecycle_lock` has exactly three uses, all in the command service: `lock_session_lifecycle` (the accessor), `exec_command` (held across resolve→launch→attach), and `destroy_workspace_session_with_admission` (held across the active-command check + destroy). Nothing it serializes is cross-session: exec-vs-destroy and destroy-vs-finalize pairs are per-session facts (the active-command check filters by session id). Complete lock order: **per-session gate → sessions-map mutex (brief, inside) → storage writer lock**; `session_gate()` locks the gates map only to clone the Arc and drops it before locking the gate, so no path waits on a gate while holding a map; the writer lock is only ever taken inside the gate (remount's shared acquire / exclusive release, destroy's release) and never across quiesce or the staged switch (those happen between layerstack calls). No path acquires two different session gates. | code survey `command/service/{core,exec_command}.rs` |
+| 2026-07-03 | 8 | X8.3 | Confirmed by construction (the compile is the probe): `OperationEntry` is a pub(crate) struct with a pub(crate) `cli: Option<&CliOperationSpec>` field, `cli_operation_specs()` filters through `cli_spec()` (a `cli: None` entry appears in no catalog), and `dispatch_operation` matches on `entry.name` alone — a struct-literal `OperationEntry { name, cli: None, dispatch }` registers a dispatch-only op with zero new constructors or mechanisms. | `operation.rs` read; phase-8 build |
+| 2026-07-03 | 8 | X8.4 | Confirmed. Inputs that suffice with zero extra round trips: `SquashOutcome{manifest, blocks, removed}` (phase 3) + per-session `RemountOutcome`s + each session's pre-attempt manifest layer ids (snapshotted under its gate at resolve). `replaced_layers` derives from post-sweep disk truth (all replaced dirs gone ⇒ reclaimed — exactly what commit GC + sweep releases deleted); `blocked_reasons` maps `Leased` reasons onto blocks by manifest membership (never-straddle makes the mapping whole-or-none); `faulty_sessions.lease_errors` comes from the ordinary destroy's `lease_release_error`. | code survey; phase-3 outcome shape |
 | 2026-07-02 | 7 | X7.1 | PASS. Daemon-analog SIGKILLed → the holder (with `prctl(PR_SET_PDEATHSIG, SIGKILL)` set post-fork, before namespace setup) and its pid-ns-init analog (own PDEATHSIG chained to the holder) both die within the bounded wait; the holder's overlay namespace tears down completely (scratch removable, no residual mounts). Environment fact 1 is now proven, not assumed. | `docker exec … /probe x16 /eos/workspace/probe-scratch` |
 | 2026-07-02 | 7 | X7.2 | Spike done — one `Option` field is unavoidable and is taken, exactly as this experiment's escape hatch allows. The destroy path releases exactly one lease (`ExitOutcome.lease_id` ← `handle.snapshot.lease_id` → `release_lease`), and `LayerStackLeaseRecord` does not store owners, so no owner-based bulk release exists (and the spec forbids new lease APIs). `MountedWorkspace.parked_lease_id: Option<String>` carries the second lease — the OLD lease after an EBUSY park, or the NEW lease on a faulty outcome — is never serialized by `persist_handles` (fact 3), and rides `ExitOutcome` into the ordinary destroy release. Alternatives rejected: registry owner-tracking (new lease API), an operation-layer side map (new state container + a second release site). | code survey `destroy.rs`/`destroy_workspace.rs`/`registry.rs`; Decision log |
 | 2026-07-02 | 7 | X7.3 | PASS. Every reader of `snapshot`/`dirs.workdir` composes with the in-place swap: `persist_handles` serializes both (picks the fresh workdir up with zero schema change); destroy's teardown only stats them and removes the whole run dir (retired workdirs die with it); `WorkspaceHandle::from(&MountedWorkspace)` copies them into runner entries (post-swap requests carry the NEW chain/workdir — required); capture reads `snapshot.manifest` (the rewritten manifest is the same logical snapshot). No reader caches the creation-time workdir. | grep audit of `dirs.workdir` + `.snapshot` consumers |

@@ -11,6 +11,7 @@ use super::model::WorkspaceSession;
 
 pub struct WorkspaceSessionService {
     sessions: Mutex<HashMap<WorkspaceSessionId, WorkspaceSession>>,
+    gates: Mutex<HashMap<WorkspaceSessionId, Arc<Mutex<()>>>>,
     workspace: Arc<WorkspaceRuntimeService>,
     cgroup_root: Option<PathBuf>,
     obs: Observer,
@@ -30,10 +31,45 @@ impl WorkspaceSessionService {
     ) -> Self {
         Self {
             sessions: Mutex::new(HashMap::new()),
+            gates: Mutex::new(HashMap::new()),
             workspace,
             cgroup_root,
             obs,
         }
+    }
+
+    /// The per-session admission gate: the single serializer for exec
+    /// launch, one-shot finalize, session file ops, capture, destroy, and
+    /// remount. The gates map is locked only to clone the Arc — never wait
+    /// on a gate while holding a map (lock order: gate → sessions map →
+    /// storage writer lock).
+    pub(crate) fn session_gate(&self, workspace_id: &WorkspaceSessionId) -> Arc<Mutex<()>> {
+        self.gates
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .entry(workspace_id.clone())
+            .or_default()
+            .clone()
+    }
+
+    pub(crate) fn drop_session_gate(&self, workspace_id: &WorkspaceSessionId) {
+        self.gates
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .remove(workspace_id);
+    }
+
+    /// Snapshot of the live session ids for the post-commit remount sweep.
+    #[must_use]
+    pub fn session_ids(&self) -> Vec<WorkspaceSessionId> {
+        self.sessions
+            .lock()
+            .map(|sessions| {
+                let mut ids: Vec<WorkspaceSessionId> = sessions.keys().cloned().collect();
+                ids.sort_by(|left, right| left.0.cmp(&right.0));
+                ids
+            })
+            .unwrap_or_default()
     }
 
     #[must_use]

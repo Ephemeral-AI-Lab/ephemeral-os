@@ -97,8 +97,9 @@ impl SandboxRuntimeOperations {
             crate::command::CommandConfig {
                 scratch_root: config.namespace_execution.scratch_root,
             },
-            observer,
+            observer.clone(),
         ));
+        boot_reap_then_sweep(&workspace_session, &layerstack, &observer);
         Self::new(command, workspace_session, layerstack, file)
     }
 
@@ -129,6 +130,80 @@ impl SandboxRuntimeOperations {
         self.layerstack.layer_stack_root()
     }
 }
+
+/// Boot cleanup, once, before serving: assert the kernel floor, reap every
+/// persisted session (each is provably dead — PDEATHSIG), then run the
+/// fail-closed storage sweep. Reap records are emitted before any sweep
+/// deletion record; both ride existing record names, so the feature's
+/// record budget stays at three.
+fn boot_reap_then_sweep(
+    workspace_session: &Arc<WorkspaceSessionService>,
+    layerstack: &Arc<LayerStackService>,
+    observer: &Observer,
+) {
+    assert_kernel_floor();
+    let reaped = workspace_session
+        .workspace()
+        .reap_persisted_sessions()
+        .unwrap_or_default();
+    for session in &reaped {
+        observer.event(
+            sandbox_observability::record::names::WORKSPACE_SESSION_DESTROY,
+            serde_json::json!({
+                "boot_reap": true,
+                "workspace_handle_id": session.workspace_handle_id,
+                "run_dir_removed": session.run_dir_removed,
+            }),
+        );
+    }
+    cli_log(format!(
+        "boot reap removed {} dead session(s)",
+        reaped.len()
+    ));
+    let sweep =
+        sandbox_runtime_layerstack::LayerStack::open(layerstack.layer_stack_root().to_path_buf())
+            .and_then(|mut stack| stack.sweep_storage());
+    match sweep {
+        Ok(report) => {
+            observer.event(
+                sandbox_observability::record::names::LAYERSTACK_SQUASH,
+                serde_json::json!({
+                    "boot_sweep": true,
+                    "removed_layer_ids": report.removed_layer_ids,
+                    "removed_staging_entries": report.removed_staging_entries,
+                    "skipped_reason": report.skipped_reason,
+                }),
+            );
+            cli_log(format!(
+                "boot storage sweep: removed {} layer id(s), {} staging entries{}",
+                report.removed_layer_ids.len(),
+                report.removed_staging_entries,
+                report
+                    .skipped_reason
+                    .map(|reason| format!(", skipped: {reason}"))
+                    .unwrap_or_default()
+            ));
+        }
+        Err(error) => cli_log(format!("boot storage sweep failed: {error}")),
+    }
+}
+
+/// The supported daemon environment is Linux ≥ 5.8 (`syncfs` writeback error
+/// reporting); refuse to serve on anything older.
+#[cfg(target_os = "linux")]
+fn assert_kernel_floor() {
+    let release = std::fs::read_to_string("/proc/sys/kernel/osrelease").unwrap_or_default();
+    let mut parts = release.trim().split(['.', '-']);
+    let major: u32 = parts.next().and_then(|part| part.parse().ok()).unwrap_or(0);
+    let minor: u32 = parts.next().and_then(|part| part.parse().ok()).unwrap_or(0);
+    assert!(
+        (major, minor) >= (5, 8),
+        "unsupported kernel {release}: the sandbox daemon requires Linux >= 5.8"
+    );
+}
+
+#[cfg(not(target_os = "linux"))]
+fn assert_kernel_floor() {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum WorkspaceBindDetach {

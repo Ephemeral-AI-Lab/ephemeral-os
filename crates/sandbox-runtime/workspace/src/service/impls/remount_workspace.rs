@@ -40,6 +40,28 @@ impl WorkspaceRuntimeService {
         }
     }
 
+    /// The authoritative post-remount handle for a live session, or `None`
+    /// when the session is gone — the operation layer refreshes its
+    /// registry copy from this after a switch.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`WorkspaceError`] when the runtime state lock is
+    /// unavailable.
+    pub fn current_handle(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> Result<Option<crate::model::WorkspaceHandle>, WorkspaceError> {
+        if self.hooks().is_some() {
+            return Ok(None);
+        }
+        let state = self.lock_state()?;
+        Ok(state
+            .manager
+            .handle(workspace_session_id)
+            .map(crate::model::WorkspaceHandle::from))
+    }
+
     /// Boot reap: destroy every persisted handle's run dir and reset the
     /// handle file — every persisted session is provably dead (PDEATHSIG).
     ///
