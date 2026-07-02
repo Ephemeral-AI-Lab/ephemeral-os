@@ -10,6 +10,7 @@ use std::time::Instant;
 pub use destroy::ExitOutcome;
 pub(crate) use leases::monotonic_seconds;
 pub use persistence::ReapedSession;
+pub(crate) use remount::execute_remount;
 #[doc(hidden)]
 pub use remount::{classify_remount_report, ReportClassification};
 pub use remount::{probe_and_set_live_remount_gate, set_live_remount_gate, RemountOutcome};

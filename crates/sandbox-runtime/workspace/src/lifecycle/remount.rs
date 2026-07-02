@@ -10,6 +10,7 @@
 //! observe the partial mount state before the ordinary destroy.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use sandbox_runtime_layerstack::{manifest_root_hash, LayerStack, Lease, RewrittenLease};
 use sandbox_runtime_namespace_execution::quiesce::{
@@ -19,7 +20,8 @@ use sandbox_runtime_namespace_execution::quiesce::{
 use serde_json::Value;
 
 use crate::model::{LeaseId, WorkspaceSessionId};
-use crate::session::{WorkspaceManager, WorkspaceManagerError};
+use crate::namespace::NamespaceRuntime;
+use crate::session::{MountedWorkspace, WorkspaceManager, WorkspaceManagerError};
 
 use super::leases::next_handle_id;
 
@@ -75,85 +77,82 @@ pub enum ReportClassification {
     Faulty { class_detail: String },
 }
 
+/// The cloned inputs one session's remount needs to run its expensive phase
+/// (lease rewrite, quiesce, staged-switch runner) with no lock on the shared
+/// manager state: an owned handle snapshot and a shared handle to the namespace
+/// runtime. Produced under the state lock by [`WorkspaceManager::remount_snapshot`].
+pub(crate) struct RemountInputs {
+    handle: MountedWorkspace,
+    runtime: Arc<NamespaceRuntime>,
+}
+
+/// The outcome of the lock-free execute phase, folded into the manager under a
+/// brief re-lock by [`WorkspaceManager::remount_apply`]. `Switch` already carries
+/// the old-lease GC result: the release runs inside execute (off the state lock,
+/// serialized only by the layerstack writer lock), so apply is pure in-memory
+/// bookkeeping.
+pub(crate) enum RemountEffect {
+    Identity,
+    Leased {
+        reason: String,
+    },
+    Faulty {
+        class_detail: String,
+        parked_lease_id: String,
+    },
+    Switch {
+        replacement: Lease,
+        fresh_workdir: PathBuf,
+        parked_reason: Option<String>,
+        old_lease_id: String,
+        released_old_lease: bool,
+        release_error: Option<String>,
+    },
+}
+
 impl WorkspaceManager {
-    pub(crate) fn remount_session(
-        &mut self,
-        layer_stack_root: &Path,
+    /// Phase 1 (under the state lock, O(1)): clone the session handle plus a
+    /// shared runtime handle, so the expensive phase can run with no state lock
+    /// held. `None` maps to the caller's `NotOpen`.
+    pub(crate) fn remount_snapshot(
+        &self,
         workspace_id: &WorkspaceSessionId,
-        cgroup_procs_path: Option<PathBuf>,
-    ) -> Result<RemountOutcome, WorkspaceManagerError> {
-        let Some(handle) = self.handles.get(workspace_id).cloned() else {
-            return Err(WorkspaceManagerError::NotOpen);
-        };
-        let mut stack = LayerStack::open(layer_stack_root.to_path_buf())
-            .map_err(|error| setup_failed("open layer stack", &error))?;
-        let current = Lease {
-            lease_id: handle.snapshot.lease_id.0.clone(),
-            manifest: handle.snapshot.manifest.clone(),
-            layer_paths: handle.snapshot.layer_paths.clone(),
-        };
-        let replacement = match stack.acquire_rewritten_lease(&current, &workspace_id.0) {
-            Ok(RewrittenLease::Identity) => return Ok(RemountOutcome::Identity),
-            Ok(RewrittenLease::Replaced(lease)) => lease,
-            Err(error) => {
-                return Ok(RemountOutcome::Leased {
-                    reason: format!("mount_uncertain:lease_rewrite:{error}"),
-                })
-            }
-        };
-        if !live_remount_enabled() {
-            release_replacement(&mut stack, &replacement.lease_id);
-            return Ok(RemountOutcome::Leased {
-                reason: "unsupported:kernel_gate_not_proven".to_owned(),
-            });
-        }
+    ) -> Option<RemountInputs> {
+        let handle = self.handles.get(workspace_id).cloned()?;
+        Some(RemountInputs {
+            handle,
+            runtime: Arc::clone(&self.runtime),
+        })
+    }
 
-        let spec = QuiesceSpec {
-            holder_pid: handle.holder_pid,
-            workspace_root: PathBuf::from(&handle.workspace_root),
-            cgroup_procs_path,
-            runner_pids: Vec::new(),
-            freeze_budget: DEFAULT_FREEZE_BUDGET,
-        };
-        let (frozen, pre_switch_mount_id): (Option<FrozenTasks>, u64) =
-            match quiesce_holder_scope(&spec) {
-                QuiesceOutcome::Blocked { reason } => {
-                    release_replacement(&mut stack, &replacement.lease_id);
-                    return Ok(RemountOutcome::Leased { reason });
+    /// Phase 3 (under the state lock, O(1)): fold the execute-phase effect into
+    /// the in-memory handle map. Handle-file persistence is the caller's,
+    /// batched once per sweep — never per session.
+    pub(crate) fn remount_apply(
+        &mut self,
+        workspace_id: &WorkspaceSessionId,
+        effect: RemountEffect,
+    ) -> RemountOutcome {
+        match effect {
+            RemountEffect::Identity => RemountOutcome::Identity,
+            RemountEffect::Leased { reason } => RemountOutcome::Leased { reason },
+            RemountEffect::Faulty {
+                class_detail,
+                parked_lease_id,
+            } => {
+                if let Some(session) = self.handles.get_mut(workspace_id) {
+                    session.parked_lease_id = Some(parked_lease_id);
                 }
-                QuiesceOutcome::NoObservableTasks { workspace_mount_id } => {
-                    (None, workspace_mount_id)
-                }
-                QuiesceOutcome::Frozen {
-                    tasks,
-                    workspace_mount_id,
-                } => (Some(tasks), workspace_mount_id),
-            };
-
-        let fresh_workdir = handle
-            .dirs
-            .run_dir
-            .join(format!("work-remount-{}", next_handle_id()));
-        let report =
-            self.runtime
-                .remount_overlay(&handle, replacement.layer_paths.clone(), &fresh_workdir);
-        let payload = report.as_ref().ok().map(|result| &result.payload);
-        let post_death_mount_id = if payload_has_report(payload) {
-            None
-        } else {
-            Some(workspace_mount_id(
-                handle.holder_pid,
-                Path::new(&handle.workspace_root),
-            ))
-        };
-        match classify_remount_report(payload, pre_switch_mount_id, post_death_mount_id) {
-            ReportClassification::CleanSkip { reason } => {
-                release_replacement(&mut stack, &replacement.lease_id);
-                drop(frozen);
-                Ok(RemountOutcome::Leased { reason })
+                RemountOutcome::Faulty { class_detail }
             }
-            ReportClassification::Verified { parked_reason } => {
-                let old_lease_id = handle.snapshot.lease_id.0.clone();
+            RemountEffect::Switch {
+                replacement,
+                fresh_workdir,
+                parked_reason,
+                old_lease_id,
+                released_old_lease,
+                release_error,
+            } => {
                 let parked = parked_reason.is_some();
                 self.apply_switch(
                     workspace_id,
@@ -161,27 +160,13 @@ impl WorkspaceManager {
                     &fresh_workdir,
                     parked.then(|| old_lease_id.clone()),
                 );
-                let _ = self.persist_handles();
-                drop(frozen);
                 match parked_reason {
-                    Some(reason) => Ok(RemountOutcome::Leased { reason }),
-                    None => {
-                        let release = stack.release_lease(&old_lease_id);
-                        Ok(RemountOutcome::Migrated {
-                            released_old_lease: matches!(release, Ok(true)),
-                            release_error: release.err().map(|error| error.to_string()),
-                        })
-                    }
+                    Some(reason) => RemountOutcome::Leased { reason },
+                    None => RemountOutcome::Migrated {
+                        released_old_lease,
+                        release_error,
+                    },
                 }
-            }
-            ReportClassification::Faulty { class_detail } => {
-                if let Some(session) = self.handles.get_mut(workspace_id) {
-                    session.parked_lease_id = Some(replacement.lease_id.clone());
-                }
-                if let Some(tasks) = frozen {
-                    std::mem::forget(tasks);
-                }
-                Ok(RemountOutcome::Faulty { class_detail })
             }
         }
     }
@@ -203,6 +188,118 @@ impl WorkspaceManager {
         session.snapshot.layer_paths = replacement.layer_paths.clone();
         session.dirs.workdir = fresh_workdir.to_path_buf();
         session.parked_lease_id = parked_old_lease;
+    }
+}
+
+/// Phase 2 (no state lock): the expensive, per-session-disjoint work — rewrite
+/// the lease, quiesce the holder, run the staged-switch runner, classify (C5),
+/// resume frozen tasks the instant the switch verifies, and GC the old lease.
+/// Touches only the cloned handle, a shared runtime handle, and a per-thread
+/// `LayerStack`; never the manager handle map — which is why the post-commit
+/// sweep can run this concurrently across sessions.
+pub(crate) fn execute_remount(
+    inputs: &RemountInputs,
+    layer_stack_root: &Path,
+    workspace_id: &WorkspaceSessionId,
+    cgroup_procs_path: Option<PathBuf>,
+) -> Result<RemountEffect, WorkspaceManagerError> {
+    let handle = &inputs.handle;
+    let mut stack = LayerStack::open(layer_stack_root.to_path_buf())
+        .map_err(|error| setup_failed("open layer stack", &error))?;
+    let current = Lease {
+        lease_id: handle.snapshot.lease_id.0.clone(),
+        manifest: handle.snapshot.manifest.clone(),
+        layer_paths: handle.snapshot.layer_paths.clone(),
+    };
+    let replacement = match stack.acquire_rewritten_lease(&current, &workspace_id.0) {
+        Ok(RewrittenLease::Identity) => return Ok(RemountEffect::Identity),
+        Ok(RewrittenLease::Replaced(lease)) => lease,
+        Err(error) => {
+            return Ok(RemountEffect::Leased {
+                reason: format!("mount_uncertain:lease_rewrite:{error}"),
+            })
+        }
+    };
+    if !live_remount_enabled() {
+        release_replacement(&mut stack, &replacement.lease_id);
+        return Ok(RemountEffect::Leased {
+            reason: "unsupported:kernel_gate_not_proven".to_owned(),
+        });
+    }
+
+    let spec = QuiesceSpec {
+        holder_pid: handle.holder_pid,
+        workspace_root: PathBuf::from(&handle.workspace_root),
+        cgroup_procs_path,
+        runner_pids: Vec::new(),
+        freeze_budget: DEFAULT_FREEZE_BUDGET,
+    };
+    let (frozen, pre_switch_mount_id): (Option<FrozenTasks>, u64) =
+        match quiesce_holder_scope(&spec) {
+            QuiesceOutcome::Blocked { reason } => {
+                release_replacement(&mut stack, &replacement.lease_id);
+                return Ok(RemountEffect::Leased { reason });
+            }
+            QuiesceOutcome::NoObservableTasks { workspace_mount_id } => (None, workspace_mount_id),
+            QuiesceOutcome::Frozen {
+                tasks,
+                workspace_mount_id,
+            } => (Some(tasks), workspace_mount_id),
+        };
+
+    let fresh_workdir = handle
+        .dirs
+        .run_dir
+        .join(format!("work-remount-{}", next_handle_id()));
+    let report =
+        inputs
+            .runtime
+            .remount_overlay(handle, replacement.layer_paths.clone(), &fresh_workdir);
+    let payload = report.as_ref().ok().map(|result| &result.payload);
+    let post_death_mount_id = if payload_has_report(payload) {
+        None
+    } else {
+        Some(workspace_mount_id(
+            handle.holder_pid,
+            Path::new(&handle.workspace_root),
+        ))
+    };
+    match classify_remount_report(payload, pre_switch_mount_id, post_death_mount_id) {
+        ReportClassification::CleanSkip { reason } => {
+            release_replacement(&mut stack, &replacement.lease_id);
+            drop(frozen);
+            Ok(RemountEffect::Leased { reason })
+        }
+        ReportClassification::Verified { parked_reason } => {
+            let old_lease_id = handle.snapshot.lease_id.0.clone();
+            drop(frozen);
+            let (released_old_lease, release_error) = if parked_reason.is_some() {
+                (false, None)
+            } else {
+                let release = stack.release_lease(&old_lease_id);
+                (
+                    matches!(release, Ok(true)),
+                    release.err().map(|error| error.to_string()),
+                )
+            };
+            Ok(RemountEffect::Switch {
+                replacement,
+                fresh_workdir,
+                parked_reason,
+                old_lease_id,
+                released_old_lease,
+                release_error,
+            })
+        }
+        ReportClassification::Faulty { class_detail } => {
+            if let Some(tasks) = frozen {
+                std::mem::forget(tasks);
+            }
+            Ok(RemountEffect::Faulty {
+                class_detail,
+                parked_lease_id: replacement.lease_id.clone(),
+            })
+        }
     }
 }
 

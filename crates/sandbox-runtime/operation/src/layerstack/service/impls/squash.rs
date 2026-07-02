@@ -10,13 +10,17 @@
 //! ordinary path.
 
 use std::collections::BTreeSet;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, PoisonError};
 
 use sandbox_observability::record::names;
+use sandbox_observability::TraceContext;
 use sandbox_runtime_layerstack::LayerStack;
 use serde_json::{json, Value};
 
 use crate::operation::OperationEntry;
 use crate::services::SandboxRuntimeOperations;
+use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_session::{SweptDisposition, SweptSession};
 
 const SQUASH_LAYERSTACK: OperationEntry = OperationEntry {
@@ -54,12 +58,14 @@ fn run_squash_layerstack(operations: &SandboxRuntimeOperations) -> Result<Value,
             span.attr("manifest_version", outcome.manifest.version);
             span.attr("blocks", outcome.blocks.len());
 
-            let swept: Vec<SweptSession> = operations
-                .workspace_session
-                .session_ids()
+            let ids = operations.workspace_session.session_ids();
+            let swept = remount_sweep(operations, &ids, operations.layerstack.obs.context());
+            if swept
                 .iter()
-                .map(|id| operations.workspace_session.remount_session(id))
-                .collect();
+                .any(|session| session.disposition == SweptDisposition::Migrated)
+            {
+                let _ = operations.workspace_session.persist_handles();
+            }
 
             let mut faulty_sessions = Vec::new();
             for session in &swept {
@@ -131,5 +137,67 @@ fn run_squash_layerstack(operations: &SandboxRuntimeOperations) -> Result<Value,
                 result["faulty_sessions"] = json!(faulty_sessions);
             }
             Ok(result)
+        })
+}
+
+/// The post-commit remount sweep: attempt every live session's remount with
+/// bounded concurrency. Each per-session remount is independent — it holds only
+/// that session's admission gate, freezes only that session's tasks, and mutates
+/// only shared manager state under a brief re-lock inside `remount_workspace` —
+/// so the expensive quiesce + staged-switch runner overlap across sessions
+/// instead of serializing. Results land in plan (session-id) order. `ctx` re-
+/// enters the squash trace on each worker so the per-session spans still record.
+fn remount_sweep(
+    operations: &SandboxRuntimeOperations,
+    ids: &[WorkspaceSessionId],
+    ctx: Option<TraceContext>,
+) -> Vec<SweptSession> {
+    if ids.is_empty() {
+        return Vec::new();
+    }
+    let width = sweep_width().min(ids.len());
+    if width <= 1 {
+        return ids
+            .iter()
+            .map(|id| operations.workspace_session.remount_session(id))
+            .collect();
+    }
+    let cursor = AtomicUsize::new(0);
+    let slots: Vec<Mutex<Option<SweptSession>>> =
+        (0..ids.len()).map(|_| Mutex::new(None)).collect();
+    let obs = &operations.layerstack.obs;
+    std::thread::scope(|scope| {
+        for _ in 0..width {
+            scope.spawn(|| loop {
+                let index = cursor.fetch_add(1, Ordering::Relaxed);
+                let Some(id) = ids.get(index) else {
+                    break;
+                };
+                let swept = obs.with_context(ctx.clone(), || {
+                    operations.workspace_session.remount_session(id)
+                });
+                *slots[index].lock().unwrap_or_else(PoisonError::into_inner) = Some(swept);
+            });
+        }
+    });
+    slots
+        .into_iter()
+        .filter_map(|slot| slot.into_inner().unwrap_or_else(PoisonError::into_inner))
+        .collect()
+}
+
+/// Bounded remount-sweep concurrency width. Defaults to the host parallelism
+/// (the work is wait-bound — subprocess wait, freeze poll, fsync — so a small
+/// fan-out overlaps those waits without buffering anything). `1` restores the
+/// serial sweep. Overridable via `EOS_REMOUNT_SWEEP_WIDTH` for tuning.
+fn sweep_width() -> usize {
+    std::env::var("EOS_REMOUNT_SWEEP_WIDTH")
+        .ok()
+        .and_then(|value| value.parse::<usize>().ok())
+        .filter(|width| *width >= 1)
+        .unwrap_or_else(|| {
+            std::thread::available_parallelism()
+                .map(std::num::NonZeroUsize::get)
+                .unwrap_or(4)
         })
 }

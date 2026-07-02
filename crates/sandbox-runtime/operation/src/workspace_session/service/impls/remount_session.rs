@@ -125,6 +125,17 @@ impl WorkspaceSessionService {
         }
     }
 
+    /// Persist the workspace handle set once, after the post-commit remount
+    /// sweep — the batched replacement for the old per-session persistence.
+    /// Best-effort at the call site: a failure changes no live mount, only the
+    /// on-disk boot-reap record (which keys on the remount-invariant run dir).
+    ///
+    /// # Errors
+    /// Returns the workspace error when the handle-file write fails.
+    pub fn persist_handles(&self) -> Result<(), WorkspaceSessionError> {
+        Ok(self.workspace().persist_handles()?)
+    }
+
     fn refresh_session_handle(&self, workspace_session_id: &WorkspaceSessionId) {
         let refreshed = self
             .workspace()

@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use sandbox_observability::Observer;
 use serde::Deserialize;
@@ -62,7 +63,7 @@ pub enum WorkspaceManagerError {
 pub struct WorkspaceManager {
     pub(crate) workspace_root: String,
     pub(crate) caps: ResourceCaps,
-    pub(crate) runtime: NamespaceRuntime,
+    pub(crate) runtime: Arc<NamespaceRuntime>,
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
     pub(crate) handles: HashMap<WorkspaceSessionId, MountedWorkspace>,
@@ -90,7 +91,7 @@ impl WorkspaceManager {
         Self {
             workspace_root: workspace_root.into(),
             caps,
-            runtime,
+            runtime: Arc::new(runtime),
             network,
             scratch_root,
             handles: HashMap::new(),
