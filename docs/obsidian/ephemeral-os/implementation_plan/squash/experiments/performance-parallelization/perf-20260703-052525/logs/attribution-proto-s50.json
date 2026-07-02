@@ -1,0 +1,97 @@
+[
+  {
+    "trace": "3a851500-beb8-4c75-b0e3-2ff4fa7ade91",
+    "ts": 1783030247259,
+    "blocks": 1,
+    "parent_ms": 80.0,
+    "sweep_wall_ms": 54.0,
+    "sweep_serial_sum_ms": 198.0,
+    "overlap_factor": 3.67,
+    "faulty_destroy_ms": 0,
+    "non_sweep_ms": 26.0,
+    "sessions_swept": 21,
+    "by_disposition": {
+      "Migrated": {
+        "n": 21,
+        "sum_ms": 198.0,
+        "min_ms": 6.0,
+        "median_ms": 9.0,
+        "max_ms": 15.0,
+        "mean_ms": 9.429
+      }
+    }
+  },
+  {
+    "trace": "61b0c5c8-3167-42b3-baac-12c4d82345a3",
+    "ts": 1783030254724,
+    "blocks": 1,
+    "parent_ms": 60.0,
+    "sweep_wall_ms": 49.0,
+    "sweep_serial_sum_ms": 179.0,
+    "overlap_factor": 3.65,
+    "faulty_destroy_ms": 0,
+    "non_sweep_ms": 11.0,
+    "sessions_swept": 38,
+    "by_disposition": {
+      "Identity": {
+        "n": 17,
+        "sum_ms": 4.0,
+        "min_ms": 0.0,
+        "median_ms": 0.0,
+        "max_ms": 1.0,
+        "mean_ms": 0.235
+      },
+      "Migrated": {
+        "n": 21,
+        "sum_ms": 175.0,
+        "min_ms": 5.0,
+        "median_ms": 8.0,
+        "max_ms": 13.0,
+        "mean_ms": 8.333
+      }
+    }
+  },
+  {
+    "trace": "30cc214e-0777-4583-b3f4-584dde02e05d",
+    "ts": 1783030262123,
+    "blocks": 1,
+    "parent_ms": 77.0,
+    "sweep_wall_ms": 50.0,
+    "sweep_serial_sum_ms": 179.0,
+    "overlap_factor": 3.58,
+    "faulty_destroy_ms": 0,
+    "non_sweep_ms": 27.0,
+    "sessions_swept": 54,
+    "by_disposition": {
+      "Identity": {
+        "n": 34,
+        "sum_ms": 8.0,
+        "min_ms": 0.0,
+        "median_ms": 0.0,
+        "max_ms": 1.0,
+        "mean_ms": 0.235
+      },
+      "Migrated": {
+        "n": 20,
+        "sum_ms": 171.0,
+        "min_ms": 6.0,
+        "median_ms": 8.5,
+        "max_ms": 13.0,
+        "mean_ms": 8.55
+      }
+    }
+  },
+  {
+    "trace": "c6c917b2-0f8e-4ff6-bd75-8abf8b18b48a",
+    "ts": 1783030269117,
+    "blocks": 1,
+    "parent_ms": 7.0,
+    "sweep_wall_ms": 0.0,
+    "sweep_serial_sum_ms": 0,
+    "overlap_factor": 0.0,
+    "faulty_destroy_ms": 0,
+    "non_sweep_ms": 7.0,
+    "sessions_swept": 0,
+    "by_disposition": {}
+  }
+]

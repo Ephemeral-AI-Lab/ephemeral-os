@@ -118,3 +118,79 @@ per-migration cost, `t_id ≈ 0.03 ms` the identity cost.
 5. Do **not** pre-filter identity sessions — they are already free.
 6. Keep peak memory `O(W)` (bounded concurrency width), never `O(N)`: the
    speedup comes from overlapping blocking waits, not from buffering in RAM.
+
+## Before/after — prototype measured (W = 4, container = 4 cores)
+
+Prototype = bounded-parallel remount sweep + phase-split per-session transaction
++ batched persist (see `DESIGN.md` §3), applied to `crates/` on `main`, daemon
+repackaged (musl) and gateway restarted. Same benchmark, same knobs, spans
+harvested identically.
+
+### Algorithmic change
+
+- **Before:** `swept = ids.iter().map(remount_session).collect()` — serial; each
+  per-session remount holds the process-wide `Mutex<WorkspaceRuntimeState>` across
+  quiesce + runner + persist + release.
+- **After:** `remount_sweep(ids, W)` — `W` workers pull from an atomic cursor; each
+  remount holds only its per-session gate; the state lock is taken only for the
+  `O(1)` snapshot and `O(1)` apply; quiesce + runner + old-lease release run
+  lock-free and overlap; `persist_handles` batched to one call after the sweep.
+
+### 50 sessions (complete span capture)
+
+| metric | before (serial) | after (W=4) | delta |
+|---|---:|---:|---|
+| `T_squash` (harness max) | 202.96 ms | 106.83 ms | **1.90×** |
+| invocation walls (ms) | 192 / 184 / 203 / 37 | 107 / 87 / 104 / 38 | |
+| sweep **wall** inv1/2/3 (ms) | 146 / 148 / 163 | 54 / 49 / 50 | **~3.0×** |
+| sweep overlap factor | 1.0× | 3.6× | |
+| per-migrated mean (ms) | 6.95 / 7.0 / 8.1 | 9.4 / 8.3 / 8.6 | +~20 % (4-core contention) |
+| `T_http_disconnect` | 20.48 ms | 12.03 ms | improved |
+| correctness / space / teardown | PASS | PASS | preserved |
+
+### 200 sessions (harness complete; after inv1 span clean, baseline rotated)
+
+| metric | before (serial) | after (W=4) | delta |
+|---|---:|---:|---|
+| `T_squash` (harness max) | 2141.28 ms | 311.39 ms | **6.88×** |
+| invocation walls (ms) | 648 / 2141 / 803 / 35 | 210 / 236 / 311 / 37 | |
+| worst-case cause | serial sweep + a 500 ms freeze straggler | straggler isolated to one worker | tail collapsed |
+| sweep of 70 migrated | serial-sum 1043 ms ≈ wall 1043 ms | serial-sum 1043 ms → **wall 267 ms** | overlap **3.91×** |
+| `T_http_disconnect` | 21.48 ms | 31.06 ms | +9.6 ms; still **48× under** the 1500 ms budget |
+| correctness / space / teardown | PASS | PASS | preserved |
+
+### Complexity, measured
+
+- Sweep wall: before `Θ(M·t̄)` serial; after `Θ(⌈M/W⌉·t̄)`. The measured 3.6–3.9×
+  overlap on 4 cores ≈ `W` (near-linear; residual = Amdahl apply/persist +
+  spawn-lock + 4-core oversubscription).
+- Straggler tail: before, one 500 ms freeze straggler stalled the whole serial
+  sweep (2141 ms); after, it stalls only its worker (worst invocation 311 ms).
+- persist: before `Θ(M·N)` serialized rewrites + `2M` fsyncs; after `Θ(N)` + 2
+  fsyncs once.
+
+### Memory (constraint honored — no RAM-for-speed)
+
+Peak added memory = `O(W)` = `O(4)`: at most 4 cloned handles + 4 frozen-task sets
+in flight. No `O(N)` buffer was introduced — the swept-results vector already
+existed in the serial baseline. The win is entirely overlap of blocking waits
+(subprocess `wait()`, freeze poll, fsync): the per-session span **durations did
+not shrink** (they rose slightly under contention) — only their wall-clock
+**overlap** produced the speedup. This is the direct empirical proof that the
+speedup did not come from trading memory for time.
+
+### Correctness regression (prototype daemon)
+
+- Squash **smoke** tier: **10/10 PASS** — migrate (SMK-06), leased/pin (SMK-07),
+  faulty + result contract (SMK-04), the three observability records (SMK-08),
+  boot reap-then-sweep (SMK-10), no-op/idempotence/boundary.
+- Squash **medium** remount-critical (MED-08 live-migration-under-batch, MED-09
+  escaped-pgid fd pin, MED-10 child-mount pin, MED-11 nested-mount-ns block,
+  MED-13 post-PONR runner death faulty, MED-17 persist-failure-still-migrates,
+  MED-19 masks-never-observable, MED-20 quiesce-at-100-tasks): **8/8 PASS**
+  (`logs/pytest-regression-medium.log`).
+- Secondary load benchmarks **LOAD-499-HTTP** (499-layer stack) and
+  **LOAD-LARGE-HTTP** (large-file squash): **2/2 PASS**
+  (`logs/pytest-regression-load.log`).
+- Host toolchain: `cargo fmt --check` clean, `cargo clippy --all-targets` clean,
+  144 host unit tests pass.

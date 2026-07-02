@@ -79,15 +79,27 @@ def analyze(spans):
 
         sweep_sum = sum(s["dur_ms"] for s in remounts)
         destroy_sum = sum(s["dur_ms"] for s in destroys)
+        # Wall time of the sweep from span timestamps (start = ts - dur_ms). For a
+        # serial sweep this ~= sweep_sum; under parallelism it is far smaller, and
+        # overlap = sweep_sum / sweep_wall is the effective concurrency achieved.
+        if remounts:
+            sweep_wall = max(s["ts"] for s in remounts) - min(
+                s["ts"] - s["dur_ms"] for s in remounts
+            )
+        else:
+            sweep_wall = 0.0
+        overlap = (sweep_sum / sweep_wall) if sweep_wall > 0 else 0.0
         blocks = max((s.get("attrs", {}).get("blocks", 0) for s in squash), default=0)
         invocations.append({
             "trace": trace,
             "ts": min(s["ts"] for s in squash),
             "blocks": blocks,
             "parent_ms": round(parent, 3),
-            "sweep_ms": round(sweep_sum, 3),
+            "sweep_wall_ms": round(sweep_wall, 3),
+            "sweep_serial_sum_ms": round(sweep_sum, 3),
+            "overlap_factor": round(overlap, 2),
             "faulty_destroy_ms": round(destroy_sum, 3),
-            "non_sweep_ms": round(parent - sweep_sum - destroy_sum, 3),
+            "non_sweep_ms": round(parent - sweep_wall, 3),
             "sessions_swept": len(remounts),
             "by_disposition": {
                 d: dist(v) for d, v in sorted(by_disp.items())
@@ -103,8 +115,10 @@ def render(invocations):
     for i, inv in enumerate(invocations, 1):
         lines.append(f"=== squash invocation {i}  (blocks={inv['blocks']}, sessions={inv['sessions_swept']}) ===")
         lines.append(f"  parent (layerstack.squash) : {inv['parent_ms']:>10.3f} ms")
-        lines.append(f"  remount sweep (serial sum) : {inv['sweep_ms']:>10.3f} ms"
-                     f"   ({pct(inv['sweep_ms'], inv['parent_ms'])} of parent)")
+        lines.append(f"  remount sweep WALL         : {inv['sweep_wall_ms']:>10.3f} ms"
+                     f"   ({pct(inv['sweep_wall_ms'], inv['parent_ms'])} of parent)")
+        lines.append(f"  remount sweep serial sum   : {inv['sweep_serial_sum_ms']:>10.3f} ms"
+                     f"   (overlap {inv['overlap_factor']}x)")
         if inv["faulty_destroy_ms"]:
             lines.append(f"  faulty destroys            : {inv['faulty_destroy_ms']:>10.3f} ms")
         lines.append(f"  non-sweep (open+plan+build+commit) :"

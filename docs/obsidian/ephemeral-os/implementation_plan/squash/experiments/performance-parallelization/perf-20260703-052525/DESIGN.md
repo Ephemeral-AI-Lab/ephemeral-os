@@ -178,10 +178,14 @@ memory trade.
 | working memory | `O(1)` | `O(W)` (W handle clones + W frozen sets in flight); W = fixed constant ≪ N |
 | result memory | `O(N)` (API-inherent) | `O(N)` (**unchanged** — same result vector) |
 
-Projected (4-core container, `W=8`, wait-bound): 200-session typical sweep
-650–800 ms → ~150–250 ms; the 2141 ms straggler invocation → far better (straggler
-isolated); 50-session 163 ms sweep → ~40–60 ms. Confirmed empirically in the
-re-benchmark (task #7).
+**Measured** (4-core container, `W=4` = `available_parallelism`; see `RESULTS.md`
+"Before/after"): 50-session `T_squash` 202.96 → 106.83 ms (1.90×), sweep wall
+146–163 → 49–54 ms at 3.6× overlap; 200-session `T_squash` 2141.28 → 311.39 ms
+(6.88×), the 70-migration sweep serial-sum 1043 ms → 267 ms wall at **3.91×
+overlap** (near-linear on 4 cores), and the 2141 ms freeze-straggler invocation
+collapsed to 311 ms (tail isolated). `T_http_disconnect` stayed far under the
+1500 ms budget throughout (12–31 ms). Squash smoke 10/10 + medium remount-critical
+8/8 PASS.
 
 ## 6. Memory guarantee (no RAM-for-speed)
 
