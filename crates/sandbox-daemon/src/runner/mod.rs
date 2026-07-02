@@ -8,6 +8,7 @@ use sandbox_config::configs::runner::RunnerConfig;
 
 mod file_op;
 pub(crate) mod mount_overlay;
+mod remount_overlay;
 mod shell;
 
 const DAEMON_CONFIG_YAML_ENV: &str = "SANDBOX_DAEMON_CONFIG_YAML";
@@ -35,6 +36,7 @@ fn dispatch_runner_mode(
     match operation {
         NsRunnerOperation::Shell => shell::run(request),
         NsRunnerOperation::MountOverlay => mount_overlay::run(request, runner_config),
+        NsRunnerOperation::RemountOverlay => remount_overlay::run(request, runner_config),
         NsRunnerOperation::FileOp => file_op::run(request),
     }
 }
@@ -58,6 +60,7 @@ fn runner_config_from_document(doc: &sandbox_config::ConfigDocument) -> Result<R
 enum NsRunnerOperation {
     Shell,
     MountOverlay,
+    RemountOverlay,
     FileOp,
 }
 
@@ -84,6 +87,7 @@ impl RunnerCliConfig {
             match arg.as_str() {
                 "--shell" => set_mode(NsRunnerOperation::Shell)?,
                 "--mount-overlay" => set_mode(NsRunnerOperation::MountOverlay)?,
+                "--remount-overlay" => set_mode(NsRunnerOperation::RemountOverlay)?,
                 "--file-op" => set_mode(NsRunnerOperation::FileOp)?,
                 "--request-fd" => {
                     request_fd = Some(
@@ -103,7 +107,7 @@ impl RunnerCliConfig {
                 }
                 "--help" | "-h" => {
                     println!(
-                        "usage: sandbox-daemon ns-runner (--shell | --mount-overlay | --file-op) --request-fd FD --result-fd FD"
+                        "usage: sandbox-daemon ns-runner (--shell | --mount-overlay | --remount-overlay | --file-op) --request-fd FD --result-fd FD"
                     );
                     std::process::exit(0);
                 }
@@ -121,7 +125,7 @@ impl RunnerCliConfig {
         let result_fd = result_fd.ok_or_else(|| anyhow!("ns-runner requires --result-fd FD"))?;
         let mode = mode.ok_or_else(|| {
             anyhow!(
-                "ns-runner requires exactly one mode flag: --shell | --mount-overlay | --file-op"
+                "ns-runner requires exactly one mode flag: --shell | --mount-overlay | --remount-overlay | --file-op"
             )
         })?;
         Ok(Self {

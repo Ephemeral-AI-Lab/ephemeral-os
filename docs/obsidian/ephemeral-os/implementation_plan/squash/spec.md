@@ -155,7 +155,7 @@ flag, no byte totals — byte accounting stays with the observability view.
 | staged switch | Kernel-gated mount of the NEW overlay at staging — same upperdir, fresh sibling workdir, production builder — then remask, probe via pre-opened dirfds, MS_MOVE old→rollback, MS_MOVE staging→root, probe, strict-unmount rollback (EBUSY ⇒ park with both leases). Masks are restored **before** the first move, so mask failure is a clean pre-PONR skip. |
 | strict unmount | A single `umount2(path, 0)` with no lazy/`MNT_DETACH` fallback. Only strict unmount or namespace death counts as "unmounted". |
 | parked old mount | Strict-unmount EBUSY after a verified switch: the OLD overlay stays mounted at the masked rollback point; the session resumes on NEW holding **both** leases (released at destroy), reported `leased(pinned:rollback_unmount_busy)`. The next squash sees Identity — no retry loop, no restore machinery. |
-| point of no return | The first `MS_MOVE` **returning success**. Failures before it — including a failed first `MS_MOVE` — leave the session untouched (clean skip). At/after it: verified switch (parked on EBUSY) or faulty. The runner always returns a report of two booleans plus free-form detail (`first_move_succeeded`, `mount_verified` — present on error paths too); a missing or ambiguous report at/past first-move-success is treated as faulty. |
+| point of no return | The first `MS_MOVE` **returning success**. Failures before it — including a failed first `MS_MOVE` — leave the session untouched (clean skip). At/after it: verified switch (parked on EBUSY) or faulty. The runner always returns a report of two booleans plus free-form detail (`first_move_succeeded`, `mount_verified` — present on error paths too); a missing or ambiguous report at/past first-move-success is treated as faulty. When the report is missing (runner died), at/past-first-move is decided by re-reading the holder mountinfo once and comparing the workspace mount id against the quiesce-time read: unchanged ⇒ the move never happened ⇒ clean skip; changed or absent ⇒ faulty (X6.4-measured: the row is absent between the moves and its id changes after the switch). |
 
 Invariants:
 
@@ -315,7 +315,13 @@ crates/sandbox-observability/
 └── src/record.rs                            (+8)        LAYERSTACK_SQUASH, WORKSPACE_SESSION_REMOUNT,
                                                          NAMESPACE_EXEC_REMOUNT_OVERLAY
 
-sandbox-protocol / sandbox-daemon / sandbox-gateway   (+0)
+sandbox-protocol / sandbox-gateway                    (+0)
+crates/sandbox-daemon/src/runner/
+├── mod.rs                                   (+6/−2)     --remount-overlay mode flag + dispatch arm
+│                                                        (the ns-runner mode registry is daemon-owned;
+│                                                        no protocol/transport/RPC change)
+└── remount_overlay.rs                       (new ~25)   thin body mirroring mount_overlay.rs: config
+                                                         hidden_paths → namespace-process setns runner
 ```
 
 Totals: **10 new source files ≈ 1,290 LoC**, **≈ +420 LoC** in existing
@@ -820,9 +826,12 @@ Preconditions:
 
 ```text
 /workspace ── overlay OLD [l4, n3, n2, n1] (hidden-path masks on top)
-staging  = <scratch>/.remount-staging-<pid>-<n>
-rollback = <scratch>/.remount-rollback-<pid>-<n>
-workdir  = <run_dir>/work-remount-<nonce>      fresh; OLD's workdir is never reused
+staging  = <run_dir>/.remount-staging-<pid>    the run dir IS the scratch: session-
+rollback = <run_dir>/.remount-rollback-<pid>   scoped, masked under /eos, and already
+workdir  = <run_dir>/work-remount-<nonce>      reaped by destroy/boot-reap — parked
+                                               mounts and staging litter need zero
+                                               new cleanup paths; fresh workdir,
+                                               OLD's workdir is never reused
 
  1. unmask hidden daemon paths                 RemountMaskGuard, build window only
  2. mount overlay NEW [l4, S(n3..n1)] at       production fsconfig builder, unchanged;

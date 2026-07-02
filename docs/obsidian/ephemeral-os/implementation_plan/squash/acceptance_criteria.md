@@ -25,9 +25,12 @@ tests" section (unit 1–22, gates G1–G3, features E1–E10).
       no remount state enum, no quarantine mechanism, no persisted sweep
       state. *Verify: grep for `.sources.json`/remount-state writes; test 8;
       test 22.*
-- [ ] **No progress streaming**: `sandbox-protocol`, `sandbox-daemon`,
-      `sandbox-gateway` have a zero-line diff for this feature. *Verify:
-      `git diff --stat` on those crates.*
+- [ ] **No progress streaming**: `sandbox-protocol` and `sandbox-gateway`
+      have a zero-line diff for this feature; `sandbox-daemon` changes are
+      limited to the ns-runner `--remount-overlay` mode registration (flag,
+      dispatch arm, thin body) — the mode registry is daemon-owned — with
+      zero protocol/transport/RPC changes. *Verify: `git diff --stat` on
+      those crates.*
 - [ ] Live remount is **never part of storage-commit correctness**: any
       remount failure before the point of no return leaves a committed
       squash intact. *Verify: test 11.*

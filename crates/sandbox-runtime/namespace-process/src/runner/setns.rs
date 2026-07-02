@@ -13,6 +13,8 @@ mod mount_overlay;
 #[cfg(target_os = "linux")]
 mod namespaces;
 #[cfg(target_os = "linux")]
+pub(crate) mod remount_overlay;
+#[cfg(target_os = "linux")]
 mod shell;
 
 #[cfg(all(target_os = "linux", test))]
@@ -46,6 +48,25 @@ pub(crate) fn run_file_op_setns(
         path: String::new(),
         message: "namespace file runner is only supported on linux".to_owned(),
     })
+}
+
+/// Run the staged-switch remount inside the holder's user+mount namespaces.
+/// Every post-`setns` outcome is a report of two booleans plus free-form
+/// detail; only request decoding and the `setns` itself can error.
+#[cfg(target_os = "linux")]
+pub fn setns_remount_overlay(
+    request: &NamespaceRunnerRequest,
+    hidden_paths: &[PathBuf],
+) -> Result<RunResult, RunnerError> {
+    remount_overlay::run_remount_overlay(request, hidden_paths)
+}
+
+#[cfg(not(target_os = "linux"))]
+pub fn setns_remount_overlay(
+    _request: &NamespaceRunnerRequest,
+    _hidden_paths: &[PathBuf],
+) -> Result<RunResult, RunnerError> {
+    Err(RunnerError::Unsupported)
 }
 
 /// Mount the overlay inside an existing workspace mount namespace.
