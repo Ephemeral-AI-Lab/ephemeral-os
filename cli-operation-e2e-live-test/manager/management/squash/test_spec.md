@@ -37,6 +37,8 @@ This suite mirrors all catalog IDs under `manager/management/squash/` and writes
 | MED-18 | medium | OVL_MAX_STACK creation boundary |
 | MED-19 | medium | masks never observable |
 | MED-20 | medium | quiesce at 100 tasks |
+| HTTP-01 | medium | running HTTP server migrates live |
+| HTTP-02 | medium | workspace-cwd HTTP server resumes leased |
 | HRD-01 | hard | B3 replay: multi-block plan, mixed classification, reclaim cascade |
 | HRD-02 | hard | B4 replay: two generations, re-squash of S |
 | HRD-03 | hard | B5 replay: every hard path in one sweep |
@@ -94,3 +96,10 @@ Speed note: the post-rebuild baseline full run was
 finishes at `128.64s` by using structured `file_write` for small publishes,
 concurrent synthetic layer publishing, and one-shot command log artifact
 writes.
+
+## Extra HTTP Service Cases
+
+`HTTP-01` and `HTTP-02` are additional medium-tier probes outside the original
+50-case source catalog. Both start the service and client through
+`sandbox-cli runtime exec_command`, record `T_http_disconnect`, and enforce the
+same correctness, space, time, and teardown verdict axes.

@@ -185,6 +185,11 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/finalize-policy/adversarial_review_prompt.md",
+    "ephemeral-os/implementation_plan/finalize-policy/spec.md",
+    "ephemeral-os/implementation_plan/finalize-policy",
+    "ephemeral-os/implementation_plan/cli_migration/operation.md",
+    "ephemeral-os/implementation_plan/cli_migration/spec.md",
     "ephemeral-os/implementation_plan/cli_migration",
     "ephemeral-os/implementation_plan/Untitled",
     "ephemeral-os/implementation_plan/squash/iteration-report.md",
@@ -213,14 +218,9 @@
     "ephemeral-os/implementation_plan/file_operations/impl_plan_and_progress_tracker.md",
     "ephemeral-os/implementation_plan/file_operations/Untitled.md",
     "ephemeral-os/docs/daemon/daemon-cli.md",
-    "ephemeral-os/docs/daemon/Untitled.md",
     "ephemeral-os/docs/daemon",
     "ephemeral-os/docs/Untitled",
-    "ephemeral-os/docs/Untitled.md",
-    "ephemeral-os/implementation_plan/file_operations/spec.md",
     "ephemeral-os/implementation_plan/file_operations",
-    "ephemeral-os/testing/file-operation",
-    "ephemeral-os/testing/Untitled",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }

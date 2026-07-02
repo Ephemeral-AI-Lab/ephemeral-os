@@ -5,6 +5,7 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -50,6 +51,8 @@ CASES = [
     {"id": "MED-18", "tier": "medium", "title": "OVL_MAX_STACK creation boundary", "scenario": "overcap"},
     {"id": "MED-19", "tier": "medium", "title": "masks never observable", "scenario": "migrate"},
     {"id": "MED-20", "tier": "medium", "title": "quiesce at 100 tasks", "scenario": "many_tasks"},
+    {"id": "HTTP-01", "tier": "medium", "title": "running HTTP server migrates live", "scenario": "http_migrate"},
+    {"id": "HTTP-02", "tier": "medium", "title": "workspace-cwd HTTP server resumes leased", "scenario": "http_pinned"},
     {"id": "HRD-01", "tier": "hard", "title": "B3 replay mixed classification", "scenario": "mixed"},
     {"id": "HRD-02", "tier": "hard", "title": "B4 replay two generations", "scenario": "generations"},
     {"id": "HRD-03", "tier": "hard", "title": "B5 replay hard path convergence", "scenario": "mixed"},
@@ -74,18 +77,121 @@ CASES = [
 
 CASE_BY_ID = {case["id"]: case for case in CASES}
 TIMED_CASES = {
-    "MED-04", "MED-18", "MED-20", "HRD-11", "HRD-13", "HRD-14", "HRD-15", "HRD-20"
+    "MED-04", "MED-18", "MED-20", "HTTP-01", "HTTP-02",
+    "HRD-11", "HRD-13", "HRD-14", "HRD-15", "HRD-20"
 }
 CASE_E2E_BUDGET_MS = {
     "MED-18": 1_800_000,
+    "HTTP-01": 30_000,
+    "HTTP-02": 30_000,
     "HRD-12": 1_800_000,
     "HRD-20": 1_800_000,
 }
 CASE_SQUASH_BUDGET_MS = {
     "MED-18": 15_000,
+    "HTTP-01": 5_000,
+    "HTTP-02": 5_000,
     "HRD-11": 20_000,
 }
 FILE_WRITE_PUBLISH_LIMIT_BYTES = 16 * 1024
+HTTP_CLIENT_SECONDS = 3.0
+HTTP_DISCONNECT_BUDGET_MS = 1_500
+CASE_DISCONNECT_BUDGET_MS = {
+    "HTTP-01": HTTP_DISCONNECT_BUDGET_MS,
+    "HTTP-02": HTTP_DISCONNECT_BUDGET_MS,
+}
+HTTP_HELPER_SOURCE = r"""
+use std::env;
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::time::{Duration, Instant};
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    match args.get(1).map(String::as_str) {
+        Some("server") => server(),
+        Some("client") => client(&args),
+        Some("probe") => probe(&args),
+        _ => std::process::exit(64),
+    }
+}
+
+fn server() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).expect("bind");
+    println!("PORT={}", listener.local_addr().expect("addr").port());
+    std::io::stdout().flush().ok();
+    for stream in listener.incoming() {
+        if let Ok(mut stream) = stream {
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request);
+            let body = b"http-ok\n";
+            let header = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(header.as_bytes());
+            let _ = stream.write_all(body);
+        }
+    }
+}
+
+fn client(args: &[String]) {
+    let port = args.get(2).and_then(|v| v.parse::<u16>().ok()).expect("port");
+    let seconds = args.get(3).and_then(|v| v.parse::<f64>().ok()).unwrap_or(3.0);
+    let deadline = Instant::now() + Duration::from_secs_f64(seconds);
+    let mut last_ok: Option<Instant> = None;
+    let mut max_gap_ms = 0.0_f64;
+    let mut ok_count = 0_u64;
+    let mut failures = 0_u64;
+    let mut ready = false;
+    while Instant::now() < deadline {
+        if http_get(port, Duration::from_millis(250)) {
+            let now = Instant::now();
+            if let Some(last) = last_ok {
+                max_gap_ms = max_gap_ms.max(now.duration_since(last).as_secs_f64() * 1000.0);
+            }
+            last_ok = Some(now);
+            ok_count += 1;
+            if !ready {
+                println!("CLIENT_READY");
+                std::io::stdout().flush().ok();
+                ready = true;
+            }
+        } else {
+            failures += 1;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    println!(
+        "CLIENT_STATS {{\"failures\":{},\"max_gap_ms\":{:.3},\"ok_count\":{}}}",
+        failures, max_gap_ms, ok_count
+    );
+}
+
+fn probe(args: &[String]) {
+    let port = args.get(2).and_then(|v| v.parse::<u16>().ok()).expect("port");
+    if http_get(port, Duration::from_secs(2)) {
+        println!("http-ok");
+    } else {
+        std::process::exit(1);
+    }
+}
+
+fn http_get(port: u16, timeout: Duration) -> bool {
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    let Ok(mut stream) = TcpStream::connect_timeout(&addr, timeout) else {
+        return false;
+    };
+    stream.set_read_timeout(Some(timeout)).ok();
+    stream.set_write_timeout(Some(timeout)).ok();
+    if stream.write_all(b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n").is_err() {
+        return false;
+    }
+    let mut response = Vec::new();
+    stream.read_to_end(&mut response).is_ok()
+        && String::from_utf8_lossy(&response).contains("\r\n\r\nhttp-ok\n")
+}
+"""
 ALLOWED_SKIP_REASONS = {
     "HRD-04": {"subcases-9-11"},
     "HRD-12": {"leg-b:not_constructible_at_ci_scale"},
@@ -236,6 +342,46 @@ def make_workspace(case_id):
     return root
 
 
+def prepare_workspace_for_case(case, workspace):
+    if case.get("scenario") in {"http_migrate", "http_pinned"}:
+        _compile_http_helper(Path(workspace))
+
+
+def _compile_http_helper(workspace):
+    source = workspace / "eos_squash_http.rs"
+    binary = workspace / "eos_squash_http"
+    source.write_text(HTTP_HELPER_SOURCE.strip() + "\n", encoding="utf-8")
+    result = subprocess.run(
+        [
+            "rustc",
+            "--edition",
+            "2021",
+            "--target",
+            _linux_musl_target(),
+            "-C",
+            "linker=rust-lld",
+            "-O",
+            str(source),
+            "-o",
+            str(binary),
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout
+
+
+def _linux_musl_target():
+    machine = platform.machine().lower()
+    if machine in ("arm64", "aarch64"):
+        return "aarch64-unknown-linux-musl"
+    if machine in ("x86_64", "amd64"):
+        return "x86_64-unknown-linux-musl"
+    raise AssertionError(f"unsupported test host architecture: {machine}")
+
+
 def assert_preconditions_once():
     case = {
         "id": "PRECONDITIONS",
@@ -323,12 +469,17 @@ def run_case(case, sandbox_factory):
 def _time_axis(case, rec, elapsed_ms, budget_ms=None):
     budget = budget_ms or _budget_for(case)
     squash_budget = CASE_SQUASH_BUDGET_MS.get(case["id"])
+    disconnect_budget = CASE_DISCONNECT_BUDGET_MS.get(case["id"])
     squash_ms = rec.timers.get("T_squash", {}).get("ms")
+    disconnect_ms = rec.timers.get("T_http_disconnect", {}).get("ms")
     elapsed_passed = elapsed_ms <= budget
     squash_passed = True
+    disconnect_passed = True
     if squash_budget is not None and squash_ms is not None:
         squash_passed = float(squash_ms) <= squash_budget
-    passed = elapsed_passed and squash_passed
+    if disconnect_budget is not None and disconnect_ms is not None:
+        disconnect_passed = float(disconnect_ms) <= disconnect_budget
+    passed = elapsed_passed and squash_passed and disconnect_passed
     status = "pass" if passed else "fail"
     if not passed and case["id"] not in TIMED_CASES:
         status = "SLOW"
@@ -339,6 +490,17 @@ def _time_axis(case, rec, elapsed_ms, budget_ms=None):
     if squash_budget is not None and squash_ms is not None:
         details += f"; T_squash={float(squash_ms):.3f}ms budget={squash_budget}ms"
         metrics.update({"T_squash_ms": float(squash_ms), "T_squash_budget_ms": squash_budget})
+    if disconnect_budget is not None and disconnect_ms is not None:
+        details += (
+            f"; T_http_disconnect={float(disconnect_ms):.3f}ms "
+            f"budget={disconnect_budget}ms"
+        )
+        metrics.update(
+            {
+                "T_http_disconnect_ms": float(disconnect_ms),
+                "T_http_disconnect_budget_ms": disconnect_budget,
+            }
+        )
     rec.axis(
         "time",
         passed,
@@ -505,6 +667,47 @@ def _try_interrupt_command(rec, sandbox_id, command_session_id):
     return None
 
 
+def _read_command_lines(rec, sandbox_id, command_session_id, *, start=0, limit=1000):
+    result = runtime(
+        rec,
+        sandbox_id,
+        "read_command_lines",
+        "--command-session-id",
+        command_session_id,
+        "--start-offset",
+        str(start),
+        "--limit",
+        str(limit),
+        timeout=30,
+    )
+    assert result.ok, result.json or result.stderr
+    return result.json
+
+
+def _wait_command(rec, sandbox_id, command_session_id, *, timeout_s=10):
+    deadline = time.monotonic() + timeout_s
+    last = None
+    while time.monotonic() < deadline:
+        last = _read_command_lines(rec, sandbox_id, command_session_id)
+        if last.get("status") != "running":
+            return last
+        time.sleep(0.1)
+    raise AssertionError(f"command {command_session_id} still running: {last}")
+
+
+def _wait_command_output(rec, sandbox_id, command_session_id, needle, *, timeout_s=5):
+    deadline = time.monotonic() + timeout_s
+    last = None
+    while time.monotonic() < deadline:
+        last = _read_command_lines(rec, sandbox_id, command_session_id)
+        if needle in last.get("output", ""):
+            return last
+        if last.get("status") != "running":
+            break
+        time.sleep(0.05)
+    raise AssertionError(f"command {command_session_id} did not print {needle!r}: {last}")
+
+
 def _create_session(rec, sandbox_id):
     result = runtime(rec, sandbox_id, "create_workspace_session")
     assert result.ok, result.json
@@ -623,6 +826,10 @@ def _parse_disk(text):
 
 def _teardown_contract(rec, sandbox_id):
     snap = snapshot(rec, sandbox_id, "S3")
+    _check_teardown_snapshot(rec, snap)
+
+
+def _check_teardown_snapshot(rec, snap):
     disk = snap["disk"]
     view = snap["layerstack"]
     active = int(view.get("active_lease_count", 0)) if isinstance(view, dict) else 0
@@ -793,6 +1000,152 @@ def _scenario_migrate(case, rec, sandbox_factory):
     _teardown_contract(rec, sandbox_id)
     rec.axis("correctness", True, "idle session migrated and reads through compact chain")
     _space_neutral(rec, before, after, tolerance=0.10)
+
+
+def _scenario_http_migrate(case, rec, sandbox_factory):
+    _scenario_http_server(case, rec, sandbox_factory, cwd="/tmp", expected="reclaimed")
+
+
+def _scenario_http_pinned(case, rec, sandbox_factory):
+    _scenario_http_server(case, rec, sandbox_factory, cwd="/workspace", expected="leased")
+
+
+def _scenario_http_server(case, rec, sandbox_factory, *, cwd, expected):
+    sandbox_id = sandbox_factory(rec)
+    for idx in range(3):
+        _publish(rec, sandbox_id, f"http-{idx}", content=f"http-{idx}\n", kib=0)
+    session = _create_session(rec, sandbox_id)
+    server_id = None
+    client_id = None
+    client_done = None
+    before = None
+    after = None
+    try:
+        _install_http_helper(rec, sandbox_id)
+        server_binary = "/workspace/eos_squash_http" if expected == "leased" else "/tmp/eos_squash_http"
+        server_id, port = _start_http_server(rec, sandbox_id, session, cwd, server_binary)
+        assert _http_probe(rec, sandbox_id, port) == "http-ok"
+        before = snapshot(rec, sandbox_id, "S0")
+        client_id = _start_http_client(rec, sandbox_id, port)
+        _wait_command_output(rec, sandbox_id, client_id, "CLIENT_READY", timeout_s=5)
+        result = _squash(rec, sandbox_id)
+        after = snapshot(rec, sandbox_id, "S2")
+        blocks = _assert_contract(result, 1)
+        assert blocks[0]["replaced_layers"] == expected, result
+        if expected == "leased":
+            reasons = blocks[0].get("blocked_reasons", [])
+            assert any("pinned" in reason or "mount" in reason for reason in reasons), reasons
+        assert _http_probe(rec, sandbox_id, port) == "http-ok"
+        read = _exec(rec, sandbox_id, "cat data/http-0.txt", session=session)
+        assert read.get("output", "").strip() == "http-0", read
+        client_done = _wait_command(rec, sandbox_id, client_id, timeout_s=10)
+        stats = _http_client_stats(client_done.get("output", ""))
+        _record_http_stats(rec, stats)
+    finally:
+        if client_id and (client_done is None or client_done.get("status") == "running"):
+            _try_interrupt_command(rec, sandbox_id, client_id)
+        if server_id:
+            _try_interrupt_command(rec, sandbox_id, server_id)
+        _destroy_session(rec, sandbox_id, session)
+    if expected == "leased":
+        final = _squash(rec, sandbox_id)
+        _assert_contract(final, 1)
+    _teardown_contract(rec, sandbox_id)
+    rec.axis(
+        "correctness",
+        True,
+        f"HTTP server stayed reachable through squash with {expected} classification",
+        metrics={"cwd": cwd},
+    )
+    if expected == "leased":
+        b = before["disk"].get("layers_bytes", 0)
+        a = after["disk"].get("layers_bytes", 0)
+        rec.axis(
+            "space",
+            a >= b,
+            f"leased run retains sources plus S: {b}->{a}",
+            metrics={"before": b, "after": a},
+        )
+    else:
+        _space_neutral(rec, before, after, tolerance=0.10)
+
+
+def _install_http_helper(rec, sandbox_id):
+    result = _exec(
+        rec,
+        sandbox_id,
+        "cp /workspace/eos_squash_http /tmp/eos_squash_http && chmod 755 /tmp/eos_squash_http",
+        timeout=60,
+    )
+    assert result.get("status") == "ok" and result.get("exit_code") == 0, result
+
+
+def _start_http_server(rec, sandbox_id, session, cwd, binary):
+    result = _exec(
+        rec,
+        sandbox_id,
+        _http_server_command(cwd, binary),
+        session=session,
+        yield_ms=300,
+        timeout_ms=120_000,
+        timeout=60,
+    )
+    assert result.get("status") == "running", result
+    command_id = result["command_session_id"]
+    output = result.get("output", "")
+    if "PORT=" not in output:
+        output = _wait_command_output(rec, sandbox_id, command_id, "PORT=", timeout_s=5).get(
+            "output", ""
+        )
+    match = re.search(r"PORT=(\d+)", output)
+    assert match, output
+    return command_id, int(match.group(1))
+
+
+def _http_server_command(cwd, binary):
+    return f"cd {cwd} && {binary} server"
+
+
+def _http_probe(rec, sandbox_id, port):
+    result = _exec(
+        rec,
+        sandbox_id,
+        f"cd /tmp && /tmp/eos_squash_http probe {port}",
+        timeout=60,
+    )
+    assert result.get("status") == "ok" and result.get("exit_code") == 0, result
+    return result.get("output", "").strip()
+
+
+def _start_http_client(rec, sandbox_id, port):
+    result = _exec(
+        rec,
+        sandbox_id,
+        _http_client_command(port),
+        yield_ms=100,
+        timeout_ms=10_000,
+        timeout=60,
+    )
+    assert result.get("status") == "running", result
+    return result["command_session_id"]
+
+
+def _http_client_command(port):
+    return f"cd /tmp && /tmp/eos_squash_http client {port} {HTTP_CLIENT_SECONDS}"
+
+
+def _http_client_stats(output):
+    for line in reversed(output.splitlines()):
+        if line.startswith("CLIENT_STATS "):
+            return json.loads(line.removeprefix("CLIENT_STATS "))
+    raise AssertionError(f"missing CLIENT_STATS line: {output!r}")
+
+
+def _record_http_stats(rec, stats):
+    rec.write_json("http-client.json", stats)
+    rec.add_timer("T_http_disconnect", stats["max_gap_ms"], "harness")
+    assert stats["ok_count"] >= 3, stats
+    assert stats["max_gap_ms"] <= HTTP_DISCONNECT_BUDGET_MS, stats
 
 
 def _scenario_pin(case, rec, sandbox_factory):

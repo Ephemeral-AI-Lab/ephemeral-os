@@ -185,6 +185,7 @@ def squash_sandbox_factory(tmp_path):
     def create(rec):
         workspace = tmp_path / rec.case_id.lower()
         workspace.mkdir(parents=True, exist_ok=True)
+        squash_helpers.prepare_workspace_for_case(rec.case, workspace)
         sandbox_id = squash_helpers.create_sandbox(rec, str(workspace))
         created.append((sandbox_id, rec))
         return sandbox_id

@@ -1,0 +1,18 @@
+{
+  "T_e2e": {
+    "ms": 5378.875,
+    "source": "harness"
+  },
+  "T_http_disconnect": {
+    "ms": 55.754,
+    "source": "harness"
+  },
+  "T_squash": {
+    "ms": 66.391,
+    "source": "harness"
+  },
+  "T_squash_invocation_1": {
+    "ms": 66.391,
+    "source": "harness"
+  }
+}

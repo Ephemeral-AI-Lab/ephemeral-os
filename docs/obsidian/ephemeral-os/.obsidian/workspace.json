@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/daemon-command-syscall-hardening.md",
+                "file": "implementation_plan/finalize-policy/adversarial_review_prompt.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "daemon-command-syscall-hardening"
+              "title": "adversarial_review_prompt"
             }
           }
         ]
@@ -183,8 +183,15 @@
       "bases:Create new base": false
     }
   },
-  "active": "7bfb5a3473fb43c0",
+  "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
+    "implementation_plan/finalize-policy/spec.md",
+    "implementation_plan/finalize-policy/adversarial_review_prompt.md",
+    "implementation_plan/cli_migration/operation.md",
+    "implementation_plan/cli_migration/spec.md",
+    "implementation_plan/daemon-command-syscall-hardening.md",
+    "implementation_plan/o1_shared_workspace_base.md",
+    "implementation_plan/finalize-policy",
     "implementation_plan/squash/iteration-report.md",
     "implementation_plan/cli_migration",
     "implementation_plan/squash/test-case.md",
@@ -199,8 +206,6 @@
     "implementation_plan/file_operations/fix_spec.md",
     "implementation_plan/file_operations/live_smoke_evidence.md",
     "implementation_plan/file_operations/spec.md",
-    "implementation_plan/o1_shared_workspace_base.md",
-    "implementation_plan/daemon-command-syscall-hardening.md",
     "implementation_plan/squash/adversarial_multi_agent_review_results.md",
     "implementation_plan/squash/adversarial_multi_agent_review_prompt.md",
     "implementation_plan/squash/adversarial_review.md",
@@ -209,16 +214,12 @@
     "docs/layerstack/overlay_mount.md",
     "The Window — watching a mind think.md",
     "index.md",
-    "testing/file-operation/operation-timing/latest.md",
-    "note/container-env-proxy.md",
-    "docs/layerstack/create_sandbox.md",
     "implementation_plan/squash",
     "testing/file-operation/operation-timing/latest.json",
     "testing/file-operation/operation-timing",
     "docs/daemon",
     "implementation_plan/file_operations",
     "testing/file-operation",
-    "testing",
-    "road_to_fully_autnomous_agent_system/ui/arbor.html"
+    "testing"
   ]
 }
