@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/squash/spec.md",
+                "file": "implementation_plan/squash/test-case.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "spec"
+              "title": "test-case"
             }
           }
         ]
@@ -185,13 +185,13 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
-    "implementation_plan/squash/test-case.md",
+    "implementation_plan/squash/spec.md",
     "implementation_plan/squash/impl_plan_and_progress_tracker.md",
+    "implementation_plan/squash/test-case.md",
     "implementation_plan/squash/simplicity_review_results.md",
     "implementation_plan/squash/implementation_prompt.md",
     "implementation_plan/squash/acceptance_criteria.md",
     "implementation_plan/squash/impl_plan_and_progress_tracker.md.tmp.35454.163647d90e80",
-    "implementation_plan/squash/spec.md",
     "implementation_plan/file_operations/impl_plan_and_progress_tracker.md",
     "implementation_plan/file_operations/fix_spec.md",
     "implementation_plan/file_operations/live_smoke_evidence.md",
