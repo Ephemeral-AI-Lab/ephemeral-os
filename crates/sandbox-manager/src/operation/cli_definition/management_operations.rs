@@ -8,8 +8,8 @@ use serde_json::{json, Value};
 
 use crate::operation::dispatch::ManagerOperationEntry;
 use crate::operation::management::{
-    create_sandbox, destroy_sandbox, inspect_sandbox, list_sandboxes, observability_snapshot,
-    CreateSandboxInput, SnapshotOptions,
+    create_sandbox, destroy_sandbox, dispatch_checkpoint_squash, inspect_sandbox, list_sandboxes,
+    observability_snapshot, CreateSandboxInput, SnapshotOptions,
 };
 use crate::operation::ManagerServices;
 use crate::{
@@ -164,6 +164,32 @@ const INSPECT_SANDBOX_CLI: CliSpec = CliSpec {
     examples: &["sandbox-cli manager inspect_sandbox --sandbox-id sbox-1"],
 };
 
+const CHECKPOINT_SQUASH_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "checkpoint_squash",
+    family: "management",
+    summary: "Squash a sandbox's layer stack and live-remount its sessions.",
+    description: "Squash every squashable block of the selected sandbox's published layers into equivalent flattened layers and migrate live workspace sessions onto the compact chains. Forwards one squash_layerstack request to the sandbox daemon.",
+    args: CHECKPOINT_SQUASH_ARGS,
+    cli: Some(CHECKPOINT_SQUASH_CLI),
+    related: &["list_sandboxes", "inspect_sandbox"],
+};
+
+const CHECKPOINT_SQUASH_ARGS: &[ArgSpec] = &[ArgSpec::required(
+    "sandbox_id",
+    ArgKind::String,
+    "Sandbox id.",
+    Some(ArgCliSpec {
+        flag: Some("--sandbox-id"),
+        positional: None,
+    }),
+)];
+
+const CHECKPOINT_SQUASH_CLI: CliSpec = CliSpec {
+    path: &["manager", "checkpoint_squash"],
+    usage: "sandbox-cli manager checkpoint_squash --sandbox-id ID",
+    examples: &["sandbox-cli manager checkpoint_squash --sandbox-id sbox-1"],
+};
+
 const FAMILIES: &[&CliOperationFamilySpec] = &[&MANAGEMENT_FAMILY];
 
 const SPECS: &[&CliOperationSpec] = &[
@@ -171,6 +197,7 @@ const SPECS: &[&CliOperationSpec] = &[
     &DESTROY_SANDBOX_SPEC,
     &LIST_SANDBOXES_SPEC,
     &INSPECT_SANDBOX_SPEC,
+    &CHECKPOINT_SQUASH_SPEC,
 ];
 
 const OPERATIONS: &[ManagerOperationEntry] = &[
@@ -182,6 +209,7 @@ const OPERATIONS: &[ManagerOperationEntry] = &[
     ),
     ManagerOperationEntry::new(&LIST_SANDBOXES_SPEC, dispatch_list_sandboxes),
     ManagerOperationEntry::new(&INSPECT_SANDBOX_SPEC, dispatch_inspect_sandbox),
+    ManagerOperationEntry::new(&CHECKPOINT_SQUASH_SPEC, dispatch_checkpoint_squash),
 ];
 
 pub(crate) const fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {

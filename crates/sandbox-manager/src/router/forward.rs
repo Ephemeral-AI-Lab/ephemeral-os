@@ -4,7 +4,7 @@ use sandbox_protocol::{CliOperationScope, Request};
 
 use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState};
 
-pub(super) fn forward_sandbox_request(
+pub(crate) fn forward_sandbox_request(
     services: &ManagerServices,
     request: Request,
 ) -> Result<sandbox_protocol::Response, ManagerError> {

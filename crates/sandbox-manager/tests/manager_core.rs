@@ -424,6 +424,7 @@ fn cli_operation_catalog_contains_only_manager_operations() {
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",
+            "checkpoint_squash",
         ]
     );
     assert!(catalog.operations.iter().all(|spec| !matches!(
@@ -922,4 +923,102 @@ impl Drop for ChildCleanup {
 fn pid_exists(pid: u32) -> bool {
     let pid = nix::unistd::Pid::from_raw(pid.try_into().expect("test pid fits nix pid"));
     nix::sys::signal::kill(pid, None).is_ok()
+}
+
+// Test 18: checkpoint_squash lives under the existing "management" family,
+// takes only --sandbox-id, and forwards ONE sandbox-scoped
+// squash_layerstack request through the generic router path — no bespoke
+// client sequence, no "checkpoint" family, no manager-local lifecycle work.
+#[test]
+fn checkpoint_squash_manager_cli_forwards_to_runtime() {
+    let catalog = sandbox_manager::cli_operation_catalog();
+    let encoded = sandbox_protocol::catalog_to_value(catalog).to_string();
+    let catalog: Value = serde_json::from_str(&encoded).expect("catalog json");
+    let spec = catalog["operations"]
+        .as_array()
+        .expect("operations array")
+        .iter()
+        .find(|op| op["name"] == "checkpoint_squash")
+        .expect("checkpoint_squash present in the manager catalog");
+    assert_eq!(spec["family"], "management");
+    assert!(
+        !encoded.contains("\"checkpoint\""),
+        "no one-member checkpoint family creeps in"
+    );
+
+    let client = Arc::new(RecordingSnapshotClient::default());
+    let (services, store) = services_with_client(client.clone());
+    store
+        .insert(sandbox_record(
+            "sbox-1",
+            SandboxState::Ready,
+            Some(endpoint("sbox-1")),
+        ))
+        .expect("insert ready sandbox");
+
+    let response = dispatch(
+        &services,
+        "checkpoint_squash",
+        json!({ "sandbox_id": "sbox-1" }),
+    );
+    assert!(
+        response.get("error").is_none(),
+        "forwarded response passes through: {response}"
+    );
+
+    let invocations = client.invocations();
+    assert_eq!(invocations.len(), 1, "exactly one wire round trip");
+    assert_eq!(
+        invocations[0].op, "squash_layerstack",
+        "renamed to the daemon op"
+    );
+    assert!(
+        matches!(&invocations[0].scope, CliOperationScope::Sandbox { sandbox_id } if sandbox_id == "sbox-1"),
+        "rebuilt as a sandbox-scoped runtime request"
+    );
+    assert_eq!(invocations[0].args, json!({}), "squash takes no options");
+}
+
+#[test]
+fn checkpoint_squash_requires_sandbox_id_and_a_ready_sandbox() {
+    let client = Arc::new(RecordingSnapshotClient::default());
+    let (services, store) = services_with_client(client.clone());
+
+    let missing = dispatch(&services, "checkpoint_squash", json!({}));
+    assert_eq!(missing["error"]["kind"], "invalid_request");
+    assert!(
+        client.invocations().is_empty(),
+        "no forward without a sandbox id"
+    );
+
+    let unknown = dispatch(
+        &services,
+        "checkpoint_squash",
+        json!({ "sandbox_id": "nope" }),
+    );
+    assert!(
+        unknown.get("error").is_some(),
+        "unknown sandbox is an error"
+    );
+
+    store
+        .insert(sandbox_record(
+            "creating",
+            SandboxState::Creating,
+            Some(endpoint("creating")),
+        ))
+        .expect("insert non-ready sandbox");
+    let not_ready = dispatch(
+        &services,
+        "checkpoint_squash",
+        json!({ "sandbox_id": "creating" }),
+    );
+    assert!(
+        not_ready.get("error").is_some(),
+        "non-ready sandbox is an error"
+    );
+    assert!(
+        client.invocations().is_empty(),
+        "the generic forward's Ready check runs before any wire call"
+    );
 }

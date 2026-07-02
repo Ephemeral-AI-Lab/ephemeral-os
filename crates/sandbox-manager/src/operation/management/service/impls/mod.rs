@@ -1,3 +1,4 @@
+pub(crate) mod checkpoint_squash;
 pub(crate) mod create_sandbox;
 pub(crate) mod destroy_sandbox;
 pub(crate) mod inspect_sandbox;

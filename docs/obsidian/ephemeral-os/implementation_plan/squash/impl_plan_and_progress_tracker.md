@@ -705,32 +705,39 @@ family (+25); registration (+10).
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X9.1 Forward-path trace.** Scratch-test one request through
+- [x] **X9.1 Forward-path trace.** Scratch-test one request through
       `router/forward.rs` with the renamed op (`checkpoint_squash` in,
       `squash_layerstack` to the daemon): endpoint lookup, Ready check,
       timeout all reused; confirm the impl needs no bespoke client
       sequence.
-- [ ] **X9.2 Catalog shape.** Confirm the `"management"` family carries
+- [x] **X9.2 Catalog shape.** Confirm the `"management"` family carries
       the new spec cleanly and that no `"checkpoint"` family or name
       translation layer creeps in beyond the one op-name mapping.
 
 ### Implementation
 
-- [ ] `impls/checkpoint_squash.rs` — parse sandbox id, delegate.
-- [ ] `cli_definition/management_operations.rs` — spec under
-      `"management"`.
-- [ ] Register in `operation/{mod,dispatch,specs}.rs`.
+- [x] `impls/checkpoint_squash.rs` — parse sandbox id, rebuild the
+      sandbox-scoped `squash_layerstack` request, delegate to the generic
+      `forward_sandbox_request` (promoted `pub(super)`→`pub(crate)`).
+- [x] `cli_definition/management_operations.rs` — `CHECKPOINT_SQUASH_SPEC`
+      under `"management"` (SPECS + OPERATIONS arrays), `--sandbox-id`
+      only.
+- [x] Registered via the existing `ManagerOperationEntry` array — no
+      changes to `operation/{mod,specs}.rs` were needed (the manager
+      op-entry mechanism already carries it); module wiring in
+      `management/{mod,service/impls/mod}` + `router/mod` re-export.
 
 ### Tests
 
-- [ ] Test 18 `checkpoint_squash_manager_cli_forwards_to_runtime` +
-      `tests/manager_core.rs` catalog/forwarding (+50).
+- [x] Test 18 `checkpoint_squash_manager_cli_forwards_to_runtime` + a
+      `checkpoint_squash_requires_sandbox_id_and_a_ready_sandbox` guard
+      test; the existing catalog-enumeration test updated for the new op.
 
 ### Exit review
 
-- [ ] Standard review; end-to-end manual smoke:
-      `sandbox-cli manager checkpoint_squash --sandbox-id <id>` against a
-      live gateway returns the contract JSON; Phase 10 unblocked.
+- [x] Standard review (manager: 15 tests green, clippy 0 warnings, fmt
+      clean); end-to-end manual smoke pending the daemon repackage — run
+      below.
 
 ---
 
@@ -809,6 +816,8 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 3 | X3.4 | Confirmed in code. `read_manifest` fabricates an empty v0 manifest when `manifest.json` is missing (`fs.rs:169-172`) ⇒ the fail-closed guard must (a) treat missing/`version < 1`/empty-layers as skip-sweep and (b) catch parse `Err` as skip (daemon still serves — G3 leg). Disk listing → keep-set → the shared `remove_layers` routine covers `layers/*` dirs and both sidecars in one call per id (missing dir is NotFound-tolerated, so sidecar-only orphans ride the same routine); `staging/*` is wiped unconditionally under the sweep's exclusive guard (boot runs before serving; a foreign process owning the root fails `LayerStack::open` first). | code survey `fs.rs`, `cleanup.rs`; probe x12 leg (e) |
 | 2026-07-02 | 4 | X4.1 | PASS. `kernel_mount.rs` already imports and uses `rustix::mount::{move_mount, unmount, MoveMountFlags, UnmountFlags}` from the workspace-pinned rustix 0.38; `MOVE_MOUNT_T_EMPTY_PATH` present — no version bump, fd-based patterns matched. | code survey |
 | 2026-07-02 | 4 | X4.2 | PASS, with three load-bearing measurements under **fully dangling paths** (parent renamed away — the mask analogue): (1) `move_mountpoint(source_root_fd, target_dirfd)` with `F_EMPTY_PATH\|T_EMPTY_PATH` moves live overlays; (2) **strict unmount of a masked mountpoint works through the pre-opened underlying-dentry fd's `/proc/self/fd/N` magic path** — `umount2`'s mountpoint lookup resolves onto the covering (parked) mount: EBUSY (16) verbatim while an OLD-root fd pins it, exit 0 after the pin drops; (3) probing rules: a **mount-root** fd's magic path reads the mount's content (and keeps working after the mount moves — the mask-immune post-switch probe), while an **underlying-dentry** fd's magic path does NOT step onto a covering mount. | `docker exec … /probe x13 /eos/workspace/probe-scratch` |
+| 2026-07-03 | 9 | X9.1 | Traced. Manager CLI ops always arrive **system-scoped with `sandbox_id` in args** (`request_builder.rs`: `Manager` execution space → `CliOperationScope::system()`). `checkpoint_squash`'s impl parses `sandbox_id`, rebuilds a **`Sandbox`-scoped** `squash_layerstack` request, and calls the existing generic `forward_sandbox_request` (`router/forward.rs`: endpoint lookup + Ready check + `invoke_with_timeout`) — no bespoke client sequence, no copy of the manager-local `destroy_sandbox`. `forward_sandbox_request` is promoted `pub(super)`→`pub(crate)` so the operation impl can reach it (the only visibility change). | code survey `request_builder.rs`, `router/{dispatch,forward}.rs` |
+| 2026-07-03 | 9 | X9.2 | Confirmed: `MANAGEMENT_FAMILY` (`id: "management"`) carries the new `CHECKPOINT_SQUASH_SPEC` alongside the five existing specs with no new family — the SPECS/FAMILIES/OPERATIONS arrays already key on `family: "management"`. The daemon-side `squash_layerstack` stays `cli: None` (phase 8), so the only name mapping is the one op-name pair the impl builds; no `"checkpoint"` family, no translation layer. | code survey `management_operations.rs` |
 | 2026-07-03 | 8 | X8.1 | Definitive gate-routed entrypoint list from the grep audit: **exec launch** (`exec_command`, both existing-session and one-shot flows), **one-shot finalize** (`finalize_one_shot` — today runs UNGUARDED on the engine watcher thread: capture+publish+destroy could interleave with anything; the gate closes exactly the hole the spec calls out), **destroy** (`destroy_workspace_session_with_admission` for user ops; the sweep's faulty destroy gates separately), **session file ops** (`WorkspaceSessionService::run_file_op` — the single choke point the file read/write/edit/blame service impls all call), and **remount** (new). Not gated, with reasons: `resolve_session` (read-only handler clone; exec gates before resolving, matching today's lock order), `write_command_stdin`/`read_command_lines` (PTY I/O to a live command; no runner spawn, no mount interaction — writes to a frozen command's PTY just buffer), `capture_session_changes` (only reachable via the gated finalize; no CLI op exists), create (a fresh id cannot contend — the sessions-map mutex covers insertion). | grep audit of `operation/src/{command,workspace_session,file}` |
 | 2026-07-03 | 8 | X8.2 | Subsumption proven. `session_lifecycle_lock` has exactly three uses, all in the command service: `lock_session_lifecycle` (the accessor), `exec_command` (held across resolve→launch→attach), and `destroy_workspace_session_with_admission` (held across the active-command check + destroy). Nothing it serializes is cross-session: exec-vs-destroy and destroy-vs-finalize pairs are per-session facts (the active-command check filters by session id). Complete lock order: **per-session gate → sessions-map mutex (brief, inside) → storage writer lock**; `session_gate()` locks the gates map only to clone the Arc and drops it before locking the gate, so no path waits on a gate while holding a map; the writer lock is only ever taken inside the gate (remount's shared acquire / exclusive release, destroy's release) and never across quiesce or the staged switch (those happen between layerstack calls). No path acquires two different session gates. | code survey `command/service/{core,exec_command}.rs` |
 | 2026-07-03 | 8 | X8.3 | Confirmed by construction (the compile is the probe): `OperationEntry` is a pub(crate) struct with a pub(crate) `cli: Option<&CliOperationSpec>` field, `cli_operation_specs()` filters through `cli_spec()` (a `cli: None` entry appears in no catalog), and `dispatch_operation` matches on `entry.name` alone — a struct-literal `OperationEntry { name, cli: None, dispatch }` registers a dispatch-only op with zero new constructors or mechanisms. | `operation.rs` read; phase-8 build |

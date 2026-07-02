@@ -6,7 +6,7 @@ mod error;
 mod model;
 mod operation;
 mod progress;
-mod router;
+pub(crate) mod router;
 mod runtime;
 mod store;
 

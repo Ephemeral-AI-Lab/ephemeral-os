@@ -1,6 +1,8 @@
 mod dispatch;
 mod forward;
 
+pub(crate) use forward::forward_sandbox_request;
+
 use std::sync::Arc;
 
 use crate::ManagerServices;
