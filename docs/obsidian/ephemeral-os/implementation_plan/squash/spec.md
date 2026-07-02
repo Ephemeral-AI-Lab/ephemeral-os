@@ -328,12 +328,28 @@ crates/sandbox-daemon/src/runner/
 ├── mod.rs                                   (+6/−2)     --remount-overlay mode flag + dispatch arm
 │                                                        (the ns-runner mode registry is daemon-owned;
 │                                                        no protocol/transport/RPC change)
-└── remount_overlay.rs                       (new ~25)   thin body mirroring mount_overlay.rs: config
-                                                         hidden_paths → namespace-process setns runner
+├── remount_overlay.rs                       (new ~25)   thin body mirroring mount_overlay.rs: config
+│                                                        hidden_paths → namespace-process setns runner
+├── main.rs                                  (+3)        gate-probe subcommand route
+└── gate_probe.rs                            (new ~20)   gate-probe adapter: run the boot kernel-gate
+                                                         probe in a fresh single-threaded subprocess
+
+crates/sandbox-runtime/namespace-process/
+└── src/gate.rs                              (new ~160)  live-remount enablement gate: same-upperdir +
+                                                         userxattr proof via the production overlay
+                                                         builder + full staged switch, run as a
+                                                         subprocess (probe_live_remount_gate spawns it,
+                                                         run_gate_probe is the body); proven ⇒ enabled,
+                                                         else every session leased(unsupported:…)
 ```
 
-Totals: **10 new source files ≈ 1,290 LoC**, **≈ +420 LoC** in existing
-files, **≈ 1,240 LoC** of tests → ≈ 2,950 LoC end to end. (Down from the
+Totals (as shipped): **13 new source files** — the pre-review 10 plus the
+three enablement-gate / daemon-runner bodies the original
+`sandbox-daemon (+0)` budget did not anticipate (`namespace-process/gate.rs`,
+`sandbox-daemon/gate_probe.rs`, `sandbox-daemon/runner/remount_overlay.rs`),
+each recorded in the Decision log. Original estimate: **10 new source files
+≈ 1,290 LoC**, **≈ +420 LoC** in existing files, **≈ 1,240 LoC** of tests →
+≈ 2,950 LoC end to end. (Down from the
 pre-review 12 files / ≈ 3,300 LoC: boot sweep merged into
 `lease/cleanup.rs`, boot reap into `lifecycle/persistence.rs`, rewrite
 relocated beside the lease registry whose lock it shares, `publish.rs`
