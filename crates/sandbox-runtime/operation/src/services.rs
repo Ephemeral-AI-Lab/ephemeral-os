@@ -142,6 +142,7 @@ fn boot_reap_then_sweep(
     observer: &Observer,
 ) {
     assert_kernel_floor();
+    probe_and_set_remount_gate(layerstack, observer);
     let reaped = workspace_session
         .workspace()
         .reap_persisted_sessions()
@@ -186,6 +187,29 @@ fn boot_reap_then_sweep(
         }
         Err(error) => cli_log(format!("boot storage sweep failed: {error}")),
     }
+}
+
+/// Probe the same-upperdir / userxattr kernel gate once and flip live
+/// remount on only if it holds; otherwise squash stays commit-only and every
+/// session reports `leased(unsupported:kernel_gate_not_proven)`.
+fn probe_and_set_remount_gate(layerstack: &Arc<LayerStackService>, observer: &Observer) {
+    // The probe mounts a scratch overlay, so its scratch must be on a real
+    // (non-overlay) filesystem — the layer-stack volume is ext4, unlike the
+    // container's overlay rootfs at /eos.
+    let scratch = layerstack.layer_stack_root().join("staging");
+    let proven = crate::workspace_crate::probe_and_set_live_remount_gate(&scratch);
+    observer.event(
+        sandbox_observability::record::names::NAMESPACE_EXEC_REMOUNT_OVERLAY,
+        serde_json::json!({ "boot_gate": true, "live_remount_enabled": proven }),
+    );
+    cli_log(format!(
+        "live remount kernel gate: {}",
+        if proven {
+            "PROVEN (enabled)"
+        } else {
+            "NOT PROVEN (squash commit-only)"
+        }
+    ));
 }
 
 /// The supported daemon environment is Linux ≥ 5.8 (`syncfs` writeback error

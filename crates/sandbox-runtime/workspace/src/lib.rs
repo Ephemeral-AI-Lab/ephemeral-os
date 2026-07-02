@@ -25,7 +25,9 @@ pub mod session;
 pub use error::WorkspaceError;
 #[doc(hidden)]
 pub use lifecycle::{classify_remount_report, ReportClassification};
-pub use lifecycle::{ReapedSession, RemountOutcome};
+pub use lifecycle::{
+    probe_and_set_live_remount_gate, set_live_remount_gate, ReapedSession, RemountOutcome,
+};
 pub use model::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, ChangedPathKind,
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,

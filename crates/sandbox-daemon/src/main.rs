@@ -31,6 +31,7 @@
 #![forbid(unsafe_code)]
 
 mod cgroup_setup;
+mod gate_probe;
 mod holder;
 mod runner;
 mod serve;
@@ -49,6 +50,7 @@ fn main() -> Result<()> {
         Some("serve") => serve::run(args),
         Some("ns-runner") => runner::run(args),
         Some("ns-holder") => holder::run(args),
+        Some("gate-probe") => gate_probe::run(args),
         Some(other) => Err(anyhow!(
             "unknown subcommand {other:?}; expected {}",
             expected_subcommands()
@@ -61,5 +63,5 @@ fn main() -> Result<()> {
 }
 
 const fn expected_subcommands() -> &'static str {
-    "serve | ns-runner | ns-holder | --version"
+    "serve | ns-runner | ns-holder | gate-probe | --version"
 }

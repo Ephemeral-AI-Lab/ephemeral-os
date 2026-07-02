@@ -6,5 +6,6 @@
 //! syscalls to this no-tokio crate.
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod gate;
 pub mod holder;
 pub mod runner;

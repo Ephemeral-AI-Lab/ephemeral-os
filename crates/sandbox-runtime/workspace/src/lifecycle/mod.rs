@@ -10,9 +10,9 @@ use std::time::Instant;
 pub use destroy::ExitOutcome;
 pub(crate) use leases::monotonic_seconds;
 pub use persistence::ReapedSession;
-pub use remount::RemountOutcome;
 #[doc(hidden)]
 pub use remount::{classify_remount_report, ReportClassification};
+pub use remount::{probe_and_set_live_remount_gate, set_live_remount_gate, RemountOutcome};
 
 pub(crate) fn record_phase_ms(
     phases_ms: &mut HashMap<String, f64>,

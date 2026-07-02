@@ -23,6 +23,34 @@ use crate::session::{WorkspaceManager, WorkspaceManagerError};
 
 use super::leases::next_handle_id;
 
+/// Process-wide live-remount gate verdict, set once at boot by
+/// [`set_live_remount_gate`] and read by every remount attempt. `0` =
+/// unprobed (disabled, fail-safe), `1` = proven, `2` = failed.
+static LIVE_REMOUNT_GATE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// Record the boot-time kernel-gate probe verdict. Until this is called with
+/// `true`, live remount is disabled and every session reports
+/// `leased(unsupported:kernel_gate_not_proven)`.
+pub fn set_live_remount_gate(proven: bool) {
+    LIVE_REMOUNT_GATE.store(
+        if proven { 1 } else { 2 },
+        std::sync::atomic::Ordering::Release,
+    );
+}
+
+/// Probe the same-upperdir / userxattr kernel gate in `scratch_root` and set
+/// the process-wide verdict. Returns whether live remount is enabled.
+pub fn probe_and_set_live_remount_gate(scratch_root: &Path) -> bool {
+    let proven = sandbox_runtime_namespace_process::gate::probe_live_remount_gate(scratch_root);
+    set_live_remount_gate(proven);
+    proven
+}
+
+#[must_use]
+fn live_remount_enabled() -> bool {
+    LIVE_REMOUNT_GATE.load(std::sync::atomic::Ordering::Acquire) == 1
+}
+
 /// One session's remount outcome, mapping 1:1 onto the C1 decision tree.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RemountOutcome {
@@ -73,6 +101,12 @@ impl WorkspaceManager {
                 })
             }
         };
+        if !live_remount_enabled() {
+            release_replacement(&mut stack, &replacement.lease_id);
+            return Ok(RemountOutcome::Leased {
+                reason: "unsupported:kernel_gate_not_proven".to_owned(),
+            });
+        }
 
         let spec = QuiesceSpec {
             holder_pid: handle.holder_pid,
