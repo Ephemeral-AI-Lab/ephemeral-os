@@ -167,6 +167,68 @@ pub const fn mount_overlay(
     Err(OverlayError::Unsupported)
 }
 
+/// Move the mount whose root is `source_mount_root` onto the directory at
+/// `target_dir` — both pre-opened `O_PATH` fds, so masked or renamed paths
+/// cannot break a staged switch mid-flight.
+///
+/// # Errors
+///
+/// Returns [`OverlayError::MountSyscall`] when `move_mount(2)` fails (a
+/// failed move leaves both mounts where they were), or
+/// [`OverlayError::Unsupported`] off Linux.
+#[cfg(target_os = "linux")]
+pub fn move_mountpoint(
+    source_mount_root: impl AsFd,
+    target_dir: impl AsFd,
+) -> std::result::Result<(), OverlayError> {
+    move_mount(
+        source_mount_root.as_fd(),
+        "",
+        target_dir.as_fd(),
+        "",
+        MoveMountFlags::MOVE_MOUNT_F_EMPTY_PATH | MoveMountFlags::MOVE_MOUNT_T_EMPTY_PATH,
+    )
+    .map_mount_syscall("move_mount mountpoint")
+}
+
+/// Non-Linux unsupported path: mount-move syscalls do not exist off Linux.
+///
+/// # Errors
+///
+/// Always returns [`OverlayError::Unsupported`].
+#[cfg(not(target_os = "linux"))]
+pub fn move_mountpoint<Source, Target>(
+    _source_mount_root: Source,
+    _target_dir: Target,
+) -> std::result::Result<(), OverlayError> {
+    Err(OverlayError::Unsupported)
+}
+
+/// Strictly unmount `mountpoint`: one `umount2(path, 0)` with no
+/// lazy/`MNT_DETACH` fallback. `EBUSY` surfaces verbatim in the error
+/// source so callers can park instead of forcing. A masked mountpoint is
+/// reachable through its pre-opened dirfd's `/proc/self/fd/N` magic path,
+/// which `umount2`'s mountpoint lookup resolves onto the covering mount.
+///
+/// # Errors
+///
+/// Returns [`OverlayError::MountSyscall`] with the raw errno when the
+/// kernel refuses the unmount, or [`OverlayError::Unsupported`] off Linux.
+#[cfg(target_os = "linux")]
+pub fn strict_unmount(mountpoint: &Path) -> std::result::Result<(), OverlayError> {
+    unmount(mountpoint, UnmountFlags::empty()).map_mount_syscall("strict umount")
+}
+
+/// Non-Linux unsupported path: unmount syscalls do not exist off Linux.
+///
+/// # Errors
+///
+/// Always returns [`OverlayError::Unsupported`].
+#[cfg(not(target_os = "linux"))]
+pub fn strict_unmount(_mountpoint: &Path) -> std::result::Result<(), OverlayError> {
+    Err(OverlayError::Unsupported)
+}
+
 #[cfg(target_os = "linux")]
 pub(crate) struct ValidatedMountInputs {
     workspace_root: PathBuf,

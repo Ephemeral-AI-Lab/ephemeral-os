@@ -23,7 +23,9 @@ use thiserror::Error;
 
 pub mod kernel_mount;
 
-pub use kernel_mount::{mount_overlay, OverlayHandle, OverlayMount};
+pub use kernel_mount::{
+    mount_overlay, move_mountpoint, strict_unmount, OverlayHandle, OverlayMount,
+};
 
 /// Failures raised by the overlay kernel-mount and writable-dir paths.
 #[derive(Debug, Error)]

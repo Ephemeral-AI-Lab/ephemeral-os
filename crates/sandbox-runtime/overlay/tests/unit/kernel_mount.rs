@@ -32,3 +32,35 @@ fn test_dir(name: &str) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sy
     std::fs::create_dir_all(&path)?;
     Ok(path)
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn strict_unmount_surfaces_kernel_errno_verbatim_with_no_fallback() {
+    // A plain directory is not a mountpoint: umount2 reports EINVAL and the
+    // helper must surface it verbatim instead of falling back to a lazy
+    // detach (the peel helper's EINVAL-means-done logic must NOT be copied).
+    let dir = test_dir("strict-einval").expect("test dir");
+    let error = super::strict_unmount(&dir).expect_err("plain dir is not a mount");
+    match error {
+        super::OverlayError::MountSyscall { context, source } => {
+            assert_eq!(context, "strict umount");
+            assert!(
+                matches!(source.raw_os_error(), Some(code) if code == 22 || code == 1),
+                "EINVAL (or EPERM for unprivileged runners) surfaced verbatim, got {source:?}"
+            );
+        }
+        other => panic!("unexpected error shape: {other:?}"),
+    }
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn move_mountpoint_of_a_non_mount_fails_cleanly() {
+    let dir = test_dir("move-nonmount").expect("test dir");
+    let source = std::fs::File::open(&dir).expect("open source");
+    let target_dir = test_dir("move-target").expect("target dir");
+    let target = std::fs::File::open(&target_dir).expect("open target");
+    let error = super::move_mountpoint(&source, &target)
+        .expect_err("a plain directory fd is not a movable mount root");
+    assert!(matches!(error, super::OverlayError::MountSyscall { .. }));
+}

@@ -54,8 +54,8 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | 1 | Flatten (layerstack pure) | done | 3/3 | 2/2 | 1/1 | ☑ |
 | 2 | Substitution map + rewritten lease | done | 3/3 | 2/2 | 1/1 | ☑ |
 | 3 | Squash transaction + commit GC + boot sweep | done | 4/4 | 4/4 | 9/9 | ☑ |
-| 4 | Overlay helpers (move/strict-unmount) | experiments | 0/2 | 0/2 | 0/1 | ☐ |
-| 5 | Quiesce (namespace-execution) | todo | 0/5 | 0/3 | 0/2 | ☐ |
+| 4 | Overlay helpers (move/strict-unmount) | done | 2/2 | 2/2 | 1/1 | ☑ |
+| 5 | Quiesce (namespace-execution) | experiments | 0/5 | 0/3 | 0/2 | ☐ |
 | 6 | Staged-switch runner (namespace-process) | todo | 0/4 | 0/2 | 0/2 | ☐ |
 | 7 | Workspace remount transaction + reap + PDEATHSIG | todo | 0/4 | 0/5 | 0/5 | ☐ |
 | 8 | Operation layer: gate, squash op, sweep loop | todo | 0/4 | 0/6 | 0/5 | ☐ |
@@ -347,30 +347,34 @@ preconditions.
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X4.1 Syscall surface.** Confirm the workspace-pinned
+- [x] **X4.1 Syscall surface.** Confirm the workspace-pinned
       nix/rustix version already exposes `move_mount`/`umount2` as needed
       (no version bumps, per workspace-deps convention); match the
       fd-based patterns already in `kernel_mount.rs`.
-- [ ] **X4.2 Re-verify X0.4/X0.5 through the crate's own abstractions**
+- [x] **X4.2 Re-verify X0.4/X0.5 through the crate's own abstractions**
       (a 20-line scratch test using the new helpers' intended signatures)
       so the API is proven before it lands.
 
 ### Implementation
 
-- [ ] `move_mountpoint` (dirfd-based) + `strict_unmount`
+- [x] `move_mountpoint` (dirfd-based) + `strict_unmount`
       (`umount2(path, 0)`, no lazy fallback) + exports.
-- [ ] No real-path mode, no lowerdir introspection — verify nothing of
-      the sort creeps in.
+- [x] No real-path mode, no lowerdir introspection — verified: the
+      helpers are two functions over `move_mount`/`unmount` with zero
+      option or mountinfo inspection.
 
 ### Tests
 
-- [ ] `tests/unit/kernel_mount.rs` (+40) — move + strict-unmount
-      behavior, EBUSY surfaced verbatim.
+- [x] `tests/unit/kernel_mount.rs` (+40) — move + strict-unmount
+      behavior, EBUSY surfaced verbatim. (Linux-gated units assert the
+      errno-verbatim/no-fallback contract; the EBUSY park behavior is
+      probe-proven and lands in E6.)
 
 ### Exit review
 
-- [ ] Standard review (experiments logged, tests green, clippy/fmt, spec
-      drift, table updated); Phase 5 unblocked.
+- [x] Standard review (experiments logged, tests green, clippy/fmt clean
+      on host and `--target aarch64-unknown-linux-musl`, spec drift
+      reconciled into §C3, table updated); Phase 5 unblocked.
 
 ---
 
@@ -708,6 +712,8 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 3 | X3.2 | PASS. On the real ext4 volume: promote `staging/S….staging → layers/S…` is a same-fs `rename(2)` — **24 µs, inode preserved** (no copy); `syncfs` on the storage-root fd succeeds post-promote; the in-process error path removes a promoted S dir cleanly. | `docker exec … /probe x12 /eos/workspace/probe-scratch` |
 | 2026-07-02 | 3 | X3.3 | PASS. Child killed (SIGKILL) after promote+syncfs but before the manifest rename leaves exactly "old manifest (v1) + orphan `layers/S…` dir + empty staging"; a keep-set sweep (keep = manifest ids, `B*` guarded) reclaims exactly the orphan and keeps the manifest layer. | `docker exec … /probe x12` legs (d)+(e) |
 | 2026-07-02 | 3 | X3.4 | Confirmed in code. `read_manifest` fabricates an empty v0 manifest when `manifest.json` is missing (`fs.rs:169-172`) ⇒ the fail-closed guard must (a) treat missing/`version < 1`/empty-layers as skip-sweep and (b) catch parse `Err` as skip (daemon still serves — G3 leg). Disk listing → keep-set → the shared `remove_layers` routine covers `layers/*` dirs and both sidecars in one call per id (missing dir is NotFound-tolerated, so sidecar-only orphans ride the same routine); `staging/*` is wiped unconditionally under the sweep's exclusive guard (boot runs before serving; a foreign process owning the root fails `LayerStack::open` first). | code survey `fs.rs`, `cleanup.rs`; probe x12 leg (e) |
+| 2026-07-02 | 4 | X4.1 | PASS. `kernel_mount.rs` already imports and uses `rustix::mount::{move_mount, unmount, MoveMountFlags, UnmountFlags}` from the workspace-pinned rustix 0.38; `MOVE_MOUNT_T_EMPTY_PATH` present — no version bump, fd-based patterns matched. | code survey |
+| 2026-07-02 | 4 | X4.2 | PASS, with three load-bearing measurements under **fully dangling paths** (parent renamed away — the mask analogue): (1) `move_mountpoint(source_root_fd, target_dirfd)` with `F_EMPTY_PATH\|T_EMPTY_PATH` moves live overlays; (2) **strict unmount of a masked mountpoint works through the pre-opened underlying-dentry fd's `/proc/self/fd/N` magic path** — `umount2`'s mountpoint lookup resolves onto the covering (parked) mount: EBUSY (16) verbatim while an OLD-root fd pins it, exit 0 after the pin drops; (3) probing rules: a **mount-root** fd's magic path reads the mount's content (and keeps working after the mount moves — the mask-immune post-switch probe), while an **underlying-dentry** fd's magic path does NOT step onto a covering mount. | `docker exec … /probe x13 /eos/workspace/probe-scratch` |
 | 2026-07-02 | 2 | X2.3 | PASS. Commit-time recording = `LayerStack::record_substitution` (called by the phase-3 commit tail after the manifest rename, before the plan-lease release returns). Restart path: the map is process-lifetime state (`OnceLock` static keyed by canonical root) — a daemon restart is a new process with an empty map, and no consumer survives (fact 2: sessions die with the daemon; boot sweep reads only the manifest keep-set — verified in `lease/cleanup.rs` + `fs.rs`). Tests simulate restart through `reset_process_state_for_tests`, which now clears substitution maps alongside lease registries in one entrypoint. | `restart_empties_substitution_map_and_no_rewrite_is_attempted` green |
 
 ## Decision log
@@ -723,4 +729,5 @@ was updated in the same change.
 | 2026-07-02 | 0 | **G2's negative control targets the opaque-dir marker, not the plain-file whiteout.** X0.3 measured: deleted-file whiteouts are char 0:0 devices (xattr-independent — they hold without `userxattr`); the xattr-encoded metadata with resurrection teeth is `user.overlay.opaque` (lower entries resurface without `userxattr`). | §Required tests → Live Docker e2e G2 |
 | 2026-07-02 | 0 | **OVL_MAX_STACK failure point recorded**: the over-limit chain fails the `fsconfig lowerdir+` call (EINVAL), not `fsmount` — still a clean pre-PONR `stage_failed:<errno>` derived from the mount-build error; wording folded into §D. | §D chain-length paragraph |
 | 2026-07-02 | 2 | **X2.2 verdict: oldest-first raw-run contraction is sound as specified — no spec revision needed.** Determinism (unique ids ⇒ single match; fixed recording order), termination (strictly-shrinking single pass), and never-straddle compatibility (boundary-excluded blocks + generation composition; validate-alive is defensive-only, unreachable for correctly-composed live leases) all proven and replayed in test 8. | none (spec confirmed) |
+| 2026-07-02 | 4 | **Masked-path mechanics pinned for the staged switch**: the strict rollback unmount reaches the masked rollback point via the pre-opened rollback dirfd's `/proc/self/fd/N` magic path (measured: `umount2` resolves it onto the covering mount); the staged and post-switch probes read through the staging **mount-root** dirfd (valid before and after the move, mask-immune) or the unmasked workspace root path — never through an underlying-dentry fd, which does not see covering mounts. `move_mountpoint` is fd→fd (`T_EMPTY_PATH`) so masked targets work. | §C3 steps 2/7/8 |
 | 2026-07-02 | 1 | **S opaque dirs are dual-encoded: `.wh..wh..opq` marker file + `user.overlay.opaque=y` xattr.** Measured: the kernel only honors the xattr (marker-only lowerdirs resurrect in live mounts — a pre-existing divergence in published `OpaqueDir` layers), while `MergedView`/capture/projection only honor (or also honor) the marker. Flatten's dir-over-whiteout and dir-over-non-dir compositions *must* mask below-block content in the kernel view, so the xattr is correctness-bearing, and the marker keeps every existing daemon-side reader working with zero changes to them. Also: a merged-dir run terminated inside the block (by whiteout, non-dir, or opaque) re-emits as an opaque dir; a run reaching the block bottom stays plain so below-block merging is preserved. | §Vocabulary `flatten` row |

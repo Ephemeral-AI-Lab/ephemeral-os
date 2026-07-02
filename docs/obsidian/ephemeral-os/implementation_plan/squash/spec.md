@@ -823,8 +823,11 @@ workdir  = <run_dir>/work-remount-<nonce>      fresh; OLD's workdir is never reu
 
  1. unmask hidden daemon paths                 RemountMaskGuard, build window only
  2. mount overlay NEW [l4, S(n3..n1)] at       production fsconfig builder, unchanged;
-    staging; open O_PATH dirfds on staging,    the dirfds outlive the remask
-    rollback, and the workspace root
+    staging; open O_PATH dirfds on staging     the dirfds outlive the remask; the
+    (the NEW mount root), rollback (the        staging MOUNT-ROOT fd probes NEW's
+    underlying dir), and the workspace         content before AND after the move; an
+    root (the OLD mount root)                  underlying-dentry fd never sees a
+                                               covering mount (X4.2 measured both)
  3. restore masks                              ── fail → clean abort (pre-PONR skip;
                                                   masks provably back before any move)
  4. probe staging through its dirfd:           ── fail → cleanup; OLD mount intact →
@@ -832,13 +835,17 @@ workdir  = <run_dir>/work-remount-<nonce>      fresh; OLD's workdir is never reu
  ────────────── point of no return = first MS_MOVE RETURNS SUCCESS ──────────────
  5. MS_MOVE /workspace → rollback (via dirfds) (a FAILED move here = clean abort)
  6. MS_MOVE staging    → /workspace
- 7. probe /workspace                           ── fail → FAULTY (tasks are frozen;
-                                                  nothing observes the partial state)
-                                                  → report + destroy
+ 7. probe /workspace via the staging           ── fail → FAULTY (tasks are frozen;
+    mount-root dirfd (now fronting the            nothing observes the partial state)
+    workspace root) or the unmasked real          → report + destroy
+    path — never via an underlying-dentry fd
  8. drop the OLD-root dirfd (only needed as     ── a held O_PATH fd on the moved OLD
     the step-5 move source), then strict           root pins it and would self-inflict
-    umount rollback — umount2(…, 0),               EBUSY (Phase-0 X0.2 measured this);
-    NO lazy/MNT_DETACH fallback                    real EBUSY → PARK: report verified
+    umount rollback — umount2 with flags 0         EBUSY (Phase-0 X0.2 measured this);
+    on the rollback dirfd's /proc/self/fd/N        umount2's mountpoint lookup resolves
+    magic path (the rollback path itself is        the magic path onto the covering
+    masked), NO lazy/MNT_DETACH fallback           parked mount (X4.2 measured this);
+                                                   real EBUSY → PARK: report verified
                                                    switch; the old mount stays at the
                                                    masked rollback point; both leases
                                                    held until session destroy
