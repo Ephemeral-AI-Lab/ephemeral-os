@@ -66,6 +66,8 @@ mod publish_tests;
 mod service_tests;
 #[path = "unit/sidecar.rs"]
 mod sidecar_tests;
+#[path = "unit/squash.rs"]
+mod squash_tests;
 #[path = "unit/stack.rs"]
 mod stack_tests;
 #[path = "unit/storage_lock.rs"]

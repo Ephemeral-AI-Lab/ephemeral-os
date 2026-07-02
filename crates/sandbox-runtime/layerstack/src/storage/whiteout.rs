@@ -8,8 +8,10 @@ use crate::error::LayerStackError;
 pub(crate) const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
 pub(crate) const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
-const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
-const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
+pub(crate) const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
+pub(crate) const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
+pub(crate) const TRUSTED_OVERLAY_OPAQUE_XATTR: &str = "trusted.overlay.opaque";
+pub(crate) const USER_OVERLAY_OPAQUE_XATTR: &str = "user.overlay.opaque";
 #[cfg(target_os = "linux")]
 const WHITEOUT_DEVICE_MAJOR: u32 = 0;
 #[cfg(target_os = "linux")]

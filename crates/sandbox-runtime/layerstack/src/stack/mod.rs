@@ -13,6 +13,7 @@ pub(crate) mod lease;
 mod ops;
 mod projection;
 pub mod publish;
+pub(crate) mod squash;
 
 use lease::release_lease_locked;
 pub(crate) use lease::reset_shared_registries_for_tests;

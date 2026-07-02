@@ -51,8 +51,8 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | Phase | Title | Status | Experiments | Impl | Tests | Exit review |
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Environment & kernel ground truth | done | 10/10 | — | — | ☑ |
-| 1 | Flatten (layerstack pure) | experiments | 0/3 | 0/2 | 0/1 | ☐ |
-| 2 | Substitution map + rewritten lease | todo | 0/3 | 0/2 | 0/1 | ☐ |
+| 1 | Flatten (layerstack pure) | done | 3/3 | 2/2 | 1/1 | ☑ |
+| 2 | Substitution map + rewritten lease | experiments | 0/3 | 0/2 | 0/1 | ☐ |
 | 3 | Squash transaction + commit GC + boot sweep | todo | 0/4 | 0/4 | 0/9 | ☐ |
 | 4 | Overlay helpers (move/strict-unmount) | todo | 0/2 | 0/2 | 0/1 | ☐ |
 | 5 | Quiesce (namespace-execution) | todo | 0/5 | 0/3 | 0/2 | ☐ |
@@ -153,40 +153,46 @@ hardlinked whole-file winners, fd-relative no-follow walks.
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X1.1 Whiteout encoding inventory.** Determine which whiteout
+- [x] **X1.1 Whiteout encoding inventory.** Determine which whiteout
       encodings the current publish path actually produces in this
       environment (char-dev vs xattr fallback); confirm
       `is_kernel_whiteout_meta` + `write_kernel_whiteout` round-trip both;
       probe one real published layer on disk.
-- [ ] **X1.2 Walk primitive choice.** Survey the repo's existing
+- [x] **X1.2 Walk primitive choice.** Survey the repo's existing
       fd-relative/no-follow walk utilities (layerstack storage, publish
       plan); pick the existing pattern — a new dependency or a new walking
       abstraction is a red flag, record justification if unavoidable.
-- [ ] **X1.3 Hardlink micro-benchmark.** Flatten a scratch 1k-entry block:
+- [x] **X1.3 Hardlink micro-benchmark.** Flatten a scratch 1k-entry block:
       confirm whole-file winners are `link(2)` (bytes copied ≈ 0) and
       wall clock is metadata-bound — validates the O(E) claim before the
       design bakes it in.
 
 ### Implementation
 
-- [ ] `src/stack/squash/flatten.rs` — pure fold, newest-wins per
+- [x] `src/stack/squash/flatten.rs` — pure fold, newest-wins per
       path/subtree; explicit entries for every surviving directory;
       whiteouts/opaques re-emitted only as winners; mode-preserving
       hardlinked `WriteFile` winners; fd-relative no-follow walks.
-- [ ] Wiring/exports (`stack/mod.rs` slice of the +25).
+- [x] Wiring/exports (`stack/mod.rs` slice of the +25).
 
 ### Tests
 
-- [ ] Test 2 `flatten_matrix` — both whiteout encodings, opaque markers,
+- [x] Test 2 `flatten_matrix` — both whiteout encodings, opaque markers,
       shadowed subtrees, dir-created-then-emptied survives, modes
       preserved, hardlinked winners, malicious-symlink no-follow.
+      (13 tests in `tests/unit/squash.rs`, including the dir-over-whiteout
+      and dir-over-file opaque compositions and the same-layer
+      logical-whiteout tie.)
 
 ### Exit review
 
-- [ ] Experiments logged; impl + tests checked;
-      `cargo test -p sandbox-runtime` (layerstack) green; clippy/fmt
-      clean; no test code in `src/`.
-- [ ] Spec drift reconciled; Progress table updated; Phase 2 unblocked.
+- [x] Experiments logged; impl + tests checked;
+      `cargo test -p sandbox-runtime-layerstack` green (58 unit tests);
+      clippy/fmt clean (zero warnings incl. `--all-targets`); no test
+      code in `src/`.
+- [x] Spec drift reconciled (flatten vocabulary row: dual-encoded opaque
+      re-emission + in-block-terminated-run rule); Progress table updated;
+      Phase 2 unblocked.
 
 ---
 
@@ -670,6 +676,9 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 0 | X0.8 | PASS. Cross-directory `link(2)` within the layer-stack fs works in the userns (inode shared, mode 0640 preserved); 1000 links to one inode in **6.4 ms** (nlink 1002; ext4 ceiling 65 000 — no practical limit at our scale). | `docker exec … /probe x08 /eos/workspace/probe-scratch` |
 | 2026-07-02 | 0 | X0.9 | PASS. SIGSTOP → all-`T` poll: 1 task ~76–152 µs, 10 tasks ~250–600 µs, 100 tasks **1.3–2.6 ms** — the ~50 ms spec claim holds with ≥ 20× margin; default freeze budget 500 ms confirmed generous. SIGKILL on stopped tasks works (reaped as SIGKILL). `setsid()` escapee found by full `/proc` ns/mnt scan; scan of container `/proc` = **74 µs** (container pid-ns scope ≈ sandbox scope). | `docker exec … /probe x09` |
 | 2026-07-02 | 0 | X0.10 | PASS. `/proc/<holder>/mountinfo` readable from outside the userns; staging mount appearance detectable (new mount id); after the `MS_MOVE` pair the workspace root's mount id changes (135 → 138) and the old id is visible at the rollback point — deterministic kill-point mechanism for E7/E8/E10 with zero src hooks. | `docker exec … /probe x10 /eos/workspace/probe-scratch` |
+| 2026-07-02 | 1 | X1.1 | PASS, with a load-bearing encoding fact. Real published layer (`exec_command` rm + rm-rf-recreate → `L000003-00000006`): deleted file = **char 0:0 device** (mknod path taken; xattr fallback never fires as container root); opaque dir = **`.wh..wh..opq` marker file, NO xattr**. A real mounted session over that layer **resurrects the lower entries and shows the raw marker** — the kernel only honors `{user,trusted}.overlay.opaque` xattrs; every daemon-side reader (`MergedView`, capture, projection) honors the marker. Probe x11: `user.overlay.opaque=y` set on a lowerdir dir **masks** under a `userxattr` mount; marker-only control resurrects; a dir over a mid-chain char-dev whiteout hides all older content (the composition case flatten must preserve). ⇒ flatten emits S opaque dirs **dual-encoded** (marker file + `user.overlay.opaque` xattr). `is_kernel_whiteout_meta` accepts char-dev + xattr-file; `MergedView` additionally accepts logical `.wh.<name>` — flatten classifies all three. | `sandbox-cli runtime exec_command …` on `eos-3312cf45`, `find`/`stat` of `layers/L000003-00000006`, live-session `ls /workspace/victim` (x,y resurfaced), `docker exec … /probe x11` |
+| 2026-07-02 | 1 | X1.2 | Survey done. Existing walks (`overlay/capture.rs`, `projection/{mod,apply}.rs`, `collect/layerstack.rs`) are all path-based `std::fs` recursions — no fd-relative walker exists in the repo. `rustix` (already a layerstack dependency, feature `fs`) provides `openat`/`Dir`/`statat`/`linkat`/`readlinkat` — flatten builds its ~40-line fd-relative no-follow merge directly on those primitives; output writes are path-based under the freshly-created staging tree (the no-follow requirement protects the *source* walk). No new dependency, no shared walking abstraction. | code survey; `layerstack/Cargo.toml` (`rustix.workspace = true`) |
+| 2026-07-02 | 1 | X1.3 | PASS. Flatten-shaped fold of a 1k-entry two-layer block: 1000 `link(2)` winners in **4.0 ms**, inode identity confirmed (0 bytes copied) — per-generation flatten cost is O(E) metadata ops as claimed. | `docker exec … /probe x11` (bench leg); X0.8 corroborates (1000 links 6.4 ms) |
 
 ## Decision log
 
@@ -683,3 +692,4 @@ was updated in the same change.
 | 2026-07-02 | 0 | **OLD-root dirfd must be dropped before the strict rollback unmount.** X0.2 proved a held pre-opened `O_PATH` fd on the OLD mount root pins the moved OLD mount at rollback, self-inflicting EBUSY at C3 step 8. The runner closes the OLD-root dirfd after the second move (it is only needed as the move-1 source). | §C3 step 8 |
 | 2026-07-02 | 0 | **G2's negative control targets the opaque-dir marker, not the plain-file whiteout.** X0.3 measured: deleted-file whiteouts are char 0:0 devices (xattr-independent — they hold without `userxattr`); the xattr-encoded metadata with resurrection teeth is `user.overlay.opaque` (lower entries resurface without `userxattr`). | §Required tests → Live Docker e2e G2 |
 | 2026-07-02 | 0 | **OVL_MAX_STACK failure point recorded**: the over-limit chain fails the `fsconfig lowerdir+` call (EINVAL), not `fsmount` — still a clean pre-PONR `stage_failed:<errno>` derived from the mount-build error; wording folded into §D. | §D chain-length paragraph |
+| 2026-07-02 | 1 | **S opaque dirs are dual-encoded: `.wh..wh..opq` marker file + `user.overlay.opaque=y` xattr.** Measured: the kernel only honors the xattr (marker-only lowerdirs resurrect in live mounts — a pre-existing divergence in published `OpaqueDir` layers), while `MergedView`/capture/projection only honor (or also honor) the marker. Flatten's dir-over-whiteout and dir-over-non-dir compositions *must* mask below-block content in the kernel view, so the xattr is correctness-bearing, and the marker keeps every existing daemon-side reader working with zero changes to them. Also: a merged-dir run terminated inside the block (by whiteout, non-dir, or opaque) re-emits as an opaque dir; a run reaching the block bottom stays plain so below-block merging is preserved. | §Vocabulary `flatten` row |
