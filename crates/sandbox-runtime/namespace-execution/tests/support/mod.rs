@@ -311,6 +311,25 @@ impl NsRunnerLauncher for FakeLauncher {
             _slave: None,
         }))
     }
+
+    fn spawn_remount_overlay(
+        &self,
+        request: NamespaceRunnerRequest,
+        _placement: RunnerPlacement,
+        _setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        let (completion, script) = self.record(&request, None);
+        if let Some(error) = script.spawn_error {
+            return Err(error);
+        }
+        if let Some(result) = script.completion {
+            completion.complete(result);
+        }
+        Ok(Box::new(FakeRunnerChild {
+            completion,
+            _slave: None,
+        }))
+    }
 }
 
 fn append_transcript(path: &Path, bytes: &[u8]) {

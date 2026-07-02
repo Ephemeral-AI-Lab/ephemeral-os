@@ -55,8 +55,8 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | 2 | Substitution map + rewritten lease | done | 3/3 | 2/2 | 1/1 | ☑ |
 | 3 | Squash transaction + commit GC + boot sweep | done | 4/4 | 4/4 | 9/9 | ☑ |
 | 4 | Overlay helpers (move/strict-unmount) | done | 2/2 | 2/2 | 1/1 | ☑ |
-| 5 | Quiesce (namespace-execution) | experiments | 0/5 | 0/3 | 0/2 | ☐ |
-| 6 | Staged-switch runner (namespace-process) | todo | 0/4 | 0/2 | 0/2 | ☐ |
+| 5 | Quiesce (namespace-execution) | done | 5/5 | 3/3 | 2/2 | ☑ |
+| 6 | Staged-switch runner (namespace-process) | experiments | 0/4 | 0/2 | 0/2 | ☐ |
 | 7 | Workspace remount transaction + reap + PDEATHSIG | todo | 0/4 | 0/5 | 0/5 | ☐ |
 | 8 | Operation layer: gate, squash op, sweep loop | todo | 0/4 | 0/6 | 0/5 | ☐ |
 | 9 | Manager CLI (`checkpoint_squash`) | todo | 0/2 | 0/3 | 0/1 | ☐ |
@@ -389,45 +389,61 @@ guard; `engine.remount_overlay` (+30).
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X5.1 Discovery legs on the machine.** Confirm cgroup placement is
+- [x] **X5.1 Discovery legs on the machine.** Confirm cgroup placement is
       genuinely best-effort/`Option` in `launcher.rs` (ns-scan is the
       freeze-set proof); verify a `setsid()` escapee and an
       `unshare -m` escapee are each caught by the correct leg.
-- [ ] **X5.2 Allowlist identification.** Enumerate how holder, pid-ns
+- [x] **X5.2 Allowlist identification.** Enumerate how holder, pid-ns
       init, and the runner are identified from existing state (pids
       already tracked? stable comm/ppid?) — the allowlist must be
       constructed from daemon-owned facts, not guesses.
-- [ ] **X5.3 Inspection parsing corpus.** Build a scratch corpus on the
+- [x] **X5.3 Inspection parsing corpus.** Build a scratch corpus on the
       real kernel: `maps` lines with spaces and `(deleted)`; fd link
       strings for PTY/socket/pipe/eventfd/timerfd/io_uring; `t`-state
       with an outside tracer; mountinfo octal escaping. Freeze the parser
       rules against reality before coding them.
-- [ ] **X5.4 Budget calibration.** Re-run X0.9 through the intended
+- [x] **X5.4 Budget calibration.** Re-run X0.9 through the intended
       quiesce shape (stop → poll → membership-stable) and set the default
       freeze budget from measured data; document the number in the spec
       if it differs from the ~500 ms example.
-- [ ] **X5.5 One-read mountinfo.** Verify child-mount detection from a
+- [x] **X5.5 One-read mountinfo.** Verify child-mount detection from a
       single holder mountinfo read catches a bind mount whose creating
       task has exited (the E4 sub-case) — proving per-task reads are
       unnecessary on this kernel.
 
 ### Implementation
 
-- [ ] `src/quiesce.rs` — discovery union, freeze, poll, membership-stable,
+- [x] `src/quiesce.rs` — discovery union, freeze, poll, membership-stable,
       pin inspection (any read error = pinned), resume-on-drop guard.
-- [ ] `src/engine.rs` — `remount_overlay` beside `mount_overlay`.
-- [ ] Exports.
+      (The ONE holder mountinfo child-mount check runs first, so it also
+      guards the no-observable-tasks plain-switch branch — the E4
+      exited-binder case blocks either way.)
+- [x] `src/engine.rs` — `remount_overlay` beside `mount_overlay` (raw
+      `RunResult` back like `run_file_op`: the two-boolean report drives
+      policy, exit codes are never mount failures), plus the
+      `--remount-overlay` launcher mode via the shared
+      `spawn_request_result` path; the trait method is defaulted so
+      existing launcher fakes keep compiling.
+- [x] Exports (`pub mod quiesce`, module doc on the declaration since the
+      test harness `include!`s sources).
 
 ### Tests
 
-- [ ] `tests/quiesce.rs` (~80) — discovery/freeze/inspect matrix with
-      fixture processes.
-- [ ] `tests/engine.rs` (+25).
+- [x] `tests/quiesce.rs` — parser-rule tests (stat state after the last
+      comm paren, mountinfo mountpoint/fstype with octal escapes and
+      optional tags, octal_unescape) portable; freeze/poll/timeout and
+      resume mechanics Linux-gated; the live discovery/freeze/inspect
+      matrix runs through the daemon in E1/E2/E4 (and was probe-proven in
+      X5.1/X5.5).
+- [x] `tests/engine.rs` (+25) — `remount_overlay` returns the raw
+      RunResult payload verbatim with target fields intact; FakeLauncher
+      records the remount spawn.
 
 ### Exit review
 
-- [ ] Standard review; measured budget + parser corpus results in the
-      Experiment log; Phase 6 unblocked.
+- [x] Standard review (11 test targets green, clippy 0 warnings, fmt
+      clean, Linux-target check clean); measured budget + parser corpus
+      results in the Experiment log; Phase 6 unblocked.
 
 ---
 
@@ -714,6 +730,11 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 3 | X3.4 | Confirmed in code. `read_manifest` fabricates an empty v0 manifest when `manifest.json` is missing (`fs.rs:169-172`) ⇒ the fail-closed guard must (a) treat missing/`version < 1`/empty-layers as skip-sweep and (b) catch parse `Err` as skip (daemon still serves — G3 leg). Disk listing → keep-set → the shared `remove_layers` routine covers `layers/*` dirs and both sidecars in one call per id (missing dir is NotFound-tolerated, so sidecar-only orphans ride the same routine); `staging/*` is wiped unconditionally under the sweep's exclusive guard (boot runs before serving; a foreign process owning the root fails `LayerStack::open` first). | code survey `fs.rs`, `cleanup.rs`; probe x12 leg (e) |
 | 2026-07-02 | 4 | X4.1 | PASS. `kernel_mount.rs` already imports and uses `rustix::mount::{move_mount, unmount, MoveMountFlags, UnmountFlags}` from the workspace-pinned rustix 0.38; `MOVE_MOUNT_T_EMPTY_PATH` present — no version bump, fd-based patterns matched. | code survey |
 | 2026-07-02 | 4 | X4.2 | PASS, with three load-bearing measurements under **fully dangling paths** (parent renamed away — the mask analogue): (1) `move_mountpoint(source_root_fd, target_dirfd)` with `F_EMPTY_PATH\|T_EMPTY_PATH` moves live overlays; (2) **strict unmount of a masked mountpoint works through the pre-opened underlying-dentry fd's `/proc/self/fd/N` magic path** — `umount2`'s mountpoint lookup resolves onto the covering (parked) mount: EBUSY (16) verbatim while an OLD-root fd pins it, exit 0 after the pin drops; (3) probing rules: a **mount-root** fd's magic path reads the mount's content (and keeps working after the mount moves — the mask-immune post-switch probe), while an **underlying-dentry** fd's magic path does NOT step onto a covering mount. | `docker exec … /probe x13 /eos/workspace/probe-scratch` |
+| 2026-07-02 | 5 | X5.1 | PASS. Code: `RunnerPlacement.cgroup_procs_path` is `Option` and `place_child_in_cgroup` is `let _ = write` (`launcher.rs:344-348`) — best-effort confirmed. Probe: the full-`/proc` ns-scan finds a `setsid()` escapee and (by design) misses an `unshare(NEWNS)` escapee; the cgroup leg (cgroup-v2 `cgroup.procs`, writable in the privileged container) lists the mnt-ns escapee, whose `ns/mnt` differs from the holder → classified `pinned:mount_namespace_escaped`. Each leg catches exactly its class. | `docker exec … /probe x14` |
+| 2026-07-02 | 5 | X5.2 | Enumerated from daemon-owned facts: the **holder** pid is `MountedWorkspace.holder_pid`; the **pid-ns init** is the holder's only direct child (the holder forks exactly once — `holder/namespace.rs`), identified by `ppid == holder_pid` among discovered members; the **remount runner** pid is the spawned `RunnerChild`'s pid, passed by the caller into the quiesce allowlist. ns-runners of live commands are *not* infrastructure: they sit in the session cgroup and freeze/resume with the command tree. | code survey `holder.rs`, `launcher.rs`, `shell_exec.rs` |
+| 2026-07-02 | 5 | X5.3 | Corpus frozen on 6.12: fd links `anon_inode:[eventfd]`, `anon_inode:[timerfd]`, `socket:[<ino>]`, `pipe:[<ino>]`, PTY master `/dev/pts/ptmx`, slave `/dev/pts/N`, `anon_inode:[io_uring]` (allowlist prefix `/dev/pts/` covers master+slave). `maps`: path = left-trimmed bytes after the 5th whitespace field — captures embedded spaces (`…/a b with  spaces.txt`) and the `… (deleted)` suffix. Tracer: ptrace-stopped tracee shows state **`t`** with `TracerPid:` set in status. mountinfo: field 5 octal-escapes spaces (`\\040`), fstype after the `-` separator reads `overlay`. | `docker exec … /probe x14` corpus dump |
+| 2026-07-02 | 5 | X5.4 | PASS. Full quiesce shape (SIGSTOP burst → poll all-`T` → full membership re-scan) for 100 tasks = **3.7 ms** — the 500 ms default budget has ≈135× headroom; spec's ~500 ms example stands, no spec change needed. `DEFAULT_FREEZE_BUDGET = 500 ms` declared in `quiesce.rs`. | `docker exec … /probe x14` budget leg |
+| 2026-07-02 | 5 | X5.5 | PASS. A bind mount created inside the workspace by a child that then **exited** remains visible in one `/proc/<holder>/mountinfo` read (child row parented on the workspace overlay row) — per-task mountinfo reads are unnecessary; the one-read child-mount check also covers the no-observable-tasks branch, so it runs before task discovery. | `docker exec … /probe x14` |
 | 2026-07-02 | 2 | X2.3 | PASS. Commit-time recording = `LayerStack::record_substitution` (called by the phase-3 commit tail after the manifest rename, before the plan-lease release returns). Restart path: the map is process-lifetime state (`OnceLock` static keyed by canonical root) — a daemon restart is a new process with an empty map, and no consumer survives (fact 2: sessions die with the daemon; boot sweep reads only the manifest keep-set — verified in `lease/cleanup.rs` + `fs.rs`). Tests simulate restart through `reset_process_state_for_tests`, which now clears substitution maps alongside lease registries in one entrypoint. | `restart_empties_substitution_map_and_no_rewrite_is_attempted` green |
 
 ## Decision log
@@ -729,5 +750,6 @@ was updated in the same change.
 | 2026-07-02 | 0 | **G2's negative control targets the opaque-dir marker, not the plain-file whiteout.** X0.3 measured: deleted-file whiteouts are char 0:0 devices (xattr-independent — they hold without `userxattr`); the xattr-encoded metadata with resurrection teeth is `user.overlay.opaque` (lower entries resurface without `userxattr`). | §Required tests → Live Docker e2e G2 |
 | 2026-07-02 | 0 | **OVL_MAX_STACK failure point recorded**: the over-limit chain fails the `fsconfig lowerdir+` call (EINVAL), not `fsmount` — still a clean pre-PONR `stage_failed:<errno>` derived from the mount-build error; wording folded into §D. | §D chain-length paragraph |
 | 2026-07-02 | 2 | **X2.2 verdict: oldest-first raw-run contraction is sound as specified — no spec revision needed.** Determinism (unique ids ⇒ single match; fixed recording order), termination (strictly-shrinking single pass), and never-straddle compatibility (boundary-excluded blocks + generation composition; validate-alive is defensive-only, unreachable for correctly-composed live leases) all proven and replayed in test 8. | none (spec confirmed) |
+| 2026-07-02 | 5 | **The one holder mountinfo read runs before task discovery**, so the child-mount check also guards the no-observable-tasks plain-switch branch (a bind mount left by an exited task blocks even when nothing needs freezing — X5.5/E4). C1's tree is unchanged in substance; the check is holder-state, not task-state. | §C1 (sweep decision tree note) |
 | 2026-07-02 | 4 | **Masked-path mechanics pinned for the staged switch**: the strict rollback unmount reaches the masked rollback point via the pre-opened rollback dirfd's `/proc/self/fd/N` magic path (measured: `umount2` resolves it onto the covering mount); the staged and post-switch probes read through the staging **mount-root** dirfd (valid before and after the move, mask-immune) or the unmasked workspace root path — never through an underlying-dentry fd, which does not see covering mounts. `move_mountpoint` is fd→fd (`T_EMPTY_PATH`) so masked targets work. | §C3 steps 2/7/8 |
 | 2026-07-02 | 1 | **S opaque dirs are dual-encoded: `.wh..wh..opq` marker file + `user.overlay.opaque=y` xattr.** Measured: the kernel only honors the xattr (marker-only lowerdirs resurrect in live mounts — a pre-existing divergence in published `OpaqueDir` layers), while `MergedView`/capture/projection only honor (or also honor) the marker. Flatten's dir-over-whiteout and dir-over-non-dir compositions *must* mask below-block content in the kernel view, so the xattr is correctness-bearing, and the marker keeps every existing daemon-side reader working with zero changes to them. Also: a merged-dir run terminated inside the block (by whiteout, non-dir, or opaque) re-emits as an opaque dir; a run reaching the block bottom stays plain so below-block merging is preserved. | §Vocabulary `flatten` row |

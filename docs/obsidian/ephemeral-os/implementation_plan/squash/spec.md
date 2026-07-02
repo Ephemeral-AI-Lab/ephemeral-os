@@ -758,7 +758,10 @@ gate is a silent skip.
 Every session takes the same freeze → inspect path — there is deliberately no
 registry-based short-circuit for predictably pinned sessions; the ~50 ms stall
 is paid only on explicit `checkpoint_squash` invocations, and one uniform
-evidence-based pipeline beats a second classification path.
+evidence-based pipeline beats a second classification path. The ONE holder
+mountinfo read runs before task discovery, so the child-mount check also
+guards the no-observable-tasks plain-switch branch (a bind mount left by an
+exited task blocks even when nothing needs freezing).
 
 ### C2. Full sequence — crate swimlanes
 

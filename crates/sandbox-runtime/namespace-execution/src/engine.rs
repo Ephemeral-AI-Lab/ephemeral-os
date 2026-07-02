@@ -156,6 +156,35 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         Ok(ExecutionHandle::new(id, promise))
     }
 
+    /// Launch the staged-switch remount runner in the session namespaces.
+    /// Peer of [`Self::mount_overlay`], but the output is the runner's raw
+    /// [`RunResult`] payload — the two-boolean report drives the caller's
+    /// policy, so the exit code is never treated as a mount failure.
+    pub fn remount_overlay(
+        &self,
+        target: NamespaceTarget,
+        id: NamespaceExecutionId,
+    ) -> Result<ExecutionHandle<RunResult>, NamespaceExecutionError> {
+        let request = build_request(&target, &id, serde_json::json!({}), None, None);
+        let child = self.reserve_spawn(&id, || {
+            self.launcher.spawn_remount_overlay(
+                request,
+                RunnerPlacement::none(),
+                self.setup_timeout_s,
+            )
+        })?;
+        let promise = Arc::new(CompletionPromise::new());
+        self.spawn_watcher(
+            id.clone(),
+            child,
+            Arc::clone(&promise),
+            Arc::new(AtomicBool::new(false)),
+            None,
+            |outcome| Ok(outcome.into_result()),
+        );
+        Ok(ExecutionHandle::new(id, promise))
+    }
+
     /// Launch a file operation in the session namespaces. Peer of
     /// [`Self::mount_overlay`]: the same request/result runner launch, but the
     /// output is the runner's raw [`RunResult`] payload (the encoded file-op

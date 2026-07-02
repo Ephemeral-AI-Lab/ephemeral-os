@@ -23,6 +23,7 @@ use crate::pty::{open_pty_pair, terminate_pgid, PtyMaster};
 pub(crate) const SHELL_MODE_FLAG: &str = "--shell";
 pub(crate) const MOUNT_OVERLAY_MODE_FLAG: &str = "--mount-overlay";
 pub(crate) const FILE_OP_MODE_FLAG: &str = "--file-op";
+pub(crate) const REMOUNT_OVERLAY_MODE_FLAG: &str = "--remount-overlay";
 const SETUP_WAIT_POLL: Duration = Duration::from_millis(1);
 
 /// Cap on the encoded ns-runner result envelope drained from `result_fd`. A
@@ -71,6 +72,20 @@ pub trait NsRunnerLauncher: Send + Sync {
         placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError>;
+
+    /// Spawn the staged-switch remount runner. Defaulted so existing
+    /// launcher fakes keep compiling; the production launcher overrides.
+    fn spawn_remount_overlay(
+        &self,
+        request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        let _ = (request, placement, setup_timeout_s);
+        Err(NamespaceExecutionError::Spawn(
+            "this launcher does not support the remount-overlay runner".to_owned(),
+        ))
+    }
 }
 
 pub trait RunnerChild: Send {
@@ -148,6 +163,20 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
         spawn_request_result(FILE_OP_MODE_FLAG, request, placement, setup_timeout_s)
+    }
+
+    fn spawn_remount_overlay(
+        &self,
+        request: NamespaceRunnerRequest,
+        placement: RunnerPlacement,
+        setup_timeout_s: f64,
+    ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
+        spawn_request_result(
+            REMOUNT_OVERLAY_MODE_FLAG,
+            request,
+            placement,
+            setup_timeout_s,
+        )
     }
 }
 

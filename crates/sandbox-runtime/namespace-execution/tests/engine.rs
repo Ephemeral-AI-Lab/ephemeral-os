@@ -376,3 +376,32 @@ fn namespace_execution_id_is_the_runner_request_id() {
     fake.complete_latest(run_result(0, "ok"));
     let _ = exec.wait();
 }
+
+// The remount runner rides the same request/result launch as mount_overlay,
+// but its raw RunResult payload comes back verbatim: the two-boolean report
+// drives the caller's policy, so a non-zero exit is not a mount failure.
+#[test]
+fn remount_overlay_returns_raw_run_result_payload() {
+    let fake = FakeLauncher::new();
+    fake.push_script(support::FakeRunnerScript::completes(
+        sandbox_runtime_namespace_process::runner::protocol::RunResult {
+            exit_code: 7,
+            payload: json!({"first_move_succeeded": true, "mount_verified": false, "detail": "d"}),
+        },
+    ));
+    let observer = Arc::new(FakeObserver::default());
+    let engine = test_engine(&fake, observer, 4);
+    let target = sample_target();
+    let handle = engine
+        .remount_overlay(target.clone(), id("remount-1"))
+        .expect("spawn remount runner");
+    let result = handle.wait().expect("remount report");
+    assert_eq!(result.exit_code, 7, "exit code passes through untranslated");
+    assert_eq!(
+        result.payload["first_move_succeeded"],
+        json!(true),
+        "report payload returned verbatim"
+    );
+    let request = fake.recorded_requests().pop().expect("request recorded");
+    assert_request_target_fields(&request, &target, &id("remount-1"));
+}
