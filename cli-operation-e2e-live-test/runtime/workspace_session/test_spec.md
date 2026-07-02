@@ -139,3 +139,70 @@ E2E_RETENTION=1 pytest runtime/workspace_session -k EX_08
 Smoke tier must stay under ~60 s wall; medium under ~5 min; EX-08 and FP-04
 are opt-in. All cases go through `sandbox-cli` structured JSON only — no log
 scraping, per the suite charter.
+
+## Current Proof
+
+Final verification date: 2026-07-03.
+
+Prerequisites and Phase 0 gates:
+
+| Gate | Result |
+| --- | --- |
+| Docker prerequisite | Docker `29.5.2` available. |
+| Requirements | Installed in `/tmp/eos-cli-operation-e2e-venv` because system Python rejected global install with PEP 668. |
+| Gateway cold start | `bin/start-sandbox-docker-gateway --rebuild-binary` rebuilt `sandbox-daemon-linux-arm64` and restarted the gateway. |
+| Rebuild smoke | `E2E_REBUILD_BINARY=1 pytest -m smoke`: `11 passed, 170 deselected in 18.45s`. |
+| Baseline runtime before new family | `pytest runtime`: `120 passed, 1 skipped in 239.13s`. |
+| Baseline manager | `pytest manager`: `58 passed in 218.76s`. |
+| Phase 0 transient audit | One post-edit `pytest runtime` hit a runtime/file/correctness cluster; `pytest --lf` passed `12 passed, 1 deselected in 19.09s`, then both full reruns below passed. No assertion was weakened. |
+| Phase 0 runtime gate 1 | `pytest runtime --log-cli-level=WARNING`: `120 passed, 1 skipped in 230.79s`. |
+| Phase 0 runtime gate 2 | `pytest runtime --log-cli-level=WARNING`: `120 passed, 1 skipped in 234.15s`. |
+
+Workspace-session proof runs:
+
+| Run id | Command | Pytest result |
+| --- | --- | --- |
+| `workspace-session-20260703-063439` | `pytest runtime/workspace_session -m smoke --log-cli-level=WARNING` | `6 passed, 12 deselected in 7.37s` |
+| `workspace-session-20260703-063450` | `pytest runtime/workspace_session --log-cli-level=WARNING` | `16 passed, 2 skipped in 35.46s` |
+| `workspace-session-20260703-063529` | `pytest runtime/workspace_session --log-cli-level=WARNING` | `16 passed, 2 skipped in 36.18s` |
+| `workspace-session-20260703-063228` | `E2E_RETENTION=1 pytest runtime/workspace_session -k EX_08 --log-cli-level=WARNING` | `1 passed, 17 deselected in 47.07s` |
+| `workspace-session-20260703-063323` | `E2E_STORM=1 pytest runtime/workspace_session -k FP_04 --log-cli-level=WARNING` | `1 passed, 17 deselected in 61.94s` |
+
+Post-family gates:
+
+| Gate | Result |
+| --- | --- |
+| Full runtime tree | `pytest runtime --log-cli-level=WARNING`: `136 passed, 3 skipped in 273.46s (0:04:33)`. |
+| Global smoke | `pytest -m smoke --log-cli-level=WARNING`: `17 passed, 182 deselected in 24.44s`. |
+| Gateway-log grep | No daemon log file path references under `runtime/workspace_session`. |
+
+Allowed skips:
+
+| Scope | Case | Reason |
+| --- | --- | --- |
+| Normal workspace-session family | EX-08 | `E2E_RETENTION=1` not set. |
+| Normal workspace-session family | FP-04 | `E2E_STORM=1` not set. |
+| Full runtime tree | layer-depth benchmark | `E2E_EXEC_BENCH=1` not set. |
+
+Per-case evidence:
+
+| Case | Status | Pytest node id | Verdict |
+| --- | --- | --- | --- |
+| WS-01 | PASS | `runtime/workspace_session/test_workspace_session.py::test_WS_01_create_response_contract` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/WS-01/verdict.json` |
+| WS-02 | PASS | `runtime/workspace_session/test_workspace_session.py::test_WS_02_no_op_session_survives_command_completion` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/WS-02/verdict.json` |
+| WS-03 | PASS | `runtime/workspace_session/test_workspace_session.py::test_WS_03_destroy_refuses_while_command_runs` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/WS-03/verdict.json` |
+| WS-04 | PASS | `runtime/workspace_session/test_workspace_session.py::test_WS_04_destroy_discards_and_sync_op_loses_cleanly` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/WS-04/verdict.json` |
+| WS-05 | PASS | `runtime/workspace_session/test_workspace_session.py::test_WS_05_no_finalize_policy_flag_exists` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/WS-05/verdict.json` |
+| WS-06 | PASS | `runtime/workspace_session/test_workspace_session.py::test_WS_06_destroyed_id_stays_dead` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/WS-06/verdict.json` |
+| EX-01 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_01_implicit_exec_response_contract` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-01/verdict.json` |
+| EX-02 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_02_implicit_exec_publishes_then_destroys` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-02/verdict.json` |
+| EX-03 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_03_session_exec_carries_the_session_id` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-03/verdict.json` |
+| EX-04 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_04_rider_defers_finalization` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-04/verdict.json` |
+| EX-05 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_05_publish_rejection_surfaces_on_terminal_response` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-05/verdict.json` |
+| EX-06 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_06_file_op_racing_last_completion_gets_not_found` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-06/verdict.json` |
+| EX-07 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_07_interrupt_and_timeout_paths_still_finalize` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/EX-07/verdict.json` |
+| EX-08 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_EX_08_drain_retention_cap` | `runtime/workspace_session/test-reports/workspace-session-20260703-063228/EX-08/verdict.json` |
+| FP-01 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_FP_01_remount_sweep_cannot_finalize_idle_implicit_session` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/FP-01/verdict.json` |
+| FP-02 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_FP_02_empty_capture_skips_publish` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/FP-02/verdict.json` |
+| FP-03 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_FP_03_back_to_back_implicit_execs_are_independent` | `runtime/workspace_session/test-reports/workspace-session-20260703-063529/FP-03/verdict.json` |
+| FP-04 | PASS | `runtime/workspace_session/test_exec_finalize.py::test_FP_04_finalize_vs_destroy_interleave_storm` | `runtime/workspace_session/test-reports/workspace-session-20260703-063323/FP-04/verdict.json` |

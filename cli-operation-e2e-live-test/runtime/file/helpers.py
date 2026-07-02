@@ -75,6 +75,7 @@ def exec_command(
     yield_time_ms=None,
     timeout=180,
 ):
+    """Run a command; responses include workspace_session_id for command-backed workspaces."""
     args = []
     if workspace_session_id is not None:
         args += ["--workspace-session-id", workspace_session_id]
@@ -123,6 +124,7 @@ def create_workspace_session(sandbox_id, *, network_profile=None):
         args += ["--network-profile", network_profile]
     result = runtime(sandbox_id, "create_workspace_session", *args)
     assert_ok(result)
+    assert result["finalize_policy"] == "no_op", result
     return result["workspace_session_id"]
 
 

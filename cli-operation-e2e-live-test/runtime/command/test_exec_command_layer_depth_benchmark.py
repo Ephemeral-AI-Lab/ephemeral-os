@@ -27,6 +27,7 @@ SAMPLES = int(os.environ.get("E2E_EXEC_BENCH_SAMPLES", "5"))
 
 
 def test_exec_command_layer_depth_shared_base_benchmark(tmp_path):
+    # This benchmark is env-gated because repeated exec publishes can approach the retention cap.
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     (workspace / "README.md").write_text("exec benchmark\n", encoding="utf-8")

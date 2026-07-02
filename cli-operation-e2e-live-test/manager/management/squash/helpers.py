@@ -66,7 +66,7 @@ CASES = [
     {"id": "HRD-06", "tier": "hard", "title": "E10 crash matrix", "scenario": "restart"},
     {"id": "HRD-07", "tier": "hard", "title": "EBUSY park convergence", "scenario": "pin"},
     {"id": "HRD-08", "tier": "hard", "title": "admission-gate storm", "scenario": "storm"},
-    {"id": "HRD-09", "tier": "hard", "title": "one-shot finalize mid-switch", "scenario": "migrate"},
+    {"id": "HRD-09", "tier": "hard", "title": "implicit-session finalize mid-switch", "scenario": "migrate"},
     {"id": "HRD-10", "tier": "hard", "title": "dense-pinning adversarial floor", "scenario": "dense"},
     {"id": "HRD-11", "tier": "hard", "title": "deep chain collapses live", "scenario": "deep"},
     {"id": "HRD-12", "tier": "hard", "title": "E9 over-cap chains fail closed", "scenario": "overcap"},
@@ -2048,7 +2048,7 @@ def _scenario_large_file(case, rec, sandbox_factory):
     large_kib = int(os.environ.get("SQUASH_LARGE_FILE_KIB", str(MAX_EXEC_CAPTURE_KIB)))
     assert 1 <= large_kib <= MAX_EXEC_CAPTURE_KIB, (
         f"SQUASH_LARGE_FILE_KIB must be 1..{MAX_EXEC_CAPTURE_KIB}; "
-        "one-shot exec capture currently publishes files up to 8MiB"
+        "implicit-session exec capture currently publishes files up to 8MiB"
     )
     large_bytes = large_kib * 1024
     _publish(rec, sandbox_id, "large-head", kib=1)
@@ -2081,7 +2081,7 @@ def _scenario_large_file_http(case, rec, sandbox_factory):
     large_kib = int(os.environ.get("SQUASH_LARGE_FILE_KIB", str(MAX_EXEC_CAPTURE_KIB)))
     assert 1 <= large_kib <= MAX_EXEC_CAPTURE_KIB, (
         f"SQUASH_LARGE_FILE_KIB must be 1..{MAX_EXEC_CAPTURE_KIB}; "
-        "one-shot exec capture currently publishes files up to 8MiB"
+        "implicit-session exec capture currently publishes files up to 8MiB"
     )
     large_bytes = large_kib * 1024
     _publish(rec, sandbox_id, "large-head", kib=1)
