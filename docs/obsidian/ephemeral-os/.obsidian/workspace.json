@@ -185,8 +185,10 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
-    "implementation_plan/squash/adversarial_review.md",
+    "implementation_plan/squash/adversarial_multi_agent_review_results.md",
     "implementation_plan/squash/spec.md",
+    "implementation_plan/squash/adversarial_multi_agent_review_prompt.md",
+    "implementation_plan/squash/adversarial_review.md",
     "implementation_plan/squash/adversarial-review-prompt.md",
     "implementation_plan/file_operations/acceptance_criteria.md",
     "docs/layerstack/overlay_mount.md",
@@ -215,9 +217,7 @@
     "implementation_plan/file_operations",
     "implementation_plan/o1_shared_workspace_base.md",
     "testing/file-operation",
-    "testing/Untitled.md",
     "testing",
-    "road_to_fully_autnomous_agent_system/ui.md",
     "road_to_fully_autnomous_agent_system/ui/arbor.html",
     "road_to_fully_autnomous_agent_system/ui/arbor-app.js",
     "road_to_fully_autnomous_agent_system/ui/arbor-data.js"
