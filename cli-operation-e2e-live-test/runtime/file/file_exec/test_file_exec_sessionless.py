@@ -94,12 +94,6 @@ def test_one_shot_rm_publishes_delete_whiteout_for_file_ops(sandbox):
     assert_error(file_edit(sandbox, path, [edit("doomed", "saved")]), "not_found")
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist lines 839-845 require rm -rf on a lower-layer directory; "
-        "live exec returns Input/output error."
-    )
-)
 def test_rm_rf_parent_whiteout_then_recreate_child_path(sandbox):
     """One-shot exec creates `reports/daily/r1.txt`, a second one-shot exec runs
     `rm -rf reports`, then sessionless `file_write` creates
@@ -155,12 +149,6 @@ def test_file_write_script_then_one_shot_exec_side_effect_is_published(sandbox):
     assert_single_owner(sandbox, "out/result.txt", prefix="workspace_session:")
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 862 requires captured executable mode to survive projection; "
-        "live projection returns exit 126."
-    )
-)
 def test_executable_bit_survives_one_shot_capture_and_projection(sandbox):
     """One-shot exec creates an executable in one command
     (`printf '#!/bin/sh\necho tool-v1' > tool.sh && chmod +x tool.sh`); then
@@ -199,12 +187,6 @@ def test_published_symlink_file_is_not_followed_by_file_ops(sandbox):
     assert_single_owner(sandbox, "real.txt", prefix="operation:")
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 875 requires invalid_request for symlink-parent traversal; "
-        "live file_read returns not_found."
-    )
-)
 def test_published_symlink_parent_is_not_traversed_by_file_ops(sandbox):
     """One-shot exec creates a symlinked directory
     (`mkdir realdir; printf x > realdir/inner.txt; ln -s realdir linkdir`);
@@ -222,12 +204,6 @@ def test_published_symlink_parent_is_not_traversed_by_file_ops(sandbox):
     assert_single_owner(sandbox, "realdir/inner.txt", prefix="workspace_session:")
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist lines 878-883 require FIFO capture drop while publishing note.txt; "
-        "live capture publishes no layer."
-    )
-)
 def test_one_shot_fifo_is_protected_drop_but_regular_note_publishes(sandbox):
     """One-shot exec runs `mkfifo pipe.fifo && printf ok > note.txt`; then
     sessionless `file_read` of both paths.
@@ -386,12 +362,6 @@ def test_complex_two_hundred_parts_then_exec_build_concatenates_all(sandbox):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 924 requires multi-MB exec output to publish and support "
-        "windowed reads; live exec returns internal_error."
-    )
-)
 def test_complex_multimeg_exec_file_supports_windowed_reads(sandbox):
     """[complex] One-shot exec generates a multi-MB file
     (`seq 1 500000 > big/seq.txt`, ~3.4 MB); then windowed sessionless reads.
@@ -445,12 +415,6 @@ def test_complex_single_wide_line_fails_read_but_file_published(sandbox):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 942 requires >4 MiB exec output to publish for edit/read checks; "
-        "live exec returns internal_error."
-    )
-)
 def test_complex_large_text_file_rejects_edit_but_allows_small_read_window(sandbox):
     """[complex] One-shot exec generates a >4 MiB text file
     (`yes padding-line | head -n 500000 > big/pad.txt`); then sessionless

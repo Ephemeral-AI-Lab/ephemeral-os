@@ -56,12 +56,6 @@ def _bulk_path(index):
     return f"bulk/dir{index % 10:02d}/sub{index % 5:02d}/file-{index}.txt"
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 633 requires layer IDs prepended newest-first; "
-        "live layerstack returns base first."
-    )
-)
 def test_three_distinct_sessionless_writes_prepend_three_layers(sandbox):
     """Three sessionless `file_write` calls to three distinct new paths, then
     read each back.
@@ -188,12 +182,6 @@ def test_delete_via_exec_then_recreate_via_file_op(sandbox):
     assert_manifest_delta(sandbox, before, 3)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 660 requires rm -rf on a lower-layer directory; "
-        "live exec returns Input/output error."
-    )
-)
 def test_parent_hidden_by_whiteout_can_be_recreated(tmp_path):
     """Parent hidden by whiteout: one-shot `exec_command "rm -rf dir"` (dir has
     files in lower layers), then `file_write dir/new.txt`.
@@ -214,12 +202,6 @@ def test_parent_hidden_by_whiteout_can_be_recreated(tmp_path):
         assert_manifest_delta(sandbox, before, 2)
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 666 requires opaque replacement of a lower-layer directory; "
-        "live exec returns Input/output error."
-    )
-)
 def test_opaque_directory_hides_lower_children_and_allows_update(tmp_path):
     """Opaque directory: one-shot
     `exec_command "rm -rf dir && mkdir dir && echo fresh > dir/only.txt"` over
@@ -252,12 +234,6 @@ def test_opaque_directory_hides_lower_children_and_allows_update(tmp_path):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 674 requires deep lower-layer directory whiteout; "
-        "live exec returns Input/output error."
-    )
-)
 def test_complex_deep_whiteout_opaque_hierarchy(sandbox):
     """[complex] Deep whiteout/opaque hierarchy: seed `a/b/c/d` with files at
     each depth (one exec layer), publish `rm -rf a/b` plus a re-created

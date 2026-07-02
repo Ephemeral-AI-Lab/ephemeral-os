@@ -447,12 +447,6 @@ def test_complex_same_path_conflicting_captures_publish_only_first(sandbox):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    reason=(
-        "Checklist lines 608-615 require all five concurrent line-disjoint "
-        "captures to commit; live run published only a subset of edits."
-    )
-)
 def test_complex_capture_order_independence_line_disjoint_merges(tmp_path):
     """[complex] Capture-order independence: seed a 10-line file, then run 5
     concurrent one-shot `exec_command` invocations, each sed-editing only its

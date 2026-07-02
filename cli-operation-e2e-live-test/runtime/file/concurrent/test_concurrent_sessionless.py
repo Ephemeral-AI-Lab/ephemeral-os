@@ -23,6 +23,7 @@ from runtime.file.helpers import (
     owners_by_line,
     run_concurrently,
     sandbox_from_workspace,
+    write_command_stdin,
 )
 
 
@@ -33,6 +34,28 @@ def _is_error(result):
 def _exec_ok(sandbox, command, **kwargs):
     kwargs.setdefault("yield_time_ms", 30_000)
     result = exec_command(sandbox, command, **kwargs)
+    assert "error" not in result, result
+    assert result["status"] == "ok", result
+    assert result["exit_code"] == 0, result
+    return result
+
+
+def _start_gated_exec(sandbox, command):
+    result = exec_command(sandbox, command, yield_time_ms=0, timeout_ms=120_000)
+    assert "error" not in result, result
+    assert result["status"] == "running", result
+    assert result["command_session_id"], result
+    return result["command_session_id"]
+
+
+def _release_gated_exec(sandbox, command_session_id):
+    result = write_command_stdin(
+        sandbox,
+        command_session_id,
+        "go\n",
+        yield_time_ms=5_000,
+        timeout=240,
+    )
     assert "error" not in result, result
     assert result["status"] == "ok", result
     assert result["exit_code"] == 0, result
@@ -310,25 +333,38 @@ def test_sessionless_write_beats_conflicting_one_shot_capture(tmp_path):
     `source_conflict` (never surfaced; `exec_command` still reports
     `status = ok`); final content is the sessionless write's payload in both
     orderings and `file_blame` shows only `operation:<request_id>`."""
-    path = "concurrent/conflict.txt"
-    with sandbox_from_workspace(tmp_path, {path: "base"}) as sandbox:
-        before = layerstack(sandbox)
-        write_result, exec_result = run_concurrently(
-            [
-                lambda: file_write(sandbox, path, "amend"),
-                lambda: _exec_ok(sandbox, "printf exec > concurrent/conflict.txt"),
-            ],
-            max_workers=2,
+    conflict_path = "concurrent/conflict.txt"
+    win_path = "concurrent/exec-first.txt"
+    with sandbox_from_workspace(
+        tmp_path,
+        {conflict_path: "base", win_path: "base"},
+    ) as sandbox:
+        before_conflict = layerstack(sandbox)
+        command_session_id = _start_gated_exec(
+            sandbox,
+            "read x; printf exec > concurrent/conflict.txt",
         )
+        write_result = file_write(sandbox, conflict_path, "amend")
+        exec_result = _release_gated_exec(sandbox, command_session_id)
 
         assert_ok(write_result)
         assert_ok(exec_result)
-        assert_content(file_read(sandbox, path), "amend")
-        assert_single_owner(sandbox, path, prefix="operation:")
-        assert layerstack(sandbox)["manifest_version"] in {
-            before["manifest_version"] + 1,
-            before["manifest_version"] + 2,
-        }
+        assert_content(file_read(sandbox, conflict_path), "amend")
+        assert_single_owner(sandbox, conflict_path, prefix="operation:")
+        assert_manifest_delta(sandbox, before_conflict, 1)
+
+        before_exec_first = layerstack(sandbox)
+        exec_first_result = _exec_ok(
+            sandbox,
+            "printf exec > concurrent/exec-first.txt",
+        )
+        write_after_result = file_write(sandbox, win_path, "amend")
+
+        assert_ok(exec_first_result)
+        assert_ok(write_after_result)
+        assert_content(file_read(sandbox, win_path), "amend")
+        assert_single_owner(sandbox, win_path, prefix="operation:")
+        assert_manifest_delta(sandbox, before_exec_first, 2)
 
 
 @pytest.mark.slow

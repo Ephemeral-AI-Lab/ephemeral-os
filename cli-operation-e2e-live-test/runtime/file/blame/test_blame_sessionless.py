@@ -48,12 +48,6 @@ def test_blame_key_resolution_and_unaudited_paths(tmp_path):
             "no auditability record for path: src",
         )
         assert_error(file_blame(sandbox, "src/../src/notes.txt"), "not_found")
-        if dotted != direct:
-            pytest.xfail(
-                "test-case.md:1023-1029 expects byte-identical blame responses "
-                "for src/notes.txt and ./src/notes.txt; current response echoes "
-                "the requested path field."
-            )
         assert dotted == direct
 
 

@@ -327,12 +327,6 @@ def test_complex_one_shot_capture_lifecycle_accepts_file_ops_before_exit(sandbox
 
 
 @pytest.mark.slow
-@pytest.mark.xfail(
-    reason=(
-        "Checklist line 1006 requires evicted_upperdir_bytes in destroy response; "
-        "current CLI response shape omits that field."
-    )
-)
 def test_complex_long_interleaved_session_destroy_discards_all_changes(sandbox):
     """[complex] Long interleaved session then destroy: in one caller-owned
     session run 15 alternating rounds of session exec append to `journal.txt`
