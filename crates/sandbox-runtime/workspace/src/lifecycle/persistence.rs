@@ -63,6 +63,56 @@ impl WorkspaceManager {
     }
 }
 
+/// One reaped boot leftover: every persisted handle is a dead session
+/// (PDEATHSIG makes holders provably dead), so reap destroys its run dir and
+/// drops the record — no lease recreation, no liveness proof.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReapedSession {
+    pub workspace_handle_id: String,
+    pub run_dir: std::path::PathBuf,
+    pub run_dir_removed: bool,
+}
+
+impl WorkspaceManager {
+    pub(crate) fn reap_persisted_handles(&mut self) -> Vec<ReapedSession> {
+        let path = self.persisted_handles_path();
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            return Vec::new();
+        };
+        let Ok(payload) = serde_json::from_str::<Value>(&text) else {
+            let _ = self.persist_handles();
+            return Vec::new();
+        };
+        let empty = Vec::new();
+        let records = payload
+            .get("handles")
+            .and_then(Value::as_array)
+            .unwrap_or(&empty);
+        let mut reaped = Vec::with_capacity(records.len());
+        for record in records {
+            let workspace_handle_id = record
+                .get("workspace_handle_id")
+                .and_then(Value::as_str)
+                .unwrap_or("<unknown>")
+                .to_owned();
+            let Some(run_dir) = record.get("scratch_dir").and_then(Value::as_str) else {
+                continue;
+            };
+            let run_dir = std::path::PathBuf::from(run_dir);
+            let contained = run_dir.starts_with(&self.scratch_root);
+            let run_dir_removed =
+                contained && (!run_dir.exists() || std::fs::remove_dir_all(&run_dir).is_ok());
+            reaped.push(ReapedSession {
+                workspace_handle_id,
+                run_dir,
+                run_dir_removed,
+            });
+        }
+        let _ = self.persist_handles();
+        reaped
+    }
+}
+
 fn manager_setup_error(step: &str, err: impl std::fmt::Display) -> WorkspaceManagerError {
     WorkspaceManagerError::SetupFailed {
         step: format!("{step}: {err}"),

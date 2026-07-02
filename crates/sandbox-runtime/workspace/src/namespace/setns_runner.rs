@@ -48,6 +48,47 @@ impl NamespaceRuntime {
         }
     }
 
+    /// Launch the staged-switch remount runner in the session's namespaces
+    /// (peer of [`Self::mount_overlay`], with the rewritten chain and the
+    /// fresh sibling workdir overriding the entry): the raw runner
+    /// [`RunResult`] comes back verbatim — its two-boolean report drives the
+    /// caller's C5 policy, so exit codes are never mount failures.
+    pub(crate) fn remount_overlay(
+        &self,
+        handle: &MountedWorkspace,
+        rewritten_layer_paths: Vec<PathBuf>,
+        fresh_workdir: &std::path::Path,
+    ) -> Result<RunResult, WorkspaceManagerError> {
+        #[cfg(not(target_os = "linux"))]
+        {
+            let _ = (
+                &self.engine,
+                &self.obs,
+                handle,
+                rewritten_layer_paths,
+                fresh_workdir,
+            );
+            Err(WorkspaceManagerError::SetupFailed {
+                step: "namespace remount runner is only supported on linux".to_owned(),
+            })
+        }
+        #[cfg(target_os = "linux")]
+        {
+            let mut entry = WorkspaceHandle::from(handle).entry().map_err(setup_error)?;
+            entry.layer_paths = rewritten_layer_paths;
+            entry.workdir = fresh_workdir.to_path_buf();
+            let id = self.engine.allocate_id();
+            let execution = self
+                .engine
+                .remount_overlay(NamespaceTarget::from(entry), id)
+                .map_err(setup_error)?;
+            self.obs
+                .scope(names::NAMESPACE_EXEC_REMOUNT_OVERLAY, |_span| {
+                    execution.wait().map_err(setup_error)
+                })
+        }
+    }
+
     /// Run a file operation inside a mounted session's namespaces (peer of
     /// [`Self::mount_overlay`]): `setns` into the live overlay via a per-op runner
     /// and return the raw runner [`RunResult`]. Does not mount and does not

@@ -4,5 +4,9 @@ mod model;
 mod overlay_capture;
 #[path = "unit/overlay_tree.rs"]
 mod overlay_tree;
+#[path = "unit/recover.rs"]
+mod recover;
+#[path = "unit/remount.rs"]
+mod remount;
 #[path = "unit/service.rs"]
 mod service;

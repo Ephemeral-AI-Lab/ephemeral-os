@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::io::Read;
 #[cfg(target_os = "linux")]
 use std::os::fd::{AsRawFd, IntoRawFd};
+#[cfg(target_os = "linux")]
 #[cfg(all(target_os = "linux", unix))]
 use std::os::unix::process::ExitStatusExt;
 #[cfg(target_os = "linux")]
@@ -120,17 +121,17 @@ impl NamespaceRuntime {
                 }
                 let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
                 let status = child.wait().map_err(setup_error)?;
-                return Ok(holder_kill_report(true, status));
+                Ok(holder_kill_report(true, status))
             } else {
                 let holder_was_alive = kill(Pid::from_raw(holder_pid), Signal::SIGTERM).is_ok();
                 if holder_was_alive {
                     thread::sleep(Duration::from_secs_f64(grace_s.max(0.0)));
                     let _ = kill(Pid::from_raw(holder_pid), Signal::SIGKILL);
                 }
-                return Ok(HolderKillReport {
+                Ok(HolderKillReport {
                     holder_was_alive,
                     ..HolderKillReport::default()
-                });
+                })
             }
         }
     }

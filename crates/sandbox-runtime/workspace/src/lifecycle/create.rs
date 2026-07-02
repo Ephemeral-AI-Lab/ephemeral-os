@@ -103,6 +103,7 @@ impl WorkspaceManager {
             veth: None,
             created_at: now,
             last_activity: now,
+            parked_lease_id: None,
         };
 
         if let Err(err) = self.initialize_handle(&mut handle) {

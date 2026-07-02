@@ -132,8 +132,9 @@ tests" section (unit 1–22, gates G1–G3, features E1–E10).
 - [ ] Remount writes **nothing required** to disk: the only write is a
       best-effort `persist_handles()` whose failure still reports
       `migrated` (the fresh workdir rides the existing `dirs.workdir`
-      field — no schema change, no new session-state fields). *Verify:
-      test 12.*
+      field — no schema change; the one session-state delta is the
+      in-memory `parked_lease_id` Option sanctioned by X7.2, never
+      persisted). *Verify: test 12.*
 
 ## 5. Boot cleanup and recovery
 
@@ -217,7 +218,9 @@ tests" section (unit 1–22, gates G1–G3, features E1–E10).
       `git diff`).
 - [ ] Final file/LoC shape matches spec §A within reason: 10 new source
       files, no `stack/sweep.rs`, no `lifecycle/recover.rs`, no standalone
-      `squash/rewrite.rs`, no new `MountedWorkspace` fields.
+      `squash/rewrite.rs`; the only `MountedWorkspace` delta is the
+      in-memory `parked_lease_id: Option<String>` (X7.2's sanctioned
+      carrier, never persisted).
 
 ## 9. Sign-off
 

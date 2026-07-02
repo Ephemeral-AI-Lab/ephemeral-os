@@ -28,9 +28,16 @@ pub struct QuiesceSpec {
 /// pins, or blocked (already resumed) with a `class:detail` reason.
 #[derive(Debug)]
 pub enum QuiesceOutcome {
-    NoObservableTasks,
-    Frozen(FrozenTasks),
-    Blocked { reason: String },
+    NoObservableTasks {
+        workspace_mount_id: u64,
+    },
+    Frozen {
+        tasks: FrozenTasks,
+        workspace_mount_id: u64,
+    },
+    Blocked {
+        reason: String,
+    },
 }
 
 /// Resume-on-drop guard over the frozen task set.
@@ -60,9 +67,10 @@ impl Drop for FrozenTasks {
 /// task still blocks).
 #[must_use]
 pub fn quiesce_holder_scope(spec: &QuiesceSpec) -> QuiesceOutcome {
-    if let Err(reason) = check_holder_mounts(spec.holder_pid, &spec.workspace_root) {
-        return QuiesceOutcome::Blocked { reason };
-    }
+    let workspace_mount_id = match check_holder_mounts(spec.holder_pid, &spec.workspace_root) {
+        Ok(mount_id) => mount_id,
+        Err(reason) => return QuiesceOutcome::Blocked { reason },
+    };
     let Ok(holder_mnt) = fs::read_link(format!("/proc/{}/ns/mnt", spec.holder_pid)) else {
         return QuiesceOutcome::Blocked {
             reason: "mount_uncertain:proc_read_error".to_owned(),
@@ -74,7 +82,7 @@ pub fn quiesce_holder_scope(spec: &QuiesceSpec) -> QuiesceOutcome {
         Err(reason) => return QuiesceOutcome::Blocked { reason },
     };
     if discovered.is_empty() {
-        return QuiesceOutcome::NoObservableTasks;
+        return QuiesceOutcome::NoObservableTasks { workspace_mount_id };
     }
 
     let mut frozen = Vec::new();
@@ -92,7 +100,7 @@ pub fn quiesce_holder_scope(spec: &QuiesceSpec) -> QuiesceOutcome {
     }
     let guard = FrozenTasks { pids: frozen };
     if guard.pids.is_empty() {
-        return QuiesceOutcome::NoObservableTasks;
+        return QuiesceOutcome::NoObservableTasks { workspace_mount_id };
     }
 
     let frozen_set: BTreeSet<i32> = guard.pids.iter().copied().collect();
@@ -116,7 +124,27 @@ pub fn quiesce_holder_scope(spec: &QuiesceSpec) -> QuiesceOutcome {
             return QuiesceOutcome::Blocked { reason };
         }
     }
-    QuiesceOutcome::Frozen(guard)
+    QuiesceOutcome::Frozen {
+        tasks: guard,
+        workspace_mount_id,
+    }
+}
+
+/// One holder mountinfo re-read for the missing-report classification: the
+/// workspace root's current mount id, `None` when the row is absent (a
+/// runner died between the moves) or the read fails.
+#[must_use]
+pub fn workspace_mount_id(holder_pid: i32, workspace_root: &Path) -> Option<u64> {
+    let mountinfo = fs::read_to_string(format!("/proc/{holder_pid}/mountinfo")).ok()?;
+    let workspace = workspace_root.to_string_lossy();
+    for line in mountinfo.lines() {
+        if let Some((mount_id, mountpoint, _fstype)) = parse_mountinfo_line(line) {
+            if mountpoint == *workspace {
+                return Some(mount_id);
+            }
+        }
+    }
+    None
 }
 
 /// Union of the cgroup members and the `/proc` ns-scan, minus infrastructure
@@ -342,32 +370,28 @@ fn inspect_maps(task: &str, workspace_root: &Path) -> Result<(), String> {
 /// ONE holder mountinfo read: the workspace root must be an overlay mount
 /// and nothing may be mounted strictly under it (masks are namespace-root
 /// tmpfs, not workspace children).
-fn check_holder_mounts(holder_pid: i32, workspace_root: &Path) -> Result<(), String> {
+fn check_holder_mounts(holder_pid: i32, workspace_root: &Path) -> Result<u64, String> {
     let mountinfo = fs::read_to_string(format!("/proc/{holder_pid}/mountinfo"))
         .map_err(|_| "mount_uncertain:mountinfo_unavailable".to_owned())?;
     let workspace = workspace_root.to_string_lossy();
     let child_prefix = format!("{workspace}/");
-    let mut workspace_is_overlay = false;
+    let mut workspace_overlay_id = None;
     for line in mountinfo.lines() {
-        let Some((mountpoint, fstype)) = parse_mountinfo_line(line) else {
+        let Some((mount_id, mountpoint, fstype)) = parse_mountinfo_line(line) else {
             return Err("mount_uncertain:mountinfo_mismatch".to_owned());
         };
         if mountpoint == *workspace {
-            workspace_is_overlay = fstype == "overlay";
+            workspace_overlay_id = (fstype == "overlay").then_some(mount_id);
         } else if mountpoint.starts_with(&child_prefix) {
             return Err("pinned:child_mount_pinned_workspace".to_owned());
         }
     }
-    if workspace_is_overlay {
-        Ok(())
-    } else {
-        Err("mount_uncertain:mountinfo_mismatch".to_owned())
-    }
+    workspace_overlay_id.ok_or_else(|| "mount_uncertain:mountinfo_mismatch".to_owned())
 }
 
-pub(crate) fn parse_mountinfo_line(line: &str) -> Option<(String, String)> {
+pub(crate) fn parse_mountinfo_line(line: &str) -> Option<(u64, String, String)> {
     let mut fields = line.split(' ');
-    let _mount_id = fields.next()?;
+    let mount_id: u64 = fields.next()?.parse().ok()?;
     let _parent_id = fields.next()?;
     let _major_minor = fields.next()?;
     let _root = fields.next()?;
@@ -375,7 +399,7 @@ pub(crate) fn parse_mountinfo_line(line: &str) -> Option<(String, String)> {
     let mut fields = fields.skip_while(|field| *field != "-");
     let _separator = fields.next()?;
     let fstype = fields.next()?.to_owned();
-    Some((mountpoint, fstype))
+    Some((mount_id, mountpoint, fstype))
 }
 
 pub(crate) fn octal_unescape(escaped: &str) -> String {

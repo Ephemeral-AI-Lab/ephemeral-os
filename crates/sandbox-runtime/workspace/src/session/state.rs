@@ -16,6 +16,10 @@ pub struct MountedWorkspace {
     pub veth: Option<VethAllocation>,
     pub created_at: f64,
     pub last_activity: f64,
+    /// The session's second lease when one exists: the OLD lease after an
+    /// EBUSY-parked switch, or the NEW lease on a faulty remount. In-memory
+    /// only — never persisted — and released by the ordinary destroy path.
+    pub parked_lease_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]

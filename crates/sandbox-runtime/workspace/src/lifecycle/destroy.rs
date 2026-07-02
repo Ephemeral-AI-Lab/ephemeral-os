@@ -16,6 +16,7 @@ use super::{monotonic_seconds, record_phase_ms};
 pub struct ExitOutcome {
     pub workspace_id: WorkspaceSessionId,
     pub lease_id: String,
+    pub parked_lease_id: Option<String>,
     pub evicted_upperdir_bytes: u64,
     pub lifetime_s: f64,
     pub total_ms: f64,
@@ -110,6 +111,7 @@ impl WorkspaceManager {
         Ok(ExitOutcome {
             workspace_id: handle.workspace_id,
             lease_id: handle.snapshot.lease_id.0,
+            parked_lease_id: handle.parked_lease_id,
             evicted_upperdir_bytes: upperdir_bytes,
             lifetime_s,
             total_ms: timer.elapsed().as_secs_f64() * 1000.0,

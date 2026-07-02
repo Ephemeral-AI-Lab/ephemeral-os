@@ -53,6 +53,7 @@ fn workspace_profile_handle() -> MountedWorkspace {
         veth: None,
         created_at: 1.0,
         last_activity: 2.0,
+        parked_lease_id: None,
     }
 }
 

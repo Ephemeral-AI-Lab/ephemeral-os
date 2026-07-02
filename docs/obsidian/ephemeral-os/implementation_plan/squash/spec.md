@@ -56,10 +56,13 @@ destroy it through the ordinary destroy path.
 
 Environment facts (normative, load-bearing for recovery):
 
-1. **Holders die with the daemon.** `spawn_ns_holder` sets
-   `prctl(PR_SET_PDEATHSIG, SIGKILL)` in a `pre_exec` hook so this is
-   kernel-enforced, not deployment luck (today only the pid-ns init carries a
-   death signal, bound to the holder — `holder/namespace.rs:189`).
+1. **Holders die with the daemon.** The ns-holder body sets
+   `prctl(PR_SET_PDEATHSIG, SIGKILL)` as its first act after exec (via nix's
+   safe wrapper — the workspace crate `forbid(unsafe_code)`s, so a `pre_exec`
+   hook is unavailable there), making the guarantee kernel-enforced from
+   setup onward, not deployment luck; the pid-ns init chains its own death
+   signal to the holder (`holder/namespace.rs:189`). G3's bounded-wait
+   assertion covers the microscopic exec-to-first-statement window.
 2. **No session survives a daemon restart.** `manager.json` identifies
    leftovers to clean at boot; it is never used to recover sessions.
    Uncommitted upperdir writes share the session's ephemeral fate by design.
@@ -275,11 +278,16 @@ crates/sandbox-runtime/workspace/
 ├── src/service/impls/remount_workspace.rs   (new  ~40)  thin impl delegating to lifecycle
 ├── src/lifecycle/persistence.rs             (+50)       boot reap lives with the manager.json owner:
 │                                                        destroy leftover handles/run dirs before
-│                                                        the storage sweep; no schema change, no
-│                                                        new session-state fields
+│                                                        the storage sweep; no schema change; the
+│                                                        one session-state delta is the in-memory
+│                                                        MountedWorkspace.parked_lease_id
+│                                                        Option (X7.2's sanctioned carrier for the
+│                                                        park/faulty second lease — never persisted)
 ├── src/namespace/setns_runner.rs            (+35)       NamespaceRuntime::remount_overlay
-├── src/namespace/holder.rs                  (+5)        pre_exec PR_SET_PDEATHSIG(SIGKILL) —
-│                                                        holders provably die with the daemon
+├── (namespace-process holder/mod.rs)        (+15)       PR_SET_PDEATHSIG(SIGKILL) as the holder
+│                                                        body's first act (workspace forbids
+│                                                        unsafe, so no pre_exec hook) — holders
+│                                                        provably die with the daemon
 ├── src/{model,service,service/impls/mod,lib}.rs         (+30)
 └── tests/unit/{remount.rs (new ~170), recover.rs (new ~60)} · tests/unit.rs (+2)
 
@@ -921,8 +929,8 @@ handled identically by the three-step boot cleanup.
 | --- | --- |
 | Abort before the first successful `MS_MOVE` (any cause: pins, escape, freeze budget, mask-restore failure, stage/probe failure, a failed first move) | Clean skip: release replacement lease, resume tasks, report `leased(class:detail)`. Session untouched — its workdir was never reused. |
 | Switch verified end-to-end (strict unmount succeeded) | Swap `MountedWorkspace` snapshot + `dirs.workdir` (existing fields), best-effort `persist_handles()`, resume tasks, release old lease (exclusive) → refcount GC. Persist failure changes nothing — nothing reads the file beyond boot reap. |
-| Strict-unmount EBUSY after a verified switch | Park: resume **immediately** on the NEW mount; keep BOTH leases in memory, released at session destroy (the old superblock is alive and reading lowerdirs — releasing its lease would delete layer dirs in use); report `leased(pinned:rollback_unmount_busy)`. The next squash sees Identity — no retry loop. |
-| Any other post-PONR failure — or runner report missing/ambiguous at/past first-move-success | Report faulty (session id, `class:detail`, lease-release errors), then destroy through the ordinary destroy path. Namespace death is the unmount proof; both leases release after it. Tasks stayed frozen, so nothing observed the partial state. |
+| Strict-unmount EBUSY after a verified switch | Park: resume **immediately** on the NEW mount; keep BOTH leases in memory — the old lease rides `MountedWorkspace.parked_lease_id` (the one sanctioned in-memory Option, never persisted) — released at session destroy (the old superblock is alive and reading lowerdirs — releasing its lease would delete layer dirs in use); report `leased(pinned:rollback_unmount_busy)`. The next squash sees Identity — no retry loop. |
+| Any other post-PONR failure — or runner report missing/ambiguous at/past first-move-success | Report faulty (session id, `class:detail`, lease-release errors), then destroy through the ordinary destroy path — the NEW lease rides `parked_lease_id` so destroy releases both. Namespace death is the unmount proof; both leases release after it. Tasks stayed frozen (the transaction forgets the resume guard on the faulty path), so nothing observed the partial state. |
 | Daemon crash at any point | The session died with the daemon (PDEATHSIG). Boot: reap run dir + handle, sweep to the active manifest. No remount-specific branching. |
 
 Faulty reporting is not optional. The result JSON's `faulty_sessions` must

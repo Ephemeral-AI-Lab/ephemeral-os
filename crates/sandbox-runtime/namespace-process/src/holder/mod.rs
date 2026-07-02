@@ -129,6 +129,7 @@ pub fn run(
     control_fd: RawFd,
     network: NamespaceNetwork,
 ) -> Result<(), NsHolderError> {
+    install_parent_death_signal()?;
     let namespaces = unshare_namespace_stack(readiness_fd, control_fd, network)?;
     rbind_proc();
     let mut handshake = Handshake::new(readiness_fd, control_fd, network, namespaces);
@@ -144,6 +145,20 @@ pub fn run(
             libc::pause();
         }
     }
+}
+
+/// Holders provably die with the daemon: `PR_SET_PDEATHSIG(SIGKILL)` is the
+/// holder's first act after exec, so the guarantee is kernel-enforced from
+/// setup onward (the pid-ns init chains its own death signal to the holder).
+#[cfg(target_os = "linux")]
+fn install_parent_death_signal() -> Result<(), NsHolderError> {
+    nix::sys::prctl::set_pdeathsig(nix::sys::signal::Signal::SIGKILL)
+        .map_err(|_| NsHolderError::Unshare)
+}
+
+#[cfg(not(target_os = "linux"))]
+const fn install_parent_death_signal() -> Result<(), NsHolderError> {
+    Ok(())
 }
 
 fn write_all_fd(fd: RawFd, mut bytes: &[u8]) -> Result<(), NsHolderError> {

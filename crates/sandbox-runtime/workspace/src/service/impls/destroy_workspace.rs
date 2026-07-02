@@ -33,6 +33,20 @@ impl WorkspaceRuntimeService {
             Ok(()) => (Some(true), None),
             Err(error) => (None, Some(error.to_string())),
         };
+        if let Some(parked) = outcome.parked_lease_id.as_deref() {
+            if let Err(error) =
+                sandbox_runtime_layerstack::service::release_lease(&layer_stack_root, parked)
+            {
+                let message = format!("release parked lease {parked}: {error}");
+                match lease_release_error.as_mut() {
+                    Some(existing) => {
+                        existing.push_str("; ");
+                        existing.push_str(&message);
+                    }
+                    None => lease_release_error = Some(message),
+                }
+            }
+        }
         let active_leases_after =
             match sandbox_runtime_layerstack::LayerStack::open(layer_stack_root) {
                 Ok(stack) => stack.active_lease_count(),

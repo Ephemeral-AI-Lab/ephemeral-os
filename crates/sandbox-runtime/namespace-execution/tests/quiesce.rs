@@ -28,13 +28,17 @@ fn task_state_parses_after_the_comm_parens() {
 #[test]
 fn mountinfo_lines_parse_mountpoint_and_fstype_with_octal_escapes() {
     let line = r"182 176 0:77 / /eos/ws\040with\040space rw,relatime - overlay none rw,userxattr";
-    let (mountpoint, fstype) = quiesce::parse_mountinfo_line(line).expect("parse");
+    let (mount_id, mountpoint, fstype) = quiesce::parse_mountinfo_line(line).expect("parse");
+    assert_eq!(
+        mount_id, 182,
+        "the mount id feeds the missing-report classification"
+    );
     assert_eq!(mountpoint, "/eos/ws with space");
     assert_eq!(fstype, "overlay");
 
     let optional_tags =
         "158 148 254:1 /docker /eos/workspace rw,relatime master:1 - ext4 /dev/vda1 rw";
-    let (mountpoint, fstype) = quiesce::parse_mountinfo_line(optional_tags).expect("parse");
+    let (_, mountpoint, fstype) = quiesce::parse_mountinfo_line(optional_tags).expect("parse");
     assert_eq!(mountpoint, "/eos/workspace");
     assert_eq!(
         fstype, "ext4",

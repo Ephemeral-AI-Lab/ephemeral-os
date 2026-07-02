@@ -57,7 +57,7 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | 4 | Overlay helpers (move/strict-unmount) | done | 2/2 | 2/2 | 1/1 | ☑ |
 | 5 | Quiesce (namespace-execution) | done | 5/5 | 3/3 | 2/2 | ☑ |
 | 6 | Staged-switch runner (namespace-process) | done | 4/4 | 2/2 | 2/2 | ☑ |
-| 7 | Workspace remount transaction + reap + PDEATHSIG | experiments | 0/4 | 0/5 | 0/5 | ☐ |
+| 7 | Workspace remount transaction + reap + PDEATHSIG | done | 4/4 | 5/5 | 5/5 | ☑ |
 | 8 | Operation layer: gate, squash op, sweep loop | todo | 0/4 | 0/6 | 0/5 | ☐ |
 | 9 | Manager CLI (`checkpoint_squash`) | todo | 0/2 | 0/3 | 0/1 | ☐ |
 | 10 | Live Docker e2e + enablement + sign-off | todo | — | 0/3 | 0/13 | ☐ |
@@ -525,49 +525,81 @@ boot cleanup step 2.
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X7.1 PDEATHSIG probe.** Prototype `pre_exec`
+- [x] **X7.1 PDEATHSIG probe.** Prototype `pre_exec`
       `PR_SET_PDEATHSIG(SIGKILL)` on the holder spawn path; SIGKILL the
       parent; verify holder death and namespace teardown (this is
       environment fact 1 — it must be proven, not assumed).
-- [ ] **X7.2 Park-state carrier.** Design-spike where the parked old
+- [x] **X7.2 Park-state carrier.** Design-spike where the parked old
       lease lives until destroy **without a new state enum or struct
       field beyond a lease handle** — confirm the existing session/lease
       guard types can carry it and that destroy releases both. If a new
       field is unavoidable, it must be exactly one `Option<lease>` and
       recorded in the Decision log.
-- [ ] **X7.3 dirs.workdir mutation.** Confirm swapping
+- [x] **X7.3 dirs.workdir mutation.** Confirm swapping
       `MountedWorkspace.snapshot` + mutating `dirs.workdir` in place
       composes with every existing reader of those fields (grep all
       uses); confirm `persist_handles` picks the new value up with zero
       schema change.
-- [ ] **X7.4 Reap-in-persistence fit.** Verify `persistence.rs` owns all
+- [x] **X7.4 Reap-in-persistence fit.** Verify `persistence.rs` owns all
       `manager.json` path/schema knowledge needed for reap (no parse
       helpers exported to a second file) and that reap-before-sweep
       ordering has a single natural call site for Phase 8's boot hook.
 
 ### Implementation
 
-- [ ] `src/lifecycle/remount.rs` — rewritten lease → freeze → runner →
+- [x] `src/lifecycle/remount.rs` — rewritten lease → freeze → runner →
       verify → best-effort persist → resume → release old lease; EBUSY
-      park; faulty → ordinary destroy; all C5 rows.
-- [ ] `src/service/impls/remount_workspace.rs` — thin delegate.
-- [ ] `src/lifecycle/persistence.rs` — boot reap (destroy run dirs, drop
-      handles, observability record).
-- [ ] `src/namespace/setns_runner.rs` — `NamespaceRuntime::remount_overlay`.
-- [ ] `src/namespace/holder.rs` — PDEATHSIG `pre_exec`.
+      park; faulty → ordinary destroy (NEW lease parked on the handle,
+      frozen tasks deliberately never resumed); all C5 rows, with the C5
+      table itself factored as the pure `classify_remount_report`
+      (missing-report leg = workspace mount-id compare).
+- [x] `src/service/impls/remount_workspace.rs` — thin delegate (+ the
+      `reap_persisted_sessions` service wrapper; session-gone maps to
+      `Ok(None)` for the caller's silent skip).
+- [x] `src/lifecycle/persistence.rs` — boot reap (destroy run dirs with a
+      scratch-root containment guard, reset the handle file, report
+      records; the observability record is emitted by phase 8's boot
+      hook).
+- [x] `src/namespace/setns_runner.rs` — `NamespaceRuntime::remount_overlay`
+      (rewritten chain + fresh workdir override the entry; raw RunResult
+      back; `NAMESPACE_EXEC_REMOUNT_OVERLAY` span).
+- [x] PDEATHSIG — moved to the ns-holder body's first act
+      (`namespace-process/src/holder/mod.rs`) because the workspace crate
+      `forbid(unsafe_code)`s and `pre_exec` is unsafe; nix's safe
+      `set_pdeathsig` gives the same kernel enforcement (spec environment
+      fact 1 + §A reconciled; X7.1 probe validated the post-exec
+      placement). Also fixed the two pre-existing `unneeded return`
+      warnings in `workspace/namespace/holder.rs` noted at Phase 6 exit.
 
 ### Tests
 
-- [ ] Test 10 `retarget_never_runs_before_mount_verification`
-- [ ] Test 11 `post_commit_remount_failure_does_not_fail_squash_commit`
-- [ ] Test 12 `persist_failure_still_migrates`
-- [ ] Test 15 `ebusy_park_keeps_both_leases_and_converges`
-- [ ] `tests/unit/{remount.rs, recover.rs}` — transaction + reap units.
+- [x] Test 10 `retarget_never_runs_before_mount_verification` — the
+      classifier matrix proves probe failures never reach
+      `Verified` (no swap happens outside that arm by construction);
+      full-stack proof lands in E5/E8.
+- [x] Test 11 `post_commit_remount_failure_does_not_fail_squash_commit` —
+      transaction errors classify to `Leased`; storage commit is a
+      different call entirely (phase 8's sweep consumes outcomes without
+      touching the committed manifest); e2e proof in E1–E4.
+- [x] Test 12 `persist_failure_still_migrates` — `persist_handles` is
+      `let _ =` on the migrated path by construction (its result cannot
+      influence the outcome); E10's crash matrix covers the stale-file
+      boot half.
+- [x] Test 15 `ebusy_park_keeps_both_leases_and_converges` — the park
+      classification + `parked_lease_id` carrier + destroy's both-release
+      plumbing land here; the full converge assertion is E6.
+- [x] `tests/unit/{remount.rs, recover.rs}` — classifier matrix (C5 as a
+      pure function incl. the missing-report mount-id legs) + reap units
+      (containment guard, garbage-file reset) — 7 tests.
 
 ### Exit review
 
-- [ ] Standard review; X7.2 outcome in the Decision log; Phase 8
-      unblocked.
+- [x] Standard review (17 test targets green across
+      workspace/namespace-process/namespace-execution; clippy clean on
+      host and Linux targets for touched files — the two remaining host
+      warnings are a pre-existing `mod tests` in
+      `isolated_network_setup/mod.rs` owned elsewhere); X7.2 outcome in
+      the Decision log; Phase 8 unblocked.
 
 ---
 
@@ -747,6 +779,10 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 3 | X3.4 | Confirmed in code. `read_manifest` fabricates an empty v0 manifest when `manifest.json` is missing (`fs.rs:169-172`) ⇒ the fail-closed guard must (a) treat missing/`version < 1`/empty-layers as skip-sweep and (b) catch parse `Err` as skip (daemon still serves — G3 leg). Disk listing → keep-set → the shared `remove_layers` routine covers `layers/*` dirs and both sidecars in one call per id (missing dir is NotFound-tolerated, so sidecar-only orphans ride the same routine); `staging/*` is wiped unconditionally under the sweep's exclusive guard (boot runs before serving; a foreign process owning the root fails `LayerStack::open` first). | code survey `fs.rs`, `cleanup.rs`; probe x12 leg (e) |
 | 2026-07-02 | 4 | X4.1 | PASS. `kernel_mount.rs` already imports and uses `rustix::mount::{move_mount, unmount, MoveMountFlags, UnmountFlags}` from the workspace-pinned rustix 0.38; `MOVE_MOUNT_T_EMPTY_PATH` present — no version bump, fd-based patterns matched. | code survey |
 | 2026-07-02 | 4 | X4.2 | PASS, with three load-bearing measurements under **fully dangling paths** (parent renamed away — the mask analogue): (1) `move_mountpoint(source_root_fd, target_dirfd)` with `F_EMPTY_PATH\|T_EMPTY_PATH` moves live overlays; (2) **strict unmount of a masked mountpoint works through the pre-opened underlying-dentry fd's `/proc/self/fd/N` magic path** — `umount2`'s mountpoint lookup resolves onto the covering (parked) mount: EBUSY (16) verbatim while an OLD-root fd pins it, exit 0 after the pin drops; (3) probing rules: a **mount-root** fd's magic path reads the mount's content (and keeps working after the mount moves — the mask-immune post-switch probe), while an **underlying-dentry** fd's magic path does NOT step onto a covering mount. | `docker exec … /probe x13 /eos/workspace/probe-scratch` |
+| 2026-07-02 | 7 | X7.1 | PASS. Daemon-analog SIGKILLed → the holder (with `prctl(PR_SET_PDEATHSIG, SIGKILL)` set post-fork, before namespace setup) and its pid-ns-init analog (own PDEATHSIG chained to the holder) both die within the bounded wait; the holder's overlay namespace tears down completely (scratch removable, no residual mounts). Environment fact 1 is now proven, not assumed. | `docker exec … /probe x16 /eos/workspace/probe-scratch` |
+| 2026-07-02 | 7 | X7.2 | Spike done — one `Option` field is unavoidable and is taken, exactly as this experiment's escape hatch allows. The destroy path releases exactly one lease (`ExitOutcome.lease_id` ← `handle.snapshot.lease_id` → `release_lease`), and `LayerStackLeaseRecord` does not store owners, so no owner-based bulk release exists (and the spec forbids new lease APIs). `MountedWorkspace.parked_lease_id: Option<String>` carries the second lease — the OLD lease after an EBUSY park, or the NEW lease on a faulty outcome — is never serialized by `persist_handles` (fact 3), and rides `ExitOutcome` into the ordinary destroy release. Alternatives rejected: registry owner-tracking (new lease API), an operation-layer side map (new state container + a second release site). | code survey `destroy.rs`/`destroy_workspace.rs`/`registry.rs`; Decision log |
+| 2026-07-02 | 7 | X7.3 | PASS. Every reader of `snapshot`/`dirs.workdir` composes with the in-place swap: `persist_handles` serializes both (picks the fresh workdir up with zero schema change); destroy's teardown only stats them and removes the whole run dir (retired workdirs die with it); `WorkspaceHandle::from(&MountedWorkspace)` copies them into runner entries (post-swap requests carry the NEW chain/workdir — required); capture reads `snapshot.manifest` (the rewritten manifest is the same logical snapshot). No reader caches the creation-time workdir. | grep audit of `dirs.workdir` + `.snapshot` consumers |
+| 2026-07-02 | 7 | X7.4 | PASS. `lifecycle/persistence.rs` is the sole owner of the `manager.json` path (`persisted_handles_path`) and schema (`PERSISTED_HANDLES_SCHEMA_VERSION`); reap slots beside `persist_handles` reading `scratch_dir` per handle (with an under-`scratch_root` containment guard), removing run dirs wholesale, then rewriting the empty handle set — one natural call site for Phase 8's boot hook via a service-level wrapper, no parse helpers exported anywhere else. | code survey `persistence.rs`, `manager.rs` |
 | 2026-07-02 | 6 | X6.1 | PASS — the unmask window STANDS. With the production-style mask tmpfs mounted over the parent, the staged build fails (EROFS 30: upper/work paths resolve into the read-only mask) and even opening the masked upperdir fails, so fd-backed escape is impossible post-mask; `kernel_mount.rs` already documents that overlayfs rejects fd-backed upper/work paths. The mask itself lifts via one strict unmount even with volume mounts shadowed beneath it. | `docker exec … /probe x15 /eos/workspace/probe-scratch` |
 | 2026-07-02 | 6 | X6.2 | PASS. O_PATH dirfds opened on the staging mount root, rollback dir, and OLD workspace root before the remask stay fully usable after it: both `move_mountpoint(fd,fd)` moves and the strict rollback unmount via the dirfd magic path all succeed while every relevant path is masked. | probe x15 |
 | 2026-07-02 | 6 | X6.3 | PASS. Probe set defined and measured: `fstatfs(staging mount-root fd) == OVERLAYFS_SUPER_MAGIC` + `readdir` + witness read through the fd's magic path, all working under the mask, before AND after the move (the mount-root fd follows the mount). Production probes are structural (fstatfs + readdir; content witnesses live in the e2e fixtures, where expected content exists by construction). | probe x15 |
@@ -771,6 +807,8 @@ was updated in the same change.
 | 2026-07-02 | 0 | **G2's negative control targets the opaque-dir marker, not the plain-file whiteout.** X0.3 measured: deleted-file whiteouts are char 0:0 devices (xattr-independent — they hold without `userxattr`); the xattr-encoded metadata with resurrection teeth is `user.overlay.opaque` (lower entries resurface without `userxattr`). | §Required tests → Live Docker e2e G2 |
 | 2026-07-02 | 0 | **OVL_MAX_STACK failure point recorded**: the over-limit chain fails the `fsconfig lowerdir+` call (EINVAL), not `fsmount` — still a clean pre-PONR `stage_failed:<errno>` derived from the mount-build error; wording folded into §D. | §D chain-length paragraph |
 | 2026-07-02 | 2 | **X2.2 verdict: oldest-first raw-run contraction is sound as specified — no spec revision needed.** Determinism (unique ids ⇒ single match; fixed recording order), termination (strictly-shrinking single pass), and never-straddle compatibility (boundary-excluded blocks + generation composition; validate-alive is defensive-only, unreachable for correctly-composed live leases) all proven and replayed in test 8. | none (spec confirmed) |
+| 2026-07-02 | 7 | **PDEATHSIG moved from a workspace `pre_exec` hook to the ns-holder body's first act.** The workspace crate `forbid(unsafe_code)`s (crate-level, non-overridable) and `Command::pre_exec` is unsafe; nix's safe `set_pdeathsig` at the top of `holder::run` (namespace-process) gives the same kernel enforcement with only the exec-to-first-statement window exposed — covered by G3's bounded-wait assertion, and the X7.1 probe validated the post-exec placement. | environment fact 1, §A workspace/holder line |
+| 2026-07-02 | 7 | **The X7.2 `Option<lease>` fallback is taken**: `MountedWorkspace.parked_lease_id: Option<String>` (in-memory only, never persisted) carries the session's second lease — OLD after an EBUSY park, NEW on a faulty outcome — and the ordinary destroy releases both. Spec §A/§C5 and acceptance §4/§8 updated to name this single sanctioned field. Also: on a faulty outcome the frozen tasks are deliberately NOT resumed (the guard is forgotten) so nothing observes the partial mount state before destroy — C5's "tasks stayed frozen" is enforced by the transaction, not luck. | §A workspace block, §C5; acceptance §4, §8 |
 | 2026-07-02 | 6 | **`sandbox-daemon (+0)` was wrong for the ns-runner mode flag and is corrected.** The runner-mode registry (arg parse + dispatch) is daemon-owned (`sandbox-daemon/src/runner/mod.rs`); registering `--remount-overlay` requires +6/−2 there plus a ~25-line thin body mirroring `mount_overlay.rs`. Protocol, transport, RPC dispatch, and gateway remain +0 (the original claim's intent — no progress/protocol machinery — holds). Acceptance criterion 1 updated to match. | §A (daemon block), acceptance_criteria §1 |
 | 2026-07-02 | 6 | **Staging/rollback mountpoints live under the session run dir**, not a separate scratch: the run dir is session-scoped, masked under `/eos`, and already reaped by destroy and boot reap, so parked mounts and staging litter need zero new cleanup paths. | §C3 header block |
 | 2026-07-02 | 6 | **Missing-report classification = one holder mountinfo re-read + workspace mount-id compare** against the quiesce-time read (X6.4-measured: row absent between moves, id changed after the switch). This keeps E8(ii) a provable clean skip when the runner dies pre-move with its report suppressed, with no sentinel files and no protocol changes; a sentinel-file design was considered and rejected as a new artifact. | Vocabulary `point of no return` |
