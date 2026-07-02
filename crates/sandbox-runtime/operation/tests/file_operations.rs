@@ -326,16 +326,19 @@ fn sessionless_read_symlink_parent_is_not_followed() {
     let env = env();
     // linkdir -> sub is a symlinked parent directory. Classification treats a
     // symlink ancestor as blocking and never joins through it, so the read
-    // surfaces as not_found (via Absent), never invalid_request or the target.
+    // surfaces as NotRegular(Symlink), never not_found or the target.
     assert!(matches!(
         env.read(read_of("linkdir/nested.txt")),
-        Err(FileOperationError::NotFound(_))
+        Err(FileOperationError::NotRegular {
+            kind: FileEntryKind::Symlink,
+            ..
+        })
     ));
     assert!(matches!(
         env.layerstack
             .read_current_window(&layer_path("linkdir/nested.txt"), 1, 10, MAX_OUTPUT_BYTES)
             .expect("read window"),
-        ManifestReadWindow::Absent
+        ManifestReadWindow::Symlink
     ));
 }
 

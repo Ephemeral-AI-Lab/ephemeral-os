@@ -50,6 +50,23 @@ fn disjoint_edits_merge_clean_with_both_sides() {
 }
 
 #[test]
+fn adjacent_line_replacements_are_disjoint() {
+    let base = b"line-1\nline-2\nline-3\nline-4\nline-5\n";
+    let active = b"line-1\nLINE-2\nline-3\nLINE-4\nline-5\n";
+    let command = b"line-1\nline-2\nLINE-3\nline-4\nline-5\n";
+
+    let (bytes, origin) = clean(three_way_merge(base, active, command));
+    assert_eq!(bytes, b"line-1\nLINE-2\nLINE-3\nLINE-4\nline-5\n");
+
+    let line3 = origin
+        .iter()
+        .find(|(range, _)| range.start <= 3 && 3 < range.start + range.len)
+        .map(|(_, kind)| *kind)
+        .expect("line 3 covered");
+    assert_eq!(line3, Origin::Command);
+}
+
+#[test]
 fn overlapping_edits_conflict() {
     let base = b"l1\nl2\nl3\nl4\nl5\n";
     let active = b"l1\nl2\nl3-ACTIVE\nl4\nl5\n";
@@ -105,6 +122,25 @@ fn new_file_is_wholly_command() {
     let (empty, ranges) = clean(three_way_merge(b"", b"", b""));
     assert!(empty.is_empty());
     assert!(ranges.is_empty());
+}
+
+#[test]
+fn large_new_file_from_empty_base_stays_command_origin() {
+    let command = "x\n".repeat(210_001);
+
+    let (bytes, origin) = clean(three_way_merge(b"", b"", command.as_bytes()));
+
+    assert_eq!(bytes, command.as_bytes());
+    assert_eq!(
+        origin,
+        vec![(
+            LineRange {
+                start: 1,
+                len: 210_001,
+            },
+            Origin::Command,
+        )]
+    );
 }
 
 #[test]

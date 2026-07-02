@@ -4,6 +4,8 @@
 //! reads them back verbatim. Best-effort — a dropped event reconciles to
 //! `unknown`.
 
+use std::collections::HashMap;
+
 use sandbox_runtime_layerstack::{LayerChange, LayerPath, LineRange, Origin};
 use sha2::{Digest, Sha256};
 
@@ -38,9 +40,12 @@ impl FileService {
                     content_digest,
                 }
             } else {
-                let latest = self.store().latest(path.as_str());
-                let line_owners = resolve_line_owners(ranges, owner, latest.as_ref());
-                event_from_line_owners(path.as_str(), &line_owners, content_digest)
+                command_only_event(path.as_str(), ranges, owner, content_digest.clone())
+                    .unwrap_or_else(|| {
+                        let latest = self.store().latest(path.as_str());
+                        let line_owners = resolve_line_owners(ranges, owner, latest.as_ref());
+                        event_from_line_owners(path.as_str(), &line_owners, content_digest)
+                    })
             };
             let _ = self.store().append(&event);
         }
@@ -88,6 +93,28 @@ fn owner_at(event: &AuditEvent, line: u64) -> &str {
     &event.default_owner
 }
 
+fn command_only_event(
+    path: &str,
+    ranges: &[(LineRange, Origin)],
+    owner: &str,
+    content_digest: String,
+) -> Option<AuditEvent> {
+    let mut line_count = 0u64;
+    for (range, origin) in ranges {
+        if !matches!(origin, Origin::Command) {
+            return None;
+        }
+        line_count += range.len as u64;
+    }
+    Some(AuditEvent {
+        path: path.to_owned(),
+        line_count,
+        default_owner: owner.to_owned(),
+        owner_ranges: Vec::new(),
+        content_digest,
+    })
+}
+
 /// Build an event from per-line owners: the most-covering owner becomes
 /// `default_owner`, every other maximal run becomes a sparse `owner_range`.
 fn event_from_line_owners(path: &str, owners: &[String], content_digest: String) -> AuditEvent {
@@ -123,11 +150,13 @@ fn event_from_line_owners(path: &str, owners: &[String], content_digest: String)
 
 fn most_common_owner(owners: &[String]) -> Option<&str> {
     let mut best: Option<(&str, usize)> = None;
+    let mut counts: HashMap<&str, usize> = HashMap::new();
     for owner in owners {
-        let count = owners.iter().filter(|other| *other == owner).count();
+        let count = counts.entry(owner.as_str()).or_insert(0);
+        *count += 1;
         match best {
-            Some((_, best_count)) if best_count >= count => {}
-            _ => best = Some((owner.as_str(), count)),
+            Some((_, best_count)) if best_count >= *count => {}
+            _ => best = Some((owner.as_str(), *count)),
         }
     }
     best.map(|(owner, _)| owner)
@@ -149,4 +178,30 @@ fn content_digest(changes: &[LayerChange], path: &LayerPath) -> String {
         | LayerChange::OpaqueDir { .. } => return String::new(),
     }
     format!("sha256:{:x}", hasher.finalize())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn command_only_event_keeps_large_blame_sparse() {
+        let event = command_only_event(
+            "big/seq.txt",
+            &[(
+                LineRange {
+                    start: 1,
+                    len: 500_000,
+                },
+                Origin::Command,
+            )],
+            "workspace_session:one-shot",
+            "sha256:test".to_owned(),
+        )
+        .expect("command-only event");
+
+        assert_eq!(event.line_count, 500_000);
+        assert_eq!(event.default_owner, "workspace_session:one-shot");
+        assert!(event.owner_ranges.is_empty());
+    }
 }

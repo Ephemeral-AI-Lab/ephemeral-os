@@ -204,5 +204,6 @@ fn destroy_workspace_session_value(result: DestroyWorkspaceResult) -> Value {
     json!({
         "workspace_session_id": result.workspace_session_id.0,
         "destroyed": true,
+        "evicted_upperdir_bytes": result.evicted_upperdir_bytes,
     })
 }

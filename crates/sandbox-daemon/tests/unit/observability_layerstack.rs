@@ -45,17 +45,17 @@ fn bytes(id: &str, bytes: u64) -> LayerBytes {
 
 #[test]
 fn layerstack_view_merges_bytes_and_derives_booked_by() {
-    // §6 fixture: leases on {l2, l3} over l0..l4 (base → newest).
+    // §6 fixture: leases on {l2, l3} over l4..l0 (newest → base).
     let observation = StackObservation {
         manifest_version: 5,
         root_hash: "root-5".to_owned(),
         active_lease_count: 2,
         layers: vec![
-            layer("l0", 0),
-            layer("l1", 0),
-            layer("l2", 1),
-            layer("l3", 1),
             layer("l4", 0),
+            layer("l3", 1),
+            layer("l2", 1),
+            layer("l1", 0),
+            layer("l0", 0),
         ],
     };
     let disk = LayerStackBytes {
@@ -80,20 +80,20 @@ fn layerstack_view_merges_bytes_and_derives_booked_by() {
     assert_eq!(layers.len(), 5);
 
     // Bytes join by id.
-    assert_eq!(layers[0]["bytes"], json!(120_000));
+    assert_eq!(layers[4]["bytes"], json!(120_000));
     assert_eq!(layers[2]["bytes"], json!(20_000));
 
     // leased by workspaces: only l2 and l3.
+    assert_eq!(layers[1]["leased_by_workspaces"], json!(1));
     assert_eq!(layers[2]["leased_by_workspaces"], json!(1));
-    assert_eq!(layers[3]["leased_by_workspaces"], json!(1));
     assert_eq!(layers[0]["leased_by_workspaces"], json!(0));
 
     // booked by leased layers above (the §1 rule).
-    assert_eq!(layers[0]["booked_by"], json!(["l2", "l3"]));
-    assert_eq!(layers[1]["booked_by"], json!(["l2", "l3"]));
+    assert_eq!(layers[0]["booked_by"], json!([]));
+    assert_eq!(layers[1]["booked_by"], json!([]));
     assert_eq!(layers[2]["booked_by"], json!(["l3"]));
-    assert_eq!(layers[3]["booked_by"], json!([]));
-    assert_eq!(layers[4]["booked_by"], json!([]));
+    assert_eq!(layers[3]["booked_by"], json!(["l3", "l2"]));
+    assert_eq!(layers[4]["booked_by"], json!(["l3", "l2"]));
 }
 
 #[test]

@@ -18,9 +18,10 @@ fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers(
 
     let captured = capture_upperdir(&fixture.base)?;
 
-    assert!(captured.changes.contains(&LayerChange::Write {
+    assert!(captured.changes.contains(&LayerChange::WriteFile {
         path: LayerPath::parse("dir/file.txt")?,
-        content: b"hello".to_vec(),
+        source_path: fixture.base.join("dir/file.txt"),
+        size: 5,
     }));
     assert!(captured.changes.contains(&LayerChange::Delete {
         path: LayerPath::parse("old.txt")?,
@@ -49,9 +50,10 @@ fn captures_unsupported_special_files_as_workspace_protected_drops(
 
     let captured = capture_upperdir(&fixture.base)?;
 
-    assert!(captured.changes.contains(&LayerChange::Write {
+    assert!(captured.changes.contains(&LayerChange::WriteFile {
         path: LayerPath::parse("file.txt")?,
-        content: b"regular".to_vec(),
+        source_path: fixture.base.join("file.txt"),
+        size: 7,
     }));
     assert!(
         captured
@@ -86,9 +88,10 @@ fn captures_non_utf8_layer_paths_as_invalid_layer_path_drops(
 
     assert_eq!(
         captured.changes,
-        vec![LayerChange::Write {
+        vec![LayerChange::WriteFile {
             path: LayerPath::parse("file.txt")?,
-            content: b"regular".to_vec(),
+            source_path: fixture.base.join("file.txt"),
+            size: 7,
         }]
     );
     assert_eq!(captured.protected_drops.len(), 1);

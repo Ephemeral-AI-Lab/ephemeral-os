@@ -81,9 +81,6 @@ impl MergedView {
             if Self::is_whiteouted(&layer_dir, rel.as_str()) {
                 return Ok(MergedEntry::Absent);
             }
-            if Self::lookup_blocked_by_layer(&layer_dir, rel.as_str()) {
-                return Ok(MergedEntry::Absent);
-            }
             let target = join_layer_path(&layer_dir, rel.as_str());
             match std::fs::symlink_metadata(&target) {
                 Ok(meta) if meta.file_type().is_symlink() => {
@@ -103,8 +100,14 @@ impl MergedView {
                 }
                 Ok(meta) if meta.is_dir() => return Ok(MergedEntry::Directory),
                 Ok(_) => return Err(stale_layer_error(layer, rel.as_str(), None)),
-                Err(err) if err.kind() == ErrorKind::NotFound => {}
+                Err(err)
+                    if err.kind() == ErrorKind::NotFound
+                        || (err.kind() == ErrorKind::NotADirectory
+                            && Self::lookup_blocked_by_layer(&layer_dir, rel.as_str())) => {}
                 Err(err) => return Err(stale_layer_error(layer, rel.as_str(), Some(&err))),
+            }
+            if Self::lookup_blocked_by_layer(&layer_dir, rel.as_str()) {
+                return Ok(MergedEntry::Absent);
             }
         }
         Ok(MergedEntry::Absent)
@@ -125,10 +128,11 @@ impl MergedView {
         let rel = LayerPath::parse(path)?;
         for layer in &manifest.layers {
             let layer_dir = self.layer_dir(layer)?;
-            if Self::is_whiteouted(&layer_dir, rel.as_str())
-                || Self::lookup_blocked_by_layer(&layer_dir, rel.as_str())
-            {
+            if Self::is_whiteouted(&layer_dir, rel.as_str()) {
                 return Ok(ManifestFileRead::Absent);
+            }
+            if Self::lookup_symlink_ancestor_by_layer(&layer_dir, rel.as_str()) {
+                return Ok(ManifestFileRead::Symlink);
             }
             let target = join_layer_path(&layer_dir, rel.as_str());
             match std::fs::symlink_metadata(&target) {
@@ -153,8 +157,14 @@ impl MergedView {
                 }
                 Ok(meta) if meta.is_dir() => return Ok(ManifestFileRead::Directory),
                 Ok(_) => return Err(stale_layer_error(layer, rel.as_str(), None)),
-                Err(err) if err.kind() == ErrorKind::NotFound => {}
+                Err(err)
+                    if err.kind() == ErrorKind::NotFound
+                        || (err.kind() == ErrorKind::NotADirectory
+                            && Self::lookup_blocked_by_layer(&layer_dir, rel.as_str())) => {}
                 Err(err) => return Err(stale_layer_error(layer, rel.as_str(), Some(&err))),
+            }
+            if Self::lookup_blocked_by_layer(&layer_dir, rel.as_str()) {
+                return Ok(ManifestFileRead::Absent);
             }
         }
         Ok(ManifestFileRead::Absent)
@@ -232,6 +242,18 @@ impl MergedView {
                 }
             }
             if path.join(OPAQUE_MARKER).exists() {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn lookup_symlink_ancestor_by_layer(layer_dir: &Path, rel: &str) -> bool {
+        let parts: Vec<&str> = rel.split('/').collect();
+        for index in 1..parts.len() {
+            let ancestor = parts[..index].join("/");
+            let path = join_layer_path(layer_dir, &ancestor);
+            if std::fs::symlink_metadata(&path).is_ok_and(|meta| meta.file_type().is_symlink()) {
                 return true;
             }
         }

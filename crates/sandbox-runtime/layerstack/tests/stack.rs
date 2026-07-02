@@ -187,6 +187,61 @@ fn read_classified_opaque_parent_never_resolves_lower_layer(
     Ok(())
 }
 
+#[test]
+fn opaque_parent_keeps_same_layer_descendants_visible(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("read_opaque_same_layer_descendant");
+    let lower = fixture.root.join("layers/L000001-lower");
+    let upper = fixture.root.join("layers/L000002-upper");
+    std::fs::create_dir_all(lower.join("dir"))?;
+    std::fs::write(lower.join("dir/old.txt"), "lower\n")?;
+    std::fs::create_dir_all(upper.join("dir"))?;
+    std::fs::write(upper.join("dir/.wh..wh..opq"), b"")?;
+    std::fs::write(upper.join("dir/new.txt"), "upper\n")?;
+    write_manifest(&fixture, &["L000002-upper", "L000001-lower"])?;
+
+    let stack = LayerStack::open(fixture.root.clone())?;
+    assert_eq!(
+        stack.read_text("dir/new.txt")?,
+        ("upper\n".to_owned(), true)
+    );
+    assert_eq!(stack.read_text("dir/old.txt")?, (String::new(), false));
+    assert!(matches!(
+        stack.read_classified(&LayerPath::parse("dir/new.txt")?, usize::MAX)?,
+        ManifestFileRead::File { .. }
+    ));
+
+    let manifest = stack.read_active_manifest()?;
+    MergedView::new(fixture.root.clone()).project(&fixture.workspace, &manifest)?;
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join("dir/new.txt"))?,
+        "upper\n"
+    );
+    assert!(!fixture.workspace.join("dir/old.txt").exists());
+    Ok(())
+}
+
+#[test]
+fn file_ancestor_blocks_lower_descendant_without_storage_error(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("read_file_ancestor_blocks_descendant");
+    let lower = fixture.root.join("layers/L000001-lower");
+    let upper = fixture.root.join("layers/L000002-upper");
+    std::fs::create_dir_all(lower.join("dir"))?;
+    std::fs::write(lower.join("dir/old.txt"), "lower\n")?;
+    std::fs::create_dir_all(&upper)?;
+    std::fs::write(upper.join("dir"), b"")?;
+    write_manifest(&fixture, &["L000002-upper", "L000001-lower"])?;
+
+    let stack = LayerStack::open(fixture.root.clone())?;
+    assert_eq!(stack.read_text("dir/old.txt")?, (String::new(), false));
+    assert!(matches!(
+        stack.read_classified(&LayerPath::parse("dir/old.txt")?, usize::MAX)?,
+        ManifestFileRead::Absent
+    ));
+    Ok(())
+}
+
 fn publish_text(
     stack: &mut LayerStack,
     path: &str,

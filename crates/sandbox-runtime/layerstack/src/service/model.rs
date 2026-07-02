@@ -18,7 +18,7 @@ pub struct LayerStatus {
 
 /// Per-layer breakdown of the active manifest, computed from the live leases.
 ///
-/// `layers` is ordered base → newest; the booked-by relation is a pure function
+/// `layers` is ordered newest → base; the booked-by relation is a pure function
 /// of this order plus `leased_by_workspaces`, so it is derived at render rather
 /// than stored.
 #[derive(Debug, Clone, PartialEq, Eq)]

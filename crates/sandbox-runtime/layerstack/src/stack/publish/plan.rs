@@ -53,7 +53,11 @@ pub(crate) fn plan_publish(
     request: &PublishValidatedChangesRequest,
 ) -> Result<PublishPlan, LayerStackError> {
     validate_base_revision(request)?;
-    if let Some(drop) = request.protected_drops.first() {
+    if let Some(drop) = request
+        .protected_drops
+        .iter()
+        .find(|drop| drop.reason != super::model::LayerProtectedDropReason::UnsupportedSpecialFile)
+    {
         return Err(LayerStackError::PublishRejected(Box::new(
             PublishReject::protected_drop(drop.clone()),
         )));

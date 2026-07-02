@@ -302,6 +302,33 @@ fn protected_drop_rejects_before_publish() -> Result<(), Box<dyn std::error::Err
 }
 
 #[test]
+fn unsupported_special_file_drop_does_not_block_regular_publish(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("unsupported-special-drop")?;
+    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut request = request(
+        base,
+        vec![LayerChange::Write {
+            path: lp("note.txt"),
+            content: b"regular\n".to_vec(),
+        }],
+    );
+    request.protected_drops.push(LayerProtectedDrop {
+        path: "run.fifo".to_owned(),
+        reason: LayerProtectedDropReason::UnsupportedSpecialFile,
+    });
+
+    let result = fixture.stack()?.publish_validated_changes(request)?;
+
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "note.txt")?,
+        Some("regular\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
 fn symlink_fingerprints_report_source_conflicts(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = PublishFixture::new("symlink-conflict")?;

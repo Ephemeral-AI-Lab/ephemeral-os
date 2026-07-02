@@ -92,7 +92,7 @@ pub fn three_way_merge(base: &[u8], active: &[u8], command: &[u8]) -> MergeOutco
         loop {
             let mut grew = false;
             if let Some(r) = ra.get(ia) {
-                if r.b0 <= cb1 {
+                if r.b0 < cb1 || r.b0 == bi {
                     saw_a = true;
                     cb1 = cb1.max(r.b1);
                     for &i in &r.repl {
@@ -103,7 +103,7 @@ pub fn three_way_merge(base: &[u8], active: &[u8], command: &[u8]) -> MergeOutco
                 }
             }
             if let Some(r) = rc.get(ic) {
-                if r.b0 <= cb1 {
+                if r.b0 < cb1 || r.b0 == bi {
                     saw_c = true;
                     cb1 = cb1.max(r.b1);
                     for &i in &r.repl {
@@ -254,6 +254,22 @@ const MYERS_MAX_D: usize = 200_000;
 fn diff<'a>(a: &[&'a [u8]], b: &[&'a [u8]]) -> Vec<EditOp> {
     if a.is_empty() && b.is_empty() {
         return Vec::new();
+    }
+    if a.is_empty() {
+        return (0..b.len())
+            .map(|j| EditOp {
+                kind: Kind::Ins,
+                b: j,
+            })
+            .collect();
+    }
+    if b.is_empty() {
+        return (0..a.len())
+            .map(|_| EditOp {
+                kind: Kind::Del,
+                b: 0,
+            })
+            .collect();
     }
     let n = a.len() as isize;
     let m = b.len() as isize;

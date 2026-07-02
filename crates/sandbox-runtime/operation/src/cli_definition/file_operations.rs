@@ -11,6 +11,7 @@ use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{error_kind, Request, Response};
+use sandbox_runtime_layerstack::LayerPath;
 
 const FILE_NOT_FOUND: &str = "not_found";
 const READ_LIMIT_MAX: u64 = 2000;
@@ -218,8 +219,18 @@ fn dispatch_file_blame(operations: &SandboxRuntimeOperations, request: &Request)
         Ok(path) => path,
         Err(response) => return response,
     };
-    match operations.file.blame(&path) {
-        Ok(ranges) => Response::ok(file_blame_value(&path, &ranges)),
+    let canonical_path = match LayerPath::parse(&path) {
+        Ok(path) => path,
+        Err(_) => {
+            return Response::fault_with_details(
+                FILE_NOT_FOUND,
+                format!("no auditability record for path: {path}"),
+                json!({ "path": path }),
+            )
+        }
+    };
+    match operations.file.blame(canonical_path.as_str()) {
+        Ok(ranges) => Response::ok(file_blame_value(canonical_path.as_str(), &ranges)),
         Err(FileError::NotFound(missing)) => Response::fault_with_details(
             FILE_NOT_FOUND,
             format!("no auditability record for path: {missing}"),

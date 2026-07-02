@@ -24,8 +24,8 @@ use rustix::fs::{Mode, OFlags};
 use rustix::io::Errno;
 #[cfg(target_os = "linux")]
 use rustix::mount::{
-    fsconfig_create, fsconfig_set_string, fsmount, fsopen, move_mount, unmount, FsMountFlags,
-    FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags,
+    fsconfig_create, fsconfig_set_flag, fsconfig_set_string, fsmount, fsopen, move_mount, unmount,
+    FsMountFlags, FsOpenFlags, MountAttrFlags, MoveMountFlags, UnmountFlags,
 };
 
 use crate::OverlayError;
@@ -129,6 +129,7 @@ pub fn mount_overlay(
         fsconfig_set_string(fsfd.as_fd(), "lowerdir+", layer)
             .map_mount_syscall("fsconfig lowerdir+")?;
     }
+    fsconfig_set_flag(fsfd.as_fd(), "userxattr").map_mount_syscall("fsconfig userxattr")?;
     fsconfig_set_string(fsfd.as_fd(), "upperdir", &inputs.upperdir)
         .map_mount_syscall("fsconfig upperdir")?;
     fsconfig_set_string(fsfd.as_fd(), "workdir", &inputs.workdir)

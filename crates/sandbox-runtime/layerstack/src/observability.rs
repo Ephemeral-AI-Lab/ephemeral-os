@@ -7,7 +7,7 @@ use crate::stack::lease::lock_shared_registry;
 use crate::LayerStack;
 
 impl LayerStack {
-    /// Per-layer lease breakdown of the active manifest, base -> newest.
+    /// Per-layer lease breakdown of the active manifest, newest -> base.
     ///
     /// Computed in one pass over the live leases: each layer's
     /// `leased_by_workspaces` is the number of leases whose newest layer is that
@@ -27,7 +27,6 @@ impl LayerStack {
         let layers = manifest
             .layers
             .iter()
-            .rev()
             .map(|layer| LayerStatus {
                 leased_by_workspaces: leased_counts
                     .get(layer.layer_id.as_str())

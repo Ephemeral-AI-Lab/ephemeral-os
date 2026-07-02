@@ -23,7 +23,7 @@ fn leased_by(obs: &StackObservation) -> Vec<usize> {
 fn booked_by_ids(obs: &StackObservation, index: usize) -> Vec<String> {
     obs.layers
         .iter()
-        .skip(index + 1)
+        .take(index)
         .filter(|status| status.leased_by_workspaces > 0)
         .map(|status| status.layer.layer_id.clone())
         .collect()
@@ -59,26 +59,26 @@ fn observe_reports_leased_and_booked_layers_over_l0_to_l4(
     assert_eq!(obs.layers.len(), 5);
 
     // Only l2 and l3 are some lease's newest layer.
-    assert_eq!(leased_by(&obs), vec![0, 0, 1, 1, 0]);
+    assert_eq!(leased_by(&obs), vec![0, 1, 1, 0, 0]);
 
     // booked by leased layers (the §1 rule): each base is booked by the leased
     // layers above it whose mount pulls it in.
-    assert_eq!(booked_by_ids(&obs, 0), ids_at(&obs, &[2, 3]));
-    assert_eq!(booked_by_ids(&obs, 1), ids_at(&obs, &[2, 3]));
-    assert_eq!(booked_by_ids(&obs, 2), ids_at(&obs, &[3]));
-    assert!(booked_by_ids(&obs, 3).is_empty());
-    assert!(booked_by_ids(&obs, 4).is_empty());
+    assert!(booked_by_ids(&obs, 0).is_empty());
+    assert!(booked_by_ids(&obs, 1).is_empty());
+    assert_eq!(booked_by_ids(&obs, 2), ids_at(&obs, &[1]));
+    assert_eq!(booked_by_ids(&obs, 3), ids_at(&obs, &[1, 2]));
+    assert_eq!(booked_by_ids(&obs, 4), ids_at(&obs, &[1, 2]));
 
     // Releasing the l3 lease leaves l3 (and l4) leased by 0 ws / booked by —.
     assert!(stack.release_lease(&lease_l3.lease_id)?);
     let obs = stack.observe()?;
     assert_eq!(obs.active_lease_count, 1);
     assert_eq!(leased_by(&obs), vec![0, 0, 1, 0, 0]);
-    assert_eq!(booked_by_ids(&obs, 0), ids_at(&obs, &[2]));
-    assert_eq!(booked_by_ids(&obs, 1), ids_at(&obs, &[2]));
+    assert!(booked_by_ids(&obs, 0).is_empty());
+    assert!(booked_by_ids(&obs, 1).is_empty());
     assert!(booked_by_ids(&obs, 2).is_empty());
-    assert!(booked_by_ids(&obs, 3).is_empty());
-    assert!(booked_by_ids(&obs, 4).is_empty());
+    assert_eq!(booked_by_ids(&obs, 3), ids_at(&obs, &[2]));
+    assert_eq!(booked_by_ids(&obs, 4), ids_at(&obs, &[2]));
 
     Ok(())
 }

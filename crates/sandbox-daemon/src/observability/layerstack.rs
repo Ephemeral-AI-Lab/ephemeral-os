@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 /// layer's `booked_by` set.
 ///
 /// `booked_by` is not stored: it is the full list of leased layers above a layer
-/// in base → newest order (the layers whose mount pulls it in as a base).
+/// in newest → base order (the layers whose mount pulls it in as a base).
 pub(crate) fn layerstack_view_value(
     observation: &StackObservation,
     bytes: &LayerStackBytes,
@@ -27,7 +27,7 @@ pub(crate) fn layerstack_view_value(
         .enumerate()
         .map(|(index, status)| {
             let layer_id = status.layer.layer_id.as_str();
-            let booked_by = observation.layers[index + 1..]
+            let booked_by = observation.layers[..index]
                 .iter()
                 .filter(|above| above.leased_by_workspaces > 0)
                 .map(|above| above.layer.layer_id.as_str())

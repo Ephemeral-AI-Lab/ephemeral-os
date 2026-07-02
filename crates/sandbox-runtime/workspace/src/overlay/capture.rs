@@ -1,9 +1,7 @@
 //! Workspace-owned capture for overlay upperdirs.
 
 use std::collections::HashSet;
-use std::io::{self, Read};
-#[cfg(unix)]
-use std::os::unix::fs::MetadataExt;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use sandbox_runtime_layerstack::{CasError, LayerChange, LayerPath};
@@ -86,10 +84,14 @@ impl PendingChange {
                 path,
                 source_path,
                 meta,
-            } => Ok(LayerChange::Write {
-                content: read_regular_file(&source_path, &meta, max_bytes)?,
-                path,
-            }),
+            } => {
+                ensure_capture_file_size(&source_path, meta.len(), max_bytes)?;
+                Ok(LayerChange::WriteFile {
+                    path,
+                    source_path,
+                    size: meta.len(),
+                })
+            }
             Self::Delete { path } => Ok(LayerChange::Delete { path }),
             Self::Symlink { path, source_path } => Ok(LayerChange::Symlink { path, source_path }),
             Self::OpaqueDir { path } => Ok(LayerChange::OpaqueDir { path }),
@@ -266,39 +268,6 @@ fn push_opaque_dir(
     }
 }
 
-fn read_regular_file(
-    entry: &Path,
-    expected_meta: &std::fs::Metadata,
-    max_bytes: usize,
-) -> std::result::Result<Vec<u8>, CaptureError> {
-    ensure_capture_file_size(entry, expected_meta.len(), max_bytes)?;
-    let file =
-        open_regular_file_no_follow(entry).map_err(|err| CaptureError::capture(entry, err))?;
-    let actual_meta = file
-        .metadata()
-        .map_err(|err| CaptureError::capture(entry, err))?;
-    if !actual_meta.is_file() || !same_file(expected_meta, &actual_meta) {
-        return Err(changed_during_capture(entry));
-    }
-    ensure_capture_file_size(entry, actual_meta.len(), max_bytes)?;
-
-    let mut content = Vec::new();
-    let limit = u64::try_from(max_bytes)
-        .unwrap_or(u64::MAX)
-        .saturating_add(1);
-    file.take(limit)
-        .read_to_end(&mut content)
-        .map_err(|err| CaptureError::capture(entry, err))?;
-    if content.len() > max_bytes {
-        return Err(capture_file_too_large(
-            entry,
-            u64::try_from(content.len()).unwrap_or(u64::MAX),
-            max_bytes,
-        ));
-    }
-    Ok(content)
-}
-
 fn ensure_capture_file_size(
     entry: &Path,
     size: u64,
@@ -309,44 +278,6 @@ fn ensure_capture_file_size(
         return Err(capture_file_too_large(entry, size, max_bytes));
     }
     Ok(())
-}
-
-#[cfg(unix)]
-fn open_regular_file_no_follow(entry: &Path) -> io::Result<std::fs::File> {
-    use rustix::fs::{Mode, OFlags};
-
-    rustix::fs::open(
-        entry,
-        OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
-        Mode::empty(),
-    )
-    .map(std::fs::File::from)
-    .map_err(io::Error::from)
-}
-
-#[cfg(not(unix))]
-fn open_regular_file_no_follow(entry: &Path) -> io::Result<std::fs::File> {
-    std::fs::File::open(entry)
-}
-
-#[cfg(unix)]
-fn same_file(left: &std::fs::Metadata, right: &std::fs::Metadata) -> bool {
-    left.dev() == right.dev() && left.ino() == right.ino()
-}
-
-#[cfg(not(unix))]
-fn same_file(_left: &std::fs::Metadata, _right: &std::fs::Metadata) -> bool {
-    true
-}
-
-fn changed_during_capture(entry: &Path) -> CaptureError {
-    CaptureError::capture(
-        entry,
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            "overlay regular file changed during capture",
-        ),
-    )
 }
 
 fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureError {
