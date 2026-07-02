@@ -194,6 +194,10 @@ def squash_sandbox_factory(tmp_path):
 
     for sandbox_id, rec in reversed(created):
         try:
+            squash_helpers.harvest_observability(rec, sandbox_id)
+        except Exception:
+            pass
+        try:
             squash_helpers.destroy_sandbox(rec, sandbox_id)
         except Exception:
             pass

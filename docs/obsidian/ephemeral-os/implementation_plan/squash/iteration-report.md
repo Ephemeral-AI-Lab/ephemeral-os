@@ -702,3 +702,27 @@
 - Cases run/passed/failed/skipped: 2/2/0/0
 - Wall time: 45433.605 ms
 - Description: suite completed with pytest exit status `0`; second consecutive green proof for default LOAD-COMBO-HTTP with `T_http_disconnect=15.762ms`, max `T_squash=822.585ms`, and 3/3 squash rounds passing correctness, space, and time axes; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-043711`.
+## perf-20260703-052525-baseline-s50 START — 2026-07-03T05:36:47+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -s -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/perf-20260703-052525-baseline-s50`.
+
+## perf-20260703-052525-baseline-s50 FINAL — 2026-07-03T05:37:22+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -s -q`
+- Cases run/passed/failed/skipped: 2/2/0/0
+- Wall time: 34270.426 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/perf-20260703-052525-baseline-s50`.
+
+## perf-20260703-052525-baseline-s200 START — 2026-07-03T05:42:02+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -s -q` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/perf-20260703-052525-baseline-s200`.
+
+## perf-20260703-052525-baseline-s200 FINAL — 2026-07-03T05:42:55+08:00
+- Command/tier: `/opt/homebrew/bin/pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP] -s -q`
+- Cases run/passed/failed/skipped: 2/2/0/0
+- Wall time: 52859.372 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/perf-20260703-052525-baseline-s200`.
+

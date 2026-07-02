@@ -388,6 +388,38 @@ def docker_volumes_from(rec, container, image, *args, timeout=120, check=False):
     return proc
 
 
+OBS_NDJSON_PATHS = (
+    "/eos/runtime/daemon/observability/observability.ndjson",
+    "/eos/runtime/daemon/observability/observability.ndjson.1",
+)
+
+
+def harvest_observability(rec, sandbox_id):
+    """Copy the daemon span log out of the container before teardown removes it.
+
+    Opt-in via SQUASH_HARVEST_OBS=1 (a performance-experiment hook). Lands the
+    raw NDJSON next to the case report artifacts. Best-effort: never raises, so
+    it cannot affect a case verdict or the destroy that follows it.
+    """
+    if not os.environ.get("SQUASH_HARVEST_OBS"):
+        return
+    dest_dir = getattr(rec, "case_dir", None)
+    if dest_dir is None:
+        return
+    for src in OBS_NDJSON_PATHS:
+        dest = Path(dest_dir) / Path(src).name
+        try:
+            subprocess.run(
+                ["docker", "cp", f"{sandbox_id}:{src}", str(dest)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=False,
+            )
+        except Exception:
+            pass
+
+
 def create_sandbox(rec, workspace_root):
     result = manager(
         rec,

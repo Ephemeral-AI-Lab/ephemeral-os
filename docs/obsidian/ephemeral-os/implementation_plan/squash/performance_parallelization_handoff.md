@@ -4,11 +4,15 @@
 
 `sandbox-cli manager checkpoint_squash` is currently correct under live Docker E2E coverage, but its latency is too high for heavy interactive workloads with hundreds of active workspace sessions. The current user-facing concern is that a worst-case live squash invocation near 800-900 ms may be noticeable, and may scale poorly as active workspace/session count rises.
 
-The goal of this handoff is to find a safe solution for:
+The goal of this handoff is to find the fastest safe solution for:
 
 - parallelizing work where correctness permits it;
 - optimizing per squash-block time;
 - reducing live-session disruption without weakening the LayerStack squash spec, live-remount guarantees, durability, or E2E assertions.
+
+Aggressive optimization is welcome. A large change is acceptable if it comes with a clear safety guarantee and benchmark evidence. Minimal patch size is not a preference here; the target is maximum safe performance.
+
+Scope for this handoff: spec, design, and experiments only. Do not implement production changes in `src/` or `crates/` until the experiment evidence and design conclusion are recorded.
 
 Do not stub product behavior, remove correctness barriers, weaken tests, widen budgets, or use test hooks in production code.
 
@@ -160,7 +164,9 @@ Do not parallelize or bypass:
 
 ## Requested Investigation
 
-Find the smallest safe implementation plan for performance improvement, in this order:
+Run experiments before reaching a design conclusion. The handoff agent should first measure where time is spent, test candidate bottleneck fixes, and only then choose the design. Do not settle on a serial, parallel, or refactor-heavy approach by inspection alone.
+
+Find the highest-performing safe implementation plan, in this order:
 
 1. Add internal timing attribution for `plan`, `build`, `commit`, and `remount_sweep`.
    This should prove where the 800-900 ms is spent before changing behavior.
@@ -182,22 +188,33 @@ Find the smallest safe implementation plan for performance improvement, in this 
    - serialize handle mutation and handle-file persistence;
    - preserve per-session gates and C1/C5 outcomes.
 
+5. If the measurements show another bottleneck, pursue that instead. The output should follow the evidence, not the initial guess.
+
 ## Expected Output From Handoff Agent
 
 The handoff agent should return:
 
-- a concrete design with file-level changes;
+- spec/design updates that state the selected optimization path and safety contract;
+- experiments run, raw timing deltas, and the conclusion those measurements support;
+- saved experiment scripts, commands, and logs as evidence when practical;
+- a concrete implementation design with file-level changes, but no production implementation yet;
 - exact correctness invariants preserved;
 - expected performance impact for single-block, multi-block, and hundreds-session cases;
 - smallest unit tests and live E2E proof runs required;
 - risks and fallback plan if parallel remount is too invasive.
 
-Preferred first patch:
+Recommended evidence layout:
 
-- phase timing attribution plus one safe low-risk optimization.
+- `docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/<RUN_ID>/scripts/`
+- `docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/<RUN_ID>/logs/`
+- `docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/<RUN_ID>/RESULTS.md`
 
-Preferred second patch:
+Preferred first step:
 
-- bounded parallel block build.
+- phase timing attribution plus benchmark experiments on the current implementation.
 
-Only attempt parallel remount sweep after attribution proves remount sweep dominates and the state-lock refactor is clearly bounded.
+Optimization target:
+
+- pursue the best safe speedup, including bounded parallel block build, remount sweep parallelization, state-lock refactors, batching, caching, or I/O reduction when experiments justify them.
+
+Parallel remount sweep is explicitly in scope if attribution proves it dominates and the replacement design preserves the safety constraints above.
