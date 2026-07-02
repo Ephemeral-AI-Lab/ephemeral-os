@@ -185,6 +185,7 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/RESULTS.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/logs/attribution-baseline-s200.json",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/logs/attribution-baseline-s200.txt",
@@ -220,7 +221,6 @@
     "ephemeral-os/implementation_plan/file_operations/fix_spec.md",
     "ephemeral-os/implementation_plan/file_operations/live_smoke_evidence.md",
     "ephemeral-os/implementation_plan/file_operations/side_daemon_cli_spec.md",
-    "ephemeral-os/implementation_plan/file_operations/impl_plan_and_progress_tracker.md",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }
