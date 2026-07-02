@@ -149,7 +149,16 @@ impl LayerStack {
                 let (layer_id, staging_dir, layer_dir) =
                     allocate_layer_dirs(&self.storage_root, 'S', plan.manifest.version + 1)?;
                 std::fs::create_dir_all(&staging_dir)?;
+                let start = find_run(&plan.manifest.layers, block).ok_or_else(|| {
+                    LayerStackError::Storage(format!(
+                        "planned source run for {layer_id} is no longer present in the plan"
+                    ))
+                })?;
                 let sources: Vec<PathBuf> = block
+                    .iter()
+                    .map(|layer| resolve_layer_path(&self.storage_root, &layer.path))
+                    .collect();
+                let lower_layers: Vec<PathBuf> = plan.manifest.layers[start + block.len()..]
                     .iter()
                     .map(|layer| resolve_layer_path(&self.storage_root, &layer.path))
                     .collect();
@@ -159,7 +168,7 @@ impl LayerStack {
                     layer_dir,
                     replaced: block.clone(),
                 });
-                flatten::flatten_block_into(&staging_dir, &sources)?;
+                flatten::flatten_block_into_with_lower(&staging_dir, &sources, &lower_layers)?;
             }
             Ok(())
         })();

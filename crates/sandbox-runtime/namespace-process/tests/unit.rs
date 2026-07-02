@@ -43,6 +43,21 @@ mod runner_error_tests {
     }
 
     #[test]
+    fn runner_overlay_error_display_includes_mount_syscall_context() {
+        let error = super::runner::RunnerError::Overlay(
+            sandbox_runtime_overlay::OverlayError::MountSyscall {
+                context: "fsconfig lowerdir+",
+                source: std::io::Error::from_raw_os_error(libc::EINVAL),
+            },
+        );
+
+        let message = error.to_string();
+        assert!(message.contains("overlay mount failed"));
+        assert!(message.contains("fsconfig lowerdir+"));
+        assert!(message.contains("Invalid argument") || message.contains("EINVAL"));
+    }
+
+    #[test]
     fn run_result_has_no_runner_trace_transport_field() {
         let value = serde_json::to_value(super::runner::protocol::RunResult {
             exit_code: 0,

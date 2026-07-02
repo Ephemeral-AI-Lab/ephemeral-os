@@ -28,17 +28,10 @@ use crate::whiteout::{
     TRUSTED_OVERLAY_WHITEOUT_XATTR, USER_OVERLAY_OPAQUE_XATTR, USER_OVERLAY_WHITEOUT_XATTR,
 };
 
-/// Fold `sources_newest_first` (a squash block's layer directories, mount
-/// priority order) into `staging_dir`.
-///
-/// # Errors
-///
-/// Returns [`LayerStackError`] when the block is smaller than two layers,
-/// a source entry has an unsupported file type, or any filesystem operation
-/// fails; the caller owns cleanup of the partially-written staging tree.
-pub(crate) fn flatten_block_into(
+pub(crate) fn flatten_block_into_with_lower(
     staging_dir: &Path,
     sources_newest_first: &[PathBuf],
+    lower_layers_newest_first: &[PathBuf],
 ) -> Result<(), LayerStackError> {
     if sources_newest_first.len() < 2 {
         return Err(LayerStackError::Storage(format!(
@@ -50,8 +43,12 @@ pub(crate) fn flatten_block_into(
     for source in sources_newest_first {
         roots.push(open_dir_abs(source)?);
     }
+    let mut lower_roots = Vec::with_capacity(lower_layers_newest_first.len());
+    for source in lower_layers_newest_first {
+        lower_roots.push(open_dir_abs(source)?);
+    }
     fs::create_dir_all(staging_dir)?;
-    let root_opaque = merge_dirs(staging_dir, &roots)?;
+    let root_opaque = merge_dirs(staging_dir, &roots, &lower_roots)?;
     if root_opaque {
         mark_opaque(staging_dir)?;
     }
@@ -73,14 +70,24 @@ struct Winner {
 /// Merge the participating layer directories (newest-first) into `out_dir`.
 /// Returns whether an opaque cut was found, in which case the caller must
 /// mask `out_dir` against layers below the block.
-fn merge_dirs(out_dir: &Path, layers: &[OwnedFd]) -> Result<bool, LayerStackError> {
+fn merge_dirs(
+    out_dir: &Path,
+    layers: &[OwnedFd],
+    lower_layers: &[OwnedFd],
+) -> Result<bool, LayerStackError> {
     let cut = opaque_cut(layers)?;
     let layers = match cut {
         Some(index) => &layers[..=index],
         None => layers,
     };
-    for (name, winner) in collect_winners(layers)? {
-        emit_winner(out_dir, layers, &name, &winner)?;
+    let empty_lower = [];
+    let lower_layers = if cut.is_some() {
+        &empty_lower[..]
+    } else {
+        lower_layers
+    };
+    for (name, winner) in collect_winners(layers, lower_layers)? {
+        emit_winner(out_dir, layers, lower_layers, &name, &winner)?;
     }
     Ok(cut.is_some())
 }
@@ -88,7 +95,10 @@ fn merge_dirs(out_dir: &Path, layers: &[OwnedFd]) -> Result<bool, LayerStackErro
 /// Newest occurrence per name across the participating layers; a logical
 /// whiteout claim in the same layer as a real entry wins, matching
 /// `MergedView::is_whiteouted` running before the entry lookup.
-fn collect_winners(layers: &[OwnedFd]) -> Result<BTreeMap<OsString, Winner>, LayerStackError> {
+fn collect_winners(
+    layers: &[OwnedFd],
+    lower_layers: &[OwnedFd],
+) -> Result<BTreeMap<OsString, Winner>, LayerStackError> {
     let mut first_dirent: BTreeMap<OsString, usize> = BTreeMap::new();
     let mut first_claim: BTreeMap<OsString, usize> = BTreeMap::new();
     for (index, layer) in layers.iter().enumerate() {
@@ -101,8 +111,16 @@ fn collect_winners(layers: &[OwnedFd]) -> Result<BTreeMap<OsString, Winner>, Lay
                 first_claim
                     .entry(OsString::from_vec(target.to_vec()))
                     .or_insert(index);
-            } else {
-                first_dirent.entry(name).or_insert(index);
+                continue;
+            }
+            match classify_at(layer, &name)? {
+                Some(SourceEntry::Whiteout) => {
+                    first_claim.entry(name).or_insert(index);
+                }
+                Some(SourceEntry::File | SourceEntry::Symlink | SourceEntry::Dir { .. }) => {
+                    first_dirent.entry(name).or_insert(index);
+                }
+                None => {}
             }
         }
     }
@@ -110,10 +128,15 @@ fn collect_winners(layers: &[OwnedFd]) -> Result<BTreeMap<OsString, Winner>, Lay
     for (name, dirent_layer) in first_dirent {
         let claim_layer = first_claim.remove(&name);
         let winner = match claim_layer {
-            Some(claim) if claim <= dirent_layer => Winner {
-                layer: claim,
-                whiteout: true,
-            },
+            Some(claim) if claim <= dirent_layer => {
+                if !lower_name_visible(lower_layers, &name)? {
+                    continue;
+                }
+                Winner {
+                    layer: claim,
+                    whiteout: true,
+                }
+            }
             _ => Winner {
                 layer: dirent_layer,
                 whiteout: false,
@@ -122,6 +145,9 @@ fn collect_winners(layers: &[OwnedFd]) -> Result<BTreeMap<OsString, Winner>, Lay
         winners.insert(name, winner);
     }
     for (name, claim_layer) in first_claim {
+        if !lower_name_visible(lower_layers, &name)? {
+            continue;
+        }
         winners.insert(
             name,
             Winner {
@@ -136,6 +162,7 @@ fn collect_winners(layers: &[OwnedFd]) -> Result<BTreeMap<OsString, Winner>, Lay
 fn emit_winner(
     out_dir: &Path,
     layers: &[OwnedFd],
+    lower_layers: &[OwnedFd],
     name: &OsStr,
     winner: &Winner,
 ) -> Result<(), LayerStackError> {
@@ -161,13 +188,16 @@ fn emit_winner(
             symlink(OsStr::from_bytes(target.as_bytes()), &out_path)?;
             Ok(())
         }
-        SourceEntry::Dir { mode } => emit_merged_dir(&out_path, layers, name, winner.layer, mode),
+        SourceEntry::Dir { mode } => {
+            emit_merged_dir(&out_path, layers, lower_layers, name, winner.layer, mode)
+        }
     }
 }
 
 fn emit_merged_dir(
     out_path: &Path,
     layers: &[OwnedFd],
+    lower_layers: &[OwnedFd],
     name: &OsStr,
     newest: usize,
     mode: u32,
@@ -189,7 +219,12 @@ fn emit_merged_dir(
         }
     }
     fs::create_dir(out_path)?;
-    let child_opaque = merge_dirs(out_path, &members)?;
+    let child_lower_layers = if terminated_in_block {
+        Vec::new()
+    } else {
+        child_lower_dirs(lower_layers, name)?
+    };
+    let child_opaque = merge_dirs(out_path, &members, &child_lower_layers)?;
     fs::set_permissions(out_path, fs::Permissions::from_mode(mode))?;
     if terminated_in_block || child_opaque {
         mark_opaque(out_path)?;
@@ -202,18 +237,21 @@ fn emit_merged_dir(
 /// (prior-generation squash encoding); layers below it contribute nothing.
 fn opaque_cut(layers: &[OwnedFd]) -> Result<Option<usize>, LayerStackError> {
     for (index, layer) in layers.iter().enumerate() {
-        match rustix::fs::statat(layer, OPAQUE_MARKER, AtFlags::SYMLINK_NOFOLLOW) {
-            Ok(_) => return Ok(Some(index)),
-            Err(Errno::NOENT) => {}
-            Err(errno) => return Err(flatten_errno(OsStr::new(OPAQUE_MARKER), "statat", errno)),
-        }
-        if fd_has_xattr_y(layer, USER_OVERLAY_OPAQUE_XATTR)
-            || fd_has_xattr_y(layer, TRUSTED_OVERLAY_OPAQUE_XATTR)
-        {
+        if fd_dir_is_opaque(layer)? {
             return Ok(Some(index));
         }
     }
     Ok(None)
+}
+
+fn fd_dir_is_opaque(layer: &OwnedFd) -> Result<bool, LayerStackError> {
+    match rustix::fs::statat(layer, OPAQUE_MARKER, AtFlags::SYMLINK_NOFOLLOW) {
+        Ok(_) => return Ok(true),
+        Err(Errno::NOENT) => {}
+        Err(errno) => return Err(flatten_errno(OsStr::new(OPAQUE_MARKER), "statat", errno)),
+    }
+    Ok(fd_has_xattr_y(layer, USER_OVERLAY_OPAQUE_XATTR)
+        || fd_has_xattr_y(layer, TRUSTED_OVERLAY_OPAQUE_XATTR))
 }
 
 fn classify_at(layer: &OwnedFd, name: &OsStr) -> Result<Option<SourceEntry>, LayerStackError> {
@@ -259,6 +297,45 @@ fn file_is_xattr_whiteout(layer: &OwnedFd, name: &OsStr) -> Result<bool, LayerSt
         || fd_has_xattr(&file, USER_OVERLAY_WHITEOUT_XATTR))
 }
 
+fn lower_name_visible(layers: &[OwnedFd], name: &OsStr) -> Result<bool, LayerStackError> {
+    for layer in layers {
+        if logical_claim_exists(layer, name)? {
+            return Ok(false);
+        }
+        match classify_at(layer, name)? {
+            Some(SourceEntry::Whiteout) => return Ok(false),
+            Some(SourceEntry::File | SourceEntry::Symlink | SourceEntry::Dir { .. }) => {
+                return Ok(true);
+            }
+            None => {}
+        }
+        if fd_dir_is_opaque(layer)? {
+            return Ok(false);
+        }
+    }
+    Ok(false)
+}
+
+fn child_lower_dirs(layers: &[OwnedFd], name: &OsStr) -> Result<Vec<OwnedFd>, LayerStackError> {
+    let mut dirs = Vec::new();
+    for layer in layers {
+        if logical_claim_exists(layer, name)? {
+            break;
+        }
+        match classify_at(layer, name)? {
+            Some(SourceEntry::Dir { .. }) => {
+                dirs.push(open_dir_at(layer, name)?);
+            }
+            Some(SourceEntry::Whiteout | SourceEntry::File | SourceEntry::Symlink) => break,
+            None => {}
+        }
+        if fd_dir_is_opaque(layer)? {
+            break;
+        }
+    }
+    Ok(dirs)
+}
+
 /// Absent-on-any-error semantics, matching `whiteout::has_xattr` — the
 /// classifier the rest of the stack already trusts for whiteout detection.
 fn fd_has_xattr(fd: &OwnedFd, xattr: &str) -> bool {
@@ -272,7 +349,8 @@ fn fd_has_xattr_y(fd: &OwnedFd, xattr: &str) -> bool {
 }
 
 fn mark_opaque(dir: &Path) -> Result<(), LayerStackError> {
-    fs::write(dir.join(OPAQUE_MARKER), b"")?;
+    let marker = dir.join(OPAQUE_MARKER);
+    write_opaque_marker(&marker)?;
     rustix::fs::lsetxattr(dir, USER_OVERLAY_OPAQUE_XATTR, b"y", XattrFlags::empty()).map_err(
         |errno| {
             LayerStackError::Storage(format!(
@@ -281,6 +359,17 @@ fn mark_opaque(dir: &Path) -> Result<(), LayerStackError> {
             ))
         },
     )
+}
+
+#[cfg(target_os = "linux")]
+fn write_opaque_marker(path: &Path) -> Result<(), LayerStackError> {
+    write_kernel_whiteout(path)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn write_opaque_marker(path: &Path) -> Result<(), LayerStackError> {
+    fs::write(path, b"")?;
+    Ok(())
 }
 
 fn dir_names(layer: &OwnedFd) -> Result<Vec<OsString>, LayerStackError> {

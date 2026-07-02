@@ -59,10 +59,9 @@ impl SandboxGatewayServer {
             writer.write_all(&cli_log_line(&log)).await?;
         }
         let response = response_task.await.map_err(|error| {
-            GatewayError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("gateway streaming task failed: {error}"),
-            ))
+            GatewayError::Io(std::io::Error::other(format!(
+                "gateway streaming task failed: {error}"
+            )))
         })?;
         writer
             .write_all(&sandbox_protocol::response_line(&response))

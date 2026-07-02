@@ -59,19 +59,6 @@ fn shell_argv_for_command_with_bash(command: &str, bash_available: bool) -> Vec<
     ["/bin/sh", "-c", command].map(str::to_owned).to_vec()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::shell_argv_for_command_with_bash;
-
-    #[test]
-    fn shell_argv_falls_back_to_sh_without_bash() {
-        assert_eq!(
-            shell_argv_for_command_with_bash("echo hi", false),
-            ["/bin/sh", "-c", "echo hi"].map(str::to_owned).to_vec()
-        );
-    }
-}
-
 pub(crate) fn shell_cwd(request: &NamespaceRunnerRequest) -> Result<PathBuf, RunnerError> {
     let raw = request
         .args

@@ -21,7 +21,7 @@ pub enum RunnerError {
     Syscall(#[source] std::io::Error),
     #[error("invalid namespace runner request: {0}")]
     InvalidRequest(String),
-    #[error("overlay mount failed")]
+    #[error("overlay mount failed: {0}")]
     Overlay(#[source] sandbox_runtime_overlay::OverlayError),
     #[error("child process failed")]
     Child(#[source] std::io::Error),

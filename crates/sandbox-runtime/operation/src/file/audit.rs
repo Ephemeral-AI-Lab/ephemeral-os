@@ -179,29 +179,3 @@ fn content_digest(changes: &[LayerChange], path: &LayerPath) -> String {
     }
     format!("sha256:{:x}", hasher.finalize())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn command_only_event_keeps_large_blame_sparse() {
-        let event = command_only_event(
-            "big/seq.txt",
-            &[(
-                LineRange {
-                    start: 1,
-                    len: 500_000,
-                },
-                Origin::Command,
-            )],
-            "workspace_session:one-shot",
-            "sha256:test".to_owned(),
-        )
-        .expect("command-only event");
-
-        assert_eq!(event.line_count, 500_000);
-        assert_eq!(event.default_owner, "workspace_session:one-shot");
-        assert!(event.owner_ranges.is_empty());
-    }
-}

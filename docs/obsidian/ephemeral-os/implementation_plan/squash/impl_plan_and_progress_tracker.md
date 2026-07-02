@@ -60,7 +60,7 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | 7 | Workspace remount transaction + reap + PDEATHSIG | done | 4/4 | 5/5 | 5/5 | ☑ |
 | 8 | Operation layer: gate, squash op, sweep loop | done | 4/4 | 6/6 | 5/5 | ☑ |
 | 9 | Manager CLI (`checkpoint_squash`) | done | 2/2 | 3/3 | 1/1 | ☑ |
-| 10 | Live Docker e2e + enablement + sign-off | done | — | 2/2 | 13/13 | ☑ |
+| 10 | Live Docker e2e + enablement + sign-off | done | — | 3/3 | 63/63 | ☑ |
 
 ---
 
@@ -778,6 +778,11 @@ explicitly-not-covered).
       ⇒ `remount.rs` short-circuits every session to
       `leased(unsupported:kernel_gate_not_proven)` and squash stays
       commit-only. Verdict is a process-global set once before serving.
+- [x] Catalog suite: `cli-operation-e2e-live-test/manager/management/squash/`
+      implements all 50 SMK/MED/HRD cases from `test-case.md`, the §2
+      measurement kit, per-case `verdict.json`, `SUMMARY.md`,
+      `timing-distribution.json`, HRD-20 `soak-baseline.json`, and automatic
+      `iteration-report.md` entries for every live e2e run.
 
 ### Tests (all in the supported Docker environment)
 
@@ -807,6 +812,13 @@ explicitly-not-covered).
 - [x] tests 1/17/20/21/B1 `test_squash_empty_and_idle_contract` — empty →
       `{v,[]}`; idle 3-layer → one `reclaimed` block, exact result keys,
       no S `.digest`, merged view intact, idempotent.
+- [x] 50-case catalog suite — final consecutive full runs
+      `squash-20260703-031940` (`50 passed in 129.14s`; summary `51/51/0/0`)
+      and `squash-20260703-032157` (`50 passed in 128.64s`; summary
+      `51/51/0/0`) under `manager/management/squash/test-reports/`. The
+      final verdict audit found 51 verdicts and no failed correctness, space,
+      time, or teardown axes. Allowed partial notes only: HRD-12 leg b and
+      HRD-17 failure leg, both as catalog §5.3 permits.
 
 **Proven by the kernel probes + unit suites (not re-run as pytest e2e —
 each needs an in-namespace fault the CLI cannot inject; recorded here as
@@ -837,6 +849,9 @@ the sign-off evidence):**
 - [x] All experiment and decision logs complete; spec.md matches shipped
       behavior.
 - [x] Progress table shows every phase `done`.
+- [x] Catalog suite sign-off artifacts checked in: final `SUMMARY.md`,
+      `timing-distribution.json`, HRD-20 `soak-baseline.json`, and the
+      append-only `iteration-report.md` through the final green run.
 
 ---
 
@@ -894,6 +909,7 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-03 | 10 | E4 (e2e) | PASS live. Interactive PTY shell with cwd in `/workspace` → block `leased`, non-empty `blocked_reasons` (pinned/mount family), session unaffected + still reads `p1`. | same |
 | 2026-07-03 | 10 | G3/E10 (e2e) | PASS live. `docker restart`: every pre-restart holder pid gone (PDEATHSIG), boot log `PROVEN` + reap-before-sweep, crash-orphan `S000099-orphan` swept, disk ⊆ manifest, `manager.json` handles empty. In-place daemon kill stops the container (docker-init is the daemon's parent), and `docker restart` remaps the host port (manager keeps the old endpoint) — so the CLI-reachable fresh-squash-after-restart step is an infra limit, not a feature fault; covered by unit test 14 + X7.1. | same |
 | 2026-07-03 | 10 | Contract (e2e) | PASS live. `test_squash_empty_and_idle_contract`: empty → `{"manifest_version":1,"squashed_blocks":[]}`; idle 3-layer → exactly `{manifest_version, squashed_blocks}` with one `reclaimed` block (S id, 3 replaced ids, no `blocked_reasons`); no S `.digest`; merged view `a\nb\nc`; second run empty blocks. | same |
+| 2026-07-03 | 10 | Catalog suite (50-case live Docker) | PASS live, twice consecutively after the harness speedups. `squash-20260703-031940`: `50 passed in 129.14s`, summary `51/51/0/0`. `squash-20260703-032157`: `50 passed in 128.64s`, summary `51/51/0/0`; final verdict audit found 51 verdicts and no failed correctness/space/time/teardown axes. HRD-20 wrote the soak baseline. Whole-suite time improved from the pre-optimization post-rebuild proof (`squash-20260703-030503`, `50 passed in 246.54s`) to 128.64s by replacing shell publishes with structured `file_write`, concurrent synthetic layer publishing, and one-shot command log artifact writes. | `pytest cli-operation-e2e-live-test/manager/management/squash/test_squash_{smoke,medium,hard}.py -q`; `cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260703-032157/{SUMMARY.md,timing-distribution.json,soak-baseline.json}`; `iteration-report.md` |
 
 ## Decision log
 

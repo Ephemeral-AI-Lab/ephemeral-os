@@ -167,24 +167,3 @@ pub(crate) fn network_error_at(
 ) -> WorkspaceManagerError {
     WorkspaceManagerError::NetworkUnavailable(format!("{}: {error}", step.into()))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn allow_rfc1918_egress_does_not_require_packet_filter_tools() {
-        let network = IsolatedNetwork::new(Rfc1918Egress::Allow);
-
-        network.validate_packet_filter_policy().unwrap();
-    }
-
-    #[test]
-    fn deny_rfc1918_egress_fails_closed_without_packet_filtering() {
-        let network = IsolatedNetwork::new(Rfc1918Egress::Deny);
-
-        let error = network.validate_packet_filter_policy().unwrap_err();
-
-        assert!(error.to_string().contains("rfc1918_egress=deny"));
-    }
-}

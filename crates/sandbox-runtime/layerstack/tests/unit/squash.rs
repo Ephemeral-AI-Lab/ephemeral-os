@@ -2,7 +2,7 @@ use std::os::unix::fs::{symlink, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::stack::squash::flatten::flatten_block_into;
+use crate::stack::squash::flatten::flatten_block_into_with_lower;
 use crate::whiteout::{is_kernel_whiteout, logical_whiteout_path_for_target, OPAQUE_MARKER};
 
 struct FlattenFixture {
@@ -35,7 +35,18 @@ impl FlattenFixture {
 
     fn flatten(&self, sources_newest_first: &[PathBuf]) -> PathBuf {
         let staging = self.staging();
-        flatten_block_into(&staging, sources_newest_first).expect("flatten block");
+        flatten_block_into_with_lower(&staging, sources_newest_first, &[]).expect("flatten block");
+        staging
+    }
+
+    fn flatten_with_lower(
+        &self,
+        sources_newest_first: &[PathBuf],
+        lower_layers_newest_first: &[PathBuf],
+    ) -> PathBuf {
+        let staging = self.staging();
+        flatten_block_into_with_lower(&staging, sources_newest_first, lower_layers_newest_first)
+            .expect("flatten block");
         staging
     }
 }
@@ -77,7 +88,12 @@ fn dir_is_opaque(path: &Path) -> bool {
         rustix::fs::lgetxattr(path, "user.overlay.opaque", &mut value),
         Ok(1) if value[0] == b'y'
     );
-    marker.exists() && xattr
+    let marker_ok = if cfg!(target_os = "linux") {
+        marker.exists() && is_kernel_whiteout(&marker)
+    } else {
+        marker.exists()
+    };
+    marker_ok && xattr
 }
 
 fn visible_names(dir: &Path) -> Vec<String> {
@@ -139,16 +155,16 @@ fn flatten_reemits_winning_whiteouts_both_encodings() {
     let fixture = FlattenFixture::new("whiteout-encodings");
     let l_new = fixture.layer("l-new");
     let l_mid = fixture.layer("l-mid");
-    let l_old = fixture.layer("l-old");
+    let lower = fixture.layer("lower");
     write(&l_new.join("keep.txt"), "keep");
     // xattr-file encoding masking a below-layer file.
-    write(&l_old.join("gone-xattr.txt"), "doomed");
+    write(&lower.join("gone-xattr.txt"), "doomed");
     write_xattr_whiteout(&l_mid.join("gone-xattr.txt"));
     // logical .wh. encoding masking a below-layer file.
-    write(&l_old.join("gone-logical.txt"), "doomed");
+    write(&lower.join("gone-logical.txt"), "doomed");
     write(&l_mid.join(".wh.gone-logical.txt"), "");
 
-    let staging = fixture.flatten(&[l_new, l_mid, l_old]);
+    let staging = fixture.flatten_with_lower(&[l_new, l_mid], &[lower]);
 
     assert!(is_whiteout_at(&staging.join("gone-xattr.txt")));
     assert!(is_whiteout_at(&staging.join("gone-logical.txt")));
@@ -341,17 +357,66 @@ fn flatten_same_layer_logical_whiteout_beats_same_layer_file() {
     let fixture = FlattenFixture::new("tie");
     let l_new = fixture.layer("l-new");
     let l_mid = fixture.layer("l-mid");
-    let l_old = fixture.layer("l-old");
+    let lower = fixture.layer("lower");
     write(&l_new.join("unrelated"), "x");
     write(&l_mid.join("tie.txt"), "contradicted");
     write(&l_mid.join(".wh.tie.txt"), "");
-    write(&l_old.join("tie.txt"), "old");
+    write(&lower.join("tie.txt"), "old");
 
-    let staging = fixture.flatten(&[l_new, l_mid, l_old]);
+    let staging = fixture.flatten_with_lower(&[l_new, l_mid], &[lower]);
 
     assert!(
         is_whiteout_at(&staging.join("tie.txt")),
         "MergedView consults whiteouts before entries, so the whiteout wins the tie"
+    );
+}
+
+#[test]
+fn flatten_drops_in_block_create_delete_without_lower_target() {
+    let fixture = FlattenFixture::new("drop-net-nothing");
+    let l_new = fixture.layer("l-new");
+    let l_old = fixture.layer("l-old");
+    write(&l_new.join("d/.wh.drop"), "");
+    write(&l_old.join("d/drop"), "short lived");
+
+    let staging = fixture.flatten(&[l_new, l_old]);
+
+    assert!(staging.join("d").is_dir());
+    assert_eq!(visible_names(&staging.join("d")), Vec::<String>::new());
+    assert!(!is_whiteout_at(&staging.join("d/drop")));
+}
+
+#[test]
+fn flatten_drops_xattr_create_delete_without_lower_target() {
+    let fixture = FlattenFixture::new("drop-net-nothing-xattr");
+    let l_new = fixture.layer("l-new");
+    let l_old = fixture.layer("l-old");
+    write_xattr_whiteout(&l_new.join("d/drop"));
+    write(&l_old.join("d/drop"), "short lived");
+
+    let staging = fixture.flatten(&[l_new, l_old]);
+
+    assert!(staging.join("d").is_dir());
+    assert_eq!(visible_names(&staging.join("d")), Vec::<String>::new());
+    assert!(!is_whiteout_at(&staging.join("d/drop")));
+}
+
+#[test]
+fn flatten_reemits_whiteout_for_visible_lower_target() {
+    let fixture = FlattenFixture::new("lower-visible-whiteout");
+    let l_new = fixture.layer("l-new");
+    let l_old = fixture.layer("l-old");
+    let lower = fixture.layer("lower");
+    write(&l_new.join(".wh.seed.txt"), "");
+    write(&l_old.join("keep.txt"), "keep");
+    write(&lower.join("seed.txt"), "seed");
+
+    let staging = fixture.flatten_with_lower(&[l_new, l_old], &[lower]);
+
+    assert!(is_whiteout_at(&staging.join("seed.txt")));
+    assert_eq!(
+        std::fs::read_to_string(staging.join("keep.txt")).expect("read keep.txt"),
+        "keep"
     );
 }
 
@@ -377,7 +442,7 @@ fn flatten_shadowed_subtree_dropped_under_file_winner() {
 fn flatten_rejects_blocks_smaller_than_two_layers() {
     let fixture = FlattenFixture::new("too-small");
     let l_new = fixture.layer("l-new");
-    let error = flatten_block_into(&fixture.staging(), &[l_new])
+    let error = flatten_block_into_with_lower(&fixture.staging(), &[l_new], &[])
         .expect_err("flatten must reject the block");
     assert!(error.to_string().contains("at least two source layers"));
 }
@@ -1019,6 +1084,15 @@ mod squash_transaction_tests {
     fn syncfs_commit_durability() {
         let fixture = SquashFixture::new("syncfs");
         let mut stack = fixture.stack();
+        stack
+            .publish_layer(&[LayerChange::Write {
+                path: LayerPath::parse("bulk/f0").expect("path"),
+                content: b"lower".to_vec(),
+            }])
+            .expect("publish lower target");
+        let _boundary = stack
+            .acquire_snapshot("boundary")
+            .expect("pin lower target");
         let changes: Vec<LayerChange> = (0..50)
             .map(|index| LayerChange::Write {
                 path: LayerPath::parse(&format!("bulk/f{index}")).expect("path"),
@@ -1053,7 +1127,7 @@ mod squash_transaction_tests {
             "exactly one syncfs per commit, independent of entry count"
         );
         assert_eq!(
-            calls[0].manifest_version_at_call, 2,
+            calls[0].manifest_version_at_call, 3,
             "syncfs runs before the manifest rename"
         );
         assert_eq!(

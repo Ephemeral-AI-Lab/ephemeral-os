@@ -225,13 +225,26 @@ tests" section (unit 1–22, gates G1–G3, features E1–E10).
 ## 9. Sign-off
 
 - [x] All 22 unit/integration tests green in CI.
+      Evidence 2026-07-03: `cargo fmt --check`, `cargo test --all-targets`,
+      and `cargo clippy --all-targets` were clean after the squash fixes.
 - [x] Gates G1–G3 green in the supported Docker environment; live remount
       enabled only after all three pass (otherwise squash ships
       commit-only and this is recorded).
+      Evidence 2026-07-03: Phase-10 gate e2e stayed green and the catalog
+      suite's HRD-17 gate case passed with only the §5.3 allowed failure-leg
+      note (`skipped:failure-leg:gate_green_env`).
 - [x] Feature tests E1–E10 green in the supported Docker environment,
       including every teardown assertion (empty lease registry, no
       staging/rollback mounts, empty `staging/`).
+      Evidence 2026-07-03: final consecutive catalog runs
+      `squash-20260703-031940` and `squash-20260703-032157` each report
+      `51` run, `51` pass, `0` slow, `0` fail, `0` skipped in
+      `cli-operation-e2e-live-test/manager/management/squash/test-reports/`;
+      every `verdict.json` passed correctness, space, time, and teardown.
 - [x] `impl_plan_and_progress_tracker.md` shows every phase's exit review
       complete; experiment and decision logs are filled in.
+      Evidence 2026-07-03: Phase 10 includes the 50-case catalog suite
+      evidence, the HRD-20 `soak-baseline.json`, and the final
+      `timing-distribution.json`.
 - [x] `spec.md` matches the shipped behavior (any deviation was folded
       back into the spec before sign-off).

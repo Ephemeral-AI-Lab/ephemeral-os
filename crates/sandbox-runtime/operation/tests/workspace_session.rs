@@ -449,6 +449,7 @@ fn workspace_session_destroy_operation_success_projects_minimal_json(
         json!({
             "workspace_session_id": "workspace-1",
             "destroyed": true,
+            "evicted_upperdir_bytes": 4096,
         })
     );
     assert_eq!(

@@ -30,7 +30,21 @@ def pytest_runtest_logreport(report):
         )
 
 
+def pytest_sessionstart(session):
+    if _is_squash_run(session.config):
+        from manager.management.squash import measure
+
+        measure.start_iteration_report("squash")
+
+
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    if _is_squash_run(config):
+        from manager.management.squash import measure
+
+        summary_path = measure.finalize_summary(exitstatus=exitstatus)
+        terminalreporter.write_sep("-", "layerstack squash verdict summary")
+        terminalreporter.write_line(f"squash verdict summary: {summary_path}")
+
     records = operation_timing_records()
     if not records:
         return
@@ -116,6 +130,12 @@ def _operation_timing_markdown(payload):
     return "\n".join(rows)
 
 
+def _is_squash_run(config):
+    args = " ".join(map(str, getattr(config, "args", ()) or ()))
+    markexpr = getattr(config.option, "markexpr", "") or ""
+    return "manager/management/squash" in args or "squash" in markexpr
+
+
 @pytest.fixture(scope="session", autouse=True)
 def gateway_up():
     """Ensure a gateway is running before any test (reused across the session)."""
@@ -147,3 +167,32 @@ def sandbox():
         yield sandbox_id
     finally:
         mgmt.destroy_sandbox(sandbox_id)
+
+
+@pytest.fixture(scope="session")
+def squash_preconditions(gateway_up):
+    from manager.management.squash import helpers as squash_helpers
+
+    squash_helpers.assert_preconditions_once()
+
+
+@pytest.fixture
+def squash_sandbox_factory(tmp_path):
+    from manager.management.squash import helpers as squash_helpers
+
+    created = []
+
+    def create(rec):
+        workspace = tmp_path / rec.case_id.lower()
+        workspace.mkdir(parents=True, exist_ok=True)
+        sandbox_id = squash_helpers.create_sandbox(rec, str(workspace))
+        created.append((sandbox_id, rec))
+        return sandbox_id
+
+    yield create
+
+    for sandbox_id, rec in reversed(created):
+        try:
+            squash_helpers.destroy_sandbox(rec, sandbox_id)
+        except Exception:
+            pass

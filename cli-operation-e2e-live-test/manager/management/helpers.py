@@ -7,7 +7,7 @@ from core.config import IMAGE, WORKSPACE_ROOT
 
 def create_sandbox(image=IMAGE, workspace_root=WORKSPACE_ROOT):
     result = manager(
-        "create_sandbox", "--image", image, "--workspace-root", workspace_root
+        "create_sandbox", "--image", image, "--workspace-bind-root", workspace_root
     )
     if isinstance(result, dict):
         cleanup.track(result.get("id"))
