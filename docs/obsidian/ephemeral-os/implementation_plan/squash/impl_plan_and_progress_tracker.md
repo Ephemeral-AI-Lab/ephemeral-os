@@ -52,8 +52,8 @@ Statuses: `todo` → `experiments` → `implementing` → `review` → `done`
 | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Environment & kernel ground truth | done | 10/10 | — | — | ☑ |
 | 1 | Flatten (layerstack pure) | done | 3/3 | 2/2 | 1/1 | ☑ |
-| 2 | Substitution map + rewritten lease | experiments | 0/3 | 0/2 | 0/1 | ☐ |
-| 3 | Squash transaction + commit GC + boot sweep | todo | 0/4 | 0/4 | 0/9 | ☐ |
+| 2 | Substitution map + rewritten lease | done | 3/3 | 2/2 | 1/1 | ☑ |
+| 3 | Squash transaction + commit GC + boot sweep | experiments | 0/4 | 0/4 | 0/9 | ☐ |
 | 4 | Overlay helpers (move/strict-unmount) | todo | 0/2 | 0/2 | 0/1 | ☐ |
 | 5 | Quiesce (namespace-execution) | todo | 0/5 | 0/3 | 0/2 | ☐ |
 | 6 | Staged-switch runner (namespace-process) | todo | 0/4 | 0/2 | 0/2 | ☐ |
@@ -207,40 +207,47 @@ substitution map, oldest-first raw-run contraction, and
 
 ### Experiments — must complete BEFORE implementation
 
-- [ ] **X2.1 Registry fit.** Confirm on the real code that
+- [x] **X2.1 Registry fit.** Confirm on the real code that
       `LeaseRegistry::acquire` takes an arbitrary `Manifest` (no new
       registry API needed) and that the map can live beside
       `shared_registry_for_root` under the same locking shape — no new
       lock level in the ordering.
-- [ ] **X2.2 Contraction property check.** Before coding, replay on paper
+- [x] **X2.2 Contraction property check.** Before coding, replay on paper
       / in a scratch property test: B3, B4 (generation-crossing
       `Sc→[L8,Sa]`), B5, plus adversarial shapes (overlapping candidate
       runs, repeated layer ids, self-referential entries). Prove
       determinism, termination, and never-straddle compatibility. If any
       shape breaks oldest-first raw-run contraction, stop and revise the
       spec before implementing.
-- [ ] **X2.3 Map lifecycle.** Confirm where commit records entries and
+- [x] **X2.3 Map lifecycle.** Confirm where commit records entries and
       that daemon restart genuinely empties the map with no consumer left
       (fact 2: no session survives restart) — trace the restart path in
       code.
 
 ### Implementation
 
-- [ ] `src/stack/lease/rewrite.rs` — map type + recording + contraction +
+- [x] `src/stack/lease/rewrite.rs` — map type + recording + contraction +
       `acquire_rewritten_lease` (validate-alive, acquire, or `Identity`).
-- [ ] Exports (`stack/lease/mod.rs` slice).
+- [x] Exports (`stack/lease/mod.rs` slice).
 
 ### Tests
 
-- [ ] Test 8 `in_memory_substitutions_match_expand_then_contract` —
+- [x] Test 8 `in_memory_substitutions_match_expand_then_contract` —
       B4 shapes, missing-entry ⇒ identity, bounded single pass,
-      post-restart no rewrite + keep-set-only sweep.
+      post-restart no rewrite + keep-set-only sweep. (5 tests: the B4
+      two-generation replay incl. a gen-0 lease crossing both
+      generations, identity degradations for missing entries and dead
+      rewritten layers, adversarial map shapes, pin-overlap with
+      clean-abort release, and restart-empties-map; the keep-set-only
+      sweep half lands with Phase 3's test 14.)
 
 ### Exit review
 
-- [ ] Experiments logged (X2.2 outcome is a mandatory Decision-log
-      entry); impl + tests checked; crate tests green; clippy/fmt clean.
-- [ ] Spec drift reconciled; Progress table updated; Phase 3 unblocked.
+- [x] Experiments logged (X2.2 outcome is a mandatory Decision-log
+      entry); impl + tests checked; crate tests green (63); clippy/fmt
+      clean.
+- [x] Spec drift reconciled (none needed — contraction verified as
+      specified); Progress table updated; Phase 3 unblocked.
 
 ---
 
@@ -679,6 +686,9 @@ command(s) + key output, or a path to a scratch script.
 | 2026-07-02 | 1 | X1.1 | PASS, with a load-bearing encoding fact. Real published layer (`exec_command` rm + rm-rf-recreate → `L000003-00000006`): deleted file = **char 0:0 device** (mknod path taken; xattr fallback never fires as container root); opaque dir = **`.wh..wh..opq` marker file, NO xattr**. A real mounted session over that layer **resurrects the lower entries and shows the raw marker** — the kernel only honors `{user,trusted}.overlay.opaque` xattrs; every daemon-side reader (`MergedView`, capture, projection) honors the marker. Probe x11: `user.overlay.opaque=y` set on a lowerdir dir **masks** under a `userxattr` mount; marker-only control resurrects; a dir over a mid-chain char-dev whiteout hides all older content (the composition case flatten must preserve). ⇒ flatten emits S opaque dirs **dual-encoded** (marker file + `user.overlay.opaque` xattr). `is_kernel_whiteout_meta` accepts char-dev + xattr-file; `MergedView` additionally accepts logical `.wh.<name>` — flatten classifies all three. | `sandbox-cli runtime exec_command …` on `eos-3312cf45`, `find`/`stat` of `layers/L000003-00000006`, live-session `ls /workspace/victim` (x,y resurfaced), `docker exec … /probe x11` |
 | 2026-07-02 | 1 | X1.2 | Survey done. Existing walks (`overlay/capture.rs`, `projection/{mod,apply}.rs`, `collect/layerstack.rs`) are all path-based `std::fs` recursions — no fd-relative walker exists in the repo. `rustix` (already a layerstack dependency, feature `fs`) provides `openat`/`Dir`/`statat`/`linkat`/`readlinkat` — flatten builds its ~40-line fd-relative no-follow merge directly on those primitives; output writes are path-based under the freshly-created staging tree (the no-follow requirement protects the *source* walk). No new dependency, no shared walking abstraction. | code survey; `layerstack/Cargo.toml` (`rustix.workspace = true`) |
 | 2026-07-02 | 1 | X1.3 | PASS. Flatten-shaped fold of a 1k-entry two-layer block: 1000 `link(2)` winners in **4.0 ms**, inode identity confirmed (0 bytes copied) — per-generation flatten cost is O(E) metadata ops as claimed. | `docker exec … /probe x11` (bench leg); X0.8 corroborates (1000 links 6.4 ms) |
+| 2026-07-02 | 2 | X2.1 | PASS. `LeaseRegistry::acquire(manifest, owner_request_id)` takes an arbitrary `Manifest` with no validation against the active manifest (`lease/registry.rs:51`) — no new registry API needed. The map mirrors the registry precedent exactly: resolved per canonical root at `LayerStack::open` and cached on the instance (`substitutions` beside `leases`), so its mutex is a leaf lock never held across the writer lock or the registry mutex — no new level in the lock order. First implementation resolved the map at call time; parallel-test interference (a foreign `reset_process_state_for_tests` emptying it mid-test) surfaced immediately and was fixed by matching the resolve-at-open precedent. | code survey `registry.rs`, `stack/mod.rs`; unit-suite failure then green at 63 tests |
+| 2026-07-02 | 2 | X2.2 | PASS — decision recorded below. Determinism: layer ids are unique within a manifest so each raw run matches at most one window; entries apply in fixed recording order. Termination: one bounded pass; every splice strictly shortens the list. Never-straddle: every live lease's newest layer is a boundary and boundaries are excluded from blocks, so a raw run is fully-inside or fully-disjoint for every lease; composition across generations holds because if `[X, S_prev]` formed a block then no lease head sits inside it, so any lease containing `S_prev`'s raw run also contains `X` and the oldest-first pass rescues the chain into the current generation (the dead-`S_prev` case is therefore unreachable and validate-alive is purely defensive). Adversarial shapes (overlapping runs, repeated ids, self-reference) cannot arise from committed blocks and degrade deterministically when injected. Replayed concretely in test 8's five cases incl. the B4 two-generation crossing. | `tests/unit/squash.rs::rewrite_tests` (5 tests green) |
+| 2026-07-02 | 2 | X2.3 | PASS. Commit-time recording = `LayerStack::record_substitution` (called by the phase-3 commit tail after the manifest rename, before the plan-lease release returns). Restart path: the map is process-lifetime state (`OnceLock` static keyed by canonical root) — a daemon restart is a new process with an empty map, and no consumer survives (fact 2: sessions die with the daemon; boot sweep reads only the manifest keep-set — verified in `lease/cleanup.rs` + `fs.rs`). Tests simulate restart through `reset_process_state_for_tests`, which now clears substitution maps alongside lease registries in one entrypoint. | `restart_empties_substitution_map_and_no_rewrite_is_attempted` green |
 
 ## Decision log
 
@@ -692,4 +702,5 @@ was updated in the same change.
 | 2026-07-02 | 0 | **OLD-root dirfd must be dropped before the strict rollback unmount.** X0.2 proved a held pre-opened `O_PATH` fd on the OLD mount root pins the moved OLD mount at rollback, self-inflicting EBUSY at C3 step 8. The runner closes the OLD-root dirfd after the second move (it is only needed as the move-1 source). | §C3 step 8 |
 | 2026-07-02 | 0 | **G2's negative control targets the opaque-dir marker, not the plain-file whiteout.** X0.3 measured: deleted-file whiteouts are char 0:0 devices (xattr-independent — they hold without `userxattr`); the xattr-encoded metadata with resurrection teeth is `user.overlay.opaque` (lower entries resurface without `userxattr`). | §Required tests → Live Docker e2e G2 |
 | 2026-07-02 | 0 | **OVL_MAX_STACK failure point recorded**: the over-limit chain fails the `fsconfig lowerdir+` call (EINVAL), not `fsmount` — still a clean pre-PONR `stage_failed:<errno>` derived from the mount-build error; wording folded into §D. | §D chain-length paragraph |
+| 2026-07-02 | 2 | **X2.2 verdict: oldest-first raw-run contraction is sound as specified — no spec revision needed.** Determinism (unique ids ⇒ single match; fixed recording order), termination (strictly-shrinking single pass), and never-straddle compatibility (boundary-excluded blocks + generation composition; validate-alive is defensive-only, unreachable for correctly-composed live leases) all proven and replayed in test 8. | none (spec confirmed) |
 | 2026-07-02 | 1 | **S opaque dirs are dual-encoded: `.wh..wh..opq` marker file + `user.overlay.opaque=y` xattr.** Measured: the kernel only honors the xattr (marker-only lowerdirs resurrect in live mounts — a pre-existing divergence in published `OpaqueDir` layers), while `MergedView`/capture/projection only honor (or also honor) the marker. Flatten's dir-over-whiteout and dir-over-non-dir compositions *must* mask below-block content in the kernel view, so the xattr is correctness-bearing, and the marker keeps every existing daemon-side reader working with zero changes to them. Also: a merged-dir run terminated inside the block (by whiteout, non-dir, or opaque) re-emits as an opaque dir; a run reaching the block bottom stays plain so below-block merging is preserved. | §Vocabulary `flatten` row |

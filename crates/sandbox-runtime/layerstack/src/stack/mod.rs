@@ -16,12 +16,17 @@ pub mod publish;
 pub(crate) mod squash;
 
 use lease::release_lease_locked;
-pub(crate) use lease::reset_shared_registries_for_tests;
+pub use lease::RewrittenLease;
 use lease::{
     lock_shared_registry, lock_shared_registry_recover, shared_registry_for_root, LeaseRegistry,
 };
 
 pub use projection::MergedView;
+
+pub(crate) fn reset_shared_registries_for_tests() {
+    lease::reset_shared_registries_for_tests();
+    lease::reset_shared_substitutions_for_tests();
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Lease {
@@ -47,6 +52,7 @@ pub struct LayerStack {
     pub(in crate::stack) storage_root: PathBuf,
     pub(crate) writer_lock: StorageWriterLockLease,
     pub(crate) leases: Arc<Mutex<LeaseRegistry>>,
+    pub(in crate::stack) substitutions: lease::rewrite::SubstitutionMap,
     pub(in crate::stack) view: MergedView,
 }
 
@@ -56,11 +62,13 @@ impl LayerStack {
         std::fs::create_dir_all(storage_root.join(STAGING_DIR))?;
         let writer_lock = StorageWriterLockLease::acquire(&storage_root)?;
         let leases = shared_registry_for_root(&storage_root)?;
+        let substitutions = lease::rewrite::shared_substitutions_for_root(&storage_root);
         let view = MergedView::new(storage_root.clone());
         Ok(Self {
             storage_root,
             writer_lock,
             leases,
+            substitutions,
             view,
         })
     }

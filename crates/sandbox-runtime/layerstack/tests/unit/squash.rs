@@ -381,3 +381,270 @@ fn flatten_rejects_blocks_smaller_than_two_layers() {
         .expect_err("flatten must reject the block");
     assert!(error.to_string().contains("at least two source layers"));
 }
+
+mod rewrite_tests {
+    use std::path::PathBuf;
+    use std::sync::atomic::Ordering;
+
+    use crate::stack::RewrittenLease;
+    use crate::{LayerRef, LayerStack, Lease, Manifest, MANIFEST_SCHEMA_VERSION};
+
+    use super::NEXT_FLATTEN_TEST;
+
+    struct RewriteFixture {
+        root: PathBuf,
+    }
+
+    impl RewriteFixture {
+        fn new(label: &str) -> Self {
+            let root = std::env::temp_dir().join(format!(
+                "layerstack-rewrite-{label}-{}-{}",
+                std::process::id(),
+                NEXT_FLATTEN_TEST.fetch_add(1, Ordering::Relaxed)
+            ));
+            let _ = std::fs::remove_dir_all(&root);
+            std::fs::create_dir_all(root.join("layers")).expect("create layers dir");
+            Self { root }
+        }
+
+        fn layer(&self, id: &str) -> LayerRef {
+            std::fs::create_dir_all(self.root.join("layers").join(id)).expect("create layer");
+            LayerRef {
+                layer_id: id.to_owned(),
+                path: format!("layers/{id}"),
+            }
+        }
+
+        fn set_manifest(&self, version: i64, layers: &[LayerRef]) {
+            let manifest =
+                Manifest::new(version, layers.to_vec(), MANIFEST_SCHEMA_VERSION).expect("manifest");
+            crate::fs::write_manifest(self.root.join("manifest.json"), &manifest)
+                .expect("write manifest");
+        }
+
+        fn stack(&self) -> LayerStack {
+            LayerStack::open(self.root.clone()).expect("open stack")
+        }
+    }
+
+    impl Drop for RewriteFixture {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.root);
+        }
+    }
+
+    fn ids(layers: &[LayerRef]) -> Vec<&str> {
+        layers.iter().map(|layer| layer.layer_id.as_str()).collect()
+    }
+
+    fn fake_lease(layers: &[LayerRef]) -> Lease {
+        Lease {
+            lease_id: "hand-built".to_owned(),
+            manifest: Manifest::new(4, layers.to_vec(), MANIFEST_SCHEMA_VERSION).expect("manifest"),
+            layer_paths: Vec::new(),
+        }
+    }
+
+    // B4's two-generation world: gen-1 squashes [L7,L6,L5]->Sa and
+    // [L3,L2,L1]->Sb; gen-2 re-squashes [L8,Sa]->Sc. Contraction applies map
+    // entries in recording order, so raw runs containing earlier S ids
+    // compose across generations without any expansion step.
+    #[test]
+    fn in_memory_substitutions_match_expand_then_contract() {
+        let fixture = RewriteFixture::new("b4");
+        let l: Vec<LayerRef> = (1..=8)
+            .map(|index| fixture.layer(&format!("L00000{index}-0{index}")))
+            .collect();
+        let newest_first: Vec<LayerRef> = l.iter().rev().cloned().collect();
+        fixture.set_manifest(8, &newest_first);
+        let stack = fixture.stack();
+        let ws1 = stack.acquire_snapshot("ws-1").expect("lease ws-1");
+
+        let sa = fixture.layer("S000009-aa");
+        let sb = fixture.layer("S000009-ab");
+        fixture.set_manifest(9, &[l[7].clone(), sa.clone(), l[3].clone(), sb.clone()]);
+        stack.record_substitution(sa.clone(), vec![l[6].clone(), l[5].clone(), l[4].clone()]);
+        stack.record_substitution(sb.clone(), vec![l[2].clone(), l[1].clone(), l[0].clone()]);
+
+        let l10 = fixture.layer("L000010-10");
+        fixture.set_manifest(
+            10,
+            &[
+                l10.clone(),
+                l[7].clone(),
+                sa.clone(),
+                l[3].clone(),
+                sb.clone(),
+            ],
+        );
+        let ws3 = stack.acquire_snapshot("ws-3").expect("lease ws-3");
+
+        let sc = fixture.layer("S000011-ac");
+        fixture.set_manifest(11, &[l10.clone(), sc.clone(), l[3].clone(), sb.clone()]);
+        stack.record_substitution(sc.clone(), vec![l[7].clone(), sa.clone()]);
+
+        let ws1_rewritten = stack
+            .acquire_rewritten_lease(&ws1, "ws-1-rewrite")
+            .expect("rewrite ws-1");
+        match ws1_rewritten {
+            RewrittenLease::Replaced(lease) => {
+                assert_eq!(
+                    ids(&lease.manifest.layers),
+                    vec!["S000011-ac", "L000004-04", "S000009-ab"],
+                    "gen-0 lease crosses both generations in one bounded pass"
+                );
+                assert_eq!(lease.manifest.version, ws1.manifest.version);
+            }
+            RewrittenLease::Identity => panic!("ws-1 must contract"),
+        }
+
+        let ws3_rewritten = stack
+            .acquire_rewritten_lease(&ws3, "ws-3-rewrite")
+            .expect("rewrite ws-3");
+        match ws3_rewritten {
+            RewrittenLease::Replaced(lease) => {
+                assert_eq!(
+                    ids(&lease.manifest.layers),
+                    vec!["L000010-10", "S000011-ac", "L000004-04", "S000009-ab"]
+                );
+            }
+            RewrittenLease::Identity => panic!("ws-3 must contract via the raw [L8,Sa] run"),
+        }
+
+        // ws-2's shape: no recorded raw run is present -> identity.
+        let ws2 = fake_lease(&[l[3].clone(), sb.clone()]);
+        assert!(matches!(
+            stack
+                .acquire_rewritten_lease(&ws2, "ws-2-rewrite")
+                .expect("rewrite ws-2"),
+            RewrittenLease::Identity
+        ));
+    }
+
+    #[test]
+    fn rewrite_missing_entry_and_dead_layer_degrade_to_identity() {
+        let fixture = RewriteFixture::new("identity");
+        let l2 = fixture.layer("L000002-02");
+        let l1 = fixture.layer("L000001-01");
+        fixture.set_manifest(2, &[l2.clone(), l1.clone()]);
+        let stack = fixture.stack();
+        let lease = stack.acquire_snapshot("ws").expect("lease");
+
+        // Empty map: identity.
+        assert!(matches!(
+            stack
+                .acquire_rewritten_lease(&lease, "empty-map")
+                .expect("rewrite"),
+            RewrittenLease::Identity
+        ));
+
+        // A substitution whose S dir does not exist on disk: the contraction
+        // would apply, but validate-alive degrades it to identity.
+        let dead = LayerRef {
+            layer_id: "S000003-dead".to_owned(),
+            path: "layers/S000003-dead".to_owned(),
+        };
+        stack.record_substitution(dead, vec![l2.clone(), l1.clone()]);
+        assert!(matches!(
+            stack
+                .acquire_rewritten_lease(&lease, "dead-target")
+                .expect("rewrite"),
+            RewrittenLease::Identity
+        ));
+    }
+
+    #[test]
+    fn rewrite_is_deterministic_under_adversarial_map_shapes() {
+        let fixture = RewriteFixture::new("adversarial");
+        let l3 = fixture.layer("L000003-03");
+        let l2 = fixture.layer("L000002-02");
+        let l1 = fixture.layer("L000001-01");
+        fixture.set_manifest(3, &[l3.clone(), l2.clone(), l1.clone()]);
+        let stack = fixture.stack();
+        let lease = stack.acquire_snapshot("ws").expect("lease");
+
+        // Repeated ids never match a real manifest.
+        let sx = fixture.layer("S000004-xx");
+        stack.record_substitution(sx, vec![l2.clone(), l2.clone()]);
+        // First recorded run wins; the overlapping later run no longer matches.
+        let sy = fixture.layer("S000004-yy");
+        stack.record_substitution(sy, vec![l3.clone(), l2.clone()]);
+        let sz = fixture.layer("S000004-zz");
+        stack.record_substitution(sz, vec![l2.clone(), l1.clone()]);
+
+        match stack
+            .acquire_rewritten_lease(&lease, "adversarial")
+            .expect("rewrite")
+        {
+            RewrittenLease::Replaced(lease) => {
+                assert_eq!(
+                    ids(&lease.manifest.layers),
+                    vec!["S000004-yy", "L000001-01"]
+                );
+            }
+            RewrittenLease::Identity => panic!("the [L3,L2] run must contract"),
+        }
+    }
+
+    #[test]
+    fn rewrite_never_releases_the_old_lease() {
+        let fixture = RewriteFixture::new("pin-overlap");
+        let l2 = fixture.layer("L000002-02");
+        let l1 = fixture.layer("L000001-01");
+        fixture.set_manifest(2, &[l2.clone(), l1.clone()]);
+        let mut stack = fixture.stack();
+        let old = stack.acquire_snapshot("ws").expect("lease");
+        let baseline = stack.active_lease_count();
+
+        let s1 = fixture.layer("S000003-s1");
+        fixture.set_manifest(3, std::slice::from_ref(&s1));
+        stack.record_substitution(s1, vec![l2.clone(), l1.clone()]);
+
+        let replacement = match stack
+            .acquire_rewritten_lease(&old, "replacement")
+            .expect("rewrite")
+        {
+            RewrittenLease::Replaced(lease) => lease,
+            RewrittenLease::Identity => panic!("must contract"),
+        };
+        assert_eq!(
+            stack.active_lease_count(),
+            baseline + 1,
+            "replacement acquired before anything is released"
+        );
+        assert_ne!(replacement.lease_id, old.lease_id);
+
+        // Clean-abort path: releasing only the replacement returns the
+        // registry to baseline and deletes nothing the old lease pins.
+        stack
+            .release_lease(&replacement.lease_id)
+            .expect("release replacement");
+        assert_eq!(stack.active_lease_count(), baseline);
+        assert!(fixture.root.join("layers/L000002-02").is_dir());
+        assert!(fixture.root.join("layers/L000001-01").is_dir());
+    }
+
+    #[test]
+    fn restart_empties_substitution_map_and_no_rewrite_is_attempted() {
+        let _state_guard = crate::process_state_test_lock();
+        crate::reset_process_state_for_tests();
+        let fixture = RewriteFixture::new("restart");
+        let l2 = fixture.layer("L000002-02");
+        let l1 = fixture.layer("L000001-01");
+        fixture.set_manifest(2, &[l2.clone(), l1.clone()]);
+        let stack = fixture.stack();
+        let lease = stack.acquire_snapshot("ws").expect("lease");
+
+        let s1 = fixture.layer("S000003-s1");
+        stack.record_substitution(s1, vec![l2.clone(), l1.clone()]);
+
+        crate::reset_process_state_for_tests();
+        let stack = fixture.stack();
+        assert!(matches!(
+            stack
+                .acquire_rewritten_lease(&lease, "post-restart")
+                .expect("rewrite"),
+            RewrittenLease::Identity
+        ));
+    }
+}
