@@ -11,6 +11,7 @@ sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-layerstack.workspace = true
 sandbox-observability.workspace = true
 sandbox-protocol.workspace = true
+sandbox-runtime-operations.workspace = true
 rustix.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

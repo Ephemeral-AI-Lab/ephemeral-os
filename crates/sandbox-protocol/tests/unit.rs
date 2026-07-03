@@ -342,7 +342,7 @@ fn render_catalog_help_groups_operations_by_family() {
     }))
     .expect("catalog decodes");
 
-    let help = render_catalog_help(&catalog);
+    let help = render_catalog_help(&catalog, "sandbox-cli runtime");
 
     assert!(help.contains("Sandbox Runtime Help"));
     assert!(
@@ -368,7 +368,8 @@ fn render_operation_help_renders_detail_page() {
     }))
     .expect("catalog decodes");
 
-    let help = render_operation_help(&catalog, "exec_command").expect("operation renders");
+    let help =
+        render_operation_help(&catalog, "exec_command", "sandbox-cli runtime").expect("operation renders");
 
     assert!(help.contains("exec_command"));
     assert!(help.contains("Family\n  Command"));
@@ -389,7 +390,8 @@ fn render_operation_help_unknown_returns_suggestions() {
     }))
     .expect("catalog decodes");
 
-    let error = render_operation_help(&catalog, "exec").expect_err("unknown operation rejected");
+    let error =
+        render_operation_help(&catalog, "exec", "sandbox-cli runtime").expect_err("unknown operation rejected");
 
     assert_eq!(error.operation(), "exec");
     assert_eq!(error.suggestions()[0].name, "exec_command");

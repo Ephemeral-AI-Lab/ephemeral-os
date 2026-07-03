@@ -1,13 +1,21 @@
-"""Thin sandbox-cli wrapper: run an operation, return its parsed JSON.
+"""Thin sandbox CLI wrapper: run an operation, return its parsed JSON.
 
-The CLI writes its result as a single JSON line — to stdout on success (exit 0)
+Operations are addressed with a leading *space* token — ``manager``,
+``observability``, or ``runtime`` — which :func:`route_cli` maps to the right
+purpose-built binary (``sandbox-manager-cli`` for manager + observability,
+``sandbox-runtime-cli`` for runtime) and rewrites into that binary's argv. This
+keeps every caller and the timing classifier space-addressed while the two
+binaries stay dependency-isolated.
+
+Each CLI writes its result as a single JSON line — to stdout on success (exit 0)
 and to stderr on error (exit 1). We capture both and parse whichever carries the
 JSON, so error responses come back as ``{"error": {...}}`` dicts rather than
 exceptions. Tests assert on the structured result; they never read logs.
 
-With ``E2E_PROGRESS=1`` we add the CLI's global ``--progress`` flag and stream
-the daemon-side progress lines (e.g. workspace base copy/hash) live to the
-``e2e.cli`` logger as they arrive, while still parsing the final JSON line.
+With ``E2E_PROGRESS=1`` we add the manager CLI's global ``--progress`` flag and
+stream the daemon-side progress lines (e.g. workspace base copy/hash) live to
+the ``e2e.cli`` logger as they arrive, while still parsing the final JSON line.
+``--progress`` is manager-only, so runtime operations never stream.
 """
 
 import json
@@ -16,7 +24,7 @@ import subprocess
 import threading
 import time
 
-from .config import PROGRESS, REPO_ROOT, SANDBOX_CLI
+from .config import PROGRESS, REPO_ROOT, SANDBOX_MANAGER_CLI, SANDBOX_RUNTIME_CLI
 
 _log = logging.getLogger("e2e.cli")
 _timing_lock = threading.Lock()
@@ -27,17 +35,38 @@ class CliError(Exception):
     """The CLI produced output that was not a JSON line."""
 
 
+def route_cli(args):
+    """Map space-prefixed ``args`` to ``(binary, argv, supports_progress)``.
+
+    ``manager`` / ``observability`` route to ``sandbox-manager-cli`` (the latter
+    as an ``observability`` subcommand); ``runtime`` routes to
+    ``sandbox-runtime-cli`` with its ``--sandbox-id …`` prefix carried through.
+    """
+    argv = [str(arg) for arg in args]
+    if not argv:
+        return SANDBOX_MANAGER_CLI, [], True
+    space, rest = argv[0], argv[1:]
+    if space == "observability":
+        return SANDBOX_MANAGER_CLI, ["observability", *rest], True
+    if space == "runtime":
+        return SANDBOX_RUNTIME_CLI, rest, False
+    if space == "manager":
+        return SANDBOX_MANAGER_CLI, rest, True
+    return SANDBOX_MANAGER_CLI, argv, True
+
+
 def cli(*args, timeout=180):
-    """Run ``sandbox-cli <args...>`` and return the parsed JSON response."""
-    printable = " ".join(["sandbox-cli", *map(str, args)])
+    """Run a space-addressed operation and return the parsed JSON response."""
+    binary, argv, supports_progress = route_cli(args)
+    printable = " ".join([binary.name, *argv])
     _log.info("→ %s", printable)
     started = time.monotonic()
-    if PROGRESS:
-        stdout, stderr_lines, returncode = _run_streaming(args, timeout)
+    if PROGRESS and supports_progress:
+        stdout, stderr_lines, returncode = _run_streaming(binary, argv, timeout)
         raw = _select_json(stdout, stderr_lines)
     else:
         proc = subprocess.run(
-            [str(SANDBOX_CLI), *map(str, args)],
+            [str(binary), *argv],
             cwd=str(REPO_ROOT),
             capture_output=True,
             text=True,
@@ -56,12 +85,12 @@ def cli(*args, timeout=180):
         ) from exc
 
 
-def _run_streaming(args, timeout):
+def _run_streaming(binary, argv, timeout):
     """Run with --progress, streaming stderr (progress) live.
 
     Returns ``(stdout, stderr_lines, returncode)``.
     """
-    cmd = [str(SANDBOX_CLI), "--progress", *map(str, args)]
+    cmd = [str(binary), "--progress", *argv]
     proc = subprocess.Popen(
         cmd,
         cwd=str(REPO_ROOT),

@@ -13,7 +13,6 @@ fn cli_config_precedence_is_cli_env_default() {
     let env_config =
         GatewayConfig::discover_with(GatewayConfigOverrides::default(), |key| match key {
             SANDBOX_GATEWAY_SOCKET_ENV => Some(OsString::from("/env/gateway.sock")),
-            SANDBOX_DEFAULT_ID_ENV => Some(OsString::from("env-sbox")),
             _ => None,
         })
         .expect("env config discovers");
@@ -21,13 +20,11 @@ fn cli_config_precedence_is_cli_env_default() {
         env_config.gateway_socket_path,
         PathBuf::from("/env/gateway.sock")
     );
-    assert_eq!(env_config.default_sandbox_id.as_deref(), Some("env-sbox"));
 
     let cli_config = GatewayConfig::discover_with(
         GatewayConfigOverrides {
             gateway_socket_path: Some(PathBuf::from("/cli/gateway.sock")),
             gateway_auth_token: None,
-            default_sandbox_id: Some("cli-sbox".to_owned()),
         },
         |_| None,
     )
@@ -36,20 +33,18 @@ fn cli_config_precedence_is_cli_env_default() {
         cli_config.gateway_socket_path,
         PathBuf::from("/cli/gateway.sock")
     );
-    assert_eq!(cli_config.default_sandbox_id.as_deref(), Some("cli-sbox"));
 }
 
 #[test]
-fn cli_config_rejects_blank_default_sandbox_id() {
+fn cli_config_rejects_blank_auth_token() {
     let err = GatewayConfig::discover_with(
         GatewayConfigOverrides {
             gateway_socket_path: None,
-            gateway_auth_token: None,
-            default_sandbox_id: Some(" ".to_owned()),
+            gateway_auth_token: Some(" ".to_owned()),
         },
         |_| None,
     )
-    .expect_err("blank sandbox id is rejected");
+    .expect_err("blank auth token is rejected");
 
-    assert_eq!(err.to_string(), "default sandbox id must be non-empty");
+    assert_eq!(err.to_string(), "gateway auth token must be non-empty");
 }

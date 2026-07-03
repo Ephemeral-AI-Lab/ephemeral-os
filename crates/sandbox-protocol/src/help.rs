@@ -16,6 +16,7 @@ pub struct HelpRenderError {
     operation_execution_space: CliOperationExecutionSpace,
     operation: String,
     suggestions: Vec<CliOperationSearchResult>,
+    program: String,
 }
 
 impl HelpRenderError {
@@ -48,15 +49,14 @@ impl std::fmt::Display for HelpRenderError {
         }
         writeln!(formatter)?;
         writeln!(formatter, "Use:")?;
-        write!(formatter, "  sandbox-cli {space} OPERATION")
+        write!(formatter, "  {} OPERATION", self.program)
     }
 }
 
 impl std::error::Error for HelpRenderError {}
 
 #[must_use]
-pub fn render_catalog_help(catalog: &CliOperationCatalogDocument) -> String {
-    let space = operation_execution_space_name(catalog.operation_execution_space);
+pub fn render_catalog_help(catalog: &CliOperationCatalogDocument, program: &str) -> String {
     let mut output = String::new();
     output.push_str(catalog_title(catalog.operation_execution_space));
     output.push_str("\n\n");
@@ -75,8 +75,8 @@ pub fn render_catalog_help(catalog: &CliOperationCatalogDocument) -> String {
     }
 
     output.push_str("Use:\n");
-    output.push_str("  sandbox-cli ");
-    output.push_str(space);
+    output.push_str("  ");
+    output.push_str(program);
     output.push_str(" OPERATION");
     trim_trailing_blank_lines(output)
 }
@@ -84,6 +84,7 @@ pub fn render_catalog_help(catalog: &CliOperationCatalogDocument) -> String {
 pub fn render_operation_help(
     catalog: &CliOperationCatalogDocument,
     operation: &str,
+    program: &str,
 ) -> Result<String, HelpRenderError> {
     let spec = catalog
         .operations
@@ -93,6 +94,7 @@ pub fn render_operation_help(
             operation_execution_space: catalog.operation_execution_space,
             operation: operation.to_owned(),
             suggestions: search_operation_help(catalog, operation),
+            program: program.to_owned(),
         })?;
     let family = catalog
         .families

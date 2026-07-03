@@ -10,23 +10,16 @@ default-run = "sandbox-gateway"
 name = "sandbox-gateway"
 path = "src/gateway/main.rs"
 
-[[bin]]
-name = "sandbox-cli"
-path = "src/cli/main.rs"
-
 [dependencies]
 sandbox-config.workspace = true
 sandbox-manager.workspace = true
-sandbox-observability-operations.workspace = true
 sandbox-protocol.workspace = true
 sandbox-provider-docker.workspace = true
-sandbox-runtime.workspace = true
 clap.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
-uuid.workspace = true
 
 [lints]
 workspace = true

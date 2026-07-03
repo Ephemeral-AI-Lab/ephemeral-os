@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+
+token_file=${SANDBOX_GATEWAY_TOKEN_FILE:-/tmp/eos-gateway.token}
+if [ -z "${SANDBOX_GATEWAY_AUTH_TOKEN:-}" ] && [ -f "$token_file" ]; then
+    SANDBOX_GATEWAY_AUTH_TOKEN=$(cat "$token_file")
+    export SANDBOX_GATEWAY_AUTH_TOKEN
+fi
+
+local_cli="$repo_root/target/debug/sandbox-manager-cli"
+if [ -x "$local_cli" ]; then
+    exec "$local_cli" "$@"
+fi
+
+exec cargo run --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-manager-cli --bin sandbox-manager-cli -- "$@"

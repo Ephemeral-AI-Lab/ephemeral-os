@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-pub mod cli;
 pub mod gateway;
 
 pub use gateway::{

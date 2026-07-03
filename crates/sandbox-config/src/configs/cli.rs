@@ -1,25 +1,22 @@
-//! Config discovery for the human-facing `sandbox-cli` client.
+//! Config discovery for the human-facing sandbox CLI clients.
 
 use std::ffi::OsString;
 use std::path::PathBuf;
 
 pub const SANDBOX_GATEWAY_SOCKET_ENV: &str = "SANDBOX_GATEWAY_SOCKET";
 pub const SANDBOX_GATEWAY_AUTH_TOKEN_ENV: &str = "SANDBOX_GATEWAY_AUTH_TOKEN";
-pub const SANDBOX_DEFAULT_ID_ENV: &str = "SANDBOX_DEFAULT_ID";
 pub const DEFAULT_GATEWAY_SOCKET: &str = "127.0.0.1:7878";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GatewayConfig {
     pub gateway_socket_path: PathBuf,
     pub gateway_auth_token: Option<String>,
-    pub default_sandbox_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GatewayConfigOverrides {
     pub gateway_socket_path: Option<PathBuf>,
     pub gateway_auth_token: Option<String>,
-    pub default_sandbox_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,7 +36,7 @@ impl GatewayConfig {
     /// Discover the CLI client config from explicit overrides and environment.
     ///
     /// # Errors
-    /// Returns an error when a configured sandbox id or socket path is invalid.
+    /// Returns an error when a configured socket path or auth token is invalid.
     pub fn discover(overrides: GatewayConfigOverrides) -> Result<Self, ConfigError> {
         Self::discover_with(overrides, |key| std::env::var_os(key))
     }
@@ -47,7 +44,7 @@ impl GatewayConfig {
     /// Discover the CLI client config using an injected environment reader.
     ///
     /// # Errors
-    /// Returns an error when a configured sandbox id or socket path is invalid.
+    /// Returns an error when a configured socket path or auth token is invalid.
     pub fn discover_with(
         overrides: GatewayConfigOverrides,
         env: impl Fn(&str) -> Option<OsString>,
@@ -56,10 +53,6 @@ impl GatewayConfig {
         let env_gateway_auth_token = env(SANDBOX_GATEWAY_AUTH_TOKEN_ENV)
             .map(|value| value.to_string_lossy().into_owned())
             .map(non_empty_auth_token)
-            .transpose()?;
-        let env_default_sandbox_id = env(SANDBOX_DEFAULT_ID_ENV)
-            .map(|value| value.to_string_lossy().into_owned())
-            .map(non_empty_sandbox_id)
             .transpose()?;
 
         let gateway_socket_path = overrides
@@ -77,25 +70,10 @@ impl GatewayConfig {
             .transpose()?
             .or(env_gateway_auth_token);
 
-        let default_sandbox_id = overrides
-            .default_sandbox_id
-            .map(non_empty_sandbox_id)
-            .transpose()?
-            .or(env_default_sandbox_id);
-
         Ok(Self {
             gateway_socket_path,
             gateway_auth_token,
-            default_sandbox_id,
         })
-    }
-}
-
-fn non_empty_sandbox_id(value: String) -> Result<String, ConfigError> {
-    if value.trim().is_empty() {
-        Err(config_error("default sandbox id must be non-empty"))
-    } else {
-        Ok(value)
     }
 }
 

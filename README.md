@@ -5,7 +5,7 @@ human-facing gateway CLI, in-sandbox daemon, and separated runtime packages.
 
 ```text
 operator or agent
-   | sandbox-cli or newline-delimited JSON protocol
+   | sandbox-manager-cli / sandbox-runtime-cli or newline-delimited JSON protocol
    v
 sandbox-gateway / sandbox-protocol
    v
@@ -28,7 +28,12 @@ sandbox-config
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `sandbox-gateway` | bin+lib | own the public gateway listener and the `sandbox-cli` protocol client | own manager or runtime behavior |
+| `sandbox-gateway` | bin+lib | own the public gateway listener | own manager or runtime behavior or any CLI client code |
+| `sandbox-cli-core` | lib | the gateway client, CLI config discovery, catalog-driven request building, and response/error/help rendering shared by the CLI binaries | know any concrete operation or space policy |
+| `sandbox-manager-cli` | bin | operator CLI: manager + observability catalogs, system-scope requests, `--progress` | depend on manager/runtime/daemon/provider implementation crates |
+| `sandbox-runtime-cli` | bin | agent CLI: runtime catalog, sandbox-scope requests, required `--sandbox-id` | depend on manager/runtime/daemon/provider implementation crates |
+| `sandbox-manager-operations` | lib | manager CLI operation specs and catalog (spec-only) | contain dispatch or service code |
+| `sandbox-runtime-operations` | lib | runtime CLI operation specs and catalog (spec-only) | contain dispatch or service code |
 | `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, and manager operations | implement runtime command/workspace semantics |
 | `sandbox-protocol` | lib | own request/response DTOs, framing, catalog, and help metadata | depend on manager, daemon, or runtime implementation crates |
 | `sandbox-daemon` | bin+lib | bind daemon transport and dispatch runtime requests | know about Docker fleets |
@@ -43,16 +48,19 @@ sandbox-config
 
 **Boundary law:** daemon transport vocabulary lives in
 `crates/sandbox-protocol`; daemon request dispatch lives in
-`crates/sandbox-daemon`; runtime operation dispatch and concrete CLI operation specs
-live in `crates/sandbox-runtime/operation`; CAS fixtures live with
-`sandbox-runtime-layerstack`.
+`crates/sandbox-daemon`; runtime operation dispatch lives in
+`crates/sandbox-runtime/operation`; CLI operation specs (spec-only) live in
+`crates/sandbox-manager-operations` and `crates/sandbox-runtime-operations`;
+CAS fixtures live with `sandbox-runtime-layerstack`.
 
 ## The pieces
 
 - `crates/sandbox-runtime/layerstack/tests/fixtures/` - runtime-owned CAS
   fixtures.
 - `crates/` - the workspace: `sandbox-daemon`, `sandbox-protocol`,
-  `sandbox-manager`, `sandbox-gateway`, `sandbox-runtime/operation`,
+  `sandbox-manager`, `sandbox-gateway`, `sandbox-cli-core`,
+  `sandbox-manager-cli`, `sandbox-runtime-cli`, `sandbox-manager-operations`,
+  `sandbox-runtime-operations`, `sandbox-runtime/operation`,
   `sandbox-runtime/workspace`, `sandbox-runtime/namespace-execution`,
   `sandbox-runtime/namespace-process`, `sandbox-runtime/layerstack`,
   `sandbox-runtime/overlay`, and `sandbox-config`.
@@ -69,8 +77,9 @@ export PATH="$PWD/bin:$PATH"
 # package the Docker daemon binary if needed and start/restart the public gateway
 start-sandbox-docker-gateway
 
-# in another shell, use the gateway client directly
-sandbox-cli manager list_sandboxes
+# in another shell, use the gateway clients directly
+sandbox-manager-cli list_sandboxes
+sandbox-runtime-cli --sandbox-id eos-abc exec_command pwd
 
 # package the in-container daemon binary for Docker/E2E iteration
 cargo run -p xtask -- package

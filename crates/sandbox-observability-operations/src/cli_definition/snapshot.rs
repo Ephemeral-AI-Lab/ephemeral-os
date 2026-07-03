@@ -22,10 +22,10 @@ resource sample per scope. Served live; does not read the log.",
     args: &[SNAPSHOT_SANDBOX_ID_ARG],
     cli: Some(CliSpec {
         path: &["observability", "snapshot"],
-        usage: "sandbox-cli observability snapshot [--sandbox-id ID]",
+        usage: "sandbox-manager-cli observability snapshot [--sandbox-id ID]",
         examples: &[
-            "sandbox-cli observability snapshot",
-            "sandbox-cli observability snapshot --sandbox-id eos-abc",
+            "sandbox-manager-cli observability snapshot",
+            "sandbox-manager-cli observability snapshot --sandbox-id eos-abc",
         ],
     }),
     related: &["trace", "cgroup"],

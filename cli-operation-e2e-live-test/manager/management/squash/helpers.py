@@ -16,7 +16,8 @@ import time
 from pathlib import Path
 
 from core import cleanup
-from core.config import IMAGE, REPO_ROOT, SANDBOX_CLI
+from core.cli import route_cli
+from core.config import IMAGE, REPO_ROOT
 
 from . import measure
 
@@ -312,8 +313,9 @@ def raw_cli(rec, *args, timeout=180):
     started = time.monotonic()
     env = os.environ.copy()
     env["PATH"] = f"{REPO_ROOT / 'bin'}:{env.get('PATH', '')}"
+    binary, argv, _ = route_cli(args)
     proc = subprocess.run(
-        [str(SANDBOX_CLI), *map(str, args)],
+        [str(binary), *argv],
         cwd=str(REPO_ROOT),
         capture_output=True,
         text=True,
@@ -1104,12 +1106,16 @@ def _scenario_contract(case, rec, sandbox_factory):
 def _scenario_catalog(case, rec, sandbox_factory):
     help_result = raw_cli(rec, "manager", "--help", timeout=30)
     assert help_result.returncode == 0, help_result.stderr
-    source = (REPO_ROOT / "crates/sandbox-manager/src/operation/cli_definition/management_operations.rs").read_text()
+    # The manager CLI spec catalog is now a spec-only crate; the dispatch table
+    # in management_operations.rs imports the spec by name.
+    spec_source = (REPO_ROOT / "crates/sandbox-manager-operations/src/lib.rs").read_text()
+    dispatch_source = (REPO_ROOT / "crates/sandbox-manager/src/operation/cli_definition/management_operations.rs").read_text()
     runtime_source = (REPO_ROOT / "crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs").read_text()
-    assert 'name: "checkpoint_squash"' in source
-    assert "CHECKPOINT_SQUASH_SPEC" in source and "--sandbox-id" in source
+    assert 'name: "checkpoint_squash"' in spec_source
+    assert "CHECKPOINT_SQUASH_SPEC" in spec_source and "--sandbox-id" in spec_source
+    assert "CHECKPOINT_SQUASH_SPEC" in dispatch_source
     assert 'name: "squash_layerstack"' in runtime_source and "cli: None" in runtime_source
-    assert "--progress" not in source[source.index("const CHECKPOINT_SQUASH_ARGS"):source.index("const CHECKPOINT_SQUASH_CLI")]
+    assert "--progress" not in spec_source[spec_source.index("const CHECKPOINT_SQUASH_ARGS"):spec_source.index("const CHECKPOINT_SQUASH_CLI")]
     rec.axis("correctness", True, "manager catalog source exposes checkpoint_squash only")
     rec.axis("space", True, "n/a", n_a=True)
     rec.axis("time", True, "n/a", n_a=True)

@@ -278,11 +278,9 @@ fn cli_operation_catalog_metadata_uses_runtime_space() {
     for spec in catalog.operations {
         let cli = spec.cli.expect("runtime catalog spec must be CLI-visible");
         assert_eq!(cli.path.first(), Some(&"runtime"));
-        assert!(cli.usage.starts_with("sandbox-cli runtime "));
-        assert!(!cli.usage.contains("--sandbox-id"));
+        assert!(cli.usage.starts_with("sandbox-runtime-cli --sandbox-id ID "));
         assert!(cli.examples.iter().all(|example| {
-            example.starts_with("sandbox-cli runtime ")
-                && !example.contains("--sandbox-id")
+            example.starts_with("sandbox-runtime-cli --sandbox-id ID ")
                 && !example.contains("daemon")
         }));
     }

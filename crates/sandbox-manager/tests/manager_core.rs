@@ -444,7 +444,7 @@ fn cli_operation_catalog_contains_only_manager_operations() {
             .map(|cli| {
                 cli.examples
                     .iter()
-                    .all(|example| example.starts_with("sandbox-cli manager "))
+                    .all(|example| example.starts_with("sandbox-manager-cli "))
             })
             .unwrap_or(true)
     }));

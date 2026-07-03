@@ -12,7 +12,8 @@ SUITE_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = SUITE_DIR.parent
 BIN_DIR = REPO_ROOT / "bin"
 
-SANDBOX_CLI = BIN_DIR / "sandbox-cli"
+SANDBOX_MANAGER_CLI = BIN_DIR / "sandbox-manager-cli"
+SANDBOX_RUNTIME_CLI = BIN_DIR / "sandbox-runtime-cli"
 START_GATEWAY = BIN_DIR / "start-sandbox-docker-gateway"
 
 # Docker image used for every sandbox (manager create_sandbox --image).
@@ -42,6 +43,7 @@ CONFIG_YAML = os.environ.get(
 # "1" -> cold-start the gateway with --rebuild-binary (the documented path).
 REBUILD_BINARY = os.environ.get("E2E_REBUILD_BINARY", "1")
 
-# "1" -> pass sandbox-cli's global --progress flag and stream daemon-side
-# progress lines (e.g. workspace base copy/hash) live. Off by default.
+# "1" -> pass the manager CLI's global --progress flag and stream daemon-side
+# progress lines (e.g. workspace base copy/hash) live. Off by default. Runtime
+# operations have no --progress flag, so they never stream.
 PROGRESS = os.environ.get("E2E_PROGRESS", "0") == "1"

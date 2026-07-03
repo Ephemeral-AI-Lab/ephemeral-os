@@ -35,10 +35,10 @@ Served live from the runtime; does not read the log.",
     cli: Some(CliSpec {
         path: &["observability", "layerstack"],
         usage:
-            "sandbox-cli observability layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]",
+            "sandbox-manager-cli observability layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]",
         examples: &[
-            "sandbox-cli observability layerstack --sandbox-id eos-abc",
-            "sandbox-cli observability layerstack --sandbox-id eos-abc --workspace-id ws-7",
+            "sandbox-manager-cli observability layerstack --sandbox-id eos-abc",
+            "sandbox-manager-cli observability layerstack --sandbox-id eos-abc --workspace-id ws-7",
         ],
     }),
     related: &["snapshot", "cgroup"],

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from core.cli import cli, is_error, manager, observability, runtime
-from core.config import REPO_ROOT, SANDBOX_CLI
+from core.config import REPO_ROOT, SANDBOX_RUNTIME_CLI
 
 
 SUITE_DIR = Path(__file__).resolve().parent
@@ -380,7 +380,7 @@ def snapshot(sandbox_id):
 
 def runtime_help(operation):
     proc = subprocess.run(
-        [str(SANDBOX_CLI), "runtime", "help", operation],
+        [str(SANDBOX_RUNTIME_CLI), "help", operation],
         cwd=str(REPO_ROOT),
         capture_output=True,
         text=True,

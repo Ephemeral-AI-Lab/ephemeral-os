@@ -45,11 +45,11 @@ start timestamp, and cap to the newest N with --last-n.",
     cli: Some(CliSpec {
         path: &["observability", "events"],
         usage:
-            "sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]",
+            "sandbox-manager-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]",
         examples: &[
-            "sandbox-cli observability events --sandbox-id eos-abc",
-            "sandbox-cli observability events --sandbox-id eos-abc --name lease.acquired",
-            "sandbox-cli observability events --sandbox-id eos-abc --last-n 20",
+            "sandbox-manager-cli observability events --sandbox-id eos-abc",
+            "sandbox-manager-cli observability events --sandbox-id eos-abc --name lease.acquired",
+            "sandbox-manager-cli observability events --sandbox-id eos-abc --last-n 20",
         ],
     }),
     related: &["trace"],

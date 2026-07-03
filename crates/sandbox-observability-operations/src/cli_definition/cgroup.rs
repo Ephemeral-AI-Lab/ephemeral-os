@@ -34,10 +34,10 @@ bytes/files) carried in the same record.",
     ],
     cli: Some(CliSpec {
         path: &["observability", "cgroup"],
-        usage: "sandbox-cli observability cgroup --sandbox-id ID [--scope SCOPE] [--window-ms MS]",
+        usage: "sandbox-manager-cli observability cgroup --sandbox-id ID [--scope SCOPE] [--window-ms MS]",
         examples: &[
-            "sandbox-cli observability cgroup --sandbox-id eos-abc",
-            "sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000",
+            "sandbox-manager-cli observability cgroup --sandbox-id eos-abc",
+            "sandbox-manager-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000",
         ],
     }),
     related: &["snapshot"],

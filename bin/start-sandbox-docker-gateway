@@ -17,7 +17,8 @@ case "$target_dir" in
     *) target_dir=$(pwd)/$target_dir ;;
 esac
 gateway_bin=$target_dir/debug/sandbox-gateway
-cli_bin=$target_dir/debug/sandbox-cli
+manager_cli_bin=$target_dir/debug/sandbox-manager-cli
+runtime_cli_bin=$target_dir/debug/sandbox-runtime-cli
 rebuild_binary=0
 show_help=0
 arg_count=$#
@@ -123,13 +124,20 @@ if [ "$show_help" -eq 0 ]; then
 fi
 
 printf 'building sandbox-gateway binaries\n'
-cargo build --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-gateway --bin sandbox-gateway --bin sandbox-cli
+cargo build --quiet --manifest-path "$repo_root/Cargo.toml" \
+    -p sandbox-gateway --bin sandbox-gateway \
+    -p sandbox-manager-cli --bin sandbox-manager-cli \
+    -p sandbox-runtime-cli --bin sandbox-runtime-cli
 if [ ! -x "$gateway_bin" ]; then
     printf 'built sandbox-gateway binary not found at %s\n' "$gateway_bin" >&2
     exit 1
 fi
-if [ ! -x "$cli_bin" ]; then
-    printf 'built sandbox-cli binary not found at %s\n' "$cli_bin" >&2
+if [ ! -x "$manager_cli_bin" ]; then
+    printf 'built sandbox-manager-cli binary not found at %s\n' "$manager_cli_bin" >&2
+    exit 1
+fi
+if [ ! -x "$runtime_cli_bin" ]; then
+    printf 'built sandbox-runtime-cli binary not found at %s\n' "$runtime_cli_bin" >&2
     exit 1
 fi
 
@@ -243,4 +251,4 @@ printf 'pid file: %s\n' "$pid_file"
 printf 'address: %s\n' "$socket_path"
 printf 'auth token: %s (also written to %s)\n' "$auth_token" "$token_file"
 printf 'log: %s\n' "$log_file"
-printf 'bin/sandbox-cli reads %s automatically; or: export SANDBOX_GATEWAY_AUTH_TOKEN=%s\n' "$token_file" "$auth_token"
+printf 'bin/sandbox-manager-cli and bin/sandbox-runtime-cli read %s automatically; or: export SANDBOX_GATEWAY_AUTH_TOKEN=%s\n' "$token_file" "$auth_token"
