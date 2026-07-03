@@ -39,7 +39,7 @@ pub struct NamespaceRunnerRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub observability_log_path: Option<PathBuf>,
     #[serde(default)]
-    pub command_security: CommandSecurityPolicy,
+    pub shell_security: ShellSecurityPolicy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,34 +50,27 @@ pub struct RunResult {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-pub struct CommandSecurityPolicy {
-    pub mode: CommandSecurityMode,
+pub struct ShellSecurityPolicy {
+    pub mode: ShellSecurityMode,
 }
 
-impl CommandSecurityPolicy {
+impl ShellSecurityPolicy {
     #[must_use]
     pub const fn enforce() -> Self {
         Self {
-            mode: CommandSecurityMode::Enforce,
-        }
-    }
-
-    #[must_use]
-    pub const fn relaxed() -> Self {
-        Self {
-            mode: CommandSecurityMode::Relaxed,
+            mode: ShellSecurityMode::Enforce,
         }
     }
 
     #[must_use]
     pub const fn off() -> Self {
         Self {
-            mode: CommandSecurityMode::Off,
+            mode: ShellSecurityMode::Off,
         }
     }
 }
 
-impl Default for CommandSecurityPolicy {
+impl Default for ShellSecurityPolicy {
     fn default() -> Self {
         Self::enforce()
     }
@@ -85,9 +78,8 @@ impl Default for CommandSecurityPolicy {
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum CommandSecurityMode {
+pub enum ShellSecurityMode {
     #[default]
     Enforce,
-    Relaxed,
     Off,
 }

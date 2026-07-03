@@ -80,10 +80,10 @@ mod runner_setns_tests {
 }
 
 #[cfg(target_os = "linux")]
-mod runner_command_security_tests {
+mod runner_shell_security_tests {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/tests/unit/runner/command_security.rs"
+        "/tests/unit/runner/shell_security.rs"
     ));
 }
 

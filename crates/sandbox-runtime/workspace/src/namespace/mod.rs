@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use sandbox_observability::{NoopHook, Observer};
 use sandbox_runtime_namespace_execution::NamespaceExecutionEngine;
+use sandbox_runtime_namespace_process::runner::protocol::ShellSecurityPolicy;
 
 #[cfg(target_os = "linux")]
 use crate::session::WorkspaceManagerError;
@@ -114,6 +115,7 @@ impl NamespaceRuntime {
                 Arc::new(NoopHook),
                 MOUNT_MAX_ACTIVE,
                 setup_timeout_s,
+                ShellSecurityPolicy::off(),
             )),
             obs,
         }

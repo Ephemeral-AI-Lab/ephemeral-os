@@ -16,7 +16,7 @@ use sandbox_runtime::command::{
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_namespace_execution::NamespaceExecutionEngine;
-use sandbox_runtime_namespace_process::runner::protocol::CommandSecurityPolicy;
+use sandbox_runtime_namespace_process::runner::protocol::ShellSecurityPolicy;
 use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
 
 use support::{FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield, TestServices};
@@ -38,6 +38,7 @@ fn retention_services(
         exec_spans.clone(),
         256,
         30.0,
+        ShellSecurityPolicy::off(),
     ));
     engine.set_terminal_retention(max_terminal);
     let command = Arc::new(CommandOperationService::with_engine(
@@ -47,7 +48,6 @@ fn retention_services(
                 "namespace-execution-retention-{}-{max_terminal}",
                 std::process::id()
             )),
-            command_security: CommandSecurityPolicy::off(),
         },
         engine,
         exec_spans,

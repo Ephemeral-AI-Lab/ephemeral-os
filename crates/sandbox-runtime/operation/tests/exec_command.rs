@@ -375,6 +375,7 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
             exec_spans.clone(),
             256,
             30.0,
+            sandbox_runtime_namespace_process::runner::protocol::ShellSecurityPolicy::off(),
         ),
     );
     let config = sandbox_runtime::command::CommandConfig {
@@ -386,8 +387,6 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
                 N.fetch_add(1, Ordering::Relaxed)
             }
         )),
-        command_security:
-            sandbox_runtime_namespace_process::runner::protocol::CommandSecurityPolicy::off(),
     };
     let command = Arc::new(
         sandbox_runtime::command::CommandOperationService::with_engine(

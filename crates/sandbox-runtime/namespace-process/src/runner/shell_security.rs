@@ -1,9 +1,10 @@
 //! Command-child security policy.
 //!
-//! The seccomp allowlist is vendored from Docker's default profile:
-//! <https://github.com/moby/moby/blob/master/profiles/seccomp/default.json>.
-//! Filters are built in the parent before `fork`, then installed in the child
-//! from prebuilt BPF slices immediately before `execve`.
+//! Seccomp is a deny table: a fixed set of dangerous syscall families is
+//! rejected and every other syscall is allowed, so the policy stays compatible
+//! with arbitrary images without vendoring an allowlist. Filters are built in
+//! the parent before `fork`, then installed in the child from prebuilt BPF
+//! slices immediately before `execve`.
 
 use std::collections::BTreeMap;
 use std::io;
@@ -14,7 +15,7 @@ use seccompiler::{
     SeccompFilter, SeccompRule, TargetArch,
 };
 
-use crate::runner::protocol::{CommandSecurityMode, CommandSecurityPolicy};
+use crate::runner::protocol::{ShellSecurityMode, ShellSecurityPolicy};
 
 const PR_CAPBSET_DROP: libc::c_int = 24;
 const PR_SET_NO_NEW_PRIVS: libc::c_int = 38;
@@ -145,7 +146,6 @@ struct CapData {
 }
 
 static ENFORCE_PROGRAMS: OnceLock<SeccompPrograms> = OnceLock::new();
-static RELAXED_PROGRAMS: OnceLock<SeccompPrograms> = OnceLock::new();
 
 #[cfg(target_arch = "x86_64")]
 const SYS_CAPSET: libc::c_long = 126;
@@ -157,76 +157,27 @@ const SYS_CAPSET: libc::c_long = 91;
 #[cfg(target_arch = "aarch64")]
 const SYS_SECCOMP: libc::c_long = 277;
 
-#[cfg(target_arch = "x86_64")]
-pub(crate) const DOCKER_DEFAULT_SYSCALLS: &[i64] = &[
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
-    50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
-    74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97,
-    98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-    117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 135, 137,
-    138, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 157, 158, 159,
-    160, 161, 162, 163, 164, 165, 166, 169, 170, 171, 172, 173, 175, 176, 179, 186, 187, 188, 189,
-    190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208,
-    209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
-    228, 229, 230, 231, 232, 233, 234, 235, 237, 238, 239, 240, 241, 242, 243, 244, 245, 247, 251,
-    252, 253, 254, 255, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271,
-    272, 273, 274, 275, 276, 277, 278, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291,
-    292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310,
-    311, 312, 313, 314, 315, 316, 317, 318, 319, 321, 322, 324, 325, 326, 327, 328, 329, 330, 331,
-    332, 334, 424, 428, 429, 430, 431, 432, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443,
-    444, 445, 446, 447, 448, 449, 450, 452, 462,
-];
-
-#[cfg(target_arch = "aarch64")]
-pub(crate) const DOCKER_DEFAULT_SYSCALLS: &[i64] = &[
-    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
-    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47, 48, 49, 50, 51,
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 72, 73, 74, 75, 76,
-    77, 78, 79, 80, 81, 82, 83, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
-    101, 102, 103, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
-    121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139,
-    140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158,
-    159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177,
-    178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196,
-    197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215,
-    216, 220, 221, 222, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 240, 241, 242,
-    243, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 273, 274, 275, 276, 277,
-    278, 279, 280, 281, 283, 284, 285, 286, 287, 288, 289, 290, 291, 293, 424, 428, 429, 430, 431,
-    432, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446, 447, 448, 449, 450,
-    452, 462,
-];
-
-pub(crate) fn prepare_command_security_policy(policy: &CommandSecurityPolicy) -> io::Result<()> {
+pub(crate) fn prepare_shell_security_policy(policy: &ShellSecurityPolicy) -> io::Result<()> {
     match policy.mode {
-        CommandSecurityMode::Off => Ok(()),
-        CommandSecurityMode::Enforce => {
-            prepare_seccomp_program(CommandSecurityMode::Enforce, &ENFORCE_PROGRAMS)
-        }
-        CommandSecurityMode::Relaxed => {
-            prepare_seccomp_program(CommandSecurityMode::Relaxed, &RELAXED_PROGRAMS)
-        }
+        ShellSecurityMode::Off => Ok(()),
+        ShellSecurityMode::Enforce => prepare_seccomp_program(&ENFORCE_PROGRAMS),
     }
 }
 
-pub(crate) fn apply_command_security_policy(policy: &CommandSecurityPolicy) -> io::Result<()> {
+pub(crate) fn apply_shell_security_policy(policy: &ShellSecurityPolicy) -> io::Result<()> {
     set_no_new_privs()?;
     drop_capabilities()?;
     match policy.mode {
-        CommandSecurityMode::Off => Ok(()),
-        CommandSecurityMode::Enforce => install_prepared_filters(&ENFORCE_PROGRAMS),
-        CommandSecurityMode::Relaxed => install_prepared_filters(&RELAXED_PROGRAMS),
+        ShellSecurityMode::Off => Ok(()),
+        ShellSecurityMode::Enforce => install_prepared_filters(&ENFORCE_PROGRAMS),
     }
 }
 
-fn prepare_seccomp_program(
-    mode: CommandSecurityMode,
-    slot: &'static OnceLock<SeccompPrograms>,
-) -> io::Result<()> {
+fn prepare_seccomp_program(slot: &'static OnceLock<SeccompPrograms>) -> io::Result<()> {
     if slot.get().is_some() {
         return Ok(());
     }
-    let programs = build_seccomp_programs(mode)?;
+    let programs = build_seccomp_programs()?;
     let _ = slot.set(programs);
     Ok(())
 }
@@ -241,28 +192,22 @@ fn install_prepared_filters(slot: &'static OnceLock<SeccompPrograms>) -> io::Res
     Ok(())
 }
 
-pub(crate) fn build_seccomp_programs(mode: CommandSecurityMode) -> io::Result<SeccompPrograms> {
-    let filters = vec![
-        build_errno_filter(mode, libc::EPERM)?,
-        build_clone3_filter()?,
-        build_docker_default_allowlist_filter()?,
-    ];
+pub(crate) fn build_seccomp_programs() -> io::Result<SeccompPrograms> {
+    let filters = vec![build_errno_filter(libc::EPERM)?, build_clone3_filter()?];
     Ok(SeccompPrograms {
         filters: filters.into_boxed_slice(),
     })
 }
 
-fn build_errno_filter(mode: CommandSecurityMode, errno: i32) -> io::Result<BpfProgram> {
+fn build_errno_filter(errno: i32) -> io::Result<BpfProgram> {
     let mut rules = BTreeMap::new();
     for name in FILESYSTEM_DENY_SYSCALLS {
         add_syscall_rule(&mut rules, name, vec![])?;
     }
-    if mode == CommandSecurityMode::Enforce {
-        for name in NAMESPACE_DENY_SYSCALLS {
-            add_syscall_rule(&mut rules, name, vec![])?;
-        }
-        add_clone_namespace_rule(&mut rules)?;
+    for name in NAMESPACE_DENY_SYSCALLS {
+        add_syscall_rule(&mut rules, name, vec![])?;
     }
+    add_clone_namespace_rule(&mut rules)?;
     for name in SYSTEM_DENY_SYSCALLS {
         add_syscall_rule(&mut rules, name, vec![])?;
     }
@@ -287,18 +232,6 @@ fn build_clone3_filter() -> io::Result<BpfProgram> {
         rules,
         SeccompAction::Allow,
         SeccompAction::Errno(libc::ENOSYS as u32),
-    )
-}
-
-fn build_docker_default_allowlist_filter() -> io::Result<BpfProgram> {
-    let mut rules = BTreeMap::new();
-    for syscall in DOCKER_DEFAULT_SYSCALLS {
-        rules.insert(*syscall, vec![]);
-    }
-    bpf_filter(
-        rules,
-        SeccompAction::Errno(libc::EPERM as u32),
-        SeccompAction::Allow,
     )
 }
 

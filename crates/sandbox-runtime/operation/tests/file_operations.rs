@@ -635,6 +635,7 @@ fn dispatch_operations(env: &Env) -> SandboxRuntimeOperations {
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&env.workspace_session),
         sandbox_runtime::command::CommandConfig::default(),
+        sandbox_runtime_namespace_process::runner::protocol::ShellSecurityPolicy::off(),
         Observer::disabled(),
     ));
     SandboxRuntimeOperations::new(
@@ -879,8 +880,13 @@ fn file_op_launch_uses_cgroup_and_setup_timeout_overlay_uses_none() {
         },
     )));
     let spans = Arc::new(SpanRegistry::new(Observer::disabled()));
-    let engine =
-        NamespaceExecutionEngine::<()>::with_launcher(Box::new(launcher.clone()), spans, 8, 7.5);
+    let engine = NamespaceExecutionEngine::<()>::with_launcher(
+        Box::new(launcher.clone()),
+        spans,
+        8,
+        7.5,
+        sandbox_runtime_namespace_process::runner::protocol::ShellSecurityPolicy::off(),
+    );
 
     let cgroup = PathBuf::from("/sys/fs/cgroup/workspace-ws-1/cgroup.procs");
     let file_op = engine

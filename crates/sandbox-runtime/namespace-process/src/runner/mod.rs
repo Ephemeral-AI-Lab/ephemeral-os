@@ -9,12 +9,12 @@ use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-#[cfg(target_os = "linux")]
-pub(crate) mod command_security;
 pub mod file_op;
 pub mod protocol;
 pub mod setns;
 pub(crate) mod shell_exec;
+#[cfg(target_os = "linux")]
+pub(crate) mod shell_security;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]

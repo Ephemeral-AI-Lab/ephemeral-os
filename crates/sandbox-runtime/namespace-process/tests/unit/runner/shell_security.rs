@@ -1,8 +1,7 @@
-use crate::runner::command_security::{
-    build_seccomp_programs, syscall_number, CLONE_NEW_FLAGS, DOCKER_DEFAULT_SYSCALLS,
-    KEEP_CAPABILITIES,
+use crate::runner::shell_security::{
+    build_seccomp_programs, syscall_number, CLONE_NEW_FLAGS, KEEP_CAPABILITIES,
 };
-use crate::runner::protocol::CommandSecurityMode;
+use crate::runner::protocol::ShellSecurityMode;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum SeccompDecision {
@@ -52,19 +51,19 @@ fn syscall(name: &str) -> i64 {
     syscall_number(name).unwrap_or_else(|| panic!("missing syscall {name}"))
 }
 
-fn decision(mode: CommandSecurityMode, name: &str, args: [u64; 6]) -> SeccompDecision {
+fn decision(mode: ShellSecurityMode, name: &str, args: [u64; 6]) -> SeccompDecision {
     decision_by_syscall(mode, syscall(name), args)
 }
 
 fn decision_by_syscall(
-    mode: CommandSecurityMode,
+    mode: ShellSecurityMode,
     syscall: i64,
     args: [u64; 6],
 ) -> SeccompDecision {
-    if mode == CommandSecurityMode::Off {
+    if mode == ShellSecurityMode::Off {
         return SeccompDecision::Allow;
     }
-    if mode == CommandSecurityMode::Enforce && namespace_creation_syscall(syscall, args) {
+    if namespace_creation_syscall(syscall, args) {
         return SeccompDecision::Errno(libc::EPERM);
     }
     if common_denied_syscall(syscall, args) {
@@ -73,11 +72,7 @@ fn decision_by_syscall(
     if syscall_number("clone3") == Some(syscall) {
         return SeccompDecision::Errno(libc::ENOSYS);
     }
-    if DOCKER_DEFAULT_SYSCALLS.binary_search(&syscall).is_ok() {
-        SeccompDecision::Allow
-    } else {
-        SeccompDecision::Errno(libc::EPERM)
-    }
+    SeccompDecision::Allow
 }
 
 fn common_denied_syscall(syscall: i64, args: [u64; 6]) -> bool {
@@ -130,16 +125,14 @@ fn kept_capabilities_match_command_policy() {
 
 #[test]
 fn seccomp_programs_build_with_arch_guard_first() {
-    for mode in [CommandSecurityMode::Enforce, CommandSecurityMode::Relaxed] {
-        let programs = build_seccomp_programs(mode).expect("programs build");
-        assert_eq!(programs.filters.len(), 3);
-        for program in programs.filters {
-            assert!(!program.is_empty());
-            assert_eq!(program[0].code, 0x20);
-            assert_eq!(program[0].k, 4);
-            #[cfg(target_arch = "x86_64")]
-            assert!(program.iter().any(|instruction| instruction.k == 0x4000_0000));
-        }
+    let programs = build_seccomp_programs().expect("programs build");
+    assert_eq!(programs.filters.len(), 2);
+    for program in programs.filters {
+        assert!(!program.is_empty());
+        assert_eq!(program[0].code, 0x20);
+        assert_eq!(program[0].k, 4);
+        #[cfg(target_arch = "x86_64")]
+        assert!(program.iter().any(|instruction| instruction.k == 0x4000_0000));
     }
 }
 
@@ -147,7 +140,7 @@ fn seccomp_programs_build_with_arch_guard_first() {
 fn explicit_denies_return_eperm_in_enforce() {
     for name in COMMON_DENIED_SYSCALLS {
         assert_eq!(
-            decision(CommandSecurityMode::Enforce, name, [0; 6]),
+            decision(ShellSecurityMode::Enforce, name, [0; 6]),
             SeccompDecision::Errno(libc::EPERM),
             "{name} should be denied"
         );
@@ -157,7 +150,7 @@ fn explicit_denies_return_eperm_in_enforce() {
 #[test]
 fn clone3_returns_enosys() {
     assert_eq!(
-        decision(CommandSecurityMode::Enforce, "clone3", [0; 6]),
+        decision(ShellSecurityMode::Enforce, "clone3", [0; 6]),
         SeccompDecision::Errno(libc::ENOSYS)
     );
 }
@@ -174,35 +167,27 @@ fn exec_syscalls_remain_allowed() {
         "setrlimit",
     ] {
         assert_eq!(
-            decision(CommandSecurityMode::Enforce, name, [0; 6]),
+            decision(ShellSecurityMode::Enforce, name, [0; 6]),
             SeccompDecision::Allow
         );
     }
 }
 
 #[test]
-fn namespace_creation_is_relaxed_only_in_relaxed_mode() {
+fn namespace_creation_is_denied_in_enforce() {
     let clone_args = [clone_namespace_mask(), 0, 0, 0, 0, 0];
     assert_eq!(
-        decision(CommandSecurityMode::Enforce, "clone", clone_args),
+        decision(ShellSecurityMode::Enforce, "clone", clone_args),
         SeccompDecision::Errno(libc::EPERM)
     );
     assert_eq!(
-        decision(CommandSecurityMode::Relaxed, "clone", clone_args),
-        SeccompDecision::Allow
-    );
-    assert_eq!(
-        decision(CommandSecurityMode::Enforce, "clone", [libc::SIGCHLD as u64, 0, 0, 0, 0, 0]),
+        decision(ShellSecurityMode::Enforce, "clone", [libc::SIGCHLD as u64, 0, 0, 0, 0, 0]),
         SeccompDecision::Allow
     );
     for name in ["setns", "unshare"] {
         assert_eq!(
-            decision(CommandSecurityMode::Enforce, name, [0; 6]),
+            decision(ShellSecurityMode::Enforce, name, [0; 6]),
             SeccompDecision::Errno(libc::EPERM)
-        );
-        assert_eq!(
-            decision(CommandSecurityMode::Relaxed, name, [0; 6]),
-            SeccompDecision::Allow
         );
     }
 }
@@ -212,14 +197,9 @@ fn each_clone_namespace_flag_is_denied_in_enforce() {
     for flag in CLONE_NEW_FLAGS {
         let clone_args = [*flag, 0, 0, 0, 0, 0];
         assert_eq!(
-            decision(CommandSecurityMode::Enforce, "clone", clone_args),
+            decision(ShellSecurityMode::Enforce, "clone", clone_args),
             SeccompDecision::Errno(libc::EPERM),
             "clone flag {flag:#x} should be denied"
-        );
-        assert_eq!(
-            decision(CommandSecurityMode::Relaxed, "clone", clone_args),
-            SeccompDecision::Allow,
-            "clone flag {flag:#x} should be relaxed"
         );
     }
 }
@@ -227,7 +207,7 @@ fn each_clone_namespace_flag_is_denied_in_enforce() {
 #[test]
 fn off_mode_skips_seccomp_denials() {
     assert_eq!(
-        decision(CommandSecurityMode::Off, "mount", [0; 6]),
+        decision(ShellSecurityMode::Off, "mount", [0; 6]),
         SeccompDecision::Allow
     );
 }
@@ -235,20 +215,20 @@ fn off_mode_skips_seccomp_denials() {
 #[test]
 fn device_mknod_is_denied_but_regular_nodes_are_not() {
     assert_eq!(
-        decision(CommandSecurityMode::Enforce, "mknodat", [0, 0, S_IFCHR, 0, 0, 0]),
+        decision(ShellSecurityMode::Enforce, "mknodat", [0, 0, S_IFCHR, 0, 0, 0]),
         SeccompDecision::Errno(libc::EPERM)
     );
     assert_eq!(
-        decision(CommandSecurityMode::Enforce, "mknodat", [0, 0, S_IFBLK, 0, 0, 0]),
+        decision(ShellSecurityMode::Enforce, "mknodat", [0, 0, S_IFBLK, 0, 0, 0]),
         SeccompDecision::Errno(libc::EPERM)
     );
     assert_eq!(
-        decision(CommandSecurityMode::Enforce, "mknodat", [0, 0, S_IFREG, 0, 0, 0]),
+        decision(ShellSecurityMode::Enforce, "mknodat", [0, 0, S_IFREG, 0, 0, 0]),
         SeccompDecision::Allow
     );
     if let Some(mknod) = syscall_number("mknod") {
         assert_eq!(
-            decision_by_syscall(CommandSecurityMode::Enforce, mknod, [0, S_IFCHR, 0, 0, 0, 0]),
+            decision_by_syscall(ShellSecurityMode::Enforce, mknod, [0, S_IFCHR, 0, 0, 0, 0]),
             SeccompDecision::Errno(libc::EPERM)
         );
     }

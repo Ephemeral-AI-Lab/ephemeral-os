@@ -100,6 +100,7 @@ fn service_graph_runtime_operations_exposes_command_lane(
     let command = Arc::new(CommandOperationService::new(
         Arc::clone(&workspace),
         CommandConfig::default(),
+        sandbox_runtime_namespace_process::runner::protocol::ShellSecurityPolicy::off(),
         Observer::disabled(),
     ));
     let operations = SandboxRuntimeOperations::new(
@@ -157,8 +158,6 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
                 scratch_root: command_scratch_root,
             },
             cgroup_root: None,
-            command_security:
-                sandbox_runtime_namespace_process::runner::protocol::CommandSecurityPolicy::off(),
         },
         Observer::disabled(),
     );

@@ -116,7 +116,6 @@ impl CommandOperationService {
                         on_complete,
                         cgroup_procs_path,
                         trace_handoff,
-                        self.config().command_security,
                     )
                 },
             );

@@ -185,7 +185,7 @@ fn main() {
     }));
 
     let key_type = c("user");
-    let key_name = c("eos-command-security");
+    let key_name = c("eos-shell-security");
     report("add_key", syscall_result(|| unsafe {
         syscall(
             nr::ADD_KEY,
@@ -280,7 +280,7 @@ fn main() {
 
 
 def linux_musl_target():
-    target = os.environ.get("E2E_COMMAND_SECURITY_TARGET")
+    target = os.environ.get("E2E_SHELL_SECURITY_TARGET")
     if target:
         return target
 
@@ -293,8 +293,8 @@ def linux_musl_target():
 
 
 def compile_probe(workspace):
-    source = workspace / "eos_command_security_probe.rs"
-    binary = workspace / "eos_command_security_probe"
+    source = workspace / "eos_shell_security_probe.rs"
+    binary = workspace / "eos_shell_security_probe"
     source.write_text(textwrap.dedent(PROBE_SOURCE).strip() + "\n")
     subprocess.run(
         [
@@ -356,7 +356,7 @@ def wait_command(sandbox_id, command_session_id, *, timeout_s=180):
 
 
 def run_probe(sandbox_id):
-    result = exec_cmd(sandbox_id, "./eos_command_security_probe")
+    result = exec_cmd(sandbox_id, "./eos_shell_security_probe")
     assert result.get("status") == "ok", result
     return parse_probe_output(result.get("output", ""))
 

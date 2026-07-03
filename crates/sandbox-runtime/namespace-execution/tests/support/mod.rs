@@ -423,7 +423,6 @@ impl ShellOperation for OkShellOp {
     fn command(&self) -> &str {
         "true"
     }
-
     fn timeout_seconds(&self) -> Option<f64> {
         None
     }
@@ -447,7 +446,6 @@ impl ShellOperation for TimedShellOp {
     fn command(&self) -> &str {
         "printf ready"
     }
-
     fn timeout_seconds(&self) -> Option<f64> {
         Some(2.5)
     }
@@ -471,7 +469,6 @@ impl ShellOperation for ErrShellOp {
     fn command(&self) -> &str {
         "false"
     }
-
     fn timeout_seconds(&self) -> Option<f64> {
         None
     }
@@ -495,7 +492,6 @@ impl ShellOperation for PanicShellOp {
     fn command(&self) -> &str {
         "panic"
     }
-
     fn timeout_seconds(&self) -> Option<f64> {
         None
     }
