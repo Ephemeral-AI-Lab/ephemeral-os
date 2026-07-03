@@ -2,6 +2,7 @@
 //! and recover existing containers by label after a gateway restart.
 
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -21,34 +22,7 @@ use crate::launch::daemon_launch_argv;
 
 const ENDPOINT_HOST: &str = "127.0.0.1";
 const SHARED_BASE_VOLUME_MOUNT_ROOT: &str = "/eos-shared-base-seed";
-const GIT_TOOLCHAIN_ARCHIVE: &str = "/tmp/eos-git-toolchain.tar";
-const GIT_TOOLCHAIN_SCRIPT: &str = r#"
-set -eu
-export DEBIAN_FRONTEND=noninteractive
-if ! command -v git >/dev/null 2>&1; then
-  if ! command -v apt-get >/dev/null 2>&1; then
-    echo "image does not contain git or apt-get" >&2
-    exit 42
-  fi
-  arch="$(dpkg --print-architecture)"
-  mirror="https://ports.ubuntu.com/ubuntu-ports"
-  if [ "$arch" = "amd64" ]; then mirror="https://archive.ubuntu.com/ubuntu"; fi
-  rm -rf /tmp/eos-apt
-  mkdir -p /tmp/eos-apt/lists/partial /tmp/eos-apt/cache/archives/partial /tmp/eos-apt/sources.list.d
-  printf 'deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] %s noble main\ndeb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] %s noble-updates main\n' "$mirror" "$mirror" > /tmp/eos-apt/sources.list
-  apt_opts='-o Dpkg::Use-Pty=0 -o Acquire::Retries=2 -o Acquire::https::Timeout=20 -o Acquire::https::Verify-Peer=false -o Acquire::https::Verify-Host=false -o Dir::State::lists=/tmp/eos-apt/lists -o Dir::Cache=/tmp/eos-apt/cache -o Dir::Cache::archives=archives -o Dir::Etc::sourcelist=/tmp/eos-apt/sources.list -o Dir::Etc::sourceparts=/tmp/eos-apt/sources.list.d -o APT::Get::List-Cleanup=0'
-  apt-get $apt_opts update -qq
-  apt-get $apt_opts install -y -qq --no-install-recommends git
-fi
-files="$(mktemp)"
-{
-  command -v git
-  [ ! -d /usr/lib/git-core ] || find /usr/lib/git-core -print
-  [ ! -d /usr/share/git-core ] || find /usr/share/git-core -print
-  ldd "$(command -v git)" /usr/lib/git-core/git-* 2>/dev/null | awk '/=> \// {print $3} /^\// && $1 !~ /:$/ {print $1}'
-} | sed 's#^/##' | sort -u > "$files"
-tar --no-recursion -C / -cf /tmp/eos-git-toolchain.tar -T "$files"
-"#;
+const GIT_TOOLCHAIN_DIR_ENV: &str = "SANDBOX_GIT_TOOLCHAIN_DIR";
 static SEEDED_SHARED_BASE_VOLUMES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 static GIT_TOOLCHAINS: OnceLock<Mutex<HashMap<String, GitToolchain>>> = OnceLock::new();
 
@@ -188,7 +162,6 @@ impl DockerSandboxRuntime {
         {
             return Ok(toolchain);
         }
-        let env = container_env(config);
         let probe = self
             .engine
             .run_image_command(
@@ -199,27 +172,14 @@ impl DockerSandboxRuntime {
                     "-ceu".to_owned(),
                     "command -v git >/dev/null 2>&1".to_owned(),
                 ],
-                env.clone(),
+                container_env(config),
             )
             .map_err(runtime_failed)?;
         let toolchain = if probe.exit_code == 0 {
             GitToolchain::Present
         } else {
-            GitToolchain::Upload(
-                self.engine
-                    .download_file_after_image_command(
-                        image.to_owned(),
-                        config.platform.clone(),
-                        vec![
-                            "sh".to_owned(),
-                            "-ceu".to_owned(),
-                            GIT_TOOLCHAIN_SCRIPT.to_owned(),
-                        ],
-                        env,
-                        GIT_TOOLCHAIN_ARCHIVE.to_owned(),
-                    )
-                    .map_err(runtime_failed)?,
-            )
+            let arch = git_toolchain_arch(config, &self.engine)?;
+            GitToolchain::Upload(load_git_toolchain_archive(arch)?)
         };
         cache
             .lock()
@@ -409,6 +369,43 @@ fn git_toolchain_key(config: &DockerRuntimeConfig, image: &str) -> String {
         image,
         config.platform.as_deref().unwrap_or_default()
     )
+}
+
+fn git_toolchain_arch(
+    config: &DockerRuntimeConfig,
+    engine: &DockerEngine,
+) -> Result<String, ManagerError> {
+    if let Some(platform) = config.platform.as_deref() {
+        if let Some(arch) = platform.split('/').nth(1) {
+            return Ok(arch.to_owned());
+        }
+    }
+    engine.daemon_architecture().map_err(runtime_failed)
+}
+
+fn load_git_toolchain_archive(arch: impl AsRef<str>) -> Result<Bytes, ManagerError> {
+    let arch = arch.as_ref();
+    let filename = match arch {
+        "aarch64" | "arm64" => "linux-arm64.tar",
+        "x86_64" | "amd64" => "linux-amd64.tar",
+        value => {
+            return Err(ManagerError::RuntimeFailed {
+                message: format!("unsupported git toolchain architecture {value}"),
+            });
+        }
+    };
+    let dir = env::var_os(GIT_TOOLCHAIN_DIR_ENV).ok_or_else(|| ManagerError::RuntimeFailed {
+        message: format!("{GIT_TOOLCHAIN_DIR_ENV} is not set"),
+    })?;
+    let path = PathBuf::from(dir).join(filename);
+    std::fs::read(&path)
+        .map(Bytes::from)
+        .map_err(|error| ManagerError::RuntimeFailed {
+            message: format!(
+                "failed to read prebuilt git toolchain {}: {error}",
+                path.display()
+            ),
+        })
 }
 
 fn container_env(config: &DockerRuntimeConfig) -> Vec<String> {

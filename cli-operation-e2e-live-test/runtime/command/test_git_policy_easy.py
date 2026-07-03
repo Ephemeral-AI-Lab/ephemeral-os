@@ -177,6 +177,19 @@ def wait_command_terminal(sandbox_id: str, command_session_id: str, timeout_s: i
 
 
 def verify_git(sandbox_id: str, rec: GitCaseRecorder):
+    install = "apt-get update -qq && apt-get install -y -qq git"
+    rec.record_cmd(install)
+    installed = exec_command(
+        sandbox_id,
+        install,
+        yield_time_ms=30_000,
+        timeout_ms=600_000,
+        timeout=720,
+    )
+    rec.record_result("setup-apt-install", installed)
+    assert_ok(installed)
+    assert installed["status"] == "ok" and installed["exit_code"] == 0, installed
+
     rec.record_cmd("git --version")
     version = exec_command(sandbox_id, "git --version", yield_time_ms=30_000, timeout=120)
     rec.record_result("setup-git-version", version)

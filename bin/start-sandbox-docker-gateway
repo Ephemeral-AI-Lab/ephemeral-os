@@ -16,6 +16,7 @@ case "$target_dir" in
     /*) ;;
     *) target_dir=$(pwd)/$target_dir ;;
 esac
+git_toolchain_dir=${SANDBOX_GIT_TOOLCHAIN_DIR:-$repo_root/dist/git}
 gateway_bin=$target_dir/debug/sandbox-gateway
 manager_cli_bin=$target_dir/debug/sandbox-manager-cli
 runtime_cli_bin=$target_dir/debug/sandbox-runtime-cli
@@ -146,6 +147,15 @@ if [ "$show_help" -eq 1 ]; then
     printf '  --rebuild-binary  force xtask package rebuild of the configured sandbox-daemon target\n\n'
     exec "$gateway_bin" serve "$@"
 fi
+
+for arch in arm64 amd64; do
+    archive=$git_toolchain_dir/linux-$arch.tar
+    if [ ! -s "$archive" ]; then
+        printf 'missing git toolchain archive: %s\n' "$archive" >&2
+        exit 1
+    fi
+done
+export SANDBOX_GIT_TOOLCHAIN_DIR="$git_toolchain_dir"
 
 log_file=${SANDBOX_GATEWAY_LOG:-${pid_file%.*}.log}
 if [ "$log_file" = "$pid_file" ]; then

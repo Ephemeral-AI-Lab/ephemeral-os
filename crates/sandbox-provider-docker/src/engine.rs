@@ -5,13 +5,10 @@
 
 use std::collections::HashMap;
 use std::future::Future;
-use std::io::{Cursor, Read};
-use std::path::Path;
 
 use bollard::container::{
-    Config, CreateContainerOptions, DownloadFromContainerOptions, ListContainersOptions,
-    LogsOptions, RemoveContainerOptions, StartContainerOptions, StopContainerOptions,
-    UploadToContainerOptions, WaitContainerOptions,
+    Config, CreateContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
+    StartContainerOptions, StopContainerOptions, UploadToContainerOptions, WaitContainerOptions,
 };
 use bollard::errors::Error as BollardError;
 use bollard::models::{
@@ -66,7 +63,6 @@ pub(crate) struct VolumeSpec {
 
 pub(crate) struct ImageCommandResult {
     pub(crate) exit_code: i64,
-    pub(crate) logs: String,
 }
 
 /// Result of starting a container and resolving its published daemon ports (the
@@ -221,47 +217,15 @@ impl DockerEngine {
         })
     }
 
-    pub(crate) fn download_file_after_image_command(
-        &self,
-        image: String,
-        platform: Option<String>,
-        cmd: Vec<String>,
-        env: Vec<String>,
-        file_path: String,
-    ) -> Result<Bytes, DockerError> {
+    pub(crate) fn daemon_architecture(&self) -> Result<String, DockerError> {
         self.run_blocking(move |docker| async move {
-            let name = create_command_container(&docker, image, platform, cmd, env).await?;
-            let result = async {
-                let output = start_wait_and_logs(&docker, &name).await?;
-                if output.exit_code != 0 {
-                    let logs = logs_for_context(&output.logs);
-                    return Err(DockerError::Api(format!(
-                        "image command exited {} while preparing {file_path}: {logs}",
-                        output.exit_code
-                    )));
-                }
-                let mut stream = docker.download_from_container(
-                    &name,
-                    Some(DownloadFromContainerOptions {
-                        path: file_path.clone(),
-                    }),
-                );
-                let mut buffer = Vec::new();
-                while let Some(item) = stream.next().await {
-                    let bytes = item.map_err(|error| {
-                        DockerError::Api(format!("download_from_container: {error}"))
-                    })?;
-                    buffer.extend_from_slice(bytes.as_ref());
-                }
-                extract_downloaded_file(Bytes::from(buffer), &file_path)
-            }
-            .await;
-            let removed = remove_command_container(&docker, &name).await;
-            match (result, removed) {
-                (Ok(bytes), Ok(())) => Ok(bytes),
-                (Err(error), _) => Err(error),
-                (Ok(_), Err(error)) => Err(error),
-            }
+            let info = docker
+                .info()
+                .await
+                .map_err(|error| DockerError::Api(format!("docker info: {error}")))?;
+            info.architecture.ok_or_else(|| {
+                DockerError::Api("docker info did not report an architecture".to_owned())
+            })
         })
     }
 
@@ -515,10 +479,7 @@ async fn start_wait_and_logs(
         .await
         .map_err(|error| DockerError::Api(format!("start command container: {error}")))?;
     let exit_code = wait_exit_code(docker, container).await?;
-    Ok(ImageCommandResult {
-        exit_code,
-        logs: collect_logs(docker, container).await,
-    })
+    Ok(ImageCommandResult { exit_code })
 }
 
 async fn wait_exit_code(docker: &Docker, container: &str) -> Result<i64, DockerError> {
@@ -558,34 +519,6 @@ async fn remove_volume(docker: &Docker, volume: &str) -> Result<(), DockerError>
         Err(error) if server_status(&error) == Some(HTTP_NOT_FOUND) => Ok(()),
         Err(error) => Err(DockerError::Api(format!("remove_volume: {error}"))),
     }
-}
-
-fn extract_downloaded_file(archive: Bytes, container_file: &str) -> Result<Bytes, DockerError> {
-    let wanted = Path::new(container_file).file_name().ok_or_else(|| {
-        DockerError::Api(format!("invalid container file path: {container_file}"))
-    })?;
-    let mut outer = tar::Archive::new(Cursor::new(archive));
-    let entries = outer
-        .entries()
-        .map_err(|error| DockerError::Api(format!("read downloaded archive: {error}")))?;
-    for entry in entries {
-        let mut entry =
-            entry.map_err(|error| DockerError::Api(format!("read downloaded entry: {error}")))?;
-        let path = entry
-            .path()
-            .map_err(|error| DockerError::Api(format!("read downloaded entry path: {error}")))?;
-        if path.file_name() == Some(wanted) {
-            let mut data = Vec::new();
-            entry
-                .read_to_end(&mut data)
-                .map_err(|error| DockerError::Api(format!("read downloaded file: {error}")))?;
-            return Ok(Bytes::from(data));
-        }
-    }
-    Err(DockerError::Api(format!(
-        "downloaded archive did not contain {}",
-        wanted.to_string_lossy()
-    )))
 }
 
 fn connect(endpoint: Option<&str>) -> Result<Docker, DockerError> {
