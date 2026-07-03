@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use bytes::Bytes;
 use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_config::configs::runtime::RuntimeConfig;
 use sandbox_manager::{
@@ -20,7 +21,43 @@ use crate::launch::daemon_launch_argv;
 
 const ENDPOINT_HOST: &str = "127.0.0.1";
 const SHARED_BASE_VOLUME_MOUNT_ROOT: &str = "/eos-shared-base-seed";
+const GIT_TOOLCHAIN_ARCHIVE: &str = "/tmp/eos-git-toolchain.tar";
+const GIT_TOOLCHAIN_SCRIPT: &str = r#"
+set -eu
+export DEBIAN_FRONTEND=noninteractive
+if ! command -v git >/dev/null 2>&1; then
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "image does not contain git or apt-get" >&2
+    exit 42
+  fi
+  arch="$(dpkg --print-architecture)"
+  mirror="https://ports.ubuntu.com/ubuntu-ports"
+  if [ "$arch" = "amd64" ]; then mirror="https://archive.ubuntu.com/ubuntu"; fi
+  rm -rf /tmp/eos-apt
+  mkdir -p /tmp/eos-apt/lists/partial /tmp/eos-apt/cache/archives/partial /tmp/eos-apt/sources.list.d
+  printf 'deb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] %s noble main\ndeb [signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] %s noble-updates main\n' "$mirror" "$mirror" > /tmp/eos-apt/sources.list
+  apt_opts='-o Dpkg::Use-Pty=0 -o Acquire::Retries=2 -o Acquire::https::Timeout=20 -o Acquire::https::Verify-Peer=false -o Acquire::https::Verify-Host=false -o Dir::State::lists=/tmp/eos-apt/lists -o Dir::Cache=/tmp/eos-apt/cache -o Dir::Cache::archives=archives -o Dir::Etc::sourcelist=/tmp/eos-apt/sources.list -o Dir::Etc::sourceparts=/tmp/eos-apt/sources.list.d -o APT::Get::List-Cleanup=0'
+  apt-get $apt_opts update -qq
+  apt-get $apt_opts install -y -qq --no-install-recommends git
+fi
+files="$(mktemp)"
+{
+  command -v git
+  [ ! -d /usr/lib/git-core ] || find /usr/lib/git-core -print
+  [ ! -d /usr/share/git-core ] || find /usr/share/git-core -print
+  ldd "$(command -v git)" /usr/lib/git-core/git-* 2>/dev/null | awk '/=> \// {print $3} /^\// && $1 !~ /:$/ {print $1}'
+} | sed 's#^/##' | sort -u > "$files"
+tar --no-recursion -C / -cf /tmp/eos-git-toolchain.tar -T "$files"
+"#;
 static SEEDED_SHARED_BASE_VOLUMES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+static GIT_TOOLCHAINS: OnceLock<Mutex<HashMap<String, GitToolchain>>> = OnceLock::new();
+
+#[derive(Clone)]
+enum GitToolchain {
+    Present,
+    Upload(Bytes),
+}
+
 /// Docker-backed runtime. Creates stopped containers; the installer starts them.
 pub struct DockerSandboxRuntime {
     engine: DockerEngine,
@@ -118,6 +155,80 @@ impl DockerSandboxRuntime {
         seeded.insert(volume_name.clone());
         Ok(volume_name)
     }
+
+    fn ensure_git_toolchain(
+        &self,
+        config: &DockerRuntimeConfig,
+        image: &str,
+        id: &SandboxId,
+    ) -> Result<(), ManagerError> {
+        match self.git_toolchain(config, image)? {
+            GitToolchain::Present => Ok(()),
+            GitToolchain::Upload(archive) => self
+                .engine
+                .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
+                .map_err(runtime_failed),
+        }
+    }
+
+    fn git_toolchain(
+        &self,
+        config: &DockerRuntimeConfig,
+        image: &str,
+    ) -> Result<GitToolchain, ManagerError> {
+        let key = git_toolchain_key(config, image);
+        let cache = GIT_TOOLCHAINS.get_or_init(|| Mutex::new(HashMap::new()));
+        if let Some(toolchain) = cache
+            .lock()
+            .map_err(|_| ManagerError::RuntimeFailed {
+                message: "git toolchain cache lock poisoned".to_owned(),
+            })?
+            .get(&key)
+            .cloned()
+        {
+            return Ok(toolchain);
+        }
+        let env = container_env(config);
+        let probe = self
+            .engine
+            .run_image_command(
+                image.to_owned(),
+                config.platform.clone(),
+                vec![
+                    "sh".to_owned(),
+                    "-ceu".to_owned(),
+                    "command -v git >/dev/null 2>&1".to_owned(),
+                ],
+                env.clone(),
+            )
+            .map_err(runtime_failed)?;
+        let toolchain = if probe.exit_code == 0 {
+            GitToolchain::Present
+        } else {
+            GitToolchain::Upload(
+                self.engine
+                    .download_file_after_image_command(
+                        image.to_owned(),
+                        config.platform.clone(),
+                        vec![
+                            "sh".to_owned(),
+                            "-ceu".to_owned(),
+                            GIT_TOOLCHAIN_SCRIPT.to_owned(),
+                        ],
+                        env,
+                        GIT_TOOLCHAIN_ARCHIVE.to_owned(),
+                    )
+                    .map_err(runtime_failed)?,
+            )
+        };
+        cache
+            .lock()
+            .map_err(|_| ManagerError::RuntimeFailed {
+                message: "git toolchain cache lock poisoned".to_owned(),
+            })?
+            .insert(key, toolchain.clone());
+        Ok(toolchain)
+    }
 }
 
 impl SandboxRuntime for DockerSandboxRuntime {
@@ -164,7 +275,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
         let cmd = daemon_launch_argv(config, &record, &auth_token);
         let spec = ContainerSpec {
             name,
-            image,
+            image: image.clone(),
             cmd,
             env: container_env(config),
             labels,
@@ -186,11 +297,14 @@ impl SandboxRuntime for DockerSandboxRuntime {
         .map_err(|error| ManagerError::RuntimeFailed {
             message: format!("failed to build shared base seed archive: {error}"),
         });
-        match archive.and_then(|archive| {
-            self.engine
-                .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
-                .map_err(runtime_failed)
-        }) {
+        match archive
+            .and_then(|archive| {
+                self.engine
+                    .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
+                    .map_err(runtime_failed)
+            })
+            .and_then(|()| self.ensure_git_toolchain(config, &image, &id))
+        {
             Ok(()) => {}
             Err(error) => {
                 let _ = self
@@ -287,6 +401,14 @@ fn runtime_volumes(
             labels,
         },
     ]
+}
+
+fn git_toolchain_key(config: &DockerRuntimeConfig, image: &str) -> String {
+    format!(
+        "{}|{}",
+        image,
+        config.platform.as_deref().unwrap_or_default()
+    )
 }
 
 fn container_env(config: &DockerRuntimeConfig) -> Vec<String> {
