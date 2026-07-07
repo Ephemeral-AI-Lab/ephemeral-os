@@ -23,6 +23,7 @@ const DAEMON_BINARY: &str = "sandbox-daemon";
 const DAEMON_ARTIFACT_PREFIX: &str = "sandbox-daemon";
 const DEFAULT_PACKAGE_PROFILE: &str = "package-fast";
 const FAST_PACKAGE_PROFILE: &str = "package-fast";
+const DEFAULT_BUILDER: &str = "auto";
 const MAX_MOD_OR_LIB_LINES: usize = 300;
 const MAX_CRATE_SRC_LINES: usize = 1_000;
 
@@ -295,7 +296,7 @@ impl PackageArgs {
         let mut out_dir = PathBuf::from("dist");
         let mut no_build = false;
         let mut builder =
-            env::var("SANDBOX_XTASK_BUILDER").unwrap_or_else(|_| "rust-lld".to_owned());
+            env::var("SANDBOX_XTASK_BUILDER").unwrap_or_else(|_| DEFAULT_BUILDER.to_owned());
         let mut profile = env::var("SANDBOX_XTASK_PROFILE")
             .unwrap_or_else(|_| DEFAULT_PACKAGE_PROFILE.to_owned());
         let mut profile_from_arg = false;
@@ -1118,37 +1119,128 @@ fn cargo_profile_dir(profile: &str) -> &str {
 }
 
 fn run_build(root: &Path, builder: &str, target: &str, profile: &str) -> Result<()> {
-    let mut command = match builder {
-        "rust-lld" => {
-            let mut command = cargo_build_command(target, profile);
-            command.env("RUSTFLAGS", rustflags_with_rust_lld());
-            command
-        }
-        "cargo" => cargo_build_command(target, profile),
-        "cross" => {
-            let mut command = Command::new("cross");
-            command.args([
-                "build",
-                "-p",
-                DAEMON_PACKAGE,
-                "--target",
-                target,
-                "--profile",
-                profile,
-            ]);
-            command
-        }
-        other => bail!("unsupported builder {other:?}; expected rust-lld, cargo, or cross"),
-    };
-    configure_arm64_musl_cc(&mut command, target);
-    let status = command
+    let builder = Builder::resolve(builder)?;
+    println!("using builder: {}", builder.name());
+    let status = builder
+        .build_command(target, profile)
         .current_dir(root)
         .status()
-        .with_context(|| format!("spawn {builder} build"))?;
+        .with_context(|| format!("spawn {} build", builder.name()))?;
     if !status.success() {
-        bail!("{builder} build failed for {target} profile {profile} with {status}");
+        bail!(
+            "{} build failed for {target} profile {profile} with {status}",
+            builder.name()
+        );
     }
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum Builder {
+    Zigbuild,
+    Cross,
+    RustLld,
+    Cargo,
+}
+
+impl Builder {
+    fn resolve(requested: &str) -> Result<Self> {
+        match requested {
+            "auto" => Self::detect(),
+            "zigbuild" => {
+                if !Self::zigbuild_available() {
+                    bail!(
+                        "builder zigbuild needs cargo-zigbuild and zig on PATH; \
+run bin/setup-musl-cross, or `cargo install --locked cargo-zigbuild` plus a zig install"
+                    );
+                }
+                Ok(Self::Zigbuild)
+            }
+            "cross" => {
+                if !command_exists("cross") {
+                    bail!(
+                        "builder cross needs the cross binary and a running Docker daemon; \
+install it with `cargo install cross`"
+                    );
+                }
+                Ok(Self::Cross)
+            }
+            "rust-lld" => Ok(Self::RustLld),
+            "cargo" => Ok(Self::Cargo),
+            other => bail!(
+                "unsupported builder {other:?}; expected auto, zigbuild, cross, rust-lld, or cargo"
+            ),
+        }
+    }
+
+    fn detect() -> Result<Self> {
+        if Self::zigbuild_available() {
+            return Ok(Self::Zigbuild);
+        }
+        if command_exists("cross") {
+            return Ok(Self::Cross);
+        }
+        bail!(
+            "no musl cross builder found; run bin/setup-musl-cross to install \
+zig + cargo-zigbuild (preferred), or `cargo install cross` to build via Docker, \
+or force a host toolchain with --builder rust-lld"
+        )
+    }
+
+    fn zigbuild_available() -> bool {
+        command_exists("cargo-zigbuild") && command_exists("zig")
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Self::Zigbuild => "zigbuild",
+            Self::Cross => "cross",
+            Self::RustLld => "rust-lld",
+            Self::Cargo => "cargo",
+        }
+    }
+
+    fn build_command(self, target: &str, profile: &str) -> Command {
+        match self {
+            Self::Zigbuild => {
+                let mut command = Command::new("cargo");
+                command.args([
+                    "zigbuild",
+                    "-p",
+                    DAEMON_PACKAGE,
+                    "--target",
+                    target,
+                    "--profile",
+                    profile,
+                ]);
+                command
+            }
+            Self::Cross => {
+                let mut command = Command::new("cross");
+                command.args([
+                    "build",
+                    "-p",
+                    DAEMON_PACKAGE,
+                    "--target",
+                    target,
+                    "--profile",
+                    profile,
+                ]);
+                command
+            }
+            Self::RustLld => {
+                let mut command = cargo_build_command(target, profile);
+                command.env("RUSTFLAGS", rustflags_with_rust_lld());
+                configure_arm64_musl_cc(&mut command, target);
+                command
+            }
+            Self::Cargo => {
+                let mut command = cargo_build_command(target, profile);
+                configure_arm64_musl_cc(&mut command, target);
+                command
+            }
+        }
+    }
 }
 
 fn configure_arm64_musl_cc(command: &mut Command, target: &str) {
@@ -1319,7 +1411,8 @@ xtask commands:
           (defaults to crates/sandbox-daemon)
   check-test-support [--root <path> ...]
           fail if crate src/ Rust files contain test-support feature gates
-  package [--target <triple>] [--out-dir <dir>] [--builder rust-lld|cargo|cross]
+  package [--target <triple>] [--out-dir <dir>]
+          [--builder auto|zigbuild|cross|rust-lld|cargo]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
   package-console
           build the web console SPA (web/console) and stage it into dist/console
@@ -1327,6 +1420,15 @@ xtask commands:
 Targets:
   {AMD64_TARGET} -> sandbox-daemon-linux-amd64
   {ARM64_TARGET} -> sandbox-daemon-linux-arm64
+
+Builders (default auto; also settable via SANDBOX_XTASK_BUILDER):
+  auto      zigbuild when cargo-zigbuild + zig are on PATH, else cross, else an
+            error pointing at bin/setup-musl-cross
+  zigbuild  cargo zigbuild; zig cc compiles and links C/asm deps against musl
+  cross     Docker-based cross-rs toolchain image
+  rust-lld  host cargo + rust-lld linker; needs a host C compiler with musl
+            headers once C-backed deps are in the graph
+  cargo     plain cargo build with the default linker
 
 Profiles:
   package-fast  default local Docker/E2E package, no LTO + incremental rebuilds

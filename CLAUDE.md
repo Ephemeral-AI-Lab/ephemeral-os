@@ -48,9 +48,17 @@ cargo test -p sandbox-daemon
 cargo clippy --all-targets     # must pass; lints are configured in Cargo.toml
 cargo fmt
 
+bin/setup-musl-cross           # one-time musl cross bootstrap (zig + cargo-zigbuild)
 cargo run -p xtask -- package                  # in-container daemon binary
 cargo run -p xtask -- package --profile release
 ```
+
+`xtask package` cross-compiles the daemon to Linux musl and picks its builder
+automatically: `zigbuild` (zig cc compiles and links C/asm deps such as
+`zstd-sys` and `sha2-asm`) when zig + cargo-zigbuild are installed, else the
+Docker-based `cross`. Force one with `--builder
+{auto|zigbuild|cross|rust-lld|cargo}` or `SANDBOX_XTASK_BUILDER`; never
+hand-export per-target `CC`/sysroot flags.
 
 ## Sandbox tools
 

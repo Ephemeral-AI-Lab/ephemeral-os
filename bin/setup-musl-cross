@@ -1,0 +1,76 @@
+#!/bin/sh
+# One-time bootstrap for the musl cross toolchain used by
+# `cargo run -p xtask -- package`: installs cargo-zigbuild and zig so the
+# daemon's C/asm dependencies (zstd-sys, sha2-asm) compile and link against
+# musl on any host (macOS arm64/x86_64, Linux glibc/musl, CI).
+set -eu
+
+zig_version=${SANDBOX_ZIG_VERSION:-0.16.0}
+
+say() { printf '%s\n' "$*"; }
+die() { printf '%s\n' "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+have cargo || die "cargo not found; install Rust via rustup first (https://rustup.rs)"
+
+if have rustup; then
+    say "ensuring musl rustup targets are installed"
+    rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+else
+    say "rustup not found; assuming the active toolchain already ships the musl targets"
+fi
+
+if have cargo-zigbuild; then
+    say "cargo-zigbuild already installed"
+else
+    say "installing cargo-zigbuild"
+    cargo install --locked cargo-zigbuild
+fi
+
+install_zig_tarball() {
+    case "$(uname -s)" in
+        Darwin) zig_os=macos ;;
+        Linux) zig_os=linux ;;
+        *) die "unsupported OS $(uname -s); install zig manually (https://ziglang.org/download)" ;;
+    esac
+    case "$(uname -m)" in
+        arm64|aarch64) zig_arch=aarch64 ;;
+        x86_64|amd64) zig_arch=x86_64 ;;
+        *) die "unsupported arch $(uname -m); install zig manually (https://ziglang.org/download)" ;;
+    esac
+
+    zig_name=zig-$zig_arch-$zig_os-$zig_version
+    zig_url=https://ziglang.org/download/$zig_version/$zig_name.tar.xz
+    cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}/ephemeral-os
+    cargo_bin=${CARGO_HOME:-$HOME/.cargo}/bin
+    mkdir -p "$cache_dir" "$cargo_bin"
+
+    if [ ! -x "$cache_dir/$zig_name/zig" ]; then
+        say "downloading $zig_url"
+        if have curl; then
+            curl -fsSL "$zig_url" -o "$cache_dir/$zig_name.tar.xz"
+        elif have wget; then
+            wget -q "$zig_url" -O "$cache_dir/$zig_name.tar.xz"
+        else
+            die "need curl or wget to download zig"
+        fi
+        tar -xJf "$cache_dir/$zig_name.tar.xz" -C "$cache_dir"
+        rm -f "$cache_dir/$zig_name.tar.xz"
+    fi
+
+    printf '#!/bin/sh\nexec "%s/%s/zig" "$@"\n' "$cache_dir" "$zig_name" >"$cargo_bin/zig"
+    chmod +x "$cargo_bin/zig"
+    say "installed zig $zig_version to $cache_dir/$zig_name (wrapper: $cargo_bin/zig)"
+}
+
+if have zig; then
+    say "zig already installed: $(zig version)"
+elif [ "$(uname -s)" = Darwin ] && have brew; then
+    say "installing zig via Homebrew"
+    brew install zig
+else
+    install_zig_tarball
+fi
+
+have zig || die "zig installed but not on PATH; ensure ${CARGO_HOME:-$HOME/.cargo}/bin is on PATH"
+say "zig $(zig version) + cargo-zigbuild ready; xtask package will select builder zigbuild"

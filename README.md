@@ -85,7 +85,11 @@ start-sandbox-console-stack        # then open http://127.0.0.1:7880
 sandbox-manager-cli list_sandboxes
 sandbox-runtime-cli --sandbox-id eos-abc exec_command pwd
 
+# one-time per machine: bootstrap the musl cross toolchain (zig + cargo-zigbuild)
+setup-musl-cross
+
 # package the in-container daemon binary for Docker/E2E iteration
+# (builder auto-selected: zigbuild -> cross; override with --builder)
 cargo run -p xtask -- package
 
 # final fat-LTO package
