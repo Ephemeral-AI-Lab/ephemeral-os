@@ -20,6 +20,7 @@ git_toolchain_dir=${SANDBOX_GIT_TOOLCHAIN_DIR:-$repo_root/dist/git}
 gateway_bin=$target_dir/debug/sandbox-gateway
 manager_cli_bin=$target_dir/debug/sandbox-manager-cli
 runtime_cli_bin=$target_dir/debug/sandbox-runtime-cli
+xtask_bin=$target_dir/debug/xtask
 rebuild_binary=0
 show_help=0
 arg_count=$#
@@ -71,6 +72,19 @@ for arg in "$@"; do
     esac
 done
 
+printf 'building host binaries\n'
+cargo build --quiet --manifest-path "$repo_root/Cargo.toml" \
+    -p sandbox-gateway --bin sandbox-gateway \
+    -p sandbox-manager-cli --bin sandbox-manager-cli \
+    -p sandbox-runtime-cli --bin sandbox-runtime-cli \
+    -p xtask --bin xtask
+for host_bin in "$gateway_bin" "$manager_cli_bin" "$runtime_cli_bin" "$xtask_bin"; do
+    if [ ! -x "$host_bin" ]; then
+        printf 'built host binary not found at %s\n' "$host_bin" >&2
+        exit 1
+    fi
+done
+
 if [ "$show_help" -eq 0 ]; then
     daemon_artifact_rel=$(
         sed -n 's/^[[:space:]]*daemon_binary_path:[[:space:]]*//p' "$config_yaml" | sed -n '1p'
@@ -117,29 +131,9 @@ if [ "$show_help" -eq 0 ]; then
         [ -z "$newer_source" ] || needs_package=1
     fi
 
-    if [ "$rebuild_binary" -eq 1 ]; then
-        cargo run -p xtask -- package --target "$package_target"
-    elif [ "$needs_package" -eq 1 ]; then
-        cargo run -p xtask -- package --target "$package_target"
+    if [ "$rebuild_binary" -eq 1 ] || [ "$needs_package" -eq 1 ]; then
+        "$xtask_bin" package --target "$package_target"
     fi
-fi
-
-printf 'building sandbox-gateway binaries\n'
-cargo build --quiet --manifest-path "$repo_root/Cargo.toml" \
-    -p sandbox-gateway --bin sandbox-gateway \
-    -p sandbox-manager-cli --bin sandbox-manager-cli \
-    -p sandbox-runtime-cli --bin sandbox-runtime-cli
-if [ ! -x "$gateway_bin" ]; then
-    printf 'built sandbox-gateway binary not found at %s\n' "$gateway_bin" >&2
-    exit 1
-fi
-if [ ! -x "$manager_cli_bin" ]; then
-    printf 'built sandbox-manager-cli binary not found at %s\n' "$manager_cli_bin" >&2
-    exit 1
-fi
-if [ ! -x "$runtime_cli_bin" ]; then
-    printf 'built sandbox-runtime-cli binary not found at %s\n' "$runtime_cli_bin" >&2
-    exit 1
 fi
 
 if [ "$show_help" -eq 1 ]; then
