@@ -9,7 +9,7 @@ tags:
   - runnable
 status: verified
 updated: 2026-07-07
-verified_run: export-runnable-20260707 (5/5 pass, four axes + teardown)
+verified_run: export-runnable-20260707 (6/6 pass incl. RUN-06 host-rebuild escape hatch)
 ---
 
 # Runnable-project export round-trip (5 projects)
@@ -152,6 +152,7 @@ Matrix (each ✓ is what the case uniquely exercises):
 | RUN-03 | Node/native addon | | | ✓ | ✓ (`*.node`) | | ✓ ABI |
 | RUN-04 | Python/Flask venv | ✓ | | ✓ | | | ✓ venv relocation |
 | RUN-05 | Python/pytest+wheel | | | ✓ | ✓ (wheel) | ✓ (`pytest`) | |
+| RUN-06 | Node/native + host rebuild | | | | ✓ (`*.node`) | | ✓ ABI escape hatch |
 
 ### RUN-01 — Node/Express HTTP server (pure JS, the happy path)
 - **Image**: `node:22-slim`. **Seed**: `package.json` (`express`), `server.js`
@@ -237,6 +238,34 @@ Matrix (each ✓ is what the case uniquely exercises):
   documentation for a mismatched host.
 - **Incremental**: n/a.
 
+### RUN-06 — host-native rebuild (the B4 escape hatch, executable)
+
+Added 2026-07-07 on user direction, after the 5/5 landing: the executable form
+of the §8 non-goal's "supported path". The non-goal stands — export does NOT
+make native artifacts cross-OS portable — RUN-06 proves the documented
+recovery is one command.
+
+- **Seed**: `package.json` (`better-sqlite3`), `app.js`, `verify.sh` (the
+  RUN-03 project, seeded this time — the export lands on `dest_seed`, the
+  full-workspace B1 story). **Build**: `npm install` in-sandbox → linux
+  `*.node`, published.
+- **Export**: `dir` onto `dest_seed` → the host holds the complete tree.
+- **Correctness**: every `*.node` byte-identical to the in-sandbox build AND
+  carries the ELF magic (`\x7fELF`) — it really is the linux binary.
+- **Runnable (primary)**: `run_in_image(dest, "node:22-slim", ["node","app.js"])` → `v=2` (unchanged from RUN-03).
+- **Escape hatch (the point)**: host `node app.js` → `xfail` (ABI), then
+  `npm rebuild better-sqlite3` with the HOST's own toolchain → exit 0, then
+  host `node app.js` → **pass**. Byte evidence recorded in
+  `rebuild-artifacts.json`: the `.node`'s sha256 changes and its magic flips
+  from ELF (to Mach-O on a macOS host). The inverse boundary is then
+  asserted too: the darwin-rebuilt binary now `xfail`s in the linux
+  container (`boundary_run`).
+- **Platform honesty**: on a linux host the before-run already passes and the
+  magic never flips — the case asserts only the invariant chain (rebuild
+  succeeds, tree runs); if the host lacks `npm`, the rebuild demonstration is
+  recorded as `skip` and the container run remains the axis.
+- **Host-safety / Incremental**: standard / n/a.
+
 ## 5. Execution order & budget
 
 1. RUN-01 (pure JS) — the smoke; also validates the `run_in_image`/`run_on_host`
@@ -244,6 +273,9 @@ Matrix (each ✓ is what the case uniquely exercises):
 2. RUN-02 (build step), RUN-04 (venv) — artifacts + symlinks + relocation.
 3. RUN-03 (native), RUN-05 (wheel + pytest) — the ABI/wheel boundary and the
    test-suite proof; heaviest installs, run last.
+4. RUN-06 (host rebuild) — after the boundary cases; the only case that also
+   depends on the host toolchain (`npm`; the rebuild step records `skip`
+   where it is absent).
 
 Serial; `-m "export and runnable"`. Budget ≤ **20 min** total (network installs
 dominate; `npm ci`/`pip install` each 20–120 s, plus per-case container runs).
@@ -260,6 +292,7 @@ four axes; the run bundles into the same `SUMMARY.md`.
 | inv 4 / B2 — incremental re-export of a built tree | RUN-01, RUN-04 |
 | inv 9 — host boundary on a large real tree | all (teardown) |
 | inv 10 / B4 — fidelity + portability boundary (native, venv, wheel, hardlink) | **RUN-03, RUN-04, RUN-05** |
+| B4 supported path — platform rebuild on the target makes the tree host-native | RUN-06 |
 | cost table — base never crosses; delta = the build output | RUN-02, RUN-03 (fresh dest) |
 
 ## 7. Landing corrections (2026-07-07) — spec vs realizable behavior

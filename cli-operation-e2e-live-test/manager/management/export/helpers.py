@@ -811,6 +811,7 @@ CASES = [
     {"id": "RUN-04", "tier": "runnable", "title": "Python/Flask venv: runs at /workspace, xfails at /elsewhere"},
     {"id": "RUN-03", "tier": "runnable", "title": "Node native addon: linux .node runs in-container, host xfail"},
     {"id": "RUN-05", "tier": "runnable", "title": "Python/pytest + numpy wheel: exported suite passes"},
+    {"id": "RUN-06", "tier": "runnable", "title": "ABI escape hatch: host npm rebuild makes the tree host-native"},
 ]
 CASE_BY_ID = {case["id"]: case for case in CASES}
 
@@ -2126,12 +2127,14 @@ def expect_boundary_failure(result, reason):
     }
 
 
-def record_runnable(rec, container_run, host_run, details, *, boundary_run=None):
+def record_runnable(rec, container_run, host_run, details, *, boundary_run=None, extras=None):
     """The fourth axis: pass == container_run.pass; host_run (and any
-    boundary_run) ride along as recorded facts."""
+    boundary_run or case-specific extras) ride along as recorded facts."""
     extra = {"container_run": container_run, "host_run": host_run}
     if boundary_run is not None:
         extra["boundary_run"] = boundary_run
+    if extras:
+        extra.update(extras)
     rec.axis("runnable", container_run.get("pass", False), details, extra=extra)
 
 
@@ -2412,6 +2415,127 @@ def case_run_05(rec):
             rec, container_run, host_run,
             f"pytest suite passed over the exported tree; host {host_run['status']}",
         )
+
+        assert no_literal_markers(read_tree(seed)), "literal markers"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+        rec.axis("incremental", True, "n/a", n_a=True)
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        shutil.rmtree(seed, ignore_errors=True)
+
+
+def case_run_06(rec):
+    """RUN-06 (B4's supported path, made executable — user-directed addition):
+    the host ABI xfail is recoverable with ONE platform rebuild. Export the
+    linux-built tree onto the seed, document the host load failure, run
+    ``npm rebuild`` with the host's own toolchain, and the SAME tree runs
+    host-native — while the linux container now (correctly) rejects the
+    darwin-rebuilt binary. Byte evidence: the .node's magic flips from ELF."""
+    seed = make_seed(
+        "run06",
+        {
+            "package.json": RUN03_PACKAGE_JSON,
+            "app.js": RUN03_APP_JS,
+            "verify.sh": "#!/bin/sh\nset -e\nnode app.js | grep -F 'v=2'\n",
+        },
+    )
+    sandbox_id = create_sandbox(rec, seed, image=NODE_IMAGE)
+    try:
+        build_in_sandbox(rec, sandbox_id, NPM_INSTALL)
+        truth = exec_capture(
+            rec,
+            sandbox_id,
+            "for f in $(find node_modules/better-sqlite3 -name '*.node' | sort); do "
+            'printf "NODE %s %s\\n" "$(sha256sum "$f" | cut -d" " -f1)" "$f"; done',
+            timeout=120,
+        )
+        sandbox_nodes = [
+            line.split()[1:3] for line in truth.splitlines() if line.startswith("NODE ")
+        ]
+        assert sandbox_nodes, f"no *.node built in-sandbox: {truth!r}"
+
+        result = export_changes(rec, sandbox_id, seed, timeout=600)
+        assert result.ok, result.json or result.stderr
+        rec.write_json("result.json", result.json)
+        native_nodes = []
+        for sha, rel in sandbox_nodes:
+            target = seed / rel
+            assert target.is_file(), f"{rel} missing from the export"
+            before = target.read_bytes()
+            assert hashlib.sha256(before).hexdigest() == sha, f"{rel} not byte-identical"
+            assert before[:4] == b"\x7fELF", f"{rel} is not the linux ELF the sandbox built"
+            native_nodes.append((rel, sha))
+        rec.axis(
+            "correctness",
+            True,
+            f"{len(native_nodes)} linux ELF *.node byte-identical in the applied tree",
+        )
+
+        container_run = assert_runnable(
+            run_in_image(rec, seed, NODE_IMAGE, ["node", "app.js"], timeout=120),
+            expect_out="v=2",
+        )
+        host_before = run_on_host(
+            rec, seed, ["node", "app.js"],
+            xfail_reason="native ABI: linux binary on non-linux host",
+        )
+
+        if shutil.which("npm") is None:
+            record_runnable(
+                rec, container_run, host_before,
+                "container green; host lacks npm — rebuild demonstration skipped",
+                extras={"host_rebuild": {"status": "skip", "reason": "host lacks npm"}},
+            )
+        else:
+            if sys.platform != "linux":
+                assert host_before["status"] == "xfail", host_before
+            rebuild = run_on_host(
+                rec, seed, ["npm", "rebuild", "better-sqlite3"], timeout=300
+            )
+            assert rebuild["status"] == "pass", f"host npm rebuild failed: {rebuild}"
+            host_after = run_on_host(rec, seed, ["node", "app.js"])
+            assert host_after["status"] == "pass", (
+                f"rebuilt tree still fails on the host: {host_after}"
+            )
+            swapped = []
+            for rel, sha_before in native_nodes:
+                data = (seed / rel).read_bytes()
+                sha_after = hashlib.sha256(data).hexdigest()
+                if sys.platform != "linux":
+                    assert sha_after != sha_before, f"{rel} unchanged by the host rebuild"
+                    assert data[:4] != b"\x7fELF", f"{rel} still a linux ELF after rebuild"
+                swapped.append(
+                    {
+                        "path": rel,
+                        "sha256_before": sha_before,
+                        "sha256_after": sha_after,
+                        "magic_after": data[:4].hex(),
+                    }
+                )
+            rec.write_json("rebuild-artifacts.json", swapped)
+
+            container_after = run_in_image(
+                rec, seed, NODE_IMAGE, ["node", "app.js"], timeout=120
+            )
+            boundary_run = None
+            if sys.platform != "linux":
+                boundary_run = expect_boundary_failure(
+                    container_after,
+                    "native ABI (inverse): darwin-rebuilt binary in a linux container",
+                )
+            else:
+                assert container_after["exit_code"] == 0, container_after
+            record_runnable(
+                rec, container_run, host_before,
+                f"linux .node ran in-container; host {host_before['status']} → "
+                "npm rebuild → host pass",
+                boundary_run=boundary_run,
+                extras={
+                    "host_rebuild": rebuild,
+                    "host_run_after_rebuild": host_after,
+                },
+            )
 
         assert no_literal_markers(read_tree(seed)), "literal markers"
         rec.axis("host_safety", True, "no literal markers; nothing outside dest")
