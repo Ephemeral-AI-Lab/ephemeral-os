@@ -14,7 +14,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 |---|---|---|---|
 | 0 | Decisions & scaffolding | — | done (2026-07-07) |
 | 1 | `sandbox-console` HTTP server v0 | 0 | done (2026-07-07) |
-| 2 | SPA shell & shared components | 1 | not started |
+| 2 | SPA shell & shared components | 1 | done (2026-07-07) |
 | 3 | Fleet Board | 2 | not started |
 | 4 | Detail shell & Overview tab | 2 | not started |
 | 5 | Terminal tab | 4 | not started |
@@ -156,18 +156,18 @@ sandbox — `list_sandboxes` via curl, a Vite dev server visible through
 
 Goal: the app skeleton every page plugs into.
 
-- [ ] Router with the full route map **including deep links**: observability
+- [x] Router with the full route map **including deep links**: observability
       sub-views, `traces/:trace-id`, `terminal#cmd-<id>`, `files?path=…&
       session=…`, `preview?scope=…&port=…&path=…`.
-- [ ] RPC client over `/api/rpc` (one-shot + SSE) with the two error paths
+- [x] RPC client over `/api/rpc` (one-shot + SSE) with the two error paths
       (protocol-in-body vs transport-in-status).
-- [ ] Catalog-driven form/validation helper backed by `/api/catalog` (used
+- [x] Catalog-driven form/validation helper backed by `/api/catalog` (used
       by CreateSandboxModal and any op form; keeps UI arguments drift-free).
-- [ ] `PollController` (per-page polling: ~300–500ms fast / ~2s slow, idle
+- [x] `PollController` (per-page polling: ~300–500ms fast / ~2s slow, idle
       decay with instant recovery, interaction nudges, pause when hidden,
       immediate catch-up refetch on return from last cursor).
-- [ ] `ErrorToast` rendering the protocol `{kind, message, details}` shape.
-- [ ] `StateBadge`, `ResourceSparkline`, `StreamLogPane` (SSE),
+- [x] `ErrorToast` rendering the protocol `{kind, message, details}` shape.
+- [x] `StateBadge`, `ResourceSparkline`, `StreamLogPane` (SSE),
       `ConfirmDestroyDialog`, `PortPreview` launcher (navigates to Preview
       routes; target tab lands in Phase 6).
 

@@ -1,10 +1,91 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router";
+import { ToastProvider } from "@/components/ErrorToast";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Shell } from "@/shell/Shell";
+import { FleetBoard } from "@/pages/fleet/FleetBoard";
+import { NotFound } from "@/pages/NotFound";
+import { SandboxDetail } from "@/pages/sandbox/SandboxDetail";
+import { PlaceholderTab } from "@/pages/sandbox/PlaceholderTab";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+});
+
 export default function App() {
   return (
-    <main className="mx-auto mt-24 max-w-xl rounded border border-line bg-surface p-8">
-      <h1 className="text-lg font-semibold">EphemeralOS Console</h1>
-      <p className="mt-2 text-ink-mid">
-        SPA scaffold is up. Pages arrive in later phases.
-      </p>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <TooltipProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Shell />}>
+                <Route index element={<FleetBoard />} />
+                <Route path="sandboxes/:sandboxId" element={<SandboxDetail />}>
+                  <Route
+                    index
+                    element={<PlaceholderTab title="Overview" phase="Phase 4" />}
+                  />
+                  <Route
+                    path="terminal"
+                    element={<PlaceholderTab title="Terminal" phase="Phase 5" />}
+                  />
+                  <Route
+                    path="files"
+                    element={<PlaceholderTab title="Files" phase="Phase 7" />}
+                  />
+                  <Route
+                    path="preview"
+                    element={<PlaceholderTab title="Preview" phase="Phase 6" />}
+                  />
+                  <Route path="observability">
+                    <Route
+                      index
+                      element={
+                        <PlaceholderTab title="Observability · Resources" phase="Phase 8" />
+                      }
+                    />
+                    <Route
+                      path="resources"
+                      element={
+                        <PlaceholderTab title="Observability · Resources" phase="Phase 8" />
+                      }
+                    />
+                    <Route
+                      path="traces"
+                      element={
+                        <PlaceholderTab title="Observability · Traces" phase="Phase 8" />
+                      }
+                    />
+                    <Route
+                      path="traces/:traceId"
+                      element={
+                        <PlaceholderTab title="Observability · Trace" phase="Phase 8" />
+                      }
+                    />
+                    <Route
+                      path="events"
+                      element={
+                        <PlaceholderTab title="Observability · Events" phase="Phase 8" />
+                      }
+                    />
+                    <Route
+                      path="layerstack"
+                      element={
+                        <PlaceholderTab title="Observability · LayerStack" phase="Phase 8" />
+                      }
+                    />
+                  </Route>
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ToastProvider>
+    </QueryClientProvider>
   );
 }
