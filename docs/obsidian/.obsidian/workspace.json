@@ -185,6 +185,7 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/export_changes/adversarial-review-prompt.md",
     "ephemeral-os/implementation_plan/web-ui/web-ui-design.md.tmp.27160.ba29b6789139",
     "ephemeral-os/implementation_plan/daemon-command-child-policy-refined-spec.md.tmp.27022.bd36e5e3ce61",
     "ephemeral-os/implementation_plan/web-ui/http-server.md",
@@ -209,7 +210,6 @@
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/width-wtune.json",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W16.yml",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W8.yml",
-    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/__pycache__/loadcombo_ab.cpython-314.pyc",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",

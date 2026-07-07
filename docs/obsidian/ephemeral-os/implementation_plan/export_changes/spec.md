@@ -1,37 +1,54 @@
 ---
-title: Runtime Export Changes — sandbox delta to local filesystem
+title: Manager Export Changes — sandbox delta to local filesystem
 tags:
   - ephemeral-os
   - layerstack
-  - runtime
+  - manager
   - export
   - implementation-plan
 status: implementation_plan
 updated: 2026-07-07
 ---
 
-# Runtime Export Changes — sandbox delta to local filesystem
+# Manager Export Changes — sandbox delta to local filesystem
 
-Revised after the CLI-surface simplification review: the operation takes
-exactly two arguments, `--dest` and `--format`. Everything the dropped flags
-did becomes a default or a property: incrementality is the skip-unchanged
-rule (no watermark flag), whiteout deletions apply unconditionally in `dir`
-mode (the destination reflects the delta, period), live sessions are out of
-scope (publish/capture first), parallel copy is a deferred measured
-experiment, not an option.
+Revised three times on 2026-07-07. First, the CLI-surface simplification:
+`--dest` and `--format` only. Second, the data-path correction: the daemon
+**unmounts the host workspace bind after building the base**
+(`operation/src/services.rs:84`, `detach_workspace_bind_after_base` — it
+panics if the unmount fails), so the daemon has no host-visible write path,
+ever; delivery streams the delta over the daemon protocol. Third, the
+ownership move: export is a **manager operation** (`checkpoint_squash`
+precedent), not a runtime one. Crossing the host boundary is operator
+authority — the manager is the component that already owns host filesystem
+actions (it seeds the base from a host directory at create) and sandbox
+records; the runtime CLI drives in-sandbox state only. The manager service
+runs on the host, so it owns the host-apply half and both CLIs stay pure
+catalog clients — the manager CLI's charter ("a thin protocol client …
+never a manager/runtime engine" refers to engines behind the wire; the
+apply engine lives in `sandbox-manager`, server-side).
 
 ## Goal
 
 Convert the changes a sandbox has accumulated — every published layer above
-the base — into a destination on the local filesystem: either materialized
-onto a directory (`dir`) or as a whiteout-preserving archive (`tar`,
-`tar-zst`). The base layer is never exported; it is the host's own seed
-content.
+the base — into a destination on the local (host) filesystem: applied
+directly onto a directory (`dir`), or written as a whiteout-preserving
+archive (`tar`, `tar-zst`).
+
+The delta is not a patch file: `dir` mode performs real file writes,
+deletions, and directory clears on the destination. Applied onto the host
+directory the base was seeded from, the result **is** the sandbox's full
+merged view — a workable tree — obtained at O(delta) cost because the host
+already owns the base bytes.
 
 Policy:
 
 ```text
-Export is read-only on storage: no staging, no manifest change, no sidecars.
+Export is manager-owned. The daemon halves register cli: None (the
+squash_layerstack precedent): dispatchable by name, invisible to the
+runtime CLI catalog. The runtime surface gains nothing.
+Export is read-only on layer-stack storage: no staging, no manifest change,
+no sidecars; the spool lives under scratch and dies with the export.
 Export exports the published state; live session upperdirs are invisible.
 A running session never fails an export: the result names live sessions so
 the caller knows unpublished upperdirs may exist, then decides.
@@ -39,14 +56,12 @@ The delta is every non-base manifest layer; the base (B*) never leaves.
 Applying the delta onto the base's host-origin directory reproduces the
 full merged view at delta cost; full materialization is composition, not a
 mode.
-One export lease pins the snapshot for the whole run; squash and GC treat it
-exactly like any session lease (never mutate or delete a leased layer dir).
-dir mode applies the full delta including deletions; a fresh destination
-makes deletions no-ops, an existing one converges to the delta's view.
-Cost is O(merged delta), never O(image): one metadata fold picks winners,
-content is read once per surviving path, zero intermediate trees.
-Re-export converges: unchanged winners are skipped by size+mtime, so a
-repeated export approaches O(new bytes) with no server-side state.
+The daemon never regains a host-visible path: the post-base bind detach is
+law. The manager — already the host-authority component — is the only host
+writer.
+One wire format: the daemon always emits one zstd-compressed,
+whiteout-preserving tar; dir and tar are manager-side renderings of that
+stream. --format never changes what the daemon does.
 ```
 
 Speed and space, explicitly (the two optimization targets):
@@ -54,62 +69,78 @@ Speed and space, explicitly (the two optimization targets):
 | Cost | Bound | Mechanism |
 | --- | --- | --- |
 | time, enumerate | O(Σ delta-layer entries) | one newest-first metadata fold over non-base layer dirs |
-| time, copy | O(merged delta bytes) | winners only — a path overwritten by a newer layer is never read from the older one |
-| time, re-export | O(new bytes) | skip-unchanged: copy preserves source mtime, re-run skips equal (size, mtime) |
-| space, intermediate | zero | winners stream straight from committed layer dirs; no staging tree |
-| space, transport | zstd frame (`tar-zst`) | fewer bytes through the bind mount, where virtiofs latency dominates |
+| time, content read | O(merged delta bytes) | winners only — a path overwritten by a newer layer is never read from the older one |
+| time, re-export host writes | O(new bytes) | manager-side skip-unchanged: entries carry source (size, mtime); the applier stamps mtimes on write and skips equal files |
+| space, daemon intermediate | O(compressed delta) | one spool file under scratch — no staging tree, no per-layer copies; unlinked when the last chunk is served |
+| space, wire | zstd delta × 4/3 | compression before base64 framing; the delta, not the image, crosses the daemon protocol |
 | memory | O(unique changed paths) | the winner map holds path → (layer dir, kind), never content |
 
-`std::fs::copy` already rides `copy_file_range` on Linux (the daemon always
-runs in the container, whatever the host OS). Host delivery is the existing
-workspace bind: a `dest` under `container_workspace_root` (default
-`/workspace`) lands directly in the bound host directory with zero protocol
-bytes — the result line is the only thing that crosses the gateway.
+Re-export re-streams the full compressed delta (the daemon cannot see the
+host destination to diff against it) — accepted: squash bounds the delta,
+and host writes still converge to O(new bytes) via the skip rule.
 
 ## CLI surface
 
-Runtime operation, existing `file` family (published-content domain — no new
-family, matching the squash precedent), spec'd in the
-`sandbox-runtime-operations` catalog like its siblings:
+One manager operation under the existing `management` family (no new
+family), spec'd in the `sandbox-manager-operations` catalog beside
+`checkpoint_squash`:
 
 ```text
-sandbox-runtime-cli --sandbox-id ID export_changes --dest PATH [--format dir|tar|tar-zst]
+sandbox-manager-cli export_changes --sandbox-id ID --dest PATH [--format dir|tar|tar-zst]
 ```
 
 ```text
-dest    required, Path.   dir format: destination directory (created if
-                          missing). tar formats: destination archive file.
-                          Resolved in the daemon's mount namespace; host
-                          delivery = a path under the workspace bind root.
-                          Rejected under layer_stack_root or scratch_root.
-format  optional, String, default "dir".  dir | tar | tar-zst.
+sandbox_id  required, String.  Target sandbox; must be Ready (the existing
+                               forward-path gate).
+dest        required, Path.   A HOST path, absolute (the manager's CWD is
+                               not the caller's — relative paths are
+                               rejected). dir format: destination
+                               directory, created if missing, applied in
+                               place. tar formats: destination archive
+                               file; must not be an existing directory.
+format      optional, String, default "dir".
+                               dir      apply the delta onto dest (writes,
+                                        deletions, directory clears, mtime
+                                        stamping, skip-unchanged)
+                               tar      decompress the stream, write a
+                                        plain tar
+                               tar-zst  write the stream as received
 ```
 
 ```rust
 pub const EXPORT_CHANGES_SPEC: CliOperationSpec = CliOperationSpec {
     name: "export_changes",
-    family: "file",
-    summary: "Export the sandbox's published changes to a destination.",
+    family: "management",
+    summary: "Export a sandbox's published changes to a host path.",
     description: "Fold every published layer above the base (newest-wins, \
-                  whiteout/opaque aware) and materialize the delta at --dest \
-                  as a directory, or emit it as a whiteout-preserving tar.",
+                  whiteout/opaque aware) into a compressed delta stream, \
+                  fetch it from the sandbox daemon, and apply it onto \
+                  --dest or write it as an archive. Forwards \
+                  export_layerstack and read_export_chunk requests to the \
+                  sandbox daemon.",
     args: EXPORT_CHANGES_ARGS,
     cli: Some(CliSpec {
-        path: &["runtime", "export_changes"],
-        usage: "sandbox-runtime-cli --sandbox-id ID export_changes --dest PATH [--format dir|tar|tar-zst]",
+        path: &["manager", "export_changes"],
+        usage: "sandbox-manager-cli export_changes --sandbox-id ID --dest PATH [--format dir|tar|tar-zst]",
         examples: &[
-            "sandbox-runtime-cli --sandbox-id ID export_changes --dest /workspace/out",
-            "sandbox-runtime-cli --sandbox-id ID export_changes --dest /workspace/delta.tar.zst --format tar-zst",
+            "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /home/me/myproject",
+            "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /tmp/delta.tar.zst --format tar-zst",
         ],
     }),
-    related: &["file_read", "file_write", "file_edit"],
+    related: &["inspect_sandbox", "checkpoint_squash"],
 };
 
 const EXPORT_CHANGES_ARGS: &[ArgSpec] = &[
     ArgSpec::required(
+        "sandbox_id",
+        ArgKind::String,
+        "Sandbox id.",
+        Some(ArgCliSpec { flag: Some("--sandbox-id"), positional: None }),
+    ),
+    ArgSpec::required(
         "dest",
         ArgKind::Path,
-        "Destination: directory for dir format, archive file for tar formats.",
+        "Absolute host destination: directory for dir format, archive file for tar formats.",
         Some(ArgCliSpec { flag: Some("--dest"), positional: None }),
     ),
     ArgSpec::optional(
@@ -122,10 +153,81 @@ const EXPORT_CHANGES_ARGS: &[ArgSpec] = &[
 ];
 ```
 
+The manager CLI stays a pure catalog client: it builds this one request and
+prints the response. `dest` and `format` travel to the **manager service**,
+which owns the whole transaction server-side (on the host): forward the
+start request, page chunks, decode, render per format, return one merged
+result. Nothing about export is special-cased in any CLI.
+
+### Data path
+
+```text
+sandbox-manager-cli ── one export_changes request ──▶ manager (host process)
+                                                        │ dest guard (absolute, dir/file rules)
+                                                        │ forward export_layerstack ──▶ sandbox daemon
+                                                        │                                fold → spool → stats
+                                                        │ loop: forward read_export_chunk ──▶ daemon
+                                                        │       (base64 frames, ≤ 2 MiB raw, eof unlinks spool)
+                                                        │ zstd decode → streaming tar apply onto dest
+                                                        │ (or archive write, temp + rename)
+                                                        ▼
+                                            one merged result line back to the CLI
+```
+
+Each forward is one bounded request on the existing generic forward path
+(`router/forward.rs`: record lookup, Ready gate, `invoke_with_timeout` at
+`REQUEST_READ_TIMEOUT_S`) — the chunk loop is many small bounded requests,
+never one long-lived stream. The spool-building start request is the one
+long call, same profile as `checkpoint_squash`; squash first if the delta
+has grown huge.
+
+Scope and trace follow the checkpoint_squash idiom exactly: the manager CLI
+op arrives system-scoped with `sandbox_id` in args, and the dispatcher
+rebuilds each forwarded runtime request sandbox-scoped
+(`CliOperationScope::sandbox(...)`). Every forward — start and all chunks —
+reuses the manager request's `request_id`, so the whole export is one trace
+across manager and daemon spans.
+
+### Daemon operations (runtime side, both `cli: None`)
+
+Two daemon-local runtime ops back the manager operation, registered like
+`squash_layerstack` — dispatch-by-name entries in the layerstack group, no
+catalog spec, no runtime CLI visibility, no new entry mechanism.
+
+**`export_layerstack`** (no args): singleflight per layerstack root.
+Acquire an `acquire_snapshot` lease → winner fold → emit the tar-zst spool
+under `<scratch_root>/.export/<nonce>.tar.zst` → release the lease (layers
+are no longer needed once spooled) → return:
+
+```json
+{
+  "export_id": "exp-7f3a",
+  "manifest_version": 12,
+  "layers_exported": ["L000002-…", "S000003-…"],
+  "entries": { "files": 214, "symlinks": 3, "whiteouts": 2, "opaques": 1 },
+  "spool_bytes": 6291456,
+  "live_workspace_sessions": ["ws-7"]
+}
+```
+
+**`read_export_chunk`** `{export_id, offset, limit?}` → one base64 frame:
+
+```json
+{ "chunk": "…", "offset": 0, "len": 2097152, "total": 6291456, "eof": false }
+```
+
+Default and maximum `limit` 2 MiB raw (≈ 2.8 MiB encoded — comfortably
+under the 8 MiB result-envelope precedent). Serving the final byte unlinks
+the spool. A new `export_layerstack` replaces any prior spool; leftovers
+are reaped with scratch at boot. The manager drives the loop synchronously
+inside one `export_changes` invocation, so overlapping readers do not
+arise from this design.
+
 ## Output contract
 
-One compact JSON line on stdout (exit 0); faults are one `{"error":…}` line
-on stderr (exit 1). Pretty-printed here.
+The manager returns — and the CLI prints — one compact JSON line on stdout
+(exit 0); faults are one `{"error":…}` line on stderr (exit 1). Daemon
+stats and host-side apply stats merge into one line. Pretty-printed here.
 
 **dir:**
 
@@ -137,14 +239,15 @@ on stderr (exit 1). Pretty-printed here.
   "files_written": 214,
   "symlinks_written": 3,
   "deletes_applied": 2,
+  "opaque_clears": 1,
   "skipped_unchanged": 190,
   "bytes_written": 18874368,
   "live_workspace_sessions": ["ws-7"]
 }
 ```
 
-**tar / tar-zst** (`deletes_applied`/`skipped_unchanged` are dir-mode
-concepts and are absent; whiteout winners become archive entries):
+**tar / tar-zst** (apply-side fields absent; entry counts come from the
+daemon result; `bytes_written` is the archive size on disk):
 
 ```json
 {
@@ -169,6 +272,7 @@ itself; dir dest untouched, tar dest is a valid empty archive):
   "files_written": 0,
   "symlinks_written": 0,
   "deletes_applied": 0,
+  "opaque_clears": 0,
   "skipped_unchanged": 0,
   "bytes_written": 0
 }
@@ -176,8 +280,7 @@ itself; dir dest untouched, tar dest is a valid empty archive):
 
 Counts, not path dumps: the result line stays bounded. Per-path deletion and
 skip detail belongs to the observability record (`LAYERSTACK_EXPORT`), the
-same division of labor squash uses for byte accounting. `bytes_written` is
-regular-file bytes actually copied (dir) or the final archive size (tar).
+same division of labor squash uses for byte accounting.
 
 `live_workspace_sessions` (both formats, omitted when empty — the
 `faulty_sessions` precedent) lists the sessions alive at snapshot time.
@@ -186,56 +289,63 @@ Their uncommitted upperdir changes are invisible to export by design
 re-export to include them. Session ids come from the existing session
 registry; no upperdir walk, no dirty-check machinery.
 
-Faults: argument problems surface through the existing request-extractor
-faults; dest-guard violations and every engine I/O failure are the existing
-`operation_failed` — no dedicated error kind:
-
-```json
-{"error":{"kind":"operation_failed","message":"export dest inside layer-stack root: …","details":{}}}
-```
+Faults: daemon-side failures surface as the existing `operation_failed`;
+manager-side failures (dest guard, sandbox not Ready, forward errors,
+corrupt stream, archive rename) surface through the existing `ManagerError`
+→ error-line path — no dedicated error kind. A partially applied dir dest
+is recovered by re-running (invariant 4).
 
 ## Vocabulary and invariants
 
 | Name | Meaning |
 | --- | --- |
 | delta manifest | The active manifest's layers with every `B*` layer removed — the ordered (newest-first) set of published change layers. Computed from one snapshot; a predicate over `Manifest`, not a new type. |
-| export lease | An ordinary `acquire_snapshot` lease taken before the fold and released after the last byte. Its only job is the existing never-mutate-leased guarantee: squash/GC cannot delete a layer dir mid-read. Zero new lease API. |
-| winner fold | Pure newest-first fold over the delta layers' entries producing the winner map. Per path, the newest verdict wins: `File{layer_dir}`, `Symlink{layer_dir}`, `Directory`, `Delete` (whiteout winner), with opaque markers cutting all older layers under that directory — the same masking rules `MergedView`/`apply_layer` already encode (`is_kernel_whiteout_meta`, logical `.wh.` prefix, `OPAQUE_MARKER`). Reuses the per-layer walk idiom of `projection/apply.rs`; reads metadata only, never content. |
+| export lease | An ordinary `acquire_snapshot` lease held from fold start to spool completion. Its only job is the existing never-mutate-leased guarantee: squash/GC cannot delete a layer dir mid-read. Zero new lease API. |
+| winner fold | Pure newest-first fold over the delta layers' entries producing the winner map. Per path, the newest verdict wins: `File{layer_dir}`, `Symlink{layer_dir}`, `Directory`, `Delete` (whiteout winner), `OpaqueDir` (opaque cut — masks every older layer AND the base under that directory) — the same masking rules `MergedView`/`apply_layer` already encode (`is_kernel_whiteout_meta`, logical `.wh.` prefix, `OPAQUE_MARKER`). Reuses the per-layer walk idiom of `projection/apply.rs`; reads metadata only, never content. |
 | winner map | `BTreeMap<LayerPath, Winner>` — O(unique changed paths) memory, deterministic emit order for free. |
-| emit-dir | Apply winners onto `dest`: explicit directories via the existing `ensure_directory` semantics (a dest-side symlink or file at a directory position is replaced by a real directory, so writes can never be redirected outside dest), file winners copied then stamped with the source mtime (`File::set_times`), symlink winners recreated, `Delete` winners `remove_path`'d. Skip-unchanged: a file winner whose dest has equal size and mtime is not copied. |
-| emit-tar | Stream winners into a `tar::Builder` (workspace `tar` dep) in map order, paths relative. `Delete` winners are emitted in the logical OCI encoding (`.wh.<name>` entry), opaque cuts as `.wh..wh..opq` — never kernel char-dev whiteouts, which need privileges to extract. `tar-zst` wraps the same stream in one zstd encoder. Written to a nonce-named sibling temp file, renamed into place on success. |
-| dest guard | `dest` must be absolute and outside `layer_stack_root` and `scratch_root`. dir format: dest must be (or be creatable as) a directory. tar formats: dest must not be an existing directory. |
-| skip-unchanged | (size, mtime) equality between a file winner's source and its dest. Sound because emit-dir stamps the source mtime on every copy; stateless because the destination itself carries the watermark. |
+| spool | The daemon's one intermediate artifact: winners streamed through `tar::Builder` into one zstd encoder, written to `<scratch_root>/.export/<nonce>.tar.zst`. Entries carry the source file's mode and mtime; `Delete` winners are emitted in the logical OCI encoding (`.wh.<name>`), opaque cuts as `.wh..wh..opq` — never kernel char-dev whiteouts, which need privileges to extract. Unlinked when the last chunk is served, replaced by the next export, reaped with scratch at boot. |
+| chunk paging | `read_export_chunk` serves the spool by byte offset in base64 frames (≤ 2 MiB raw). The read_command_lines shape: stable offsets, caller-driven, stateless between calls except the spool file itself. |
+| host apply | The manager's dir-mode renderer, streaming the decoded tar: directories ensured (a dest-side symlink or file at a directory position is replaced by a real directory, so writes can never be redirected outside dest); file entries compared (size, mtime) against dest — equal skips, else write then stamp the entry mtime; symlinks recreated; `.wh.<name>` entries `remove_path` the target; `.wh..wh..opq` clears the directory before its siblings apply (existing `apply_layer` semantics — this is what removes base-origin files the sandbox masked with an opaque dir). |
+| skip-unchanged | (size, mtime) equality between a tar entry and its dest file. Sound because host apply stamps the entry mtime on every write; stateless because the destination itself carries the watermark. |
+| dest guard | Manager-side, before any forward: dest absolute; dir format: create if missing, must be a directory; tar formats: parent must exist, dest must not be a directory; archives written to a nonce-named sibling temp file, renamed into place on success. |
 
 Invariants:
 
-1. **Read-only on storage** — export never writes under `layer_stack_root`:
-   no staging, no manifest mutation, no sidecars, no substitution state.
-2. **Merged-delta equivalence** — emit-dir onto an empty destination equals
-   `MergedView` over the delta manifest for every path, including
-   directory-only shapes and deletion masking. One fold, one truth.
+1. **Read-only on layer-stack storage** — export never writes under
+   `layer_stack_root`: no staging, no manifest mutation, no sidecars, no
+   substitution state. The spool lives under scratch and is transient.
+2. **Merged-delta equivalence** — the delta stream applied onto an empty
+   destination equals `MergedView` over the delta manifest for every path,
+   including directory-only shapes, deletion masking, and opaque cuts. One
+   fold, one truth, one unit test pinning them together.
 3. **Lease pins sources** — every layer dir the fold or emit reads is pinned
-   by the export lease for the whole run. A concurrent squash sees the
-   lease's newest layer as a boundary, exactly like a session lease; a
+   by the export lease until the spool is complete. A concurrent squash sees
+   the lease's newest layer as a boundary, exactly like a session lease; a
    concurrent publish prepends layers the snapshot simply doesn't include.
 4. **Idempotent re-run** — re-exporting the same manifest version onto the
-   same dest writes zero content bytes (all file winners skip) and converges
-   to the identical tree.
+   same dest writes zero content bytes on the host (every file entry skips)
+   and converges to the identical tree. This is also the crash-recovery
+   story for a partially applied dir dest.
 5. **Published-only** — no session upperdir, no namespace entry, no live
    mount is ever read. The snapshot manifest is the sole source of truth
    (same axis as the file-operations sessionless backend).
-6. **Tar atomicity** — the archive is complete-or-absent at `dest`: temp
-   name in dest's parent, one rename on success, temp removed on failure.
-7. **No durability ceremony** — dir mode does not fsync; a crash mid-export
-   leaves a partial dest whose recovery is re-running the export (invariant
-   4 makes that cheap). Durability of the host directory is the host's
-   concern.
+6. **The detach stays; the manager is the only host writer** — export never
+   mounts, binds, or re-attaches anything host-visible in the daemon, and
+   no runtime-CLI-reachable surface can write to the host. Delivery is
+   bytes over the daemon protocol into the manager, full stop.
+7. **Archive atomicity** — a tar-format dest is complete-or-absent:
+   manager-side temp + one rename. The spool is nonce-named and
+   unlink-on-eof, so a crashed export leaves at most one dead file in
+   scratch for boot reap.
+8. **No durability ceremony** — host apply does not fsync; durability of
+   the host directory is the host's concern, and invariant 4 makes re-run
+   the cheap answer to any doubt.
 
 ## A. Expected file/folder structure with LoC change
 
 `(new ~N)` = new file with estimated LoC; `(+N)` = lines added to existing
 file. Calibrated against existing module sizes (`projection/apply.rs` 157,
-`projection/mod.rs` 350, service impls 26–110).
+`projection/mod.rs` 350, service impls 26–110, manager forward impls ~30).
 
 ```text
 crates/sandbox-runtime/layerstack/
@@ -243,135 +353,183 @@ crates/sandbox-runtime/layerstack/
 │                                                       (newest-first, whiteout/opaque masking,
 │                                                       metadata-only; shares apply.rs's walk
 │                                                       and the whiteout helpers)
-├── src/stack/projection/emit_dir.rs        (new ~120)  apply winner map onto dest: ensure-dir
-│                                                       semantics, copy + mtime stamp,
-│                                                       skip-unchanged, delete winners, counts
-├── src/stack/projection/emit_tar.rs        (new ~110)  winner map → tar stream, logical .wh.
-│                                                       re-encoding, optional zstd, temp+rename
-├── src/stack/projection/mod.rs             (+15)       exports; walk visibility pub(super)→
-│                                                       shared within projection
-└── tests/unit/{export_delta.rs (new ~180), export_emit.rs (new ~220)} · tests/unit.rs (+2)
+├── src/stack/projection/emit_stream.rs     (new ~130)  winner map → tar::Builder → zstd → spool
+│                                                       file; logical .wh. re-encoding; mode +
+│                                                       mtime on entries; entry counts out
+├── src/stack/projection/mod.rs             (+15)       exports; walk visibility shared within
+│                                                       projection
+└── tests/unit/{export_delta.rs (new ~180), export_stream.rs (new ~160)} · tests/unit.rs (+2)
 
 crates/sandbox-runtime/operation/
-├── src/layerstack/service/impls/export_changes.rs (new ~90)
-│                                                       the whole transaction: dest guard →
-│                                                       acquire_snapshot lease → delta → fold →
-│                                                       emit by format → result assembly →
-│                                                       release lease (guard-scoped)
-├── src/layerstack/service/{model,mod}.rs   (+25)       ExportFormat, ExportOutcome DTOs, export
-├── src/cli_definition/file_operations.rs   (+45)       dispatch_export_changes + entry in the
-│                                                       existing file group (operation.rs +0:
-│                                                       no new entry group, no new mechanism)
-└── tests/layerstack_export.rs (new ~150)   end-to-end dispatch: dir, tar, empty delta,
-                                            dest-guard faults, re-run convergence
+├── src/layerstack/service/impls/export.rs  (new ~120)  export_layerstack + read_export_chunk
+│                                                       daemon ops, BOTH cli: None (squash
+│                                                       precedent — no catalog spec, invisible
+│                                                       to the runtime CLI): singleflight per
+│                                                       root, lease scope (fold → spool), spool
+│                                                       registry {export_id → path, total},
+│                                                       chunk reads, unlink-on-eof, live session
+│                                                       ids in the start result
+├── src/layerstack/service/{model,mod}.rs   (+30)       ExportOutcome, ExportChunk DTOs, exports
+├── src/operation.rs                        (+4)        two entries join the layerstack group
+└── tests/layerstack_export.rs (new ~180)   daemon-op dispatch: spool + paging to eof, empty
+                                            delta, singleflight, spool replacement
 
-crates/sandbox-runtime-operations/
-├── src/export.rs                           (new ~70)   EXPORT_CHANGES_SPEC + args
-└── src/lib.rs                              (+5)        catalog registration
+crates/sandbox-manager-operations/
+└── src/lib.rs                              (+55)       EXPORT_CHANGES_SPEC + args + CLI under
+                                                        the existing "management" family; joins
+                                                        SPECS (spec-only crate — dispatch stays
+                                                        in sandbox-manager); checkpoint_squash's
+                                                        related list gains "export_changes"
+
+crates/sandbox-manager/
+├── src/operation/management/service/impls/export_changes.rs (new ~80)
+│                                                       the manager transaction
+│                                                       (checkpoint_squash.rs is the template):
+│                                                       parse sandbox_id/dest/format, absolute-
+│                                                       dest guard (the InvalidWorkspaceRoot
+│                                                       precedent), rebuild the sandbox-scoped
+│                                                       runtime request, forward
+│                                                       export_layerstack, drive the chunk loop
+│                                                       via forward_sandbox_request, hand the
+│                                                       stream to the applier, merge the result
+├── src/export_apply.rs                     (new ~200)  host-side renderer (crate-root engine
+│                                                       module, the daemon_install.rs precedent):
+│                                                       zstd decode, streaming tar apply
+│                                                       (ensure-dir, skip-unchanged, mtime stamp,
+│                                                       .wh./.opq application) or archive write
+│                                                       (temp + rename)
+├── src/operation/cli_definition/management_operations.rs (+3)
+│                                                       import + ManagerOperationEntry::new(
+│                                                       &EXPORT_CHANGES_SPEC,
+│                                                       dispatch_export_changes) in OPERATIONS
+├── src/operation/management/mod.rs         (+1)        re-export dispatch_export_changes
+├── Cargo.toml                              (+3)        tar.workspace, zstd.workspace, base64
+└── tests/manager_export.rs (new ~240)      catalog + forward loop against a fake daemon;
+                                            apply semantics: winners, deletions, opaque
+                                            clears, skip, idempotent re-run, archive atomicity
 
 crates/sandbox-observability/
 └── src/record.rs                           (+3)        LAYERSTACK_EXPORT
 
-Cargo.toml (workspace)                      (+1)        zstd
-crates/sandbox-runtime/layerstack/Cargo.toml (+2)       tar.workspace, zstd.workspace
+Cargo.toml (workspace)                      (+1)        zstd (tar already present; base64 if not
+                                                        already the payload-encoding dep)
 
+sandbox-runtime-cli / sandbox-runtime-operations         (+0)
 sandbox-protocol / sandbox-daemon / sandbox-gateway / sandbox-config   (+0)
 ```
 
-Totals: **5 new source files ≈ 530 LoC**, **≈ +95 LoC** in existing files,
-**≈ 550 LoC** of tests → ≈ 1,180 LoC end to end. No protocol change, no
-daemon change, no config field, no new operation-entry mechanism, no new
-family.
+Totals: **5 new source files ≈ 670 LoC**, **≈ +120 LoC** in existing files,
+**≈ 760 LoC** of tests → ≈ 1,550 LoC end to end. Zero changes to the
+protocol crate, daemon transport, gateway, config, and — after the
+ownership move — zero changes to both CLIs and the runtime catalog.
 
-Build order: winner fold (pure) → emit-dir → emit-tar → service impl +
-catalog spec + dispatcher → observability record.
+Build order: winner fold (pure) → emit-stream → daemon ops (spool +
+chunks) → manager applier (pure over a byte stream, testable without a
+daemon) → manager op impl + catalog spec → observability record.
 
 ## B. Export workflows
 
 Legend: `Ln` published layer, `B` base, `wh(p)` whiteout of path p,
 `opq(d)` opaque marker on directory d. Manifests are newest-first.
 
-### B1. Simple — two layers onto a fresh directory
+### B1. Primary — apply onto the seeding host directory, workable result
 
 ```text
-active v3: [L2 L1 B]        L1: src/a.rs, src/b.rs      L2: src/a.rs (edit), wh(src/b.rs)
+host /home/me/myproject seeded the base at create time.
+sandbox published: L1: src/a.rs, src/b.rs        L2: src/a.rs (edit), wh(src/b.rs)
 
-fold (newest-first):
-  src/a.rs → File(L2)        L1's a.rs is masked: never read
-  src/b.rs → Delete          whiteout wins
-  src/     → Directory
+sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /home/me/myproject
 
-emit-dir --dest /workspace/out (fresh):
-  out/src/a.rs written (L2 content, L2 mtime), delete of src/b.rs = no-op
+daemon:  fold → winners { src/a.rs → File(L2), src/b.rs → Delete, src/ → Dir }
+         (L1's a.rs is masked: never read; the base's thousands of files
+          never enter the fold)
+         spool: src/ · src/a.rs · src/.wh.b.rs
+manager: forwards the start request, pages 1 chunk, applies onto
+         /home/me/myproject — a.rs overwritten (L2 content, L2 mtime),
+         .wh.b.rs deletes b.rs
 
-result: files_written 1, deletes_applied 0, skipped_unchanged 0
+/home/me/myproject now equals the sandbox's full merged view — base +
+delta — and is immediately workable. Total cost: two layer walks, one file
+copy, one deletion; the base crossed nothing.
 ```
 
-The base's thousands of files never enter the fold; cost is two layer walks
-plus one file copy.
+Fidelity condition: the result equals the sandbox view exactly when every
+path the delta does not touch still carries base-seed content. Host edits
+made after seeding survive at untouched paths (export neither knows nor
+cares), are overwritten at winner paths, and are removed under
+opaque-cleared directories. In-place override is destructive by design —
+no backup, no dry-run; the workspace's own VCS is the review-and-undo
+surface, and invariant 4 makes re-running always safe. A dest with no base
+copy at all gets the sparse delta tree, not a workspace: full copies at
+arbitrary locations are composition (seed copy first, then export — see
+the `dir-full` deferral for the no-base-copy case).
 
 ### B2. Re-export after more publishes — incremental by property
 
 ```text
-first export @v3 to /workspace/out          214 files copied
-publishes land: v5 = [L4 L3 L2 L1 B]        L3, L4 touch 9 paths
-second export @v5 to the same dest:
-  205 winners: equal (size, mtime) at dest → skipped
-  9 winners: copied
+first export @v3 onto /home/me/myproject      214 files applied
+publishes land: v5 = [L4 L3 L2 L1 B]          L3, L4 touch 9 paths
+second export @v5 onto the same dest:
+  wire: full compressed delta streams again (the daemon cannot see dest)
+  host: 205 entries equal (size, mtime) → skipped; 9 written
 result: files_written 9, skipped_unchanged 205
 ```
 
-No watermark flag, no server state: the mtime stamp written at copy time is
-the watermark, carried by the destination itself.
+No watermark flag, no server state: the mtime stamped at apply time is the
+watermark, carried by the destination itself.
 
-### B3. Masking — opaque directory and nested whiteouts
+### B3. Masking — opaque directory over base content
 
 ```text
-L1: cfg/dev.yml, cfg/prod.yml    L2: opq(cfg), cfg/prod.yml (rewrite)
+base: cfg/dev.yml, cfg/prod.yml     L1: opq(cfg), cfg/prod.yml (rewrite)
 
-fold: cfg → Directory, cfg/prod.yml → File(L2)
-      cfg/dev.yml never becomes a winner (opaque cut masks L1 under cfg)
+fold: cfg → OpaqueDir, cfg/prod.yml → File(L1)
+stream: cfg/ · cfg/.wh..wh..opq · cfg/prod.yml
+apply onto the seeding dir: the opaque entry CLEARS cfg/ (removing the
+base-origin dev.yml the sandbox masked), then prod.yml applies
 
-emit-dir onto a dest that already has cfg/dev.yml from an older export:
-  the opaque cut re-emits as Delete winners for masked dest survivors? NO —
-  the fold emits exactly the merged view; dest convergence for paths that
-  left the delta between exports is out of scope (the delta no longer
-  describes them). Converging a stale dest = export to a fresh dir, or
-  re-run after squash which re-emits the surviving shape.
+dest converges to the sandbox view including base files hidden by the
+opaque cut — the whole reason the opaque marker rides the stream instead
+of being resolved away by the fold.
 ```
 
-The contract is "dest reflects this delta", not "dest is synchronized with
-delta history" — stated here so nobody retrofits rsync semantics later.
+Honesty boundary: a path that *leaves* the delta between exports without a
+masking winner (today only `amend_path` rewriting head can do this) is not
+re-converged on a stale dest — the delta no longer describes it. The
+contract is "dest reflects this delta", not "dest is synchronized with
+delta history"; a fresh dest or re-seeded copy is the escape hatch. Stated
+here so nobody retrofits rsync semantics later.
 
-### B4. Archive — tar-zst with whiteouts preserved
+### B4. Archive — lossless, transportable delta
 
 ```text
-same v3 as B1, --format tar-zst --dest /workspace/delta.tar.zst
+same v3 as B1, --format tar-zst --dest /tmp/delta.tar.zst
 
+manager writes the stream as received: .delta.tar.zst.<nonce> → rename
 entries: src/ · src/a.rs · src/.wh.b.rs        (logical OCI encoding)
-write: /workspace/.delta.tar.zst.<nonce> → rename → delta.tar.zst
-
 result: files_written 1, whiteouts_emitted 1, bytes_written = archive size
 ```
 
-The archive is a valid OCI-style layer: lossless (deletions survive),
-transportable, re-importable, and compressed before it crosses the
-virtiofs bind mount.
+The archive is a valid OCI-style layer: deletions survive, it applies later
+onto any base copy, and it compressed before crossing the wire.
 
 ### B5. Concurrent squash — the lease does all the work
 
 ```text
 export starts @v13, lease snapshot [L12 L11 L10 … B]
-checkpoint_squash runs mid-export:
-  export lease's newest layer is a boundary → blocks straddling it squash
-  around it; replaced layers the export still reads stay on disk (never
-  mutate/delete a leased layer dir — existing law, no new code)
-export completes on its snapshot, reports manifest_version 13
-lease releases → refcount GC reclaims whatever only the export pinned
+checkpoint_squash runs mid-spool:
+  export lease's newest layer is a boundary → squash blocks straddling it;
+  replaced layers the export still reads stay on disk (never mutate or
+  delete a leased layer dir — existing law, no new code)
+spool completes on its snapshot → lease releases → refcount GC reclaims
+whatever only the export pinned; chunks keep serving from the spool, which
+depends on no layer
 next squash compacts what this one had to skip
 ```
 
-No retry, no invalidation, no special case: invariant 3 is the whole story.
+No retry, no invalidation, no special case: invariant 3 plus the spool's
+independence from layer dirs is the whole story. The two manager
+operations compose: squash to compact, export to deliver.
 
 ## C. Non-goals and deferrals
 
@@ -380,65 +538,88 @@ No retry, no invalidation, no special case: invariant 3 is the whole story.
   sessions in the result line rather than failing on them. Publish first.
 - **Full materialization (`dir-full`)** — a self-contained snapshot
   including the base, for a dest with no host copy of the seed or one that
-  has diverged. The primitive already exists (`MergedView::project`: dest
-  wipe + oldest-first apply of ALL layers); exposing it is one new `format`
-  value whenever the need materializes. Deliberately not v1: it costs
-  O(image) per run, forces a dest wipe (full-view deletions are absences,
-  which only converge from empty), and defeats skip-unchanged — the delta
-  plus the host's own base copy reproduces the same view at O(delta).
-- **Bounded parallel copy** — a width-N worker pool over file winners
-  (squash's remount-sweep precedent, default 4, env-tunable) is deferred to
-  a measured experiment on the virtiofs bind path; the winner fold already
-  removes the redundant-byte cost, and serial emit keeps v1 at one code
-  path. Follow the squash perf-experiment format under
-  `export_changes/experiments/` when taken up.
-- **Streaming export over the gateway** — for sandboxes created without a
-  workspace bind root. Would add a paging op (exec_command/read_lines
-  precedent) and is the only piece that would ever touch sandbox-protocol.
-  Out of scope until such a deployment exists.
+  has diverged. Composition covers the common cases: in-place override
+  (B1), and a full copy at an arbitrary location = copy the seed there
+  (`cp -a` / fresh clone), then export onto the copy. When a no-base-copy
+  full export is genuinely needed it is one new `format` value streaming
+  ALL layers — the base is immutably available daemon-side
+  (`base/B000001-base`), and `MergedView::project` already encodes the
+  semantics — at documented O(image) wire and time cost. Deliberately not
+  v1.
+- **Dest defaulting from the sandbox record** — the manager knows the host
+  workspace the base was seeded from (`inspect_sandbox` already surfaces
+  the workspace root), so `--dest` could default to it. Deferred: a
+  zero-extra-args invocation whose default behavior deletes host files is
+  the wrong ergonomic to ship first; revisit once usage exists.
+- **Server-side dest diffing** — wire bytes are always the full compressed
+  delta. A future manifest-version watermark could skip spooling entirely
+  when nothing changed; deferred until re-export frequency proves it
+  matters.
+- **Bounded parallel apply** — host apply is a serial tar stream; a width-N
+  pool would need out-of-order extraction for marginal gain on a
+  local-filesystem write path. Not planned.
 - **Byte-level deltas between exports** — skip-unchanged captures the win at
   a fraction of the complexity.
-- **Path filtering, dry-run, checksum flags** — deliberately absent; the
-  operation has two arguments. Per-layer digests in `.layer-metadata/`
-  remain the integrity story.
+- **Path filtering, dry-run, checksum flags** — deliberately absent. Per-
+  layer digests in `.layer-metadata/` remain the integrity story.
 
 ## Decision log
 
-1. **Two arguments only** (user review, 2026-07-07): `--dest`, `--format`.
-   Incrementality, deletion policy, parallelism, and scope became
-   defaults/properties instead of flags.
+1. **Two user arguments beyond the sandbox selector** (user review,
+   2026-07-07): `--dest`, `--format`. Incrementality, deletion policy,
+   parallelism, and scope became defaults/properties instead of flags.
 2. **Deletions apply by default in dir mode**: "convert the changes"
    includes deletions; a fresh dest makes them no-ops; counts in the result
    line, per-path detail in the observability record (bounded result,
-   squash precedent — supersedes the chat sketch's itemized list).
-3. **Family `file`, no new family**; dispatcher joins the existing file
-   group so `operation.rs` is untouched.
+   squash precedent).
+3. **No new family, no new entry mechanism**: the manager op joins the
+   existing `management` family; the daemon ops register with `cli: None`
+   (squash_layerstack precedent) so the runtime surface gains nothing.
 4. **Reuse over invention**: winner fold lives beside `projection/apply.rs`
    and shares its walk and whiteout vocabulary; `MergedView` stays the
-   read-path truth; equivalence between the two is invariant 2 and a unit
-   test, not a shared abstraction forced before it's needed.
-5. **mtime-stamped copies** power skip-unchanged (`File::set_times`,
-   rust ≥ 1.75; workspace floor is 1.85) — chosen over a server-side
-   watermark to keep the daemon stateless.
-6. **`zstd` enters `[workspace.dependencies]`** for `tar-zst`; `tar` is
-   already there. Compression is worth a dependency because bind-mount
-   write bytes are the dominant cost on Docker Desktop.
-7. **Logical `.wh.` encoding in archives** (kernel char-dev whiteouts need
-   privileged extraction); emit-dir consumes whiteouts directly and never
-   writes them to dest.
+   read-path truth; equivalence is invariant 2 and a unit test, not a
+   shared abstraction forced before it's needed.
+5. **mtime-stamped writes** power skip-unchanged (tar entries carry source
+   mtime; the applier stamps on write) — chosen over a server-side
+   watermark to keep the daemon stateless about destinations it cannot see.
+6. **`zstd` enters `[workspace.dependencies]`**; `tar` is already there.
+   Compression is worth a dependency because the delta crosses the wire
+   base64-framed — fewer raw bytes is the dominant win.
+7. **Logical `.wh.` encoding on the stream** (kernel char-dev whiteouts
+   need privileged extraction); host apply consumes whiteouts and opaque
+   markers directly and never writes them to a dir dest.
 8. **No fsync in dir mode**: idempotent re-run is the recovery story;
-   tar mode gets temp+rename because a partial archive is corrupt, not
+   tar dests get temp+rename because a partial archive is corrupt, not
    merely incomplete.
 9. **Delta, not full materialization** (design review, 2026-07-07): the
    base seed is host-origin, so a full export re-copies bytes the host
-   already has at O(image) and forces a dest wipe every run; the delta
-   yields the full view by composition onto the host's base copy at
-   O(delta) and is the only form that carries deletions explicitly.
-   `dir-full` stays a documented deferral backed by the existing
-   `MergedView::project`.
+   already has at O(image); the delta yields the full view by composition
+   onto the host's base copy at O(delta) and is the only form that carries
+   deletions explicitly. `dir-full` stays a documented deferral.
 10. **Running sessions report, never fail** (design review, 2026-07-07):
     session existence is not evidence of missing changes, sessions never
     mutate published layers (no consistency hazard to guard), and blocking
     export under long-lived sessions would make it unusable. Silent
     omission is equally wrong, so the result line carries
     `live_workspace_sessions` — the squash report-don't-fail precedent.
+11. **Chunk streaming, not bind-mount writes** (data-path review,
+    2026-07-07): the daemon unmounts the host workspace bind after base
+    build (`services.rs:84`; panic on failure), so "write through the
+    bind" was never available. One tar-zst spool, paged chunks
+    (`read_command_lines` precedent). Costs accepted: base64 4/3 framing
+    over zstd, O(compressed delta) spool in scratch, full-delta wire on
+    re-export.
+12. **Opaque markers ride the stream**: the winner fold must NOT resolve
+    opaque cuts away, because they are the only record that base-origin
+    files under that directory were masked — host apply's clear-directory
+    is what makes dest converge to the sandbox view (B3).
+13. **Manager-owned, manager-applied** (user direction, 2026-07-07):
+    crossing the host boundary is operator authority, and the manager is
+    the component that already touches the host filesystem (base seeding)
+    and holds the sandbox records. The manager service — a host process —
+    drives the forward loop and owns the applier, so BOTH CLIs stay pure
+    catalog clients (the previous revision had special-cased the runtime
+    CLI). `--sandbox-id` joins the surface as the ordinary manager-op
+    selector; each forward is one bounded request on the existing
+    `router/forward.rs` path; dest must be absolute because the manager's
+    CWD is not the caller's.

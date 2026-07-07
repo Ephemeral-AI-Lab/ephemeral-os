@@ -1194,3 +1194,27 @@
 - Wall time: 68974.206 ms
 - Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260707-115150`.
 
+## squash-20260707-121754 START — 2026-07-07T12:17:54+08:00
+- Command/tier: `/opt/homebrew/lib/python3.14/site-packages/pytest/__main__.py runtime/file/blame runtime/file/concurrent runtime/file/correctness runtime/file/file_exec/test_file_exec_session.py runtime/workspace_session runtime/daemon_http observability manager/management/squash/test_squash_medium.py manager/management/squash/test_squash_hard.py -q --no-header --log-cli-level=WARNING` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260707-121754`.
+
+## squash-20260707-121754 FINAL — 2026-07-07T12:25:01+08:00
+- Command/tier: `/opt/homebrew/lib/python3.14/site-packages/pytest/__main__.py runtime/file/blame runtime/file/concurrent runtime/file/correctness runtime/file/file_exec/test_file_exec_session.py runtime/workspace_session runtime/daemon_http observability manager/management/squash/test_squash_medium.py manager/management/squash/test_squash_hard.py -q --no-header --log-cli-level=WARNING`
+- Cases run/passed/failed/skipped: 48/48/0/0
+- Wall time: 426727.509 ms
+- Description: suite completed with pytest exit status `1`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260707-121754`.
+
+## squash-20260707-123042 START — 2026-07-07T12:30:42+08:00
+- Command/tier: `/opt/homebrew/lib/python3.14/site-packages/pytest/__main__.py manager/management/squash/test_squash_bench.py runtime/command/test_exec_command_layer_depth_benchmark.py -q --no-header --log-cli-level=WARNING` (squash)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260707-123042`.
+
+## squash-20260707-123042 FINAL — 2026-07-07T12:31:11+08:00
+- Command/tier: `/opt/homebrew/lib/python3.14/site-packages/pytest/__main__.py manager/management/squash/test_squash_bench.py runtime/command/test_exec_command_layer_depth_benchmark.py -q --no-header --log-cli-level=WARNING`
+- Cases run/passed/failed/skipped: 4/4/0/0
+- Wall time: 29068.220 ms
+- Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260707-123042`.
+

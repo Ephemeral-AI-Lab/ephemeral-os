@@ -44,6 +44,20 @@ observability page isn't warranted yet — `events`/`trace`/`cgroup` all require
 the board already shows. There is no dedicated audit page: auditability is
 file blame, and it surfaces as the `BlameGutter` inside the Files tab.
 
+Cross-links between tabs are first-class — blame owners jump to a trace,
+event rows to the waterfall, in-flight executions to a command card — so
+those targets get addresses now rather than after the router exists:
+
+- `/sandboxes/:id/observability/:view` — sub-view (`resources` / `traces` /
+  `events` / `layerstack`); bare `/observability` opens `resources`.
+- `/sandboxes/:id/observability/traces/:trace-id` — one trace's waterfall;
+  target of `EventStream` trace cells and `BlameGutter` operation owners.
+- `/sandboxes/:id/terminal#cmd-<command-session-id>` — scrolls to and expands
+  one `CommandCard`; target of `InFlightExecutions` rows, destroy-refusal
+  jump-links, and `BlameGutter` session owners.
+- `/sandboxes/:id/files?path=<path>&session=<ws-id>` — one file in one scope;
+  no `session` query means the published snapshot.
+
 ---
 
 ## Page 1: Fleet Board (`/`)
@@ -125,13 +139,13 @@ The core interactive surface. Two-pane layout:
 
 ```
 ┌───────────────┬──────────────────────────────────────────────────┐
-│ SESSIONS      │  ▸ $ cargo build --release            ✓ exit 0   │
-│ ─────────     │  ▾ $ python server.py                 ● running  │
-│ ● implicit    │  ┌────────────────────────────────────────────┐  │
-│ ● ws-1 shared │  │ Serving on 0.0.0.0:8000                    │  │
-│   ws-2 isol.  │  │ GET /health 200                            │  │
-│ [+ session]   │  │ ▂ (tailing… lines 1–214 of 214)            │  │
-│               │  └────────────────────────────────────────────┘  │
+│ SESSIONS      │  ▸ $ cargo build --release     ws-1   ✓ exit 0   │
+│ ─────────     │  ▾ $ python server.py    ws-1         ● running  │
+│ ◉ all         │  ┌────────────────────────────────────────────┐  │
+│ ● implicit    │  │ Serving on 0.0.0.0:8000                    │  │
+│ ● ws-1 shared │  │ GET /health 200                            │  │
+│   ws-2 isol.  │  │ ▂ (tailing… lines 1–214 of 214)            │  │
+│ [+ session]   │  └────────────────────────────────────────────┘  │
 │               │  [stdin ______________________] [↵] [^C] [^D]    │
 │               ├──────────────────────────────────────────────────┤
 │               │  $ run in: [ws-1 ▾]  timeout: [30s ▾]  ________ ↵│
@@ -140,7 +154,10 @@ The core interactive surface. Two-pane layout:
 
 #### Components
 
-- **`SessionSidebar`** — lists workspace sessions; create
+- **`SessionSidebar`** — lists workspace sessions under an **all** entry.
+  Selection has one meaning, fixed here: picking a session filters the ledger
+  to that session's commands and pre-fills the composer target; **all** (the
+  default) leaves the ledger unfiltered. Create
   (`create_workspace_session` with a shared/isolated network-profile picker)
   and destroy (`destroy_workspace_session` with optional grace seconds).
   Destroy surfaces the API's refusal when the command ledger is non-empty,
@@ -149,8 +166,10 @@ The core interactive surface. Two-pane layout:
   dropdown (or "implicit" — which per the API creates a one-shot session that
   captures + publishes on completion; the UI should label this
   "auto-publish"), optional timeout. Fires `exec_command`.
-- **`CommandCard`** — one per command, collapsible. States: running (spinner,
-  elapsed) / completed / failed / timed-out, exit code. Contains:
+- **`CommandCard`** — one per command, collapsible, always carrying a session
+  chip naming its owning session so the unfiltered ledger stays readable.
+  States: running (spinner, elapsed) / completed / failed / timed-out, exit
+  code. Contains:
   - **`TranscriptViewer`** — virtualized log view tailing via
     `read_command_lines` (offset-windowed, ≤1000 lines/fetch — the stable
     line offsets make infinite scroll-back trivial).
@@ -194,8 +213,18 @@ The core interactive surface. Two-pane layout:
   `file_blame`: `workspace_session:<id>` / `operation:<id>` / `original` /
   `unknown`, with a legend and click-through (session owners link to
   Terminal, operation owners link to their trace in the Observability tab).
-  This is the whole auditability surface of the console.
-- **`FileEditor`** — edit mode; Save maps to `file_write`. (Exposing
+  `file_blame` is published-snapshot-only — it takes no session id — so the
+  toggle is enabled only when `SessionScopePicker` is on **published**; in
+  live-session scope it renders disabled with a hint, never pairing snapshot
+  ownership with live content. This is the whole auditability surface of the
+  console.
+- **`FileEditor`** — edit mode; Save maps to `file_write`. Because
+  `file_write` replaces the whole file, entering edit mode first pages
+  `file_read` to the end so the buffer always holds the complete file —
+  saving from a truncated window would destroy everything outside it; files
+  past a size threshold open read-only. Save guards against concurrent
+  writers (agents share the workspace): re-read, compare with the load-time
+  content, and refuse with a reload prompt when it changed. (Exposing
   `file_edit`'s exact-string-replacement JSON in a UI isn't useful for humans
   — that op stays agent-only.)
 
