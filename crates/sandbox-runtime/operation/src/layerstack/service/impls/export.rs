@@ -86,6 +86,7 @@ fn run_export_layerstack(
                     return Err(error);
                 }
             };
+            apply_spool_override(&operations.layerstack.export_spool_dir(), &spool_path)?;
             let spool_bytes = std::fs::metadata(&spool_path)
                 .map_err(|error| error.to_string())?
                 .len();
@@ -117,6 +118,25 @@ fn run_export_layerstack(
             }
             Ok(result)
         })
+}
+
+/// Fault-injection seam (spec test-case §1.4): if an operator drops a spool
+/// at `<scratch_root>/.export/OVERRIDE.tar.zst` inside the sandbox, serve it
+/// in place of the honest fold. This does NOT weaken the host boundary —
+/// invariant 9 already treats every daemon byte as untrusted, so a
+/// container-local actor supplying the stream is exactly the threat the
+/// manager applier is hardened against. The honest fold's metadata still
+/// rides the start result; only the spool bytes are replaced. The override
+/// is consumed (renamed) so it fires once.
+const SPOOL_OVERRIDE_FILE: &str = "OVERRIDE.tar.zst";
+
+fn apply_spool_override(export_dir: &Path, spool_path: &Path) -> Result<(), String> {
+    let override_path = export_dir.join(SPOOL_OVERRIDE_FILE);
+    match std::fs::rename(&override_path, spool_path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("apply export spool override: {error}")),
+    }
 }
 
 fn fold_and_spool(

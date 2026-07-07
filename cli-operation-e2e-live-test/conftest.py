@@ -45,6 +45,14 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         terminalreporter.write_sep("-", "layerstack squash verdict summary")
         terminalreporter.write_line(f"squash verdict summary: {summary_path}")
 
+    if _is_export_run(config):
+        from manager.management.export import helpers as export_helpers
+
+        summary_path = export_helpers.finalize_summary(exitstatus=exitstatus)
+        if summary_path is not None:
+            terminalreporter.write_sep("-", "manager export verdict summary")
+            terminalreporter.write_line(f"export verdict summary: {summary_path}")
+
     records = operation_timing_records()
     if not records:
         return
@@ -136,6 +144,12 @@ def _is_squash_run(config):
     return "manager/management/squash" in args or "squash" in markexpr
 
 
+def _is_export_run(config):
+    args = " ".join(map(str, getattr(config, "args", ()) or ()))
+    markexpr = getattr(config.option, "markexpr", "") or ""
+    return "manager/management/export" in args or "export" in markexpr
+
+
 @pytest.fixture(scope="session", autouse=True)
 def gateway_up():
     """Ensure a gateway is running before any test (reused across the session)."""
@@ -174,6 +188,13 @@ def squash_preconditions(gateway_up):
     from manager.management.squash import helpers as squash_helpers
 
     squash_helpers.assert_preconditions_once()
+
+
+@pytest.fixture(scope="session")
+def export_preconditions(gateway_up):
+    from manager.management.export import helpers as export_helpers
+
+    export_helpers.assert_preconditions_once()
 
 
 @pytest.fixture
