@@ -44,6 +44,17 @@ not the 8 MiB runner-result cap; each forward opens a fresh TCP connection
 with no pooling; and byte-zero re-run holds for file winners only — opaque
 clears and whiteouts re-apply.
 
+Fifth, a measured speed revision (2026-07-08). Stage-1 benchmarks
+(`export-perf-results.md`) attributed ~79% of the 20 MiB cold-dir wall to
+the JSON chunk transport itself — base64's ×4/3 inflation and
+encode/decode passes, serde round trips over ≈2.8 MB JSON strings, and a
+fresh connection per 2 MiB chunk — which is exactly decision 15's named
+successor condition. Delivery now streams the sealed spool to the manager
+as one token-gated `daemon_http` octet-stream response (decision 19);
+`read_export_chunk` remains registered as the compatibility fallback.
+Invariants 6 and 9 are unchanged: the manager stays the only host writer,
+and stream bytes stay hostile under the same canonicalization and caps.
+
 ## Goal
 
 Convert the changes a sandbox has accumulated — every published layer above
@@ -88,7 +99,7 @@ Speed and space, explicitly (the two optimization targets):
 | time, content read | O(merged delta bytes) | winners only — a path overwritten by a newer layer is never read from the older one; hardlinked winners are read and emitted as duplicate content (tar carries no cross-winner hardlink) |
 | time, re-export host writes | O(new bytes) | manager-side skip-unchanged: entries carry source (size, second-granular mtime); the applier stamps mtimes on write and skips equal files (same-second same-size churn is a documented false-skip hole) |
 | space, daemon intermediate | O(compressed delta) | one spool file under scratch — no staging tree, no per-layer copies; unlinked when the last chunk is served |
-| space, wire | zstd delta × 4/3 | compression before base64 framing; the delta, not the image, crosses the daemon protocol |
+| space, wire | zstd delta × 1 (streamed); × 4/3 only on the chunk fallback | the sealed spool crosses as one octet-stream HTTP response; base64 framing survives only in the `read_export_chunk` fallback |
 | memory | O(unique changed paths) | the winner map holds path → (layer dir, kind), never content |
 
 Re-export re-streams the full compressed delta (the daemon cannot see the
@@ -181,26 +192,45 @@ result. Nothing about export is special-cased in any CLI.
 sandbox-manager-cli ── one export_changes request ──▶ manager (host process)
                                                         │ dest guard (absolute, dir/file rules)
                                                         │ forward export_layerstack ──▶ sandbox daemon
-                                                        │                                fold → spool → stats
-                                                        │ loop: forward read_export_chunk ──▶ daemon
-                                                        │       (base64 frames, ≤ 2 MiB raw, eof unlinks spool)
+                                                        │                                fold → sealed spool → stats
+                                                        │                                + single-use stream token
+                                                        │ GET /export/<export_id> ─────▶ daemon_http (loopback)
+                                                        │   one application/octet-stream response of the
+                                                        │   sealed spool — no base64, no JSON framing, no
+                                                        │   per-chunk round trips; MAX_STREAM_BYTES enforced
+                                                        │   while reading; spool unlinked at claim
                                                         │ zstd decode → streaming tar apply onto dest
                                                         │ (or archive write, temp + rename)
                                                         ▼
                                             one merged result line back to the CLI
 ```
 
-Each forward is one bounded request on the existing generic forward path
-(`router/forward.rs`: record lookup, Ready gate, `invoke_with_timeout` at
-`REQUEST_READ_TIMEOUT_S` = 30 s, `sandbox-protocol/src/limits.rs:2`) — the
-chunk loop is many small bounded requests, never one long-lived stream.
-Each forward opens a fresh TCP connection (`daemon_client.rs`: connect →
-write → shutdown → read; no pooling), so a large delta pays per-round-trip
-connection overhead: a 1 GiB compressed delta at 2 MiB raw/chunk is ~512
-sequential forwards, tens of seconds of wall-clock before any transport
-latency. Every response rides the 16 MiB `MAX_REQUEST_BYTES` envelope
-(`limits.rs:1`); a 2 MiB raw chunk base64-frames to ≈ 2.8 MiB, well under
-it.
+The start request rides the existing authenticated generic forward path
+unchanged (`router/forward.rs`: record lookup, Ready gate,
+`invoke_with_timeout` at `REQUEST_READ_TIMEOUT_S` = 30 s,
+`sandbox-protocol/src/limits.rs:2`). Delivery is one HTTP GET against the
+sandbox record's `daemon_http` endpoint: the daemon streams the sealed
+spool as a single octet-stream body — one connection, one worker on each
+side, and the only overlap is the socket buffer filling while the manager
+reads. The manager enforces `MAX_STREAM_BYTES` while buffering, never
+trusts a daemon-claimed length for allocation, and holds the whole body
+read to one `REQUEST_READ_TIMEOUT_S` deadline — the same ceiling as any
+forward. Completeness is a hard gate: the response must carry
+`Content-Length` and the body must yield exactly that many bytes — a short
+read (daemon death, dropped connection) aborts the export before any
+render, because `tar-zst` mode writes the stream as received and a
+truncated buffer would otherwise become a silently corrupt archive. The
+abort leaves dir dests untouched (plan-before-mutate) and archive dests
+absent (temp + rename); re-running converges.
+
+Fallback: when the start result carries no stream token (a daemon
+predating this revision) or the record has no `daemon_http` endpoint, the
+manager pages the spool through `read_export_chunk` exactly as before.
+The fallback keeps the old cost profile — each forward a fresh TCP
+connection (`daemon_client.rs`: connect → write → shutdown → read; no
+pooling), 2 MiB raw chunks base64-framed to ≈ 2.8 MiB under the 16 MiB
+`MAX_REQUEST_BYTES` envelope (`limits.rs:1`), ~512 sequential forwards per
+compressed GiB — and exists for compatibility, not speed.
 
 The spool-building start request is the one long call and it must complete
 the whole fold **and** the compressed spool write inside a single
@@ -239,11 +269,41 @@ are no longer needed once spooled) → return:
   "layers_exported": ["L000002-…", "S000003-…"],
   "entries": { "files": 214, "symlinks": 3, "whiteouts": 2, "opaques": 1 },
   "spool_bytes": 6291456,
+  "stream_token": "0f6c…",
   "live_workspace_sessions": ["ws-7"]
 }
 ```
 
-**`read_export_chunk`** `{export_id, offset, limit?}` → one base64 frame:
+**Stream delivery (primary).** The start result carries a single-use
+stream token minted inside the authenticated start forward: ≥ 244 bits of
+CSPRNG entropy, stored beside the spool's registry entry with its mint
+instant. The manager claims the spool with one
+`GET /export/<export_id>` against the `daemon_http` listener, the token in
+the `x-eos-export-token` header. The claim is atomic under the registry
+lock: constant-time token compare, expiry check (30 s TTL), entry removed,
+spool opened and then unlinked (the bytes live on the open fd), body
+streamed with the known content length. Reuse, expiry, an unknown
+`export_id`, and a token minted for a different export all collapse to one
+uniform 404 — the response never says which check failed. `daemon_http`
+remains otherwise unauthenticated; this route hands bytes only to a caller
+proving possession of a token that only the authenticated start path can
+mint, and it writes nothing anywhere (the unlink of its own spool under
+scratch is the sole mutation). A crashed manager after a claim costs
+nothing: the spool died with the claim and re-running rebuilds it. Two
+honesty notes. First, "authenticated start" is literal: the Docker
+provider mints a per-sandbox RPC auth token at create
+(`sandbox-provider-docker/src/runtime.rs:214`) and every manager forward
+carries it — but the daemon's in-container unix socket skips the TCP-only
+token check, so in-container code can mint stream tokens for its own
+exports; that changes nothing at the host boundary (it receives bytes it
+can already read from its own filesystem — the same analysis invariant 6
+already makes for name-dispatch callers). Second, the token is a secret:
+it never appears in the merged result line, observability attributes, or
+any log — it lives in the start response and the one claim header, then
+dies.
+
+**`read_export_chunk` (fallback)** `{export_id, offset, limit?}` → one
+base64 frame:
 
 ```json
 { "chunk": "…", "offset": 0, "len": 2097152, "total": 6291456, "eof": false }
@@ -263,9 +323,13 @@ by `export_id`. This resolves the earlier contradiction between "replaces
 any prior spool" and singleflight — neither happens; folds serialize and
 spools are per-export.
 
-The `{export_id → spool path, total}` registry is **in-memory** in the
-layerstack service (the command/session-registry precedent — no runtime op
-persists cross-request state). Two consequences the spec owns explicitly:
+The `{export_id → spool path, total, stream token, mint instant}` registry
+is **in-memory** in the layerstack service (the command/session-registry
+precedent — no runtime op persists cross-request state). A stream claim
+takes the whole entry, so a concurrent fallback `read_export_chunk` for the
+same export finds export-not-found and aborts cleanly — the two delivery
+paths can never interleave on one spool. Two consequences the spec owns
+explicitly:
 (1) a daemon restart between chunks drops the registry, so subsequent
 `read_export_chunk` calls fail with an export-not-found error and the whole
 `export_changes` aborts — re-running is the recovery, and the fold is cheap
@@ -421,8 +485,12 @@ Invariants:
    ops only WRITE under scratch and only DELIVER bytes to their caller;
    neither has a host-visible write path. The worst a name-dispatch caller
    gets is a spool under scratch (a nuisance the boot reap and `export_id`
-   keying bound) and its own bytes back. Delivery to the host filesystem
-   happens only in the manager, full stop.
+   keying bound) and its own bytes back. The daemon-HTTP stream route obeys
+   the same law: it writes nothing host-visible, unlinks only its own spool
+   under scratch, and hands spool bytes solely to the caller holding the
+   single-use token that only the authenticated start forward can mint —
+   an HTTP caller without the token gets a uniform 404 and nothing else.
+   Delivery to the host filesystem happens only in the manager, full stop.
 7. **Archive atomicity** — a tar-format dest is complete-or-absent:
    manager-side temp + one rename, so a manager crash mid-apply leaves the
    nonce-named `.tmp` sibling (never a half-written dest) for the operator
@@ -440,10 +508,12 @@ Invariants:
    after prefix strip); every path is reached by a dest-rooted `O_NOFOLLOW`
    open-parent fd walk so no symlink component is ever followed out of dest;
    hardlink entries are rejected. Daemon-claimed numbers (`total`, `len`,
-   `spool_bytes`, entry counts) are untrusted — the manager never
-   pre-allocates on them, loops on actual EOF, and caps both decompressed
-   output (tar mode, against a zstd bomb) and per-run entry count (against a
-   millions-of-empty-files bomb). No canonicalization means no export.
+   `spool_bytes`, content lengths, entry counts) are untrusted — the manager
+   never pre-allocates on them, reads to actual EOF, enforces
+   `MAX_STREAM_BYTES` on the delivery stream itself while the bytes arrive
+   (both transports), and caps both decompressed output (tar mode, against a
+   zstd bomb) and per-run entry count (against a millions-of-empty-files
+   bomb). No canonicalization means no export.
 10. **Fidelity boundary** — the stream carries content, **file** mode
     (second-granular mtime), symlink targets, logical deletions, and opaque
     cuts. It does NOT carry uid/gid (files land owned by the manager
@@ -569,6 +639,66 @@ Totals: **5 new source files ≈ 680 LoC**, **≈ +140 LoC** in existing files
 little), **≈ 800 LoC** of tests → ≈ 1,620 LoC end to end. Zero changes to
 the protocol crate, daemon transport, gateway, config, and — after the
 ownership move — zero changes to both CLIs and the runtime catalog.
+
+Speed-revision delta (decision 19, 2026-07-08 — supersedes the zero-change
+claims for the protocol and daemon-transport crates above):
+
+```text
+crates/sandbox-protocol/src/export_stream.rs      (new ~12)  shared vocabulary: route prefix,
+                                                             token header name, token result
+                                                             field, 30 s TTL
+crates/sandbox-runtime/operation/…/service/core.rs (+~40)    ExportSpool gains token + minted_at;
+                                                             claim_export_stream: constant-time
+                                                             compare, expiry, single-use take,
+                                                             unlink-at-claim
+crates/sandbox-runtime/operation/…/impls/export.rs (+~15)    mint token at register, add it to
+                                                             the start result
+crates/sandbox-daemon/src/http/export.rs           (new ~80) GET /export/<id>: claim + stream the
+                                                             spool fd as the response body
+crates/sandbox-daemon/src/http/router.rs           (+3)      route
+crates/sandbox-manager/src/…/impls/export_changes.rs (+~80)  stream-first delivery (sync HTTP GET
+                                                             over one TcpStream, MAX_STREAM_BYTES
+                                                             while reading, REQUEST_READ_TIMEOUT_S
+                                                             deadline, Content-Length completeness
+                                                             gate), chunk-paging fallback kept
+Cargo.toml (workspace)                             (+0/-0)   tokio-util gains the "io" feature
+                                                             (ReaderStream for the response body);
+                                                             no new dependency enters the tree
+```
+
+### Adversarial review record — decision 19 revision (2026-07-08)
+
+Reviewed against the codebase on `main` per `adversarial-review-prompt.md`
+(four axes), scoped to the transport revision. Verdicts: Truth
+**PASS** (auth wiring verified at `runtime.rs:214` + `dispatch.rs
+strip_tcp_auth`; `daemon_http` record field at `model.rs:67`; hyper server
++ routes at `http/{server,router}.rs`); Architecture **PASS** (claim logic
+lives beside the registry as one `LayerStackService` method; the manager's
+client is a ~50-line sync GET, no new dependency — hyper client machinery
+for one loopback GET fails prefer-less); Correctness **PASS-WITH-RISKS**
+(finding 1); Security **PASS-WITH-RISKS** (findings 2–3). Findings, all
+resolved in this revision:
+
+1. **[High → resolved] Silent truncation in `tar-zst` mode.** The archive
+   renderer writes bytes as received; a daemon death mid-stream would have
+   produced a valid-looking but truncated `.tar.zst`. Resolution: the
+   completeness gate — `Content-Length` required, received must equal it,
+   short read aborts before any render (data-path section).
+2. **[Medium → resolved] "Authenticated start" was deployment-dependent.**
+   The RPC token check is TCP-only; the in-container unix socket can mint
+   tokens. Resolution: verified the Docker provider always mints and
+   passes the RPC token; the unix-socket caveat is now stated with its
+   host-boundary analysis (stream-delivery section).
+3. **[Medium → resolved] Token leak surface.** Resolution: the
+   never-logged / never-in-result rule is now spec text; the manager's
+   result builders construct fresh objects, so the token cannot ride out
+   by construction, and the daemon span records no token attribute.
+4. **[Low → accepted] Timing distinguishes unknown-export from bad-token**
+   (HashMap miss skips the constant-time compare). Leaks only the
+   existence of an in-flight export on a loopback surface; the token
+   compare itself stays constant-time. Accepted with this note.
+5. **[Low → resolved] The LoC delta omitted the `tokio-util` "io" feature
+   bump.** Added above; no new crate enters the workspace.
 
 Build order: winner fold (pure) → emit-stream → daemon ops (spool +
 chunks) → manager applier (pure over a byte stream, testable without a
@@ -834,3 +964,30 @@ operations compose: squash to compact, export to deliver.
     (squash-first is the mitigation); and each forward opens a fresh TCP
     connection, so the chunk loop's cost is stated, not hidden behind "same
     profile as checkpoint_squash".
+19. **The sealed spool streams over daemon HTTP; JSON chunk paging becomes
+    the fallback** (measured speed revision, 2026-07-08): stage-1 benchmarks
+    (`export-perf-results.md`) fitted wall ≈ 25.7 + 2.3·chunks + 11.4·MiB
+    against a 1.0 ms/MiB dd read+write control and a 25.7 ms PERF-0 floor,
+    and attributed ~79% of a 20 MiB cold export to the chunk transport
+    itself: base64's ×4/3 inflation and encode/decode passes, serde
+    serialize/parse over ≈2.8 MB JSON strings, and a fresh thread + runtime
+    + TCP connection per 2 MiB chunk. That is decision 15's own successor
+    condition ("if the base64 tax dominates, the HTTP stream is the
+    documented next step"), and both of its objections are answered rather
+    than overridden: (a) consistency — the spool is a lease-independent,
+    `export_id`-keyed artifact sealed before delivery, so streaming it
+    changes no snapshot semantics and no layer read ever bypasses the
+    daemon protocol; (b) auth — `daemon_http` stays unauthenticated except
+    that `GET /export/<export_id>` serves bytes only against a single-use,
+    30 s-expiring, export_id-bound token (≥ 244 bits CSPRNG) minted inside
+    the authenticated `export_layerstack` forward, compared in constant
+    time, with reuse/expiry/mismatch/unknown collapsing to one uniform 404.
+    The claim is atomic (entry taken, spool unlinked at claim), so the
+    stream and the fallback pager can never interleave on one spool. One
+    connection, one worker, no added parallelism — the speedup is waste
+    removal (framing, string passes, round trips), not fan-out.
+    `MAX_STREAM_BYTES` is enforced on the stream while bytes arrive; the
+    whole body read rides one `REQUEST_READ_TIMEOUT_S`; invariants 6 and 9
+    are unchanged. The manager falls back to `read_export_chunk` whenever
+    the start result carries no token (older daemon) or the record has no
+    `daemon_http` endpoint.
