@@ -20,7 +20,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 5 | Terminal tab | 4 | done (2026-07-07) |
 | 6 | Preview tab | 4 | done (2026-07-07) |
 | 7 | `file_list` op + Files tab | 4 | done (2026-07-07) |
-| 8 | Observability tab | 4 | not started |
+| 8 | Observability tab | 4 | done (2026-07-07) |
 | 9 | Hardening & docs | 3–8 | not started |
 
 Milestones:
@@ -281,20 +281,22 @@ save with the conflict guard demonstrably firing under a concurrent write.
 
 ## Phase 8 — Observability tab
 
-- [ ] Sub-nav routes (`resources` default / `traces` / `events` /
+- [x] Sub-nav routes (`resources` default / `traces` / `events` /
       `layerstack`).
-- [ ] Resources: CPU/mem/IO/disk charts, counters rendered as deltas
+- [x] Resources: CPU/mem/IO/disk charts, counters rendered as deltas
       (`_counters` flag), scope picker, window capped at 600s, auto-refresh.
-- [ ] Traces: `TraceList` (default `last`), `TraceWaterfall` (nested bars,
+- [x] Traces: `TraceList` (default `last`; as-built the list derives from
+      recent events — no enumeration op), `TraceWaterfall` (nested bars,
       status colors, ⚑ events pinned), `SpanAttrsDrawer`;
       `traces/:trace-id` deep link resolves.
-- [ ] Events: filterable table (name / since / last-N), live-tail via
+- [x] Events: filterable table (name / since / last-N), live-tail via
       polling, trace cells linking to waterfalls.
-- [ ] LayerStack: `LayerStackViz` (per-layer hash/version/bytes/leases,
-      squashable bracket, workspace filter, depth trend), `SquashButton`
-      with `StreamLogPane`; verify whether a pre-run "est. after" count is
-      derivable — if not, show before-count only and report after from the
-      result.
+- [x] LayerStack: `LayerStackViz` (per-layer id/bytes/lease+booking counts,
+      squashable bracket, client-side depth trend; per-layer workspace ids
+      aren't in the view result so the workspace filter was dropped),
+      `SquashButton` with `StreamLogPane`; verified: a pre-run "est. after"
+      count is **not derivable** — before-count only, after from the
+      refetch.
 
 Exit: **M4** — every view in [[web-ui-design]] renders live data; all
 cross-tab deep links resolve end to end.

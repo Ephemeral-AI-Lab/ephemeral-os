@@ -66,3 +66,93 @@ export function inFlightCount(snapshot: SandboxSnapshot): number {
     0,
   );
 }
+
+export interface CgroupSeries {
+  view: "cgroup";
+  scope: string;
+  series: ResourceSample[];
+}
+
+export function fetchCgroup(
+  sandboxId: string,
+  scope: string,
+  windowMs: number,
+): Promise<CgroupSeries> {
+  return fetchObservabilityView<CgroupSeries>(sandboxId, "cgroup", {
+    scope,
+    window_ms: windowMs,
+  });
+}
+
+export interface TraceEvent {
+  ts: number;
+  trace: string;
+  parent: string | null;
+  name: string;
+  attrs: Record<string, unknown>;
+}
+
+export interface TraceSpan {
+  ts: number;
+  trace: string;
+  span: string;
+  name: string;
+  dur_ms: number | null;
+  status: string;
+  attrs: Record<string, unknown>;
+}
+
+export interface TraceNode {
+  span: TraceSpan;
+  offset_ms: number;
+  children: TraceNode[];
+  events: TraceEvent[];
+}
+
+export interface TraceResult {
+  view: "trace";
+  trace: string;
+  spans: TraceNode[];
+}
+
+export function fetchTrace(sandboxId: string, traceId: string): Promise<TraceResult> {
+  return fetchObservabilityView<TraceResult>(sandboxId, "trace", {
+    trace_id: traceId,
+  });
+}
+
+export interface EventsResult {
+  view: "events";
+  events: TraceEvent[];
+}
+
+export function fetchEvents(
+  sandboxId: string,
+  filters: { name?: string; sinceMs?: number; lastN?: number },
+): Promise<EventsResult> {
+  const args: Record<string, unknown> = {};
+  if (filters.name) args["name"] = filters.name;
+  if (filters.sinceMs !== undefined) args["since_ms"] = filters.sinceMs;
+  if (filters.lastN !== undefined) args["last_n"] = filters.lastN;
+  return fetchObservabilityView<EventsResult>(sandboxId, "events", args);
+}
+
+export interface StackLayer {
+  layer_id: string;
+  bytes: number;
+  leased_by_workspaces: number;
+  booked_by: string[];
+}
+
+export interface LayerStackResult {
+  view: "layerstack";
+  manifest_version: number;
+  root_hash: string;
+  active_lease_count: number;
+  total_bytes: number;
+  layers: StackLayer[];
+}
+
+export function fetchLayerStack(sandboxId: string): Promise<LayerStackResult> {
+  return fetchObservabilityView<LayerStackResult>(sandboxId, "layerstack");
+}

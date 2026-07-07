@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ToastProvider } from "@/components/ErrorToast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Shell } from "@/shell/Shell";
@@ -10,7 +10,11 @@ import { OverviewTab } from "@/pages/sandbox/overview/OverviewTab";
 import { TerminalTab } from "@/pages/sandbox/terminal/TerminalTab";
 import { FilesTab } from "@/pages/sandbox/files/FilesTab";
 import { PreviewTab } from "@/pages/sandbox/preview/PreviewTab";
-import { PlaceholderTab } from "@/pages/sandbox/PlaceholderTab";
+import { ObservabilityTab } from "@/pages/sandbox/observability/ObservabilityTab";
+import { ResourcesView } from "@/pages/sandbox/observability/ResourcesView";
+import { TracesView } from "@/pages/sandbox/observability/TracesView";
+import { EventsView } from "@/pages/sandbox/observability/EventsView";
+import { LayerStackView } from "@/pages/sandbox/observability/LayerStackView";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,43 +37,13 @@ export default function App() {
                   <Route path="terminal" element={<TerminalTab />} />
                   <Route path="files" element={<FilesTab />} />
                   <Route path="preview" element={<PreviewTab />} />
-                  <Route path="observability">
-                    <Route
-                      index
-                      element={
-                        <PlaceholderTab title="Observability · Resources" phase="Phase 8" />
-                      }
-                    />
-                    <Route
-                      path="resources"
-                      element={
-                        <PlaceholderTab title="Observability · Resources" phase="Phase 8" />
-                      }
-                    />
-                    <Route
-                      path="traces"
-                      element={
-                        <PlaceholderTab title="Observability · Traces" phase="Phase 8" />
-                      }
-                    />
-                    <Route
-                      path="traces/:traceId"
-                      element={
-                        <PlaceholderTab title="Observability · Trace" phase="Phase 8" />
-                      }
-                    />
-                    <Route
-                      path="events"
-                      element={
-                        <PlaceholderTab title="Observability · Events" phase="Phase 8" />
-                      }
-                    />
-                    <Route
-                      path="layerstack"
-                      element={
-                        <PlaceholderTab title="Observability · LayerStack" phase="Phase 8" />
-                      }
-                    />
+                  <Route path="observability" element={<ObservabilityTab />}>
+                    <Route index element={<Navigate to="resources" replace />} />
+                    <Route path="resources" element={<ResourcesView />} />
+                    <Route path="traces" element={<TracesView />} />
+                    <Route path="traces/:traceId" element={<TracesView />} />
+                    <Route path="events" element={<EventsView />} />
+                    <Route path="layerstack" element={<LayerStackView />} />
                   </Route>
                 </Route>
                 <Route path="*" element={<NotFound />} />

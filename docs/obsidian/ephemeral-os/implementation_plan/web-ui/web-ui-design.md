@@ -322,6 +322,9 @@ catalog exactly.
 ```
 
 - **`TraceList`** — picks the trace; defaults to the op's `last` selector.
+  As-built: no trace-enumeration op exists, so the list shows `last` plus
+  trace ids discovered from recent `events` (and any id navigated to via a
+  deep link).
 - **`TraceWaterfall`** — nested span bars offset by start time, colored by
   status (completed/error/cancelled/timed_out), events (⚑) pinned inline at
   their timestamp. Span names come from the fixed vocabulary
@@ -365,13 +368,18 @@ catalog exactly.
 └──────────────────────────────────┴───────────────────────────────┘
 ```
 
-- **`LayerStackViz`** — the stack as a vertical column of layers (root_hash,
-  manifest_version, disk bytes, lease/booking counts per workspace), with
-  squashable blocks bracketed, plus a workspace filter and stack-depth trend
-  from the stack series.
-- **`SquashButton`** — the natural home for `checkpoint_squash`, showing
-  before/after layer counts — it turns an opaque CLI verb into something
-  visual. Runs with `_stream_logs` into a `StreamLogPane`.
+- **`LayerStackViz`** — the stack as a vertical column of layers. As-built,
+  the view returns `layer_id`, `bytes`, `leased_by_workspaces` (a count, not
+  workspace ids), and `booked_by` per layer plus stack-level
+  manifest_version/root_hash — so the per-layer workspace chips and filter
+  from the mockup aren't derivable; squashable runs are bracketed
+  (contiguous unleased, unbooked layers) and the depth trend accumulates
+  client-side across polls.
+- **`SquashButton`** — the natural home for `checkpoint_squash`. A pre-run
+  "est. after" count is **not derivable** (risk confirmed): the header shows
+  the before-count and the after-count comes from the post-squash refetch;
+  the result body reports `squashed_blocks`. Runs with `_stream_logs` into a
+  `StreamLogPane`.
 
 ### Tab 5 — Preview
 
