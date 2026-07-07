@@ -43,3 +43,7 @@ coverage/
 
 # Release/build artifacts
 /dist/
+
+# Web console SPA
+/web/console/node_modules/
+/web/console/dist/

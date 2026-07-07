@@ -1406,6 +1406,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "sandbox-console"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "clap",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "sandbox-cli-core",
+ "sandbox-manager-operations",
+ "sandbox-observability-operations",
+ "sandbox-protocol",
+ "sandbox-runtime-operations",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "sandbox-daemon"
 version = "0.1.0"
 dependencies = [

@@ -16,8 +16,9 @@ map 1:1 — the bridge adds no vocabulary. Three realities shape the UI:
 
 - **Command output is transcript-based, not raw PTY.** The exposed API is
   `exec_command` → `read_command_lines` (stable line offsets) →
-  `write_command_stdin`. So the "terminal" should be a **command ledger** (one
-  card per command with a live-tailing transcript), not an xterm.js raw PTY
+  `write_command_stdin`. So the "terminal" is a **ledger of per-command
+  terminals** — each `exec_command` opens its own terminal frame with a
+  live-tailing transcript and integrated stdin — not an xterm.js raw PTY
   emulation. This fits the product — it's how agents use the sandbox too.
 - **Observability is pull-based NDJSON** (spans/events/samples), so charts and
   waterfalls poll on an interval rather than subscribing.
@@ -138,7 +139,11 @@ The web rendering of `inspect_sandbox` + per-sandbox `snapshot`.
 
 ### Tab 2 — Terminal
 
-The core interactive surface. Two-pane layout:
+The core interactive surface: a **ledger of per-command terminals**.
+`exec_command` opens a terminal, `write_command_stdin` types into it — and
+because every command owns its own transcript and stdin stream, several
+terminals can run at once (a server tailing in one, a REPL in another),
+which a single shared PTY could never offer. Two-pane layout:
 
 ```
 ┌───────────────┬──────────────────────────────────────────────────┐
@@ -169,12 +174,20 @@ The core interactive surface. Two-pane layout:
   dropdown (or "implicit" — which per the API creates a one-shot session that
   captures + publishes on completion; the UI should label this
   "auto-publish"), optional timeout. Fires `exec_command` with
-  `yield_time_ms: 0` — the flag stays hidden from the user; the call returns
-  immediately and the card's poll loop is the one output path.
-- **`CommandCard`** — one per command, collapsible, always carrying a session
-  chip naming its owning session so the unfiltered ledger stays readable.
-  States: running (spinner, elapsed) / completed / failed / timed-out, exit
-  code. Contains:
+  `yield_time_ms: 0` and opens the new command's terminal expanded and
+  focused. The two protocol knobs serve two audiences: `timeout_ms` is
+  semantic (how long the command may live) and stays user-visible here;
+  `yield_time_ms` is an agent-tool affordance ("block this RPC up to N ms
+  before returning") — a browser is a polling client, so the console pins
+  it to 0 on every call and never exposes it.
+- **`CommandCard`** — one terminal per command. Expanded, it is a terminal
+  frame: transcript filling the pane, input line integrated at the bottom,
+  autoscroll pinned to the tail unless the user scrolls up. Collapsed, it is
+  a one-line ledger history row. Always carries a session chip naming its
+  owning session so the unfiltered ledger stays readable. States: running
+  (spinner, elapsed) / completed / failed / timed-out, exit code. A terminal
+  frame is not a PTY: line discipline only — REPLs and Ctrl-C-able servers
+  work naturally; full-screen TUIs (vim, htop) will not render. Contains:
   - **`TranscriptViewer`** — virtualized log view tailing via
     `read_command_lines` (offset-windowed, ≤1000 lines/fetch — the stable
     line offsets make infinite scroll-back trivial). One API nuance: the
@@ -183,8 +196,17 @@ The core interactive surface. Two-pane layout:
     the wait returns terminal with its output inline, and the card renders
     that transcript directly with nothing to poll. `yield_time_ms: 0` makes
     the polling path the norm, but the inline path must still render.
-  - **`StdinBar`** — text input plus Ctrl-C/Ctrl-D buttons, mapped to
-    `write_command_stdin`; only rendered while status is running.
+    Leaving the tab never loses output — the transcript is
+    server-authoritative, so on return the viewer catches up from its last
+    stored offset (a burst of ≤1000-line pages if much happened) and
+    re-pins to the tail.
+  - **`StdinBar`** — the terminal's input line, rendered inside the frame
+    only while status is running. Enter sends the line via
+    `write_command_stdin` (yield pinned to 0) followed by an immediate
+    `read_command_lines` poll nudge, so the program's reaction renders
+    without waiting for the next interval tick. Ctrl-C/Ctrl-D are captured
+    as keystrokes while the frame is focused; the explicit buttons remain
+    for discoverability.
   - **`PortPreview`** ("open in browser") — for running commands that serve
     HTTP: pre-fills the command's session scope (shared vs. isolated ws-id),
     asks only for the port, and opens the Preview tab with scope and port
@@ -192,6 +214,15 @@ The core interactive surface. Two-pane layout:
     isolated sessions it shows the bind hint inline: listen on `0.0.0.0` or
     the workspace IP, not `127.0.0.1` (isolated loopback relay is an
     explicitly skipped `daemon_http` feature).
+
+The ledger itself is client-remembered: the command family has no listing
+operation, so known command ids (with command text and timestamps) persist
+in `localStorage` per sandbox. A reload rebuilds the ledger from storage
+plus the snapshot's in-flight executions — running commands always survive
+a reload; completed ones survive on the browser that ran them. `#cmd-` deep
+links share this dependency: they resolve for in-flight or locally-known
+ids; a cold browser can still read a known id's transcript, just without
+ledger context.
 
 ### Tab 3 — Files
 
@@ -377,7 +408,12 @@ preview proxy in an iframe — no new server surface.
 `_stream_logs` progress lines, streamed to the browser over SSE; used by
 create/destroy/squash) · `ErrorToast` (renders the protocol's
 `{kind, message, details}` error shape uniformly) · `PollController`
-(per-page polling with fast/slow modes).
+(per-page polling: fast ~300–500ms for visible running surfaces, ~2s for
+backgrounded ones, idle decay with instant recovery on new output, and
+interaction nudges that fire an immediate read after `exec_command` /
+`write_command_stdin`; pauses on hidden tabs or unmounted views and fires an
+immediate catch-up refetch on return — every consumer resumes from its last
+cursor, never from scratch).
 
 ## API gaps to close before building
 
@@ -386,6 +422,8 @@ create/destroy/squash) · `ErrorToast` (renders the protocol's
    [[http-server]]. RPC and preview pass through 1:1 to the gateway protocol
    and `daemon_http` respectively; no other backend work needed — `/health`
    and `/forward` already exist on `daemon_http`.
-3. Optional, nice-to-have: a fleet-wide event feed (currently `events` is
-   per-sandbox only) and binary file transfer (`file_read`/`file_write` are
-   UTF-8-text-only).
+3. Optional, nice-to-have: `list_command_sessions` (the command family
+   can't enumerate past commands — the web ledger works around it with
+   `localStorage`, but a fresh browser sees only in-flight commands), a
+   fleet-wide event feed (currently `events` is per-sandbox only), and
+   binary file transfer (`file_read`/`file_write` are UTF-8-text-only).

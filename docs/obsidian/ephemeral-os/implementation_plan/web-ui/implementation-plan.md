@@ -12,7 +12,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 
 | Phase | Title | Depends on | Status |
 |---|---|---|---|
-| 0 | Decisions & scaffolding | — | not started |
+| 0 | Decisions & scaffolding | — | done (2026-07-07) |
 | 1 | `sandbox-console` HTTP server v0 | 0 | not started |
 | 2 | SPA shell & shared components | 1 | not started |
 | 3 | Fleet Board | 2 | not started |
@@ -113,16 +113,16 @@ console work is a boundary-law violation to catch in review.
 
 Goal: everything later phases assume, decided and committed.
 
-- [ ] Adopt the stack fixed in [[design]]: React 19 + TypeScript + Vite
+- [x] Adopt the stack fixed in [[design]]: React 19 + TypeScript + Vite
       under `web/console/`, Tailwind tokens for the light theme, and the
       package set listed there.
-- [ ] Decide asset packaging: `cargo run -p xtask -- package` (or a sibling
-      xtask verb) builds the SPA and embeds/copies `dist/` for
+- [x] Decide asset packaging: `cargo run -p xtask -- package-console` builds
+      the SPA (`web/console/dist`) and stages it into `dist/console` for
       `sandbox-console` to serve.
-- [ ] Scaffold `sandbox-console` bin crate: config (gateway endpoint, auth
+- [x] Scaffold `sandbox-console` bin crate: config (gateway endpoint, auth
       token, loopback bind), `GatewayClient` wiring, HTTP listener, serves a
       placeholder SPA.
-- [ ] Add the crate to `README.md`'s component table with its boundary law.
+- [x] Add the crate to `README.md`'s component table with its boundary law.
 
 Exit: `cargo run -p sandbox-console` serves a hello page on loopback;
 workspace builds and clippy passes.
@@ -163,8 +163,9 @@ Goal: the app skeleton every page plugs into.
       (protocol-in-body vs transport-in-status).
 - [ ] Catalog-driven form/validation helper backed by `/api/catalog` (used
       by CreateSandboxModal and any op form; keeps UI arguments drift-free).
-- [ ] `PollController` (per-page polling, fast/slow modes, stops when tab
-      hidden).
+- [ ] `PollController` (per-page polling: ~300–500ms fast / ~2s slow, idle
+      decay with instant recovery, interaction nudges, pause when hidden,
+      immediate catch-up refetch on return from last cursor).
 - [ ] `ErrorToast` rendering the protocol `{kind, message, details}` shape.
 - [ ] `StateBadge`, `ResourceSparkline`, `StreamLogPane` (SSE),
       `ConfirmDestroyDialog`, `PortPreview` launcher (navigates to Preview
@@ -212,16 +213,25 @@ The first product priority: sessions + exec + stdin + live transcript.
       refusal path listing `active_command_session_ids` as `#cmd-` jump
       links.
 - [ ] `CommandComposer`: command text, target session or "auto-publish"
-      (implicit `publish_then_destroy`), optional timeout; fires
-      `exec_command` with hidden `yield_time_ms: 0`.
-- [ ] `CommandCard`: session chip, running/completed/failed/timed-out states,
-      collapsible, addressable as `#cmd-<command-session-id>`.
+      (implicit `publish_then_destroy`), optional timeout (user-visible;
+      `yield_time_ms` is agent-only, pinned to 0 and hidden); submit opens
+      the new command's terminal expanded and focused.
+- [ ] `CommandCard`: a terminal frame when expanded (integrated input line,
+      tail-pinned autoscroll), a one-line ledger row when collapsed; session
+      chip, running/completed/failed/timed-out states, addressable as
+      `#cmd-<command-session-id>`. Line discipline only — no PTY/raw mode.
 - [ ] `TranscriptViewer`: offset-tracked tail via `read_command_lines`
       (≤1000 lines/fetch), infinite scroll-back, **plus the inline path** —
       a command that beats the initial wait returns terminal output with no
       `command_session_id`, and the card renders it without polling.
-- [ ] `StdinBar`: text input + Ctrl-C/Ctrl-D → `write_command_stdin`; only
-      while running.
+- [ ] `StdinBar`: the terminal's input line while running — Enter →
+      `write_command_stdin` (yield 0) + an immediate `read_command_lines`
+      poll nudge for instant reaction; Ctrl-C/Ctrl-D captured as keystrokes
+      when the frame is focused, explicit buttons kept for discoverability.
+- [ ] Ledger persistence + catch-up: known command ids (text, timestamps)
+      in `localStorage` per sandbox; reload rebuilds the ledger from
+      storage plus snapshot in-flight executions; on return to the tab,
+      transcripts resume from their last offset with a catch-up nudge.
 
 Exit: run a server, watch it log, poke it with stdin, Ctrl-C it, watch the
 implicit-session publish appear — all without leaving the tab.
@@ -320,3 +330,7 @@ fully `done`.
   embed; fallback is new-tab, accepted as v0 behavior.
 - **Binary / non-UTF-8 files** (Phase 7): `file_read`/`file_write` are
   UTF-8-text-only; Files tab shows a "binary file" placeholder in v0.
+- **Command history is per-browser** (Phase 5): no `list_command_sessions`
+  op exists; `localStorage` rebuilds the ledger, but a fresh browser sees
+  only in-flight commands. Add the listing op later if shared history
+  matters.

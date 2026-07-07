@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+
+token_file=${SANDBOX_GATEWAY_TOKEN_FILE:-/tmp/eos-gateway.token}
+if [ -z "${SANDBOX_GATEWAY_AUTH_TOKEN:-}" ] && [ -f "$token_file" ]; then
+    SANDBOX_GATEWAY_AUTH_TOKEN=$(cat "$token_file")
+    export SANDBOX_GATEWAY_AUTH_TOKEN
+fi
+
+if [ -z "${SANDBOX_CONSOLE_ASSETS:-}" ]; then
+    for candidate in "$repo_root/dist/console" "$repo_root/web/console/dist"; do
+        if [ -f "$candidate/index.html" ]; then
+            SANDBOX_CONSOLE_ASSETS=$candidate
+            export SANDBOX_CONSOLE_ASSETS
+            break
+        fi
+    done
+fi
+
+local_bin="$repo_root/target/debug/sandbox-console"
+if [ -x "$local_bin" ]; then
+    exec "$local_bin" "$@"
+fi
+
+exec cargo run --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-console --bin sandbox-console -- "$@"

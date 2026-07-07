@@ -105,15 +105,33 @@ console can't afford it.
 | Routing | `react-router` v7 | the spec's route map — nested tabs, `#cmd-` anchors, query-param scopes — maps 1:1 |
 | Server state / polling | TanStack Query v5 | `refetchInterval` + visibility pause *is* `PollController`; keep-previous-data gives flicker-free polls |
 | Virtualization | TanStack Virtual | `TranscriptViewer`, `FileViewer`, `EventStream` |
-| Headless primitives | Radix UI via shadcn/ui-style copies | dialogs/tabs/dropdowns/toasts accessible out of the box, zero imposed look |
+| Headless primitives | Radix UI, vendored via the shadcn pattern (see below) | dialogs/tabs/dropdowns/toasts accessible out of the box, zero imposed look |
 | Styling | Tailwind CSS v4 | tokens from §1 as CSS variables; no runtime cost |
 | File view/edit | CodeMirror 6 | its gutter extension is exactly `BlameGutter`; solid read-only + large-document behavior |
 | Time-series charts | uPlot | tiny and fast for the Resources tab; sparklines are plain inline SVG |
 | Icons | `lucide-react` | consistent stroke set, tree-shakeable |
 
+### shadcn: a scaffolding technique, not a design system
+
+"Using shadcn" here means one specific thing. shadcn/ui is not a library we
+depend on — its CLI copies component source (Radix primitives + Tailwind
+classes) into `web/console/src/components/`, and from that point the code is
+ours: versionless, no upstream to track, restyled to the §1 tokens rather
+than shadcn's default look. The only `package.json` entries it produces are
+the underlying Radix primitives.
+
+Its scope is the chrome only: dialog, tabs, dropdown, select, toast,
+tooltip. The surfaces that make this console what it is — `CommandCard`,
+`TranscriptViewer`, `SessionSidebar`, `BlameGutter`, `TraceWaterfall`,
+`LayerStackViz`, sparklines — exist in no component catalog and are always
+custom-built, never shadcn-generated.
+
+### Hand-rolled by design
+
 `TraceWaterfall` and `LayerStackViz` are **custom SVG/DOM** — no charting
 library models trace waterfalls or layer stacks well, and wrestling one is
-worse than drawing rectangles.
+worse than drawing rectangles. Sparklines are plain inline SVG for the same
+reason: uPlot is overkill at that size.
 
 Explicitly **not** used:
 
