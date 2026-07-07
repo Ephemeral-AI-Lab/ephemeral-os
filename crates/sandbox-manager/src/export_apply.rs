@@ -311,13 +311,32 @@ fn apply_content(
                     .ok_or_else(|| format!("unreachable file {}", comps.join("/")))?;
                 let name = last(comps);
                 if unchanged(&parent, name, *size, *mtime) {
-                    stats.skipped_unchanged += 1;
-                    continue;
+                    // A (size, second-mtime) match is only a *candidate* skip: it
+                    // holds for a genuine prior-export watermark, but equally for a
+                    // pre-existing dest file that collides on size and shares the
+                    // winner's mtime second (the documented skip-unchanged
+                    // sub-second hole). Confirm by content so a real winner is
+                    // never skipped; an identical re-run still skips with zero
+                    // bytes written (invariant 4).
+                    let mut winner_bytes = Vec::new();
+                    entry
+                        .read_to_end(&mut winner_bytes)
+                        .map_err(map_cap_error)?;
+                    if dest_file_content_equals(&parent, name, &winner_bytes)? {
+                        stats.skipped_unchanged += 1;
+                        continue;
+                    }
+                    remove_recursive_at(&parent, name)?;
+                    let mut reader = winner_bytes.as_slice();
+                    let written = write_file(&parent, name, *mode, *mtime, &mut reader)?;
+                    stats.bytes_written += written;
+                    stats.files_written += 1;
+                } else {
+                    remove_recursive_at(&parent, name)?;
+                    let written = write_file(&parent, name, *mode, *mtime, &mut entry)?;
+                    stats.bytes_written += written;
+                    stats.files_written += 1;
                 }
-                remove_recursive_at(&parent, name)?;
-                let written = write_file(&parent, name, *mode, *mtime, &mut entry)?;
-                stats.bytes_written += written;
-                stats.files_written += 1;
             }
             PlannedEntry::Symlink { comps } => {
                 let target = entry
@@ -507,6 +526,29 @@ fn unchanged(parent: &OwnedFd, name: &str, size: u64, mtime: u64) -> bool {
         return false;
     };
     dest_size == size && dest_mtime == mtime
+}
+
+/// Confirm a candidate skip by content: read the existing dest regular file
+/// (reached no-follow) and compare it byte-for-byte to the winner. Returns
+/// `false` when the file cannot be read as a plain file, so the winner is
+/// written rather than skipped.
+fn dest_file_content_equals(parent: &OwnedFd, name: &str, winner: &[u8]) -> Result<bool, String> {
+    let fd = match rustix::fs::openat(
+        parent,
+        name,
+        OFlags::RDONLY | OFlags::NOFOLLOW | OFlags::CLOEXEC,
+        Mode::empty(),
+    ) {
+        Ok(fd) => fd,
+        Err(Errno::NOENT) => return Ok(false),
+        Err(errno) if is_non_directory(errno) => return Ok(false),
+        Err(errno) => return Err(format!("open {name} for content compare: {errno}")),
+    };
+    let mut file = std::fs::File::from(fd);
+    let mut current = Vec::new();
+    file.read_to_end(&mut current)
+        .map_err(|error| format!("read {name} for content compare: {error}"))?;
+    Ok(current == winner)
 }
 
 fn write_file(

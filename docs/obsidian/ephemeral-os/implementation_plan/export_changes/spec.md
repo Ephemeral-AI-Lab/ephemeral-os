@@ -444,17 +444,25 @@ Invariants:
    pre-allocates on them, loops on actual EOF, and caps both decompressed
    output (tar mode, against a zstd bomb) and per-run entry count (against a
    millions-of-empty-files bomb). No canonicalization means no export.
-10. **Fidelity boundary** — the stream carries content, file/dir mode
+10. **Fidelity boundary** — the stream carries content, **file** mode
     (second-granular mtime), symlink targets, logical deletions, and opaque
     cuts. It does NOT carry uid/gid (files land owned by the manager
-    process), user xattrs, or cross-winner hardlinks (hardlinked winners are
-    emitted as duplicate content). Filenames beginning with `.wh.` cannot be
+    process), user xattrs, cross-winner hardlinks (hardlinked winners are
+    emitted as duplicate content), or **directory mode**. Directory mode is
+    outside the boundary because the overlay-capture model records directories
+    only implicitly — via their file/symlink/opaque children, never as a
+    first-class `LayerChange` (`workspace/src/overlay/capture.rs`) — so an
+    empty directory is not captured at all and every consumer (squash,
+    `MergedView`, and this export) materializes a directory at the layer-write
+    default rather than the sandbox's `chmod`. The emit stage carries the
+    directory's on-disk (default) mode faithfully; it simply has no
+    sandbox-set mode to carry. Filenames beginning with `.wh.` cannot be
     represented as content — `.wh.` is a reserved namespace and publish
     fail-closes on any `.wh.`-prefixed path component (`ProtectedPath`,
     `stack/publish/route.rs:22-33`), so the logical `.wh.<name>` deletion
     encoding on the stream is unambiguous by construction. "Lossless
     OCI-style layer" (B4) means lossless for that carried set, not for
-    ownership, xattrs, or hardlinks.
+    ownership, xattrs, hardlinks, or directory mode.
 
 ## A. Expected file/folder structure with LoC change
 

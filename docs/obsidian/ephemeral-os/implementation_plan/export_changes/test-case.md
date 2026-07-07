@@ -365,10 +365,10 @@ One interaction dimension per case.
 - **Host-safety**: n/a.
 - **Incremental**: `content_bytes_written` is O(delta), not O(image) — the base bytes the host already owns are not re-copied.
 
-#### MED-09 — metadata fidelity: mode carried, uid/gid + xattrs not (inv 10)
-- **Spec**: inv 10. **Fixture**: `delta` publishing a file `chmod 0640` and a directory `chmod 0700`, plus a user xattr on a file where the platform allows. **Dest**: `dest_fresh`.
+#### MED-09 — metadata fidelity: file mode carried, uid/gid + xattrs + dir mode not (inv 10)
+- **Spec**: inv 10. **Fixture**: `delta` publishing a file `chmod 0640` and a directory `chmod 0700` **holding a child** (an empty directory is not a `LayerChange` — the overlay capture records directories only implicitly via their children, `workspace/src/overlay/capture.rs`), plus a user xattr on a file where the platform allows. **Dest**: `dest_fresh`.
 - **Steps**: `export_changes(dir)` → `stat` the file and dir; read xattrs.
-- **Correctness**: file mode `0640`, dir mode `0700` (carried); uid/gid equal the **manager process** owner, not the sandbox's (not carried); the user xattr is **absent** (documented boundary, not a defect).
+- **Correctness**: file mode `0640` (carried); the directory is reproduced as a directory-only shape (inv 2) with its child, but its **mode is not carried** — the capture model emits no directory mode, so every consumer (squash, `MergedView`, export) materializes a directory at the layer-write default, never the sandbox's `chmod`; uid/gid equal the **manager process** owner, not the sandbox's (not carried); the user xattr is **absent**. All three are the documented fidelity boundary, not defects.
 - **Host-safety**: n/a.
 - **Incremental**: n/a.
 
@@ -448,9 +448,9 @@ catalog's weight (adversarial Axis 4 outranks the rest).
 - **Incremental**: wall-clock, chunk count, and start-request duration recorded (informational; no hard budget in v1).
 
 #### HRD-10 — daemon restart mid-paging (adversarial M3 + H1)
-- **Spec**: M3 (in-memory registry), H1 (export boot reap). **Fixture**: a delta large enough to span several chunks. **Dest**: `dest_fresh`.
-- **Steps**: begin `export_changes`; kill + restart the daemon after the first chunk but before eof; observe the manager's next `read_export_chunk`; then re-run the export.
-- **Correctness**: the interrupted invocation aborts with a structured **export-not-found** error (the in-memory `{export_id → spool}` registry dropped); the re-run rebuilds the spool and converges — the exported tree equals the merged view.
+- **Spec**: M3 (in-memory registry), H1 (export boot reap). **Fixture**: a delta large enough to span several chunks — an **incompressible** ~6 MiB payload generated container-side (`head -c … /dev/urandom`, under the 8 MiB capture cap); a repeated byte compresses to one chunk and an ~8 MiB `--content` CLI arg exceeds the host `ARG_MAX`. **Dest**: `dest_fresh`.
+- **Steps**: begin `export_changes`; kill + restart the daemon after the first chunk but before eof, then re-run the export. In the Docker deployment the daemon lives and dies with its container (`docker-init` pid 1 exits with its daemon child), so "restart the daemon" is a `docker restart` of the sandbox container — which reassigns the daemon's ephemeral host ports. The manager re-resolves those ports by label on gateway startup (`recover_sandboxes`), not per forward, so recovering the manager's view before the re-run is a **gateway restart** (the same recovery path a real daemon/container bounce would take). Observe the manager's next `read_export_chunk`, recover, then re-run.
+- **Correctness**: the interrupted invocation aborts with a structured error (the in-memory `{export_id → spool}` registry dropped with the daemon; the surfacing message is `export-not-found` when paging outlives the restart, or a forward/transport failure when the connection drops mid-request); the re-run rebuilds the spool and converges — the exported tree equals the merged view.
 - **Host-safety** (load-bearing): the orphaned spool left under `<scratch_root>/.export/` is removed by the **export boot step** on restart (P4), not leaked; the partial `dest_fresh` converges on the re-run (dir idempotence).
 - **Incremental**: the re-run is byte-identical to a clean export.
 

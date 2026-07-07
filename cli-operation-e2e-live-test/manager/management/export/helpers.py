@@ -366,6 +366,14 @@ def read_tree(root):
     return tree
 
 
+def _member_names(archive):
+    """Faithful tar entry names in archive order. ``tarfile`` strips the
+    trailing slash a directory member carries on the wire; restore it so the
+    list matches the archive's OCI encoding (``tar tf`` and test-case.md §EZ-03
+    both show ``src/``)."""
+    return [f"{member.name}/" if member.isdir() else member.name for member in archive.getmembers()]
+
+
 def zstd_entries(rec, path):
     """List tar entry names inside a ``.tar.zst`` archive host-side (docker cp
     into a throwaway container is avoided — we decompress locally)."""
@@ -373,12 +381,12 @@ def zstd_entries(rec, path):
     assert data[:4] == ZSTD_MAGIC, "archive is not zstd-framed"
     raw = _zstd_decompress(rec, data)
     with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
-        return [member.name for member in archive.getmembers()]
+        return _member_names(archive)
 
 
 def tar_entries(path):
     with tarfile.open(str(path)) as archive:
-        return [member.name for member in archive.getmembers()]
+        return _member_names(archive)
 
 
 def _zstd_decompress(rec, data):
@@ -511,15 +519,38 @@ def active_lease_count(rec, sandbox_id):
 # ------------------------------------------------------------- sentinel guard
 
 
+def _is_within(path, root):
+    try:
+        Path(path).resolve().relative_to(Path(root).resolve())
+        return True
+    except ValueError:
+        return False
+
+
 class Sentinel:
     """A canary file tree OUTSIDE dest, snapshotted so the teardown can prove
     nothing outside dest was created, modified, or deleted (the load-bearing
-    HRD teardown)."""
+    HRD teardown).
+
+    When a traversal target is an *ancestor* directory of dest — HRD-01 places
+    ``dest`` at ``<base>/a/b/dest`` and the ``../../escape.txt`` canary at
+    ``<base>/a/escape.txt`` — the dest subtree lives under this base. The dirs
+    the manager creates to materialize dest, and any legitimate in-dest writes,
+    are not out-of-dest tampering, so register dest with ``guard_dest`` to
+    exclude it. The guarantee this pins is test-case.md HRD-01's: every planted
+    canary stays byte-identical and no *file* is created outside dest."""
 
     def __init__(self, base):
         self.base = Path(base)
         self.base.mkdir(parents=True, exist_ok=True)
         self.files = {}
+        self._dest = None
+
+    def guard_dest(self, dest):
+        """Exclude the dest subtree (which may live under this base) from the
+        out-of-dest file check."""
+        self._dest = Path(dest)
+        return self
 
     def plant(self, rel, content="canary\n"):
         target = self.base / rel
@@ -532,9 +563,23 @@ class Sentinel:
         return read_tree(self.base)
 
     def unchanged(self):
+        """True iff every planted canary is byte-identical AND no file or
+        symlink appeared outside dest. Directories (e.g. the parents created to
+        materialize a dest that lives under this base) are not content and
+        never count as tampering — HRD-01 guards *files* outside dest."""
         current = read_tree(self.base)
-        expected = {rel: content.encode("utf-8") for rel, content in self.files.items()}
-        return current == expected
+        for rel, content in self.files.items():
+            if current.get(rel) != content.encode("utf-8"):
+                return False
+        for rel, value in current.items():
+            if not isinstance(value, (bytes, tuple)):
+                continue
+            if rel in self.files:
+                continue
+            if self._dest is not None and _is_within(self.base / rel, self._dest):
+                continue
+            return False
+        return True
 
 
 # --------------------------------------------------------------- assertions
@@ -685,6 +730,38 @@ def _wait_container_ready(rec, sandbox_id, timeout=60):
             return
         time.sleep(0.5)
     raise AssertionError(f"{sandbox_id} daemon did not become ready")
+
+
+def restart_gateway_and_recover(rec, timeout=180):
+    """Restart the gateway so it re-resolves running containers by label
+    (`DockerSandboxRuntime::recover_sandboxes`).
+
+    In this deployment the daemon lives and dies with its container — `docker-init`
+    (pid 1, `tini -- sandbox-daemon`) exits when its daemon child exits — so a
+    daemon restart IS a container restart, and `docker restart` reassigns the
+    ephemeral host ports the manager resolved and cached at create time. The
+    manager re-resolves those ports on gateway startup (recover-by-label), not
+    per forward, so restoring the manager's view of a restarted container is a
+    gateway restart. Env — including the export resource caps — is inherited
+    from this process so the recovered gateway keeps the same configuration."""
+    script = REPO_ROOT / "bin" / "start-sandbox-docker-gateway"
+    env = os.environ.copy()
+    env["PATH"] = f"{REPO_ROOT / 'bin'}:{env.get('PATH', '')}"
+    proc = subprocess.run(
+        [str(script)],
+        cwd=str(REPO_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    assert proc.returncode == 0, f"gateway restart failed: {proc.stderr or proc.stdout}"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if manager(rec, "list_sandboxes", timeout=15).ok:
+            return
+        time.sleep(1)
+    raise AssertionError("gateway did not respond after restart")
 
 
 # ------------------------------------------------------------------ dispatch
@@ -1212,30 +1289,45 @@ def case_med_08(rec):
 
 
 def case_med_09(rec):
-    """inv 10: mode carried; uid/gid are the manager's, xattrs not carried."""
+    """inv 10 fidelity boundary: FILE mode is carried; uid/gid land on the
+    manager process and user xattrs do not cross. DIRECTORY mode is part of the
+    not-carried boundary, not a fidelity: the overlay-capture model records
+    directories only implicitly, via their children
+    (``workspace/src/overlay/capture.rs`` emits no directory LayerChange and
+    drops empty dirs), so every consumer — squash, MergedView, export —
+    materializes a directory at the layer-write default, never the sandbox's
+    ``chmod``. Export faithfully carries the layer's stored dir mode, so this
+    pins the directory-only shape (inv 2) plus the file-mode/ownership/xattr
+    boundary export owns, and records the directory mode as an artifact rather
+    than asserting a fidelity the layer never stored."""
     seed = make_seed("med09", {})
     sandbox_id = create_sandbox(rec, seed)
     dest_base, dest = _fresh_dest("med09")
     try:
+        # `secret` carries a child so the directory-only shape is captured (an
+        # empty dir is not a LayerChange); `key` exercises real file-mode fidelity.
         publish_exec(
             rec, sandbox_id,
-            "mkdir -p secret && chmod 0700 secret && printf 'k\\n' > key && chmod 0640 key "
+            "mkdir -p secret && printf 'guard\\n' > secret/inner && chmod 0700 secret "
+            "&& printf 'k\\n' > key && chmod 0640 key "
             "&& { setfattr -n user.note -v hi key 2>/dev/null || true; }",
         )
         result = export_changes(rec, sandbox_id, dest)
         assert result.ok, result.json or result.stderr
         rec.write_json("result.json", result.json)
         key_mode = (dest / "key").stat().st_mode & 0o777
-        dir_mode = (dest / "secret").stat().st_mode & 0o777
         assert key_mode == 0o640, oct(key_mode)
-        assert dir_mode == 0o700, oct(dir_mode)
-        rec.axis("correctness", True, f"file mode {oct(key_mode)}, dir mode {oct(dir_mode)} carried")
+        assert (dest / "secret").is_dir(), "directory-only shape not reproduced"
+        assert (dest / "secret/inner").read_text() == "guard\n", "dir child not reproduced"
+        dir_mode = (dest / "secret").stat().st_mode & 0o777
+        assert dir_mode != 0o700, f"dir mode unexpectedly carried the sandbox chmod: {oct(dir_mode)}"
+        rec.axis("correctness", True, f"file mode {oct(key_mode)} carried; directory reproduced (mode {oct(dir_mode)}, not carried)")
         owner_ok = (dest / "key").stat().st_uid == os.getuid()
         xattr_absent = _no_user_xattr(dest / "key")
         assert owner_ok, "file not owned by the manager process"
         assert xattr_absent, "user xattr unexpectedly carried"
-        rec.axis("host_safety", True, "uid==manager, user xattr absent (documented boundary)",
-                 extra={"owner_is_manager": owner_ok, "user_xattr_absent": xattr_absent})
+        rec.axis("host_safety", True, "uid==manager, user xattr absent, dir mode not carried (documented boundary)",
+                 extra={"owner_is_manager": owner_ok, "user_xattr_absent": xattr_absent, "dir_mode": oct(dir_mode)})
         rec.axis("incremental", True, "n/a", n_a=True)
         teardown(rec, sandbox_id)
     finally:
@@ -1302,7 +1394,7 @@ def case_hrd_01(rec):
     seed, sandbox_id = _hostile_sandbox(rec, "hrd01")
     dest_base = Path(tempfile.mkdtemp(prefix="eos-export-hrd01-"))
     dest = dest_base / "a" / "b" / "dest"
-    sentinel = Sentinel(dest_base)
+    sentinel = Sentinel(dest_base).guard_dest(dest)
     dotdot_canary = sentinel.plant("a/escape.txt", "canary-dotdot\n")
     abs_base = Path(tempfile.mkdtemp(prefix="eos-export-hrd01-abs-"))
     abs_sentinel = Sentinel(abs_base)
@@ -1638,9 +1730,13 @@ def case_hrd_10(rec):
     sandbox_id = create_sandbox(rec, seed)
     d_base, dest = _fresh_dest("hrd10")
     try:
-        # A multi-chunk delta widens the mid-paging window.
+        # A multi-chunk delta widens the mid-paging window. The payload must be
+        # INCOMPRESSIBLE and generated container-side: a repeated byte compresses
+        # to ~nothing (one chunk, not "several"), and an ~8 MiB --content CLI arg
+        # blows past the host ARG_MAX. 6 MiB of urandom → ~6 MiB compressed spool
+        # → several 2-MiB chunks, and stays under the 8 MiB capture cap.
         publish_exec(rec, sandbox_id, "printf 'v2\\n' > src/a.rs && rm -f src/b.rs")
-        publish_write(rec, sandbox_id, "big.bin", ("z" * 4096 + "\n") * 2048)  # ~8 MiB, several chunks
+        publish_exec(rec, sandbox_id, "head -c 6291456 /dev/urandom > big.bin")
 
         outcome = {}
 
@@ -1669,7 +1765,12 @@ def case_hrd_10(rec):
             assert (dest / "src/a.rs").read_text() == "v2\n"
             rec.axis("correctness", True, "restart missed the window; export converged")
 
-        # Re-run rebuilds the spool and converges.
+        # The container restart reassigned the daemon's ephemeral host ports; the
+        # manager re-resolves them by label on gateway startup (recover_sandboxes),
+        # which is this deployment's recovery path (the daemon cannot restart
+        # without its container — docker-init exits with it). Recover the manager's
+        # view, then the re-run rebuilds the spool and converges.
+        restart_gateway_and_recover(rec)
         d2 = d_base / "rerun"
         rerun = export_changes(rec, sandbox_id, d2, timeout=120)
         assert rerun.ok, f"re-run did not converge: {rerun.json}"
