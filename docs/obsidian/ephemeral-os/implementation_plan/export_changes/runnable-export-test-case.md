@@ -7,8 +7,9 @@ tags:
   - export
   - testing
   - runnable
-status: draft
+status: verified
 updated: 2026-07-07
+verified_run: export-runnable-20260707 (5/5 pass, four axes + teardown)
 ---
 
 # Runnable-project export round-trip (5 projects)
@@ -120,16 +121,22 @@ load-bearing **runnable** axis:
 ```json
 {
   "case_id": "RUN-01",
-  "runnable": {
-    "pass": true,
-    "container_run": { "pass": true, "exit_code": 0, "output_match": true, "image": "node:22-slim" },
-    "host_run":      { "status": "pass|skip|xfail", "exit_code": 0, "reason": "" }
+  "axes": {
+    "runnable": {
+      "pass": true,
+      "container_run": { "pass": true, "exit_code": 0, "output_match": true, "image": "node:22-slim" },
+      "host_run":      { "status": "pass|skip|xfail", "exit_code": 0, "reason": "" },
+      "boundary_run":  { "status": "xfail", "exit_code": 1, "mount_at": "/elsewhere", "reason": "…" }
+    }
   }
 }
 ```
 
-`runnable.pass == container_run.pass`. `host_run` is informational
-(`skip`/`xfail` never fails the case). The `correctness` axis additionally
+The axis nests under `axes.runnable`, joining the landed three-axis layout of
+test-case.md §2 (so `verdict.json` stays one schema across both catalogs);
+`boundary_run` appears only where a case exercises the wrong-path/platform
+boundary (RUN-03/04/05). `runnable.pass == container_run.pass`. `host_run` is
+informational (`skip`/`xfail` never fails the case). The `correctness` axis additionally
 asserts the build artifacts are present in the export result
 (`files_written` > the source-file count; specific dep paths on disk);
 `incremental` (where run) asserts a source-only re-export skips the dep tree.
@@ -255,7 +262,49 @@ four axes; the run bundles into the same `SUMMARY.md`.
 | inv 10 / B4 — fidelity + portability boundary (native, venv, wheel, hardlink) | **RUN-03, RUN-04, RUN-05** |
 | cost table — base never crosses; delta = the build output | RUN-02, RUN-03 (fresh dest) |
 
-## 7. Non-goals
+## 7. Landing corrections (2026-07-07) — spec vs realizable behavior
+
+Recorded while implementing RUN-01…05; each is a correction of this draft to
+what actually runs, or a product change the spec forced. Assertions were never
+weakened.
+
+1. **Product change — the 8 MiB per-file overlay-capture cap is removed**
+   (`workspace/src/overlay/capture.rs`). Capture is metadata-only: file
+   winners become `LayerChange::WriteFile` source-path references and publish
+   streams their content (`stack/layer/write.rs`), so the cap guarded no
+   memory materialization — it was a fossil of the pre-`WriteFile` in-memory
+   design. It made real toolchain artifacts unpublishable
+   (`typescript/lib/typescript.js` ≈ 8.7 MB, numpy's vendored
+   `libscipy_openblas` ≈ 25 MB), directly contradicting B1's workable-tree
+   promise that this spec pins. No invariant or test relied on it; a captured
+   tree is bounded by the sandbox's own storage.
+2. **`npm install`, not `npm ci`** — `npm ci` refuses to run without a
+   committed `package-lock.json`, and the minimal seeds ship none (hand-
+   authoring integrity hashes is not realizable). The lockfile lands as part
+   of the published delta instead, which the incremental axis then tracks.
+3. **Probes use the language runtime, not `curl`** — the slim images ship no
+   curl/wget; §0 already forbids assuming toolchain beyond the runtime. The
+   seeds carry `probe.js` (node `http`) / `probe.py` (`urllib`) and `verify.sh`
+   fails fast when the server dies at startup (which is exactly how the
+   `/elsewhere` venv boundary manifests).
+4. **RUN-03's `app.js`/`verify.sh` are published, not seeded** — the case
+   exports onto a *fresh* dest, which carries only the delta; a seed-resident
+   `app.js` would never cross. Publishing them in-sandbox composes the
+   fresh-dest cost proof with the run proof.
+5. **RUN-04's verify runs the `.venv/bin/flask` console script**, not
+   `.venv/bin/python -m flask` — the baked `#!/workspace/.venv/bin/python`
+   shebang IS the relocation boundary; `python -m flask` resolves the venv
+   relative to the invoking interpreter path and relocates cleanly, which
+   would hide the boundary the case exists to document.
+6. **`run_in_image` publishes no ports** — the probe runs inside the
+   verification container against 127.0.0.1, so `-p`/`ports` never applies;
+   the helper signature drops it.
+7. **Dependency versions are pinned** (express 4.19.2, typescript 5.4.5,
+   better-sqlite3 ^11.9.1, flask 3.0.3, numpy 2.2.6, pytest 8.3.5) so the
+   built trees — and the boundary artifacts they must contain — stay
+   deterministic across runs.
+
+## 8. Non-goals
 
 - **Cross-arch / cross-OS portability of native artifacts** — explicitly out of
   scope and documented as `xfail`; export is content fidelity, not a portable

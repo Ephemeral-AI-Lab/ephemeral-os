@@ -19,8 +19,6 @@ use crate::model::{ProtectedPathDrop, ProtectedPathDropReason};
 
 use super::tree::TreeResourceStats;
 
-const MAX_CAPTURE_FILE_BYTES: usize = 8 * 1024 * 1024;
-
 /// Captured upperdir changes and resource stats.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapturedChanges {
@@ -81,36 +79,34 @@ enum PendingChange {
 }
 
 impl PendingChange {
-    fn materialize_in_memory(
-        self,
-        max_bytes: usize,
-    ) -> std::result::Result<LayerChange, CaptureError> {
+    fn into_layer_change(self) -> LayerChange {
         match self {
             Self::Write {
                 path,
                 source_path,
                 meta,
-            } => {
-                ensure_capture_file_size(&source_path, meta.len(), max_bytes)?;
-                Ok(LayerChange::WriteFile {
-                    path,
-                    source_path,
-                    size: meta.len(),
-                })
-            }
-            Self::Delete { path } => Ok(LayerChange::Delete { path }),
-            Self::Symlink { path, source_path } => Ok(LayerChange::Symlink { path, source_path }),
-            Self::OpaqueDir { path } => Ok(LayerChange::OpaqueDir { path }),
+            } => LayerChange::WriteFile {
+                path,
+                source_path,
+                size: meta.len(),
+            },
+            Self::Delete { path } => LayerChange::Delete { path },
+            Self::Symlink { path, source_path } => LayerChange::Symlink { path, source_path },
+            Self::OpaqueDir { path } => LayerChange::OpaqueDir { path },
         }
     }
 }
 
 /// Capture a workspace overlay upperdir into concrete layer changes.
 ///
+/// Capture is metadata-only: file winners become [`LayerChange::WriteFile`]
+/// source-path references and publish streams their content, so no payload
+/// size bound applies here — a captured tree is limited only by the
+/// sandbox's own storage.
+///
 /// # Errors
 ///
-/// Returns [`CaptureError`] when metadata capture or selected payload
-/// materialization fails.
+/// Returns [`CaptureError`] when metadata capture fails.
 pub fn capture_upperdir(upperdir: &Path) -> std::result::Result<CapturedChanges, CaptureError> {
     std::fs::create_dir_all(upperdir).map_err(|err| CaptureError::capture(upperdir, err))?;
     let mut emitted_opaque_dirs = HashSet::new();
@@ -130,8 +126,8 @@ pub fn capture_upperdir(upperdir: &Path) -> std::result::Result<CapturedChanges,
     )?;
     let changes = entries
         .into_iter()
-        .map(|entry| entry.materialize_in_memory(MAX_CAPTURE_FILE_BYTES))
-        .collect::<std::result::Result<Vec<_>, CaptureError>>()?;
+        .map(PendingChange::into_layer_change)
+        .collect();
     Ok(CapturedChanges {
         changes,
         protected_drops,
@@ -243,28 +239,6 @@ fn push_opaque_dir(
     if emitted_opaque_dirs.insert(path.as_str().to_owned()) {
         entries.push(PendingChange::OpaqueDir { path });
     }
-}
-
-fn ensure_capture_file_size(
-    entry: &Path,
-    size: u64,
-    max_bytes: usize,
-) -> std::result::Result<(), CaptureError> {
-    let max = u64::try_from(max_bytes).unwrap_or(u64::MAX);
-    if size > max {
-        return Err(capture_file_too_large(entry, size, max_bytes));
-    }
-    Ok(())
-}
-
-fn capture_file_too_large(entry: &Path, size: u64, max_bytes: usize) -> CaptureError {
-    CaptureError::capture(
-        entry,
-        io::Error::new(
-            io::ErrorKind::InvalidData,
-            format!("overlay regular file too large: {size} > {max_bytes} bytes"),
-        ),
-    )
 }
 
 fn symlink_entry(

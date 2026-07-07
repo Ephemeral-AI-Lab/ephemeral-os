@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import base64
 import datetime as dt
+import hashlib
 import io
 import json
 import os
 import shutil
 import subprocess
+import sys
 import tarfile
 import tempfile
 import threading
@@ -141,7 +143,9 @@ def docker(rec, container, *args, timeout=60, check=False):
 
 
 class CaseRecorder:
-    """One case's report bundle + the three-axis verdict.json (test-case.md §2)."""
+    """One case's report bundle + the axis verdict.json: the three axes of
+    test-case.md §2, plus a fourth load-bearing ``runnable`` axis for the
+    runnable tier (runnable-export-test-case.md §3)."""
 
     def __init__(self, case):
         self.case = dict(case)
@@ -153,6 +157,8 @@ class CaseRecorder:
             "host_safety": {"pass": False, "status": "not_run"},
             "incremental": {"pass": False, "status": "not_run"},
         }
+        if self.case.get("tier") == "runnable":
+            self.axes["runnable"] = {"pass": False, "status": "not_run"}
         self.teardown = {"pass": False, "details": "not checked"}
         self.defects = []
         self.started = None
@@ -242,12 +248,15 @@ def make_seed(case_id, files=None):
     return root
 
 
-def create_sandbox(rec, workspace_root, timeout=300):
+def create_sandbox(rec, workspace_root, timeout=300, image=None):
+    """Create a sandbox over ``workspace_root``. ``image`` overrides the suite
+    default so runnable-tier projects build on their own toolchain base
+    (runnable-export-test-case.md §2)."""
     result = manager(
         rec,
         "create_sandbox",
         "--image",
-        IMAGE,
+        image or IMAGE,
         "--workspace-bind-root",
         str(workspace_root),
         timeout=timeout,
@@ -797,6 +806,11 @@ CASES = [
     {"id": "HRD-08", "tier": "hard", "title": "export under a concurrent publish"},
     {"id": "HRD-09", "tier": "hard", "title": "deep/large delta converges or fails cleanly"},
     {"id": "HRD-10", "tier": "hard", "title": "daemon restart mid-paging"},
+    {"id": "RUN-01", "tier": "runnable", "title": "Node/Express: npm install exports a runnable server"},
+    {"id": "RUN-02", "tier": "runnable", "title": "Node/TypeScript: compiled dist runs from a fresh dest"},
+    {"id": "RUN-04", "tier": "runnable", "title": "Python/Flask venv: runs at /workspace, xfails at /elsewhere"},
+    {"id": "RUN-03", "tier": "runnable", "title": "Node native addon: linux .node runs in-container, host xfail"},
+    {"id": "RUN-05", "tier": "runnable", "title": "Python/pytest + numpy wheel: exported suite passes"},
 ]
 CASE_BY_ID = {case["id"]: case for case in CASES}
 
@@ -1734,7 +1748,7 @@ def case_hrd_10(rec):
         # INCOMPRESSIBLE and generated container-side: a repeated byte compresses
         # to ~nothing (one chunk, not "several"), and an ~8 MiB --content CLI arg
         # blows past the host ARG_MAX. 6 MiB of urandom → ~6 MiB compressed spool
-        # → several 2-MiB chunks, and stays under the 8 MiB capture cap.
+        # → several 2-MiB chunks.
         publish_exec(rec, sandbox_id, "printf 'v2\\n' > src/a.rs && rm -f src/b.rs")
         publish_exec(rec, sandbox_id, "head -c 6291456 /dev/urandom > big.bin")
 
@@ -1784,6 +1798,630 @@ def case_hrd_10(rec):
         shutil.rmtree(d_base, ignore_errors=True)
 
 
+# ====================================================== RUNNABLE (RUN-01..05)
+# Runnable-project round-trip (runnable-export-test-case.md): build a real
+# Node/Python project in-sandbox, export the built tree, and RUN it — primary
+# proof in a fresh same-image container mounted at the build-time workspace
+# path, secondary best-effort on the host. The portability boundary (native
+# ABI, venv paths) is exercised for real and recorded as xfail, never hidden.
+
+NODE_IMAGE = "node:22-slim"
+PYTHON_IMAGE = "python:3.12-slim"
+WORKSPACE_MOUNT = "/workspace"
+
+NPM_INSTALL = "npm install --no-audit --no-fund --loglevel=error"
+VENV_BUILD = (
+    "python -m venv .venv && "
+    ".venv/bin/pip install --quiet --disable-pip-version-check --no-input -r requirements.txt"
+)
+
+PROBE_JS = """\
+const http = require('http');
+
+const port = process.env.PORT || 18123;
+const path = process.argv[2] || '/health';
+const expect = process.argv[3] || '';
+
+http.get({ host: '127.0.0.1', port, path }, (res) => {
+  let body = '';
+  res.on('data', (chunk) => { body += chunk; });
+  res.on('end', () => {
+    console.log(body);
+    process.exit(body.includes(expect) ? 0 : 1);
+  });
+}).on('error', () => process.exit(1));
+"""
+
+PROBE_PY = """\
+import sys
+import urllib.request
+
+url, expect = sys.argv[1], sys.argv[2]
+try:
+    body = urllib.request.urlopen(url, timeout=2).read().decode()
+except Exception:
+    sys.exit(1)
+print(body)
+sys.exit(0 if expect in body else 1)
+"""
+
+
+def _server_verify_sh(start_line, probe_line):
+    """A self-terminating verify entrypoint: start the server in the
+    background, fail fast if it dies at startup (the /elsewhere venv boundary
+    fails here), probe until healthy, print VERIFY-OK."""
+    return f"""\
+#!/bin/sh
+set -e
+PORT="${{PORT:-18123}}"
+export PORT PYTHONDONTWRITEBYTECODE=1
+{start_line} &
+SERVER_PID=$!
+trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+sleep 0.5
+kill -0 "$SERVER_PID" 2>/dev/null || {{ echo "server process died at startup"; exit 1; }}
+i=0
+until {probe_line}; do
+  i=$((i+1))
+  if [ "$i" -ge 30 ]; then echo "server never became healthy"; exit 1; fi
+  sleep 0.5
+done
+echo VERIFY-OK
+"""
+
+
+RUN01_SEED = {
+    "package.json": json.dumps(
+        {"name": "run01-express", "private": True, "dependencies": {"express": "4.19.2"}},
+        indent=2,
+    )
+    + "\n",
+    "server.js": """\
+const express = require('express');
+
+const app = express();
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+const port = process.env.PORT || 18123;
+app.listen(port, '127.0.0.1', () => console.log(`listening on ${port}`));
+""",
+    "probe.js": PROBE_JS,
+    "verify.sh": _server_verify_sh(
+        "node server.js", 'node probe.js "/health" "\\"status\\":\\"ok\\""'
+    ),
+}
+
+RUN02_SEED = {
+    "package.json": json.dumps(
+        {
+            "name": "run02-tsc",
+            "private": True,
+            "devDependencies": {"typescript": "5.4.5"},
+            "scripts": {"build": "tsc"},
+        },
+        indent=2,
+    )
+    + "\n",
+    "tsconfig.json": json.dumps(
+        {
+            "compilerOptions": {
+                "outDir": "dist",
+                "module": "commonjs",
+                "target": "es2020",
+                "strict": True,
+            },
+            "include": ["src"],
+        },
+        indent=2,
+    )
+    + "\n",
+    "src/index.ts": """\
+function sum(a: number, b: number): number {
+  return a + b;
+}
+
+console.log(`sum(2,3)=${sum(2, 3)}`);
+""",
+    "verify.sh": "#!/bin/sh\nset -e\nnode dist/index.js | grep -F 'sum(2,3)=5'\n",
+}
+
+RUN03_PACKAGE_JSON = (
+    json.dumps(
+        {"name": "run03-native", "private": True, "dependencies": {"better-sqlite3": "^11.9.1"}},
+        indent=2,
+    )
+    + "\n"
+)
+
+RUN03_APP_JS = """\
+const Database = require('better-sqlite3');
+
+const db = new Database(':memory:');
+const row = db.prepare('SELECT 1+1 AS v').get();
+console.log(`v=${row.v}`);
+process.exit(row.v === 2 ? 0 : 1);
+"""
+
+RUN04_SEED = {
+    "app.py": """\
+from flask import Flask
+
+app = Flask(__name__)
+
+
+@app.get("/ping")
+def ping():
+    return "pong"
+""",
+    "requirements.txt": "flask==3.0.3\n",
+    "probe.py": PROBE_PY,
+    "verify.sh": _server_verify_sh(
+        '.venv/bin/flask --app app run --host 127.0.0.1 --port "$PORT"',
+        '.venv/bin/python probe.py "http://127.0.0.1:$PORT/ping" pong',
+    ),
+}
+
+RUN05_SEED = {
+    "pkg/__init__.py": "",
+    "pkg/stats.py": """\
+import numpy as np
+
+
+def mean(values):
+    return float(np.asarray(values, dtype=np.float64).mean())
+""",
+    "test_stats.py": """\
+from pkg.stats import mean
+
+
+def test_mean():
+    assert mean([1, 2, 3, 4]) == 2.5
+
+
+def test_mean_handles_negatives():
+    assert mean([-2.0, 2.0]) == 0.0
+""",
+    "requirements.txt": "numpy==2.2.6\npytest==8.3.5\n",
+    "verify.sh": (
+        "#!/bin/sh\nset -e\nexport PYTHONDONTWRITEBYTECODE=1\n"
+        ".venv/bin/pytest -q -p no:cacheprovider test_stats.py\n"
+    ),
+}
+
+
+def build_in_sandbox(rec, sandbox_id, command, timeout=900):
+    """A ``publish_exec`` with a build-scale timeout: the command may pull
+    packages over the network; the built tree publishes as the delta."""
+    return publish_exec(rec, sandbox_id, command, timeout=timeout)
+
+
+def exec_capture(rec, sandbox_id, command, timeout=180):
+    """``publish_exec`` returning the command's captured output text."""
+    payload = publish_exec(rec, sandbox_id, command, timeout=timeout)
+    return payload.get("output") or ""
+
+
+def run_in_image(rec, dest, image, argv, *, timeout=180, mount_at=WORKSPACE_MOUNT):
+    """Primary remount-and-run (§0): mount the exported HOST dest at
+    ``mount_at`` in a fresh throwaway container of the project's base image
+    and execute one self-terminating command. Returns the raw run record."""
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        f"{Path(dest).resolve()}:{mount_at}",
+        "-w",
+        mount_at,
+        image,
+        *map(str, argv),
+    ]
+    started = time.monotonic()
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
+    except subprocess.TimeoutExpired as exc:
+        exit_code = -1
+        stdout = exc.stdout.decode("utf-8", "replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        stderr = f"timed out after {timeout}s"
+    elapsed = round((time.monotonic() - started) * 1000.0, 3)
+    if rec is not None:
+        rec.add_command(
+            {
+                "cmd": cmd,
+                "exit_code": exit_code,
+                "elapsed_ms": elapsed,
+                "stdout": stdout[-20000:],
+                "stderr": stderr[-20000:],
+            }
+        )
+    return {
+        "exit_code": exit_code,
+        "image": image,
+        "mount_at": mount_at,
+        "stdout": stdout,
+        "stderr": stderr,
+    }
+
+
+def run_on_host(rec, dest, argv, *, timeout=120, requires=None, xfail_reason=None):
+    """Secondary best-effort host run in ``dest`` (§0). ``skip`` when the
+    runtime is absent; a non-zero exit is ``xfail`` when ``xfail_reason``
+    names the documented portability boundary, else ``fail``. Informational
+    either way — the runnable axis never hard-fails on the host run."""
+    dest = Path(dest)
+    runtime_name = requires or str(argv[0])
+    if "/" in runtime_name:
+        available = (dest / runtime_name).exists()
+        absent_reason = f"{runtime_name} not present in dest"
+    else:
+        available = shutil.which(runtime_name) is not None
+        absent_reason = f"host lacks {runtime_name}"
+    if not available:
+        record = {"status": "skip", "exit_code": None, "reason": absent_reason}
+        if rec is not None:
+            rec.add_command({"cmd": ["host", *map(str, argv)], "skipped": absent_reason})
+        return record
+    started = time.monotonic()
+    try:
+        proc = subprocess.run(
+            list(map(str, argv)),
+            cwd=str(dest),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        exit_code, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        exit_code, stdout, stderr = -1, "", str(exc)
+    elapsed = round((time.monotonic() - started) * 1000.0, 3)
+    if rec is not None:
+        rec.add_command(
+            {
+                "cmd": ["host", *map(str, argv)],
+                "exit_code": exit_code,
+                "elapsed_ms": elapsed,
+                "stdout": stdout[-20000:],
+                "stderr": stderr[-20000:],
+            }
+        )
+    if exit_code == 0:
+        return {"status": "pass", "exit_code": 0, "reason": ""}
+    if xfail_reason:
+        return {"status": "xfail", "exit_code": exit_code, "reason": xfail_reason}
+    return {"status": "fail", "exit_code": exit_code, "reason": (stderr or stdout)[-500:]}
+
+
+def assert_runnable(result, *, expect_exit=0, expect_out=None):
+    """Exit-code + output-substring assertion over a ``run_in_image`` record;
+    returns the slim container_run record for the runnable axis (§3)."""
+    output = (result.get("stdout") or "") + (result.get("stderr") or "")
+    assert result["exit_code"] == expect_exit, (
+        f"container run exited {result['exit_code']} (want {expect_exit}): {output[-2000:]}"
+    )
+    if expect_out is not None:
+        assert expect_out in output, f"expected {expect_out!r} in run output: {output[-2000:]}"
+    return {
+        "pass": True,
+        "exit_code": result["exit_code"],
+        "output_match": expect_out is None or expect_out in output,
+        "image": result.get("image"),
+        "mount_at": result.get("mount_at"),
+    }
+
+
+def expect_boundary_failure(result, reason):
+    """The load-bearing portability boundary (§0, inv 10/B4): the run at the
+    wrong platform/path must REALLY fail; asserting it works — or skipping it
+    — would fake the boundary. Returns the xfail record."""
+    output = (result.get("stdout") or "") + (result.get("stderr") or "")
+    assert result["exit_code"] != 0, (
+        f"boundary run unexpectedly succeeded — {reason} must be a real failure: {output[-2000:]}"
+    )
+    return {
+        "status": "xfail",
+        "exit_code": result["exit_code"],
+        "mount_at": result.get("mount_at"),
+        "reason": reason,
+    }
+
+
+def record_runnable(rec, container_run, host_run, details, *, boundary_run=None):
+    """The fourth axis: pass == container_run.pass; host_run (and any
+    boundary_run) ride along as recorded facts."""
+    extra = {"container_run": container_run, "host_run": host_run}
+    if boundary_run is not None:
+        extra["boundary_run"] = boundary_run
+    rec.axis("runnable", container_run.get("pass", False), details, extra=extra)
+
+
+def case_run_01(rec):
+    """RUN-01 (B1, inv 2, inv 4): Node/Express — npm install in-sandbox,
+    export onto the seed, remount-and-run, host smoke, incremental re-export."""
+    seed = make_seed("run01", RUN01_SEED)
+    sandbox_id = create_sandbox(rec, seed, image=NODE_IMAGE)
+    try:
+        build_in_sandbox(rec, sandbox_id, NPM_INSTALL)
+        first = export_changes(rec, sandbox_id, seed, timeout=600)
+        assert first.ok, first.json or first.stderr
+        rec.write_json("result.json", first.json)
+        assert (seed / "node_modules/express/package.json").is_file(), "express did not cross"
+        assert first.json["symlinks_written"] > 0, first.json
+        bin_dir = seed / "node_modules/.bin"
+        bin_links = [p.name for p in bin_dir.iterdir() if p.is_symlink()] if bin_dir.is_dir() else []
+        assert bin_links, "no relative node_modules/.bin symlinks carried"
+        assert first.json["files_written"] > 50, first.json
+        rec.axis(
+            "correctness",
+            True,
+            f"dep tree crossed: files_written={first.json['files_written']}, "
+            f"symlinks_written={first.json['symlinks_written']}, .bin links={len(bin_links)}",
+        )
+
+        container = run_in_image(rec, seed, NODE_IMAGE, ["sh", "verify.sh"], timeout=240)
+        container_run = assert_runnable(container, expect_out="VERIFY-OK")
+        host_run = run_on_host(rec, seed, ["sh", "verify.sh"], requires="node")
+        record_runnable(
+            rec, container_run, host_run,
+            f"container verify green; host smoke {host_run['status']}",
+        )
+
+        assert no_literal_markers(read_tree(seed)), "literal .wh. marker on host"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+
+        build_in_sandbox(
+            rec, sandbox_id,
+            "printf '\\n// touched by RUN-01 incremental\\n' >> server.js",
+            timeout=120,
+        )
+        second = export_changes(rec, sandbox_id, seed, timeout=600)
+        assert second.ok, second.json or second.stderr
+        rec.write_json("result-incremental.json", second.json)
+        assert second.json["files_written"] == 1, second.json
+        assert second.json["skipped_unchanged"] == first.json["files_written"], (
+            second.json,
+            first.json,
+        )
+        assert "touched by RUN-01" in (seed / "server.js").read_text(), "edit did not land"
+        rec.axis(
+            "incremental",
+            True,
+            "source-only edit: server.js rewritten, dep tree skipped_unchanged",
+            extra={"skipped_unchanged": second.json["skipped_unchanged"]},
+        )
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        shutil.rmtree(seed, ignore_errors=True)
+
+
+def case_run_02(rec):
+    """RUN-02 (inv 2, cost table): a real build step — the compiled dist/
+    crosses to a fresh (no-base) dest and runs; the base never crosses."""
+    seed = make_seed("run02", RUN02_SEED)
+    sandbox_id = create_sandbox(rec, seed, image=NODE_IMAGE)
+    dest_base, dest = _fresh_dest("run02")
+    try:
+        build_in_sandbox(rec, sandbox_id, f"{NPM_INSTALL} && npm run build")
+        result = export_changes(rec, sandbox_id, dest, timeout=600)
+        assert result.ok, result.json or result.stderr
+        rec.write_json("result.json", result.json)
+        assert (dest / "dist/index.js").is_file(), "compiled dist/index.js did not cross"
+        assert os.path.islink(dest / "node_modules/.bin/tsc"), ".bin/tsc symlink not carried"
+        assert not (dest / "src").exists(), "base src/ leaked into a fresh dest"
+        assert not (dest / "tsconfig.json").exists(), "base tsconfig leaked into a fresh dest"
+        rec.axis(
+            "correctness",
+            True,
+            "dist/index.js + node_modules/.bin/tsc crossed; base stayed home",
+        )
+
+        container = run_in_image(rec, dest, NODE_IMAGE, ["node", "dist/index.js"], timeout=120)
+        container_run = assert_runnable(container, expect_out="sum(2,3)=5")
+        host_run = run_on_host(rec, dest, ["node", "dist/index.js"])
+        record_runnable(
+            rec, container_run, host_run,
+            f"compiled output ran in-container; host {host_run['status']}",
+        )
+
+        assert no_literal_markers(read_tree(dest)), "literal markers"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+        rec.axis("incremental", True, "n/a", n_a=True)
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        shutil.rmtree(seed, ignore_errors=True)
+        shutil.rmtree(dest_base, ignore_errors=True)
+
+
+def case_run_04(rec):
+    """RUN-04 (B1, inv 10/B4, inv 4): Flask venv — runs remounted at the
+    build-time /workspace; REALLY fails at /elsewhere (venv relocation
+    boundary); source-only edit re-exports with the venv skipped."""
+    seed = make_seed("run04", RUN04_SEED)
+    sandbox_id = create_sandbox(rec, seed, image=PYTHON_IMAGE)
+    try:
+        build_in_sandbox(rec, sandbox_id, VENV_BUILD)
+        first = export_changes(rec, sandbox_id, seed, timeout=600)
+        assert first.ok, first.json or first.stderr
+        rec.write_json("result.json", first.json)
+        assert os.path.islink(seed / ".venv/bin/python"), ".venv/bin/python symlink not carried"
+        assert first.json["symlinks_written"] > 0, first.json
+        assert (seed / ".venv/lib/python3.12/site-packages/flask").is_dir(), "flask missing"
+        flask_script = (seed / ".venv/bin/flask").read_bytes()
+        assert flask_script.startswith(b"#!"), "console script did not cross as a script"
+        assert b"/workspace/.venv" in flask_script, "shebang not baked at /workspace"
+        rec.axis(
+            "correctness",
+            True,
+            "venv crossed: bin/python symlink, site-packages/flask, /workspace shebang",
+        )
+
+        container = run_in_image(rec, seed, PYTHON_IMAGE, ["sh", "verify.sh"], timeout=240)
+        container_run = assert_runnable(container, expect_out="VERIFY-OK")
+        boundary = run_in_image(
+            rec, seed, PYTHON_IMAGE, ["sh", "verify.sh"], timeout=240, mount_at="/elsewhere"
+        )
+        boundary_run = expect_boundary_failure(
+            boundary, "venv is not path-relocatable (shebangs/pyvenv.cfg baked at /workspace)"
+        )
+        host_run = run_on_host(
+            rec, seed, ["sh", "verify.sh"],
+            xfail_reason="venv is not host-portable (linux interpreter + /workspace paths)",
+        )
+        record_runnable(
+            rec, container_run, host_run,
+            f"green at /workspace; xfail at /elsewhere; host {host_run['status']}",
+            boundary_run=boundary_run,
+        )
+
+        assert no_literal_markers(read_tree(seed)), "literal markers"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+
+        build_in_sandbox(
+            rec, sandbox_id,
+            "printf '\\n# touched by RUN-04 incremental\\n' >> app.py",
+            timeout=120,
+        )
+        second = export_changes(rec, sandbox_id, seed, timeout=600)
+        assert second.ok, second.json or second.stderr
+        rec.write_json("result-incremental.json", second.json)
+        assert second.json["files_written"] == 1, second.json
+        assert second.json["skipped_unchanged"] == first.json["files_written"], (
+            second.json,
+            first.json,
+        )
+        assert "touched by RUN-04" in (seed / "app.py").read_text(), "edit did not land"
+        rec.axis(
+            "incremental",
+            True,
+            "source-only edit: app.py rewritten, .venv skipped_unchanged",
+            extra={"skipped_unchanged": second.json["skipped_unchanged"]},
+        )
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        shutil.rmtree(seed, ignore_errors=True)
+
+
+def case_run_03(rec):
+    """RUN-03 (inv 10/B4, cost table): native addon — the linux ``*.node``
+    crosses byte-identical with its mode to a fresh dest and executes on its
+    own platform; the host load failure is the documented ABI boundary.
+    app.js/verify.sh are PUBLISHED (not seeded) so the fresh dest carries
+    them — a fresh dest holds only the delta."""
+    seed = make_seed("run03", {"package.json": RUN03_PACKAGE_JSON})
+    sandbox_id = create_sandbox(rec, seed, image=NODE_IMAGE)
+    dest_base, dest = _fresh_dest("run03")
+    try:
+        publish_write(rec, sandbox_id, "app.js", RUN03_APP_JS)
+        publish_write(
+            rec, sandbox_id, "verify.sh", "#!/bin/sh\nset -e\nnode app.js | grep -F 'v=2'\n"
+        )
+        build_in_sandbox(rec, sandbox_id, NPM_INSTALL)
+        truth = exec_capture(
+            rec,
+            sandbox_id,
+            "for f in $(find node_modules/better-sqlite3 -name '*.node' | sort); do "
+            'printf "NODE %s %s %s\\n" "$(sha256sum "$f" | cut -d" " -f1)" '
+            '"$(stat -c "%a" "$f")" "$f"; done',
+            timeout=120,
+        )
+        sandbox_nodes = [
+            line.split()[1:4] for line in truth.splitlines() if line.startswith("NODE ")
+        ]
+        assert sandbox_nodes, f"no *.node built in-sandbox: {truth!r}"
+
+        result = export_changes(rec, sandbox_id, dest, timeout=600)
+        assert result.ok, result.json or result.stderr
+        rec.write_json("result.json", result.json)
+        assert not (dest / "package.json").exists(), "base package.json leaked into a fresh dest"
+        checked = []
+        for sha, mode, rel in sandbox_nodes:
+            target = dest / rel
+            assert target.is_file(), f"{rel} missing from the export"
+            host_sha = hashlib.sha256(target.read_bytes()).hexdigest()
+            assert host_sha == sha, f"{rel} not byte-identical: {host_sha} != {sha}"
+            host_mode = format(target.stat().st_mode & 0o777, "o")
+            assert host_mode == mode, f"{rel} mode not carried: {host_mode} != {mode}"
+            checked.append({"path": rel, "sha256": sha, "mode": mode})
+        rec.write_json("native-artifacts.json", checked)
+        rec.axis(
+            "correctness",
+            True,
+            f"{len(checked)} native *.node byte-identical with mode carried",
+        )
+
+        container = run_in_image(rec, dest, NODE_IMAGE, ["node", "app.js"], timeout=120)
+        container_run = assert_runnable(container, expect_out="v=2")
+        host_run = run_on_host(
+            rec, dest, ["node", "app.js"],
+            xfail_reason="native ABI: linux binary on non-linux host",
+        )
+        if sys.platform != "linux" and host_run["status"] != "skip":
+            assert host_run["status"] == "xfail", (
+                f"linux .node unexpectedly loaded on {sys.platform}: {host_run}"
+            )
+        record_runnable(
+            rec, container_run, host_run,
+            f"linux addon ran in-container (v=2); host {host_run['status']}",
+        )
+
+        assert no_literal_markers(read_tree(dest)), "literal markers"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+        rec.axis("incremental", True, "n/a", n_a=True)
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        shutil.rmtree(seed, ignore_errors=True)
+        shutil.rmtree(dest_base, ignore_errors=True)
+
+
+def case_run_05(rec):
+    """RUN-05 (B1, inv 10/B4): pytest over the exported tree — the manylinux
+    numpy wheel's compiled .so crosses and the suite passes in-container;
+    the venv/wheel host boundary is recorded, not hidden."""
+    seed = make_seed("run05", RUN05_SEED)
+    sandbox_id = create_sandbox(rec, seed, image=PYTHON_IMAGE)
+    try:
+        build_in_sandbox(rec, sandbox_id, VENV_BUILD)
+        result = export_changes(rec, sandbox_id, seed, timeout=900)
+        assert result.ok, result.json or result.stderr
+        rec.write_json("result.json", result.json)
+        numpy_root = seed / ".venv/lib/python3.12/site-packages/numpy"
+        so_files = sorted(str(p.relative_to(seed)) for p in numpy_root.rglob("*.so*"))
+        assert so_files, "numpy compiled *.so missing from the export"
+        pytest_script = (seed / ".venv/bin/pytest").read_bytes()
+        assert pytest_script.startswith(b"#!"), "pytest console script did not cross"
+        assert b"/workspace/.venv" in pytest_script, "shebang not baked at /workspace"
+        assert result.json["symlinks_written"] > 0, result.json
+        rec.axis(
+            "correctness",
+            True,
+            f"{len(so_files)} compiled numpy artifacts + pytest shebang script crossed",
+            extra={"so_sample": so_files[:5]},
+        )
+
+        container = run_in_image(rec, seed, PYTHON_IMAGE, ["sh", "verify.sh"], timeout=300)
+        container_run = assert_runnable(container, expect_out="passed")
+        host_run = run_on_host(
+            rec, seed, [".venv/bin/pytest", "-q", "test_stats.py"],
+            xfail_reason="manylinux wheel + venv paths are not host-portable",
+        )
+        record_runnable(
+            rec, container_run, host_run,
+            f"pytest suite passed over the exported tree; host {host_run['status']}",
+        )
+
+        assert no_literal_markers(read_tree(seed)), "literal markers"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+        rec.axis("incremental", True, "n/a", n_a=True)
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        shutil.rmtree(seed, ignore_errors=True)
+
+
 # ------------------------------------------------------------ suite entrypoints
 
 
@@ -1815,14 +2453,16 @@ def finalize_summary(exitstatus=None):
         f"- Pytest exit status: `{exitstatus}`",
         f"- Cases: `{len(verdicts)}` run · `{passed}` pass · `{failed}` fail",
         "",
-        "| Case | Tier | Status | Correctness | Host-safety | Incremental | Teardown |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Case | Tier | Status | Correctness | Host-safety | Incremental | Runnable | Teardown |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for verdict in verdicts:
         axes = verdict.get("axes", {})
 
         def cell(name):
-            axis = axes.get(name, {})
+            axis = axes.get(name)
+            if not axis:
+                return "—"
             if axis.get("status") == "n/a":
                 return "n/a"
             return "pass" if axis.get("pass") else f"fail: {axis.get('details', '')}"
@@ -1830,6 +2470,7 @@ def finalize_summary(exitstatus=None):
         rows.append(
             f"| `{verdict.get('case_id')}` | {verdict.get('tier')} | {verdict.get('status')} | "
             f"{cell('correctness')} | {cell('host_safety')} | {cell('incremental')} | "
+            f"{cell('runnable')} | "
             f"{'pass' if verdict.get('teardown', {}).get('pass') else 'fail'} |"
         )
     rows.append("")
