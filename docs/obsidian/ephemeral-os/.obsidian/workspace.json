@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/web-ui/web-ui-design.md",
+                "file": "implementation_plan/web-ui/design.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "web-ui-design"
+              "title": "design"
             }
           }
         ]
@@ -185,10 +185,10 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
-    "implementation_plan/web-ui/design.md",
-    "implementation_plan/web-ui/implementation-plan.md",
     "implementation_plan/web-ui/web-ui-design.md",
     "implementation_plan/export_changes/spec.md",
+    "implementation_plan/web-ui/design.md",
+    "implementation_plan/web-ui/implementation-plan.md",
     "implementation_plan/export_changes/adversarial-review-prompt.md",
     "implementation_plan/web-ui/http-server.md",
     "implementation_plan/web-ui/web-ui-design.md.tmp.27160.ba29b6789139",
