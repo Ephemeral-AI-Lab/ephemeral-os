@@ -14,8 +14,10 @@ import datetime as dt
 import hashlib
 import io
 import json
+import math
 import os
 import shutil
+import statistics
 import subprocess
 import sys
 import tarfile
@@ -812,6 +814,12 @@ CASES = [
     {"id": "RUN-03", "tier": "runnable", "title": "Node native addon: linux .node runs in-container, host xfail"},
     {"id": "RUN-05", "tier": "runnable", "title": "Python/pytest + numpy wheel: exported suite passes"},
     {"id": "RUN-06", "tier": "runnable", "title": "ABI escape hatch: host npm rebuild makes the tree host-native"},
+    {"id": "PERF-0", "tier": "bench", "title": "fixed-cost control: empty-delta export x5"},
+    {"id": "PERF-1M", "tier": "bench", "title": "1 MiB urandom: cold/warm dir + tar-zst walls"},
+    {"id": "PERF-5M", "tier": "bench", "title": "5 MiB urandom: cold/warm dir + tar-zst walls"},
+    {"id": "PERF-20M", "tier": "bench", "title": "20 MiB urandom: cold/warm dir + tar-zst walls"},
+    {"id": "PERF-SHAPE-20M", "tier": "bench", "title": "20 x 1 MiB files: entry-count overhead vs single-file"},
+    {"id": "PERF-ZSTD-20M", "tier": "bench", "title": "20 MiB zeros: compressibility contrast (dir + tar-zst)"},
 ]
 CASE_BY_ID = {case["id"]: case for case in CASES}
 
@@ -2544,6 +2552,311 @@ def case_run_06(rec):
     finally:
         destroy_sandbox(rec, sandbox_id)
         shutil.rmtree(seed, ignore_errors=True)
+
+
+# =============================================================== BENCH (PERF)
+#
+# Stage-1 trio benchmark (bench-prompt.md): PERF-0 fixed-cost control plus the
+# 1/5/20 MiB exploration trio, PERF-SHAPE-20M entry-count contrast, and
+# PERF-ZSTD-20M compressibility contrast. The only quantity measured anywhere
+# is the export OPERATION's client wall clock (RawResult.elapsed_ms); timing is
+# recorded in measurements.json and is NEVER a pass/fail axis. Explicit-run
+# tier: pytest -m "export and bench".
+
+BENCH_REPS_COLD = 3
+BENCH_REPS_WARM = 3
+BENCH_REPS_ARCHIVE = 3
+BENCH_REPS_EMPTY = 5
+CHUNK_BYTES = 2 * 1024 * 1024
+
+
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _parse_sha_manifest(text):
+    """{filename: hex} parsed from ``sha256sum`` output lines."""
+    shas = {}
+    for line in text.strip().splitlines():
+        parts = line.split()
+        if len(parts) >= 2:
+            shas[parts[-1].lstrip("*").lstrip("./")] = parts[0]
+    return shas
+
+
+def _verify_dest_shas(dest):
+    """Every file named in dest/payload.sha hashes to its in-sandbox sha256.
+    The manifest itself crossed as delta content, so the comparison pins the
+    whole payload byte-for-byte. Returns the number of payload files."""
+    manifest = (Path(dest) / "payload.sha").read_text(encoding="utf-8")
+    shas = _parse_sha_manifest(manifest)
+    assert shas, "payload.sha carried no entries"
+    for name, expected in shas.items():
+        actual = _sha256_file(Path(dest) / name)
+        assert actual == expected, f"sha mismatch for {name}: {actual} != {expected}"
+    return len(shas)
+
+
+def _verify_archive_shas(rec, archive):
+    """Decompress a tar-zst archive host-side and verify every payload member
+    against the in-archive payload.sha manifest."""
+    raw = _zstd_decompress(rec, Path(archive).read_bytes())
+    with tarfile.open(fileobj=io.BytesIO(raw)) as tar:
+        members = {member.name: member for member in tar.getmembers() if member.isfile()}
+        assert "payload.sha" in members, sorted(members)
+        manifest = tar.extractfile(members["payload.sha"]).read().decode("utf-8")
+        shas = _parse_sha_manifest(manifest)
+        assert shas, "payload.sha carried no entries"
+        for name, expected in shas.items():
+            data = tar.extractfile(members[name]).read()
+            actual = hashlib.sha256(data).hexdigest()
+            assert actual == expected, f"archive sha mismatch for {name}"
+    return len(shas)
+
+
+def _assert_cold_counts(result_json, entry_files):
+    assert result_json["files_written"] == entry_files, result_json
+    assert result_json["symlinks_written"] == 0, result_json
+    assert result_json["deletes_applied"] == 0, result_json
+    assert result_json["opaque_clears"] == 0, result_json
+    assert result_json["skipped_unchanged"] == 0, result_json
+    assert len(result_json["layers_exported"]) == 1, result_json
+    assert result_json["manifest_version"] == _expected_version(1), result_json
+
+
+def _assert_warm_counts(result_json, entry_files):
+    assert result_json["files_written"] == 0, result_json
+    assert result_json["bytes_written"] == 0, result_json
+    assert result_json["skipped_unchanged"] == entry_files, result_json
+
+
+def _bench_rep(phase, rep, result, **extra):
+    entry = {
+        "phase": phase,
+        "rep": rep,
+        "wall_ms": result.elapsed_ms,
+        "result": result.json,
+    }
+    entry.update(extra)
+    return entry
+
+
+def _bench_medians(measurements):
+    walls = {}
+    for entry in measurements["reps"]:
+        walls.setdefault(entry["phase"], []).append(entry["wall_ms"])
+    medians = {phase: round(statistics.median(values), 3) for phase, values in walls.items()}
+    payload = measurements.get("payload_bytes") or 0
+    if payload and "cold_dir" in medians and medians["cold_dir"] > 0:
+        medians["cold_dir_mib_per_s"] = round(
+            (payload / (1024 * 1024)) / (medians["cold_dir"] / 1000.0), 3
+        )
+    return medians
+
+
+def _bench_sized_case(
+    rec,
+    case_id,
+    payload_bytes,
+    publish_command,
+    entry_files,
+    *,
+    warm=True,
+    archive=True,
+):
+    """One sized bench case: publish the payload once, then cold dir x3 on
+    fresh dests, warm re-export x3 on the first dest, tar-zst x3. sha256
+    correctness is asserted on every cold dest and the last archive."""
+    seed = make_seed(case_id.lower(), {"base.txt": "B\n"})
+    sandbox_id = create_sandbox(rec, seed)
+    scratch = [seed]
+    measurements = {
+        "case": case_id,
+        "payload_bytes": payload_bytes,
+        "chunk_bytes": CHUNK_BYTES,
+        "reps": [],
+    }
+    try:
+        publish_started = time.monotonic()
+        publish_exec(rec, sandbox_id, publish_command, timeout=600)
+        measurements["publish_wall_ms"] = round((time.monotonic() - publish_started) * 1000.0, 3)
+
+        warm_dest = None
+        for rep in range(BENCH_REPS_COLD):
+            base, dest = _fresh_dest(case_id, f"cold{rep}")
+            scratch.append(base)
+            result = export_changes(rec, sandbox_id, dest, timeout=600)
+            assert result.ok, result.json or result.stderr
+            _assert_cold_counts(result.json, entry_files)
+            files = _verify_dest_shas(dest)
+            assert files == entry_files - 1, (files, entry_files)
+            measurements["reps"].append(_bench_rep("cold_dir", rep, result))
+            if warm_dest is None:
+                warm_dest = dest
+
+        if warm:
+            for rep in range(BENCH_REPS_WARM):
+                result = export_changes(rec, sandbox_id, warm_dest, timeout=600)
+                assert result.ok, result.json or result.stderr
+                _assert_warm_counts(result.json, entry_files)
+                measurements["reps"].append(_bench_rep("warm_dir", rep, result))
+
+        spool_bytes = None
+        if archive:
+            archive_base = Path(tempfile.mkdtemp(prefix=f"eos-export-bench-{case_id.lower()}-"))
+            scratch.append(archive_base)
+            last_archive = None
+            for rep in range(BENCH_REPS_ARCHIVE):
+                target = archive_base / f"delta-{rep}.tar.zst"
+                result = export_changes(rec, sandbox_id, target, fmt="tar-zst", timeout=600)
+                assert result.ok, result.json or result.stderr
+                size = target.stat().st_size
+                assert result.json["bytes_written"] == size, result.json
+                spool_bytes = size
+                measurements["reps"].append(_bench_rep("tar_zst", rep, result, spool_bytes=size))
+                last_archive = target
+            files = _verify_archive_shas(rec, last_archive)
+            assert files == entry_files - 1, (files, entry_files)
+            measurements["spool_bytes"] = spool_bytes
+            measurements["chunks"] = math.ceil(spool_bytes / CHUNK_BYTES)
+
+        measurements["medians"] = _bench_medians(measurements)
+        rec.write_json("measurements.json", measurements)
+
+        rec.axis(
+            "correctness",
+            True,
+            f"sha256 verified on every cold dest{' and the archive' if archive else ''}; counts exact",
+        )
+        tree = read_tree(warm_dest)
+        assert no_literal_markers(tree), "literal markers on host"
+        rec.axis("host_safety", True, "no literal markers; nothing outside dest")
+        if warm:
+            rec.axis(
+                "incremental",
+                True,
+                "warm re-export: files_written 0, bytes_written 0, all entries skipped",
+            )
+        else:
+            rec.axis("incremental", True, "n/a (no warm arm in this case)", n_a=True)
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        for path in scratch:
+            shutil.rmtree(path, ignore_errors=True)
+
+
+def case_perf_0(rec):
+    """PERF-0: the fixed-cost control — empty-delta export x5 onto fresh dests.
+    This wall is the floor every export pays (CLI spawn + forward + fold of
+    nothing + result line); it anchors the model's constant term."""
+    seed = make_seed("perf0", {"keep.txt": "K\n"})
+    sandbox_id = create_sandbox(rec, seed)
+    scratch = [seed]
+    measurements = {
+        "case": "PERF-0",
+        "payload_bytes": 0,
+        "chunk_bytes": CHUNK_BYTES,
+        "chunks": 0,
+        "spool_bytes": 0,
+        "reps": [],
+    }
+    try:
+        for rep in range(BENCH_REPS_EMPTY):
+            base, dest = _fresh_dest("perf0", f"empty{rep}")
+            scratch.append(base)
+            result = export_changes(rec, sandbox_id, dest, timeout=600)
+            assert result.ok, result.json or result.stderr
+            assert result.json["layers_exported"] == [], result.json
+            assert result.json["manifest_version"] == 1, result.json
+            for count in (
+                "files_written",
+                "symlinks_written",
+                "deletes_applied",
+                "opaque_clears",
+                "skipped_unchanged",
+                "bytes_written",
+            ):
+                assert result.json[count] == 0, (count, result.json)
+            measurements["reps"].append(_bench_rep("empty_dir", rep, result))
+        measurements["medians"] = _bench_medians(measurements)
+        rec.write_json("measurements.json", measurements)
+        rec.axis("correctness", True, "empty delta: all counts zero, version 1, x5")
+        rec.axis("host_safety", True, "dest untouched on every rep")
+        rec.axis("incremental", True, "n/a", n_a=True)
+        teardown(rec, sandbox_id)
+    finally:
+        destroy_sandbox(rec, sandbox_id)
+        for path in scratch:
+            shutil.rmtree(path, ignore_errors=True)
+
+
+def case_perf_1m(rec):
+    """PERF-1M: single 1 MiB urandom file (1 expected chunk)."""
+    _bench_sized_case(
+        rec,
+        "PERF-1M",
+        1 * 1024 * 1024,
+        "head -c 1048576 /dev/urandom > payload.bin && sha256sum payload.bin > payload.sha",
+        entry_files=2,
+    )
+
+
+def case_perf_5m(rec):
+    """PERF-5M: single 5 MiB urandom file (3 expected chunks)."""
+    _bench_sized_case(
+        rec,
+        "PERF-5M",
+        5 * 1024 * 1024,
+        "head -c 5242880 /dev/urandom > payload.bin && sha256sum payload.bin > payload.sha",
+        entry_files=2,
+    )
+
+
+def case_perf_20m(rec):
+    """PERF-20M: single 20 MiB urandom file (10-11 expected chunks)."""
+    _bench_sized_case(
+        rec,
+        "PERF-20M",
+        20 * 1024 * 1024,
+        "head -c 20971520 /dev/urandom > payload.bin && sha256sum payload.bin > payload.sha",
+        entry_files=2,
+    )
+
+
+def case_perf_shape_20m(rec):
+    """PERF-SHAPE-20M: the same 20 MiB as 20 x 1 MiB files — entry-count
+    overhead vs the single-file shape. Dir cold+warm only (bench-prompt
+    matrix); chunk count for this shape is derived in the results doc from
+    PERF-20M's measured spool (same payload bytes, +20 tar headers)."""
+    _bench_sized_case(
+        rec,
+        "PERF-SHAPE-20M",
+        20 * 1024 * 1024,
+        "head -c 20971520 /dev/urandom > payload.bin"
+        " && split -b 1048576 payload.bin part_"
+        " && rm payload.bin"
+        " && sha256sum part_* > payload.sha",
+        entry_files=21,
+        archive=False,
+    )
+
+
+def case_perf_zstd_20m(rec):
+    """PERF-ZSTD-20M: 20 MiB of zeros — spool_bytes collapses, so the wire tax
+    rides on COMPRESSED bytes. Dir + tar-zst cold arms only."""
+    _bench_sized_case(
+        rec,
+        "PERF-ZSTD-20M",
+        20 * 1024 * 1024,
+        "head -c 20971520 /dev/zero > payload.bin && sha256sum payload.bin > payload.sha",
+        entry_files=2,
+        warm=False,
+    )
 
 
 # ------------------------------------------------------------ suite entrypoints
