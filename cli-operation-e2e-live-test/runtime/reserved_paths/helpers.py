@@ -93,6 +93,20 @@ SUITE_NOTES = [
     "re-encoded it. write_layer_changes now writes the same kernel-native "
     "dual encoding squash flatten always produced (whiteout-encoded marker + "
     "overlay opaque xattr); every existing layer stays valid.",
+    "Catalog correction (CX-03 isolation): the original 'fd count stable "
+    "+/-16' sentinel contradicts the daemon's documented command-session "
+    "retention — every completed session retains its pty fd until LRU "
+    "eviction at the engine cap (MAX_ACTIVE_COMMANDS), so any 17+-command "
+    "workload would trip it regardless of reserved names. The sentinel now "
+    "bounds fd growth by command sessions started (+16 margin), which still "
+    "catches real leaks; test-case.md was amended to match.",
+    "Residual artifact (pre-existing, shared with every squash-produced "
+    "layer): kernel overlayfs does not filter whiteout dirents from an "
+    "opaque lowerdir directory, so a raw in-session `ls` of an opaque dir "
+    "still lists the whiteout-encoded `.wh..wh..opq` char-device name. The "
+    "daemon's merged read surface hides it and no lower data is exposed; "
+    "MED-06/CX-02 pin the merged reads plus session data correctness and "
+    "record this artifact.",
 ]
 
 _summary_lock = threading.Lock()

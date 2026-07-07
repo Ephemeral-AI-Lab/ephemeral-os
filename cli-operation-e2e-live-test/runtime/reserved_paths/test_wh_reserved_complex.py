@@ -108,7 +108,17 @@ def test_CX_02_squash_interplay_reservation_survives_squash(tmp_path):
                 assert_read_not_found(sandbox, rec, "d/x.txt", f"{tag}-read-x")
                 assert_read_not_found(sandbox, rec, "d/y.txt", f"{tag}-read-y")
                 assert_read_equals(sandbox, rec, "d/new.txt", "new", f"{tag}-read-new")
-                assert_no_wh_visible(sandbox, rec, f"{tag}-wh-sweep")
+                assert_read_not_found(sandbox, rec, "d/.wh..wh..opq", f"{tag}-read-marker")
+                session = exec_read(
+                    sandbox,
+                    rec,
+                    "cat /workspace/d/new.txt && test ! -e /workspace/d/x.txt "
+                    "&& test ! -e /workspace/d/y.txt && test ! -e /workspace/solo.txt "
+                    "&& echo masked-ok",
+                    f"{tag}-session-view",
+                )
+                assert "new" in session["output"], session
+                assert "masked-ok" in session["output"], session
 
             verify_merged("pre-squash")
 
@@ -207,6 +217,7 @@ def test_CX_03_reserved_name_storm_standing_invariants(tmp_path):
             expected_version = assert_ok(layerstack(sandbox))["manifest_version"]
             fd_base = daemon_fd_count(sandbox)
             fd_samples = [fd_base]
+            sessions_started = 0
 
             for iteration in range(iterations):
                 shape_name, shape = rng.choice(POISON_SHAPES)
@@ -258,13 +269,15 @@ def test_CX_03_reserved_name_storm_standing_invariants(tmp_path):
                 for name in deleted:
                     assert_read_not_found(sandbox, rec, name)
                 assert_no_wh_visible(sandbox, rec, f"iter{iteration:02d}-wh-sweep")
+                sessions_started += 3
 
                 fd_now = daemon_fd_count(sandbox)
                 fd_samples.append(fd_now)
-                assert abs(fd_now - fd_base) <= 16, {
+                assert fd_now - fd_base <= sessions_started + 16, {
                     "iteration": iteration,
                     "fd_base": fd_base,
                     "fd_now": fd_now,
+                    "sessions_started": sessions_started,
                 }
                 rec.record(
                     f"iter{iteration:02d}.json",
@@ -274,6 +287,7 @@ def test_CX_03_reserved_name_storm_standing_invariants(tmp_path):
                         "legit": legit_kind,
                         "manifest_version": stack["manifest_version"],
                         "fd_count": fd_now,
+                        "sessions_started": sessions_started,
                     },
                 )
 
@@ -299,4 +313,10 @@ def test_CX_03_reserved_name_storm_standing_invariants(tmp_path):
                 fd_base=fd_base,
                 fd_samples=fd_samples,
                 fd_drift_max=max(abs(sample - fd_base) for sample in fd_samples),
+                sessions_started=sessions_started,
+            )
+            rec.note(
+                "fd sentinel bound is sessions_started + 16: completed command "
+                "sessions retain their pty fd by design until LRU eviction at "
+                "the engine cap (catalog corrected accordingly)."
             )

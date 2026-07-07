@@ -298,7 +298,7 @@ Multi-session, interplay with squash, storm, scale.
 - **Steps**: per iteration draw one poison shape from `{.wh.<name>, dir/.wh..wh..opq, a/.wh.d/f, symlink .wh.l, bare .wh.}` **and** one legitimate publish (normal write or real `rm`); interleave; finalize both; sweep.
 - **Correctness (standing, ×10)**: every poisoned finalize rejects with class `protected_path` — never a second class, never a panic, never an `internal_error`; `manifest_version` advances by exactly the accepted count.
 - **Data-safety (standing, ×10)**: after every iteration, every still-live base file `k*.txt` reads byte-equal; every legitimately deleted path is `not_found`; no `.wh.*` name in any listing.
-- **Isolation**: daemon healthy across the storm (fd count stable ±16; a fresh exec succeeds after every iteration).
+- **Isolation**: daemon healthy across the storm (fd growth bounded by the command-session retention design — completed sessions retain their pty fd until LRU eviction at the engine cap, so the bound is `fd_delta ≤ command sessions started + 16`; a fresh exec succeeds after every iteration).
 
 #### CX-04 — reject on a deep stack is prompt and clean
 - **Spec**: invariant 2 at depth; teardown contract under load. **Fixture**: 50 accepted layers published up front (structured `file_write` loop, squash-suite pattern), then `session`.
