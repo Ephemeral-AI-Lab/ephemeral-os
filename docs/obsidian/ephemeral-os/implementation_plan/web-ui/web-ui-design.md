@@ -118,7 +118,8 @@ Polling: `list_sandboxes` + `snapshot` every few seconds; cards in
 The conversion of `sandbox-runtime-cli` plus per-sandbox observability.
 Persistent header, five tabs.
 
-**`SandboxHeader`** (always visible): id, StateBadge, image, workspace root,
+**`SandboxHeader`** (always visible): id, StateBadge, workspace root (the
+record carries no image field — the image is a create-time argument only),
 daemon endpoints (RPC + HTTP) with health dot, shared-base indicator, a
 **`PortPreview`** launcher (enter a port + scope — shared, or an isolated
 workspace session — and open the app in the Preview tab's embedded viewer),
@@ -131,9 +132,12 @@ The web rendering of `inspect_sandbox` + per-sandbox `snapshot`.
 
 - **`RecordPanel`** — full `SandboxRecord` fields.
 - **`WorkspaceSessionList`** — live sessions with layer counts, network
-  profile (shared/isolated), base revision (manifest_version, root_hash).
-- **`InFlightExecutions`** — currently running commands with elapsed time;
-  each links into the Terminal tab.
+  profile (shared/isolated), and base root hash (the snapshot exposes
+  `layers.base_root_hash` + `layer_count`; no manifest_version).
+- **`InFlightExecutions`** — currently running commands; each links into
+  the Terminal tab. The snapshot entry is `{namespace_execution_id,
+  operation, lifecycle_state}` — no start time, so elapsed time only
+  renders for commands the browser's own ledger knows.
 - **`ResourceSnapshot`** — latest cgroup sample per scope (sandbox +
   per-workspace).
 

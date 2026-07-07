@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router";
-import { rpc, systemScope, RpcError } from "@/api/rpc";
+import { rpc, systemScope } from "@/api/rpc";
 import type { SandboxRecord } from "@/api/types";
+import { fetchSandboxSnapshot } from "@/api/observability";
 import { usePoll } from "@/poll/usePoll";
-import { StateBadge } from "@/components/StateBadge";
 import { useErrorToast } from "@/components/ErrorToast";
+import { SandboxHeader } from "@/pages/sandbox/SandboxHeader";
 
 const TABS = [
   { path: "", label: "Overview", end: true },
@@ -26,6 +27,15 @@ export function SandboxDetail() {
     fn: () => rpc<SandboxRecord>("inspect_sandbox", systemScope, { sandbox_id: sandboxId }),
     mode: "slow",
     enabled: sandboxId !== "",
+  });
+
+  const ready = record.data?.state === "ready";
+  const snapshot = usePoll({
+    key: ["sandbox", sandboxId, "snapshot"],
+    fn: () => fetchSandboxSnapshot(sandboxId),
+    mode:
+      snapshotHasActivity(record.data ?? null) === true ? "fast" : "slow",
+    enabled: sandboxId !== "" && ready,
   });
 
   useEffect(() => {
@@ -57,20 +67,15 @@ export function SandboxDetail() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [navigate]);
 
-  const unknownSandbox =
-    record.error instanceof RpcError &&
-    !record.error.transport &&
-    record.error.message.includes("not found");
-
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-line bg-surface px-4 pt-3">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-sm font-semibold">{sandboxId}</span>
-          {record.data ? <StateBadge state={record.data.state} /> : null}
-          {unknownSandbox ? <StateBadge state="danger" label="not found" /> : null}
-        </div>
-        <nav className="mt-2 flex gap-1">
+      <div className="border-b border-line bg-surface">
+        <SandboxHeader
+          sandboxId={sandboxId}
+          record={record.data ?? null}
+          snapshot={snapshot.data}
+        />
+        <nav className="mt-1 flex gap-1 px-4">
           {TABS.map((tab) => (
             <NavLink
               key={tab.path}
@@ -89,9 +94,20 @@ export function SandboxDetail() {
           ))}
         </nav>
       </div>
-      <div className="min-h-0 flex-1">
-        <Outlet context={{ sandboxId, record: record.data ?? null }} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <Outlet
+          context={{
+            sandboxId,
+            record: record.data ?? null,
+            snapshot: snapshot.data ?? null,
+            recordError: record.error ?? null,
+          }}
+        />
       </div>
     </div>
   );
+}
+
+function snapshotHasActivity(record: SandboxRecord | null): boolean {
+  return record?.state === "creating" || record?.state === "stopping";
 }

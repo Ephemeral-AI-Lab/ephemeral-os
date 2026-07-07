@@ -16,7 +16,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 1 | `sandbox-console` HTTP server v0 | 0 | done (2026-07-07) |
 | 2 | SPA shell & shared components | 1 | done (2026-07-07) |
 | 3 | Fleet Board | 2 | done (2026-07-07) |
-| 4 | Detail shell & Overview tab | 2 | not started |
+| 4 | Detail shell & Overview tab | 2 | done (2026-07-07) |
 | 5 | Terminal tab | 4 | not started |
 | 6 | Preview tab | 4 | not started |
 | 7 | `file_list` op + Files tab | 4 | not started |
@@ -194,10 +194,10 @@ Exit: **M2** — full lifecycle from the browser against a real gateway.
 
 ## Phase 4 — Detail shell & Overview tab (`/sandboxes/:id`)
 
-- [ ] `SandboxHeader` from `inspect_sandbox`: badges, endpoints + health dot,
+- [x] `SandboxHeader` from `inspect_sandbox`: badges, endpoints + health dot,
       shared-base indicator, `PortPreview` launcher, Squash/Destroy.
-- [ ] Five-tab scaffold with routed tabs (Overview is the index route).
-- [ ] Overview panels: `RecordPanel`, `WorkspaceSessionList`,
+- [x] Five-tab scaffold with routed tabs (Overview is the index route).
+- [x] Overview panels: `RecordPanel`, `WorkspaceSessionList`,
       `InFlightExecutions` (links use `terminal#cmd-<id>`),
       `ResourceSnapshot`.
 
