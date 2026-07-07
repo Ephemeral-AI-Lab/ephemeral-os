@@ -5,15 +5,30 @@ use sandbox_runtime_layerstack::{LayerChange, LayerPath};
 use sandbox_runtime_workspace::overlay::capture::capture_upperdir;
 use sandbox_runtime_workspace::{ProtectedPathDrop, ProtectedPathDropReason};
 
-#[cfg(unix)]
+// Whiteout/opaque fixtures fabricate kernel overlay metadata via user-namespace
+// xattrs (settable unprivileged), so delete/opaque capture coverage is
+// Linux-gated: the daemon target is Linux, and dirent names no longer stand in
+// for markers.
+#[cfg(target_os = "linux")]
 #[test]
 fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = Fixture::new("capture_upperdir")?;
     std::fs::create_dir_all(fixture.base.join("dir"))?;
     std::fs::write(fixture.base.join("dir/file.txt"), b"hello")?;
-    std::fs::write(fixture.base.join(".wh.old.txt"), b"")?;
-    std::fs::write(fixture.base.join("dir/.wh..wh..opq"), b"")?;
+    std::fs::write(fixture.base.join("old.txt"), b"")?;
+    rustix::fs::lsetxattr(
+        fixture.base.join("old.txt"),
+        "user.overlay.whiteout",
+        b"y",
+        rustix::fs::XattrFlags::empty(),
+    )?;
+    rustix::fs::lsetxattr(
+        fixture.base.join("dir"),
+        "user.overlay.opaque",
+        b"y",
+        rustix::fs::XattrFlags::empty(),
+    )?;
     std::os::unix::fs::symlink("../target", fixture.base.join("link"))?;
 
     let captured = capture_upperdir(&fixture.base)?;
@@ -33,6 +48,80 @@ fn captures_upperdir_files_whiteouts_symlinks_and_opaque_markers(
     assert!(captured.changes.contains(&LayerChange::OpaqueDir {
         path: LayerPath::parse("dir")?,
     }));
+    Ok(())
+}
+
+#[test]
+fn plain_wh_named_file_is_captured_as_write_not_delete(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("capture_plain_wh_named_file")?;
+    std::fs::write(fixture.base.join(".wh.foo"), b"payload")?;
+    std::fs::write(fixture.base.join("foo"), b"sibling")?;
+
+    let captured = capture_upperdir(&fixture.base)?;
+
+    assert!(captured.changes.contains(&LayerChange::WriteFile {
+        path: LayerPath::parse(".wh.foo")?,
+        source_path: fixture.base.join(".wh.foo"),
+        size: 7,
+    }));
+    assert!(captured.changes.contains(&LayerChange::WriteFile {
+        path: LayerPath::parse("foo")?,
+        source_path: fixture.base.join("foo"),
+        size: 7,
+    }));
+    assert!(
+        !captured
+            .changes
+            .iter()
+            .any(|change| matches!(change, LayerChange::Delete { .. })),
+        "a dirent named .wh.foo must never fabricate a delete: {:?}",
+        captured.changes
+    );
+    Ok(())
+}
+
+#[test]
+fn plain_opaque_marker_named_file_is_not_captured_as_opaque_dir(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("capture_plain_opaque_marker_named_file")?;
+    std::fs::create_dir_all(fixture.base.join("dir"))?;
+    std::fs::write(fixture.base.join("dir/.wh..wh..opq"), b"x")?;
+
+    let captured = capture_upperdir(&fixture.base)?;
+
+    assert!(captured.changes.contains(&LayerChange::WriteFile {
+        path: LayerPath::parse("dir/.wh..wh..opq")?,
+        source_path: fixture.base.join("dir/.wh..wh..opq"),
+        size: 1,
+    }));
+    assert!(
+        !captured
+            .changes
+            .iter()
+            .any(|change| matches!(change, LayerChange::OpaqueDir { .. })),
+        "a dirent named .wh..wh..opq must never fabricate an opaque dir: {:?}",
+        captured.changes
+    );
+    Ok(())
+}
+
+#[test]
+fn bare_wh_file_is_captured_as_write() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("capture_bare_wh_file")?;
+    std::fs::write(fixture.base.join(".wh."), b"bare")?;
+
+    let captured = capture_upperdir(&fixture.base)?;
+
+    assert_eq!(
+        captured.changes,
+        vec![LayerChange::WriteFile {
+            path: LayerPath::parse(".wh.")?,
+            source_path: fixture.base.join(".wh."),
+            size: 4,
+        }]
+    );
+    assert!(captured.protected_drops.is_empty());
     Ok(())
 }
 

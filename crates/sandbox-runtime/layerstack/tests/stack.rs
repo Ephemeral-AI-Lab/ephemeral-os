@@ -242,6 +242,46 @@ fn file_ancestor_blocks_lower_descendant_without_storage_error(
     Ok(())
 }
 
+#[test]
+fn bare_wh_layer_entry_projects_as_file_not_directory_clear(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    // A historic layer (publishable before the `.wh.` reservation) may hold a
+    // literal file named exactly `.wh.`; projection must materialize it as
+    // the file it is, never strip it to an empty target and clear the parent.
+    let fixture = Fixture::new("bare_wh_projects_as_file");
+    let lower = fixture.root.join("layers/L000001-lower");
+    let upper = fixture.root.join("layers/L000002-upper");
+    std::fs::create_dir_all(&lower)?;
+    std::fs::write(lower.join("keep.txt"), "keep\n")?;
+    std::fs::create_dir_all(&upper)?;
+    std::fs::write(upper.join("sibling.txt"), "sibling\n")?;
+    std::fs::write(upper.join(".wh."), "literal\n")?;
+    write_manifest(&fixture, &["L000002-upper", "L000001-lower"])?;
+
+    let stack = LayerStack::open(fixture.root.clone())?;
+    let manifest = stack.read_active_manifest()?;
+    MergedView::new(fixture.root.clone()).project(&fixture.workspace, &manifest)?;
+
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join("keep.txt"))?,
+        "keep\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join("sibling.txt"))?,
+        "sibling\n"
+    );
+    let meta = std::fs::symlink_metadata(fixture.workspace.join(".wh."))?;
+    assert!(
+        meta.is_file(),
+        "bare .wh. layer entry must project as a literal file"
+    );
+    assert_eq!(
+        std::fs::read_to_string(fixture.workspace.join(".wh."))?,
+        "literal\n"
+    );
+    Ok(())
+}
+
 fn publish_text(
     stack: &mut LayerStack,
     path: &str,

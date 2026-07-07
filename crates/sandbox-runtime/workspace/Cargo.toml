@@ -25,6 +25,7 @@ futures-util.workspace = true
 sandbox-runtime-layerstack.workspace = true
 sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-namespace-process.workspace = true
+rustix.workspace = true
 serde_json.workspace = true
 
 [lints]

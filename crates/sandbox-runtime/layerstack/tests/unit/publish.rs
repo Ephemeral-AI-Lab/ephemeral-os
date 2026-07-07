@@ -712,6 +712,112 @@ fn mixed_source_and_ignored_changes_publish_in_one_layer(
 }
 
 #[test]
+fn wh_prefixed_component_rejects_as_protected_path(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("wh-reserved")?;
+    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
+    let base = fixture.build_base()?;
+    let source_file = fixture.base.join("wh-payload.bin");
+    std::fs::write(&source_file, b"payload")?;
+
+    // Every change kind at a reserved `.wh.` component rejects fail-closed,
+    // including the bare `.wh.`, a mid-path component, and the literal opaque
+    // marker name.
+    let changes = vec![
+        LayerChange::Write {
+            path: lp(".wh.x"),
+            content: b"x".to_vec(),
+        },
+        LayerChange::WriteFile {
+            path: lp("a/.wh.b"),
+            source_path: source_file.clone(),
+            size: 7,
+        },
+        LayerChange::Delete { path: lp(".wh.x") },
+        LayerChange::Symlink {
+            path: lp(".wh.link"),
+            source_path: "target".to_owned(),
+        },
+        LayerChange::OpaqueDir { path: lp(".wh.d") },
+        LayerChange::Write {
+            path: lp(".wh."),
+            content: b"bare".to_vec(),
+        },
+        LayerChange::Write {
+            path: lp("a/.wh..wh..opq"),
+            content: b"opq".to_vec(),
+        },
+    ];
+
+    for change in changes {
+        let offending = change.path().clone();
+        let error = fixture
+            .stack()?
+            .publish_validated_changes(request(base.clone(), vec![change]))
+            .expect_err("reserved .wh. component rejects publish");
+        match error {
+            LayerStackError::PublishRejected(rejection)
+                if rejection.reason == PublishRejectReason::ProtectedPath =>
+            {
+                assert_eq!(
+                    rejection.path.as_ref(),
+                    Some(&offending),
+                    "reject must name the offending path"
+                );
+            }
+            other => panic!("unexpected error for {}: {other:?}", offending.as_str()),
+        }
+        assert_eq!(fixture.stack()?.read_active_manifest()?, base);
+    }
+    Ok(())
+}
+
+#[test]
+fn wh_lookalikes_still_publish() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("wh-lookalikes")?;
+    std::fs::write(fixture.workspace.join("README.md"), "base\n")?;
+    let base = fixture.build_base()?;
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![
+            LayerChange::Write {
+                path: lp(".wh"),
+                content: b"1".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp(".whx"),
+                content: b"2".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("x.wh.y"),
+                content: b"3".to_vec(),
+            },
+            LayerChange::Write {
+                path: lp("wh.foo"),
+                content: b"4".to_vec(),
+            },
+        ],
+    ))?;
+
+    assert!(!result.no_op);
+    assert_eq!(result.route_summary.source_count, 4);
+    for (path, content) in [
+        (".wh", "1"),
+        (".whx", "2"),
+        ("x.wh.y", "3"),
+        ("wh.foo", "4"),
+    ] {
+        assert_eq!(
+            read_text(&fixture.root, &result.manifest, path)?,
+            Some(content.to_owned()),
+            "lookalike {path} publishes and reads back"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn digest_deduped_publish_reports_no_op() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = PublishFixture::new("dedupe-no-op")?;
     std::fs::write(fixture.workspace.join("README.md"), "base\n")?;

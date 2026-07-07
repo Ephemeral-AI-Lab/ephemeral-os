@@ -1,4 +1,12 @@
 //! Workspace-owned capture for overlay upperdirs.
+//!
+//! Capture derives `Delete` and `OpaqueDir` changes exclusively from kernel
+//! overlay metadata — char-device 0:0 whiteouts, `user.overlay.whiteout`
+//! xattr files, and `{trusted,user}.overlay.opaque` xattr directories. Dirent
+//! names are never interpreted as markers: `.wh.`-prefixed path components
+//! are a reserved layerstack-internal namespace, so a user-created `.wh.`
+//! name flows through as the ordinary write it is and publish admission
+//! rejects it fail-closed as `protected_path`.
 
 use std::collections::HashSet;
 use std::io;
@@ -12,8 +20,6 @@ use crate::model::{ProtectedPathDrop, ProtectedPathDropReason};
 use super::tree::TreeResourceStats;
 
 const MAX_CAPTURE_FILE_BYTES: usize = 8 * 1024 * 1024;
-const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
-const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
 /// Captured upperdir changes and resource stats.
 #[derive(Debug, Clone, PartialEq)]
@@ -164,14 +170,7 @@ fn walk_upperdir(
     }
 
     for (entry, meta) in files {
-        capture_file_entry_metadata(
-            root,
-            &entry,
-            &meta,
-            emitted_opaque_dirs,
-            entries,
-            protected_drops,
-        )?;
+        capture_file_entry_metadata(root, &entry, &meta, entries, protected_drops)?;
     }
     for entry in dirs {
         if has_overlay_opaque_xattr(&entry) {
@@ -196,32 +195,10 @@ fn capture_file_entry_metadata(
     root: &Path,
     entry: &Path,
     meta: &std::fs::Metadata,
-    emitted_opaque_dirs: &mut HashSet<String>,
     entries: &mut Vec<PendingChange>,
     protected_drops: &mut Vec<ProtectedPathDrop>,
 ) -> std::result::Result<(), CaptureError> {
     let rel = relative_path(root, entry)?;
-    let name = entry
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_default();
-    if name == OPAQUE_MARKER {
-        let Some(parent) = rel.parent().filter(|parent| !parent.as_os_str().is_empty()) else {
-            push_invalid_layer_path_drop(&rel, protected_drops);
-            return Ok(());
-        };
-        if let Some(opaque_path) = layer_path_from_relative_or_drop(parent, protected_drops) {
-            push_opaque_dir(opaque_path, emitted_opaque_dirs, entries);
-        }
-        return Ok(());
-    }
-    if is_whiteout_marker(name) {
-        let target = whiteout_target(&rel);
-        if let Some(path) = layer_path_from_relative_or_drop(&target, protected_drops) {
-            entries.push(PendingChange::Delete { path });
-        }
-        return Ok(());
-    }
     if is_overlay_whiteout(entry, meta)? {
         if let Some(path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
             entries.push(PendingChange::Delete { path });
@@ -376,26 +353,6 @@ fn path_component_string(component: &std::ffi::OsStr) -> std::result::Result<Str
             "overlay path component is not valid UTF-8: {bytes:?}"
         ))
     })
-}
-
-fn is_whiteout_marker(name: &str) -> bool {
-    name.starts_with(LOGICAL_WHITEOUT_PREFIX)
-        && name != OPAQUE_MARKER
-        && name.len() > LOGICAL_WHITEOUT_PREFIX.len()
-}
-
-fn whiteout_target(rel: &Path) -> PathBuf {
-    let name = rel
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or_default();
-    let target_name = &name[LOGICAL_WHITEOUT_PREFIX.len()..];
-    rel.parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .map_or_else(
-            || PathBuf::from(target_name),
-            |parent| parent.join(target_name),
-        )
 }
 
 fn is_overlay_whiteout(

@@ -101,7 +101,9 @@ fn collect_project_entries(layer_dir: &Path) -> Result<Vec<ProjectEntry>, LayerS
             let meta = std::fs::symlink_metadata(&path)?;
             let kind = if name == OPAQUE_MARKER {
                 ProjectEntryKind::Opaque
-            } else if name.starts_with(LOGICAL_WHITEOUT_PREFIX) {
+            } else if name.len() > LOGICAL_WHITEOUT_PREFIX.len()
+                && name.starts_with(LOGICAL_WHITEOUT_PREFIX)
+            {
                 ProjectEntryKind::LogicalWhiteout
             } else if is_kernel_whiteout_meta(&path, &meta) {
                 ProjectEntryKind::KernelWhiteout
