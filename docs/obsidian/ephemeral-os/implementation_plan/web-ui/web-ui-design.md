@@ -37,6 +37,7 @@ map 1:1 — the bridge adds no vocabulary. Three realities shape the UI:
 | `/sandboxes/:id/terminal` | Terminal tab | `exec_command`, `read_command_lines`, `write_command_stdin`, workspace session ops |
 | `/sandboxes/:id/files` | Files tab | `file_read`, `file_write`, `file_edit`, `file_blame` |
 | `/sandboxes/:id/observability` | Observability tab | `snapshot`, `cgroup`, `trace`, `events`, `layerstack` |
+| `/sandboxes/:id/preview` | Preview tab | `daemon_http` `/forward` via the console `/s/:id` proxy |
 
 Two real pages, with the detail page tabbed. A separate fleet-wide
 observability page isn't warranted yet — `events`/`trace`/`cgroup` all require
@@ -57,6 +58,8 @@ those targets get addresses now rather than after the router exists:
   jump-links, and `BlameGutter` session owners.
 - `/sandboxes/:id/files?path=<path>&session=<ws-id>` — one file in one scope;
   no `session` query means the published snapshot.
+- `/sandboxes/:id/preview?scope=<shared|ws-id>&port=<port>&path=<path>` — the
+  embedded web viewer; target of every `PortPreview` launcher.
 
 ---
 
@@ -112,14 +115,14 @@ Polling: `list_sandboxes` + `snapshot` every few seconds; cards in
 ## Page 2: Sandbox Detail (`/sandboxes/:id`)
 
 The conversion of `sandbox-runtime-cli` plus per-sandbox observability.
-Persistent header, four tabs.
+Persistent header, five tabs.
 
 **`SandboxHeader`** (always visible): id, StateBadge, image, workspace root,
 daemon endpoints (RPC + HTTP) with health dot, shared-base indicator, a
 **`PortPreview`** launcher (enter a port + scope — shared, or an isolated
-workspace session — and open the app in a new tab through the console's
-`/s/:id/…` preview proxy), and the two sandbox-level actions (Squash,
-Destroy). Backed by `inspect_sandbox`.
+workspace session — and open the app in the Preview tab's embedded viewer),
+and the two sandbox-level actions (Squash, Destroy). Backed by
+`inspect_sandbox`.
 
 ### Tab 1 — Overview
 
@@ -165,19 +168,27 @@ The core interactive surface. Two-pane layout:
 - **`CommandComposer`** — the prompt line: command text, target session
   dropdown (or "implicit" — which per the API creates a one-shot session that
   captures + publishes on completion; the UI should label this
-  "auto-publish"), optional timeout. Fires `exec_command`.
+  "auto-publish"), optional timeout. Fires `exec_command` with
+  `yield_time_ms: 0` — the flag stays hidden from the user; the call returns
+  immediately and the card's poll loop is the one output path.
 - **`CommandCard`** — one per command, collapsible, always carrying a session
   chip naming its owning session so the unfiltered ledger stays readable.
   States: running (spinner, elapsed) / completed / failed / timed-out, exit
   code. Contains:
   - **`TranscriptViewer`** — virtualized log view tailing via
     `read_command_lines` (offset-windowed, ≤1000 lines/fetch — the stable
-    line offsets make infinite scroll-back trivial).
+    line offsets make infinite scroll-back trivial). One API nuance: the
+    `command_session_id` it polls with exists only when `exec_command`
+    answered "still running after the initial wait"; a command that beats
+    the wait returns terminal with its output inline, and the card renders
+    that transcript directly with nothing to poll. `yield_time_ms: 0` makes
+    the polling path the norm, but the inline path must still render.
   - **`StdinBar`** — text input plus Ctrl-C/Ctrl-D buttons, mapped to
     `write_command_stdin`; only rendered while status is running.
   - **`PortPreview`** ("open in browser") — for running commands that serve
     HTTP: pre-fills the command's session scope (shared vs. isolated ws-id),
-    asks only for the port, and opens the app through the preview proxy. For
+    asks only for the port, and opens the Preview tab with scope and port
+    pre-filled. For
     isolated sessions it shows the bind hint inline: listen on `0.0.0.0` or
     the workspace IP, not `127.0.0.1` (isolated loopback relay is an
     explicitly skipped `daemon_http` feature).
@@ -326,6 +337,36 @@ catalog exactly.
 - **`SquashButton`** — the natural home for `checkpoint_squash`, showing
   before/after layer counts — it turns an opaque CLI verb into something
   visual. Runs with `_stream_logs` into a `StreamLogPane`.
+
+### Tab 5 — Preview
+
+The embedded web viewer for anything serving HTTP inside the sandbox, on any
+port. Purely client-side: it renders the console's existing `/s/:id/…`
+preview proxy in an iframe — no new server surface.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│ scope: [shared ▾]   port: [5173]   path: [/dashboard]  ⟳  [↗ tab]│
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│         <iframe src="/s/eos-abc/shared/5173/dashboard">          │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+- **`WebPreviewPane`** — iframe over `/s/:id/<scope>/<port>/<path>`.
+  Controls: scope picker (shared, or an isolated workspace session — showing
+  the bind hint: listen on `0.0.0.0` or the workspace IP), free-form port,
+  editable path, refresh, open-in-new-tab. The proxy makes the app
+  same-origin, so embedding needs no CORS work, and the proxy's WebSocket
+  tunneling means HMR dev servers work embedded.
+- Every `PortPreview` launcher (`SandboxHeader`, running `CommandCard`s)
+  deep-links here with scope and port pre-filled instead of opening a bare
+  new tab; new-tab stays one click away for full-window use.
+- Embedding caveat: an app that sends `X-Frame-Options` / CSP
+  `frame-ancestors` won't render in an iframe — the pane detects the blocked
+  load and offers the new-tab fallback. Apps emitting absolute URLs break
+  exactly as they do under `daemon_http` v0; same answer, don't fix in v0.
 
 ---
 

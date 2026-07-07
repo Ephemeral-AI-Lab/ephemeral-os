@@ -1,0 +1,322 @@
+# Web Console — Implementation Plan & Progress Tracker
+
+Execution plan for [[web-ui-design]] (pages/components) and [[http-server]]
+(`sandbox-console` HTTP surface). Phases are ordered so the two product
+priorities land earliest: (1) workspace sessions + exec/stdin/transcript in
+the browser, (2) embedded preview of anything serving HTTP in the sandbox.
+
+## Progress tracker
+
+Update the Status column and the phase checkboxes as work lands. Statuses:
+`not started` · `in progress` · `blocked (<on what>)` · `done (<date>)`.
+
+| Phase | Title | Depends on | Status |
+|---|---|---|---|
+| 0 | Decisions & scaffolding | — | not started |
+| 1 | `sandbox-console` HTTP server v0 | 0 | not started |
+| 2 | SPA shell & shared components | 1 | not started |
+| 3 | Fleet Board | 2 | not started |
+| 4 | Detail shell & Overview tab | 2 | not started |
+| 5 | Terminal tab | 4 | not started |
+| 6 | Preview tab | 4 | not started |
+| 7 | `file_list` op + Files tab | 4 | not started |
+| 8 | Observability tab | 4 | not started |
+| 9 | Hardening & docs | 3–8 | not started |
+
+Milestones:
+
+- **M1 — bridge up** (end of Phase 1): every gateway op curl-able through
+  `/api/rpc`; preview proxy forwards to a live sandbox.
+- **M2 — fleet manageable** (end of Phase 3): create/inspect/squash/destroy
+  sandboxes entirely from the browser.
+- **M3 — product priorities met** (end of Phase 6): sessions, exec, stdin,
+  live transcript, and embedded port preview all usable.
+- **M4 — spec complete** (end of Phase 8): every page in [[web-ui-design]]
+  built.
+
+## Standing constraints (apply to every phase)
+
+- `sandbox-console` is a client peer built on `sandbox-cli-core`'s
+  `GatewayClient`. It must never define operation vocabulary, contact the
+  daemon RPC endpoint directly, or expose the gateway auth token to the
+  browser ([[http-server]] · Position).
+- Repo rules from `CLAUDE.md`: SRP, no inline comments in `src/`, tests under
+  `tests/` only, workspace-level dependency declarations, `cargo clippy
+  --all-targets` clean, work directly on `main`.
+
+## Expected footprint
+
+### New folders
+
+`crates/sandbox-console/` (Phases 0–1) — module split is the implementer's
+call (SRP per module); the responsibilities are:
+
+```
+crates/sandbox-console/
+├── Cargo.toml
+├── src/
+│   ├── main.rs / lib.rs
+│   ├── config.rs          gateway endpoint, auth token, loopback bind
+│   ├── router.rs          the six public routes
+│   ├── rpc.rs             /api/rpc one-shot + SSE bridge over GatewayClient
+│   ├── catalog.rs         /api/catalog
+│   ├── health.rs          /api/sandboxes/:id/health probe
+│   ├── proxy.rs           /s/:id preview proxy + endpoint-resolution cache
+│   └── assets.rs          static SPA serving with route fallback
+└── tests/                 integration tests + fake-gateway / fake-daemon_http
+```
+
+`web/console/` (Phases 0, 2–8) — the SPA:
+
+```
+web/console/
+├── package.json, vite.config.ts, tsconfig.json, index.html
+└── src/
+    ├── api/               rpc client (two error paths), SSE, catalog forms
+    ├── components/        StateBadge, ResourceSparkline, StreamLogPane,
+    │                      ErrorToast, ConfirmDestroyDialog, PortPreview,
+    │                      PollController
+    └── pages/
+        ├── fleet/         FleetSummaryBar, SandboxCard, CreateSandboxModal
+        └── sandbox/       SandboxHeader + tabs: overview/, terminal/,
+                           files/, observability/, preview/
+```
+
+### Existing files changed
+
+| File | Change | Phase |
+|---|---|---|
+| `Cargo.toml` (root) | workspace member + HTTP-stack deps in `[workspace.dependencies]` | 0 |
+| `README.md` | component-table row for `sandbox-console` with its boundary law | 0 |
+| `xtask/src/main.rs` | packaging verb: build SPA, stage assets for the console | 0 |
+| `.gitignore` | `web/console/node_modules`, SPA build output | 0 |
+| `bin/` | optional `start-sandbox-console` launcher script | 0 |
+| `crates/sandbox-runtime-operations/src/file.rs` | add `FILE_LIST_SPEC` + args | 7 |
+| `crates/sandbox-runtime-operations/src/lib.rs` | export + register in family/catalog arrays | 7 |
+| `crates/sandbox-runtime/operation/src/file/service/impls/` | new `list.rs` beside read/write/edit/blame, plus `mod.rs` and the service trait | 7 |
+| `crates/sandbox-runtime/operation/src/cli_definition/file_operations.rs` | `FILE_LIST` `OperationEntry` + `dispatch_file_list` in `OPERATIONS` | 7 |
+| `crates/sandbox-runtime/.../tests/` (and e2e suites as applicable) | `file_list` coverage | 7 |
+| this file + the two specs | tracker updates per phase; specs corrected against as-built | all / 9 |
+
+### Deliberately untouched
+
+`sandbox-gateway`, `sandbox-daemon` (its `/health` and `/forward` already
+exist), `sandbox-protocol` (the console adds zero vocabulary),
+`sandbox-manager*`, `sandbox-observability*`, and `sandbox-runtime-cli`
+(dispatch lives in `sandbox-runtime/operation`; the CLI and `/api/catalog`
+pick `file_list` up from the spec for free). Any diff touching these during
+console work is a boundary-law violation to catch in review.
+
+---
+
+## Phase 0 — Decisions & scaffolding
+
+Goal: everything later phases assume, decided and committed.
+
+- [ ] Adopt the stack fixed in [[design]]: React 19 + TypeScript + Vite
+      under `web/console/`, Tailwind tokens for the light theme, and the
+      package set listed there.
+- [ ] Decide asset packaging: `cargo run -p xtask -- package` (or a sibling
+      xtask verb) builds the SPA and embeds/copies `dist/` for
+      `sandbox-console` to serve.
+- [ ] Scaffold `sandbox-console` bin crate: config (gateway endpoint, auth
+      token, loopback bind), `GatewayClient` wiring, HTTP listener, serves a
+      placeholder SPA.
+- [ ] Add the crate to `README.md`'s component table with its boundary law.
+
+Exit: `cargo run -p sandbox-console` serves a hello page on loopback;
+workspace builds and clippy passes.
+
+## Phase 1 — `sandbox-console` HTTP server v0
+
+Goal: the full backend surface of [[http-server]]; no UI work.
+
+- [ ] `POST /api/rpc` one-shot: inject `request_id` + auth, pass through
+      verbatim; protocol errors in body with HTTP 200, transport errors as
+      400/502/504.
+- [ ] `POST /api/rpc` SSE variant (`Accept: text/event-stream`): sets
+      `_stream_logs: true`, emits `log` events then one `result` event.
+- [ ] `GET /api/catalog`: manager + runtime + observability catalogs.
+- [ ] `GET /api/sandboxes/:id/health`: resolve record → probe `daemon_http`
+      `/health` with short timeout → `{status: ok|unreachable}`.
+- [ ] `/s/:id/...` preview proxy: prefix swap to `/forward/...`, preserve
+      method/headers/body/query, stream bodies, tunnel WebSocket/upgrades,
+      append `X-Forwarded-*`, short-TTL endpoint-resolution cache.
+- [ ] Console error mapping (400/404/503/502) with `daemon_http` errors
+      passed through verbatim.
+- [ ] Static SPA serving with client-route fallback.
+- [ ] Integration tests in `tests/`: fake gateway for RPC/SSE/catalog, fake
+      `daemon_http` for health/proxy (including an upgrade round-trip).
+
+Exit: all six routes pass integration tests; manual smoke against a real
+sandbox — `list_sandboxes` via curl, a Vite dev server visible through
+`/s/<id>/shared/<port>/`.
+
+## Phase 2 — SPA shell & shared components
+
+Goal: the app skeleton every page plugs into.
+
+- [ ] Router with the full route map **including deep links**: observability
+      sub-views, `traces/:trace-id`, `terminal#cmd-<id>`, `files?path=…&
+      session=…`, `preview?scope=…&port=…&path=…`.
+- [ ] RPC client over `/api/rpc` (one-shot + SSE) with the two error paths
+      (protocol-in-body vs transport-in-status).
+- [ ] Catalog-driven form/validation helper backed by `/api/catalog` (used
+      by CreateSandboxModal and any op form; keeps UI arguments drift-free).
+- [ ] `PollController` (per-page polling, fast/slow modes, stops when tab
+      hidden).
+- [ ] `ErrorToast` rendering the protocol `{kind, message, details}` shape.
+- [ ] `StateBadge`, `ResourceSparkline`, `StreamLogPane` (SSE),
+      `ConfirmDestroyDialog`, `PortPreview` launcher (navigates to Preview
+      routes; target tab lands in Phase 6).
+
+Exit: shell loads through the console, routes resolve, an intentionally bad
+RPC renders an `ErrorToast`.
+
+## Phase 3 — Fleet Board (`/`)
+
+- [ ] Poll `list_sandboxes` + no-arg `snapshot`; fast cadence for
+      `Creating`/`Stopping` cards.
+- [ ] `FleetSummaryBar` — **client-side aggregation** (the no-arg snapshot
+      returns `{sandboxes: [...]}`, per-sandbox; nothing pre-aggregated).
+- [ ] `SandboxCard` with state-dependent layouts: Ready (sparkline, counts,
+      actions), Creating (max-height scrolling `StreamLogPane`), Failed
+      (error + Inspect).
+- [ ] Health dots — decide fan-out posture up front: batch endpoint or a
+      slower independent cadence (N probes per poll cycle doesn't scale).
+- [ ] `CreateSandboxModal` mirroring `create_sandbox` args (image,
+      workspace-bind-root, count) with SSE progress.
+- [ ] Squash action; Destroy behind `ConfirmDestroyDialog` (type-the-id).
+
+Exit: **M2** — full lifecycle from the browser against a real gateway.
+
+## Phase 4 — Detail shell & Overview tab (`/sandboxes/:id`)
+
+- [ ] `SandboxHeader` from `inspect_sandbox`: badges, endpoints + health dot,
+      shared-base indicator, `PortPreview` launcher, Squash/Destroy.
+- [ ] Five-tab scaffold with routed tabs (Overview is the index route).
+- [ ] Overview panels: `RecordPanel`, `WorkspaceSessionList`,
+      `InFlightExecutions` (links use `terminal#cmd-<id>`),
+      `ResourceSnapshot`.
+
+Exit: detail page renders live data; in-flight execution links land on the
+Terminal tab route (cards arrive in Phase 5).
+
+## Phase 5 — Terminal tab
+
+The first product priority: sessions + exec + stdin + live transcript.
+
+- [ ] `SessionSidebar`: list under an **all** entry (selection filters the
+      ledger and pre-fills the composer; **all** = unfiltered), create with
+      network-profile picker, destroy with grace seconds and the
+      refusal path listing `active_command_session_ids` as `#cmd-` jump
+      links.
+- [ ] `CommandComposer`: command text, target session or "auto-publish"
+      (implicit `publish_then_destroy`), optional timeout; fires
+      `exec_command` with hidden `yield_time_ms: 0`.
+- [ ] `CommandCard`: session chip, running/completed/failed/timed-out states,
+      collapsible, addressable as `#cmd-<command-session-id>`.
+- [ ] `TranscriptViewer`: offset-tracked tail via `read_command_lines`
+      (≤1000 lines/fetch), infinite scroll-back, **plus the inline path** —
+      a command that beats the initial wait returns terminal output with no
+      `command_session_id`, and the card renders it without polling.
+- [ ] `StdinBar`: text input + Ctrl-C/Ctrl-D → `write_command_stdin`; only
+      while running.
+
+Exit: run a server, watch it log, poke it with stdin, Ctrl-C it, watch the
+implicit-session publish appear — all without leaving the tab.
+
+## Phase 6 — Preview tab
+
+The second product priority: see anything serving HTTP, any port.
+
+- [ ] `WebPreviewPane`: iframe over `/s/:id/<scope>/<port>/<path>`; scope
+      picker with the isolated bind hint (`0.0.0.0` / workspace IP),
+      free-form port, editable path, refresh, open-in-new-tab.
+- [ ] Blocked-embed detection (`X-Frame-Options` / `frame-ancestors`) with
+      new-tab fallback.
+- [ ] Wire every `PortPreview` launcher (header + running command cards) to
+      deep-link here pre-filled.
+
+Exit: **M3** — start a dev server in the Terminal tab, click preview on its
+card, see the site embedded; WebSocket HMR works through the proxy.
+
+## Phase 7 — `file_list` op + Files tab
+
+- [ ] Backend: `file_list` spec in `sandbox-runtime-operations` (path,
+      optional `workspace_session_id` for the dual scope, entries with
+      kind/size), implementation in `sandbox-runtime/operation`
+      (`file/service/impls/list.rs` plus a dispatch entry in
+      `cli_definition/file_operations.rs`), tests in `tests/`. The CLI picks
+      it up from the spec for free.
+- [ ] `FileTree` over `file_list`; `SessionScopePicker` (published snapshot
+      vs live session) driving tree + viewer.
+- [ ] `FileViewer`: 2000-line windows, offset paging, truncation indicator.
+- [ ] `BlameGutter`: owner coloring + legend + click-through (session →
+      Terminal, operation → trace deep link); **enabled only in published
+      scope** — `file_blame` takes no session id; disabled with hint in
+      live-session scope.
+- [ ] `FileEditor`: edit mode pages `file_read` to the end first (whole-file
+      buffer — `file_write` replaces everything), size threshold →
+      read-only, save guard: re-read + compare, refuse with reload prompt on
+      concurrent change.
+
+Exit: browse both scopes, blame a published file into its trace, edit and
+save with the conflict guard demonstrably firing under a concurrent write.
+
+## Phase 8 — Observability tab
+
+- [ ] Sub-nav routes (`resources` default / `traces` / `events` /
+      `layerstack`).
+- [ ] Resources: CPU/mem/IO/disk charts, counters rendered as deltas
+      (`_counters` flag), scope picker, window capped at 600s, auto-refresh.
+- [ ] Traces: `TraceList` (default `last`), `TraceWaterfall` (nested bars,
+      status colors, ⚑ events pinned), `SpanAttrsDrawer`;
+      `traces/:trace-id` deep link resolves.
+- [ ] Events: filterable table (name / since / last-N), live-tail via
+      polling, trace cells linking to waterfalls.
+- [ ] LayerStack: `LayerStackViz` (per-layer hash/version/bytes/leases,
+      squashable bracket, workspace filter, depth trend), `SquashButton`
+      with `StreamLogPane`; verify whether a pre-run "est. after" count is
+      derivable — if not, show before-count only and report after from the
+      result.
+
+Exit: **M4** — every view in [[web-ui-design]] renders live data; all
+cross-tab deep links resolve end to end.
+
+## Phase 9 — Hardening & docs
+
+- [ ] Empty states for every list surface (no sandboxes, no sessions, no
+      commands, no traces, empty directory).
+- [ ] Error-path sweep: gateway down, sandbox not ready, daemon unreachable,
+      preview 403 (isolated without reachable IP) — each renders its mapped
+      error, not a blank pane.
+- [ ] Poll audit: cadences, tab-hidden pauses, health fan-out posture
+      revisited at fleet scale.
+- [ ] Manual e2e journey scripted in the repo docs: create → exec → stdin →
+      preview → blame → squash → destroy.
+- [ ] Docs: crate README, `README.md` component-table row finalized, both
+      specs re-read and corrected against as-built behavior.
+
+Exit: journey script passes clean against a fresh gateway; tracker above
+fully `done`.
+
+---
+
+## Risks & open questions
+
+- **SPA stack** — fixed in [[design]] (React 19 + TS + Vite + the listed
+  packages); revisit only if a listed package fails a Phase 2 spike.
+- **`sandbox-cli-core` reuse** (Phase 1): consumed as-is, but if
+  `GatewayClient`'s streaming interface (`send_with_logs`) or config surface
+  isn't public enough for the console, it needs a small visibility-only
+  change — flag it, don't fork the client.
+- **Health fan-out** (Phase 3): per-card probes may need a batch endpoint;
+  that would be the console's first non-pass-through route — keep it dumb
+  (fan-out server-side, same probe), or accept slower cadence instead.
+- **Squash estimate** (Phase 8): "12 → est. 4" in the mockup assumes a
+  derivable post-squash count; unverified.
+- **Frame-blocked apps** (Phase 6): apps sending `X-Frame-Options` can't
+  embed; fallback is new-tab, accepted as v0 behavior.
+- **Binary / non-UTF-8 files** (Phase 7): `file_read`/`file_write` are
+  UTF-8-text-only; Files tab shows a "binary file" placeholder in v0.
