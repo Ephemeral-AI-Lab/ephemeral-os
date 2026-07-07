@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/export_changes/test-case.md",
+                "file": "implementation_plan/export_changes/speedup-10x-prompt.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "test-case"
+              "title": "speedup-10x-prompt"
             }
           }
         ]
@@ -183,12 +183,16 @@
       "bases:Create new base": false
     }
   },
-  "active": "7bfb5a3473fb43c0",
+  "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
-    "implementation_plan/export_changes/run-prompt.md",
-    "implementation_plan/export_changes/goal-prompt.md",
-    "implementation_plan/export_changes/test-case.md",
+    "implementation_plan/export_changes/bench-prompt.md.tmp.27160.0d3d9e59e09b",
     "implementation_plan/export_changes/spec.md",
+    "implementation_plan/export_changes/speedup-10x-prompt.md",
+    "implementation_plan/export_changes/runnable-export-test-case.md",
+    "implementation_plan/export_changes/bench-prompt.md",
+    "implementation_plan/export_changes/run-prompt.md",
+    "implementation_plan/export_changes/test-case.md",
+    "implementation_plan/export_changes/goal-prompt.md",
     "implementation_plan/export_changes/adversarial-review-prompt.md",
     "implementation_plan/web-ui/web-ui-design.md",
     "implementation_plan/export_changes/spec.md.tmp.39741.36a8d9f15dc1",
@@ -216,10 +220,6 @@
     "implementation_plan/daemon-shell-security-knob-removal-adversarial-review-prompt.md",
     "implementation_plan/daemon-command-syscall-hardening-test-case.md",
     "implementation_plan/daemon-command-child-policy-refined-spec.md",
-    "implementation_plan/daemon-command-child-policy-refined-adversarial-review-prompt.md",
-    "implementation_plan/daemon-command-syscall-hardening-spec.md",
-    "implementation_plan/git-policy/test-case.md",
-    "implementation_plan/file_operations/spec.md",
-    "implementation_plan/squash/test-case.md"
+    "implementation_plan/daemon-command-child-policy-refined-adversarial-review-prompt.md"
   ]
 }
