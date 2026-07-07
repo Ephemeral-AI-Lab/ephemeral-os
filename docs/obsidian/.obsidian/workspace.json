@@ -185,6 +185,7 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/export_changes/run-prompt.md",
     "ephemeral-os/implementation_plan/export_changes/goal-prompt.md",
     "ephemeral-os/implementation_plan/export_changes/test-case.md",
     "ephemeral-os/implementation_plan/export_changes/spec.md.tmp.39741.36a8d9f15dc1",
@@ -220,7 +221,6 @@
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/W-tuning.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",
-    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }

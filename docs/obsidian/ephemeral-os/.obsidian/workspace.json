@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/export_changes/goal-prompt.md",
+                "file": "implementation_plan/export_changes/test-case.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "goal-prompt"
+              "title": "test-case"
             }
           }
         ]
@@ -183,11 +183,12 @@
       "bases:Create new base": false
     }
   },
-  "active": "d5fccc8ee65959ed",
+  "active": "7bfb5a3473fb43c0",
   "lastOpenFiles": [
+    "implementation_plan/export_changes/run-prompt.md",
+    "implementation_plan/export_changes/goal-prompt.md",
     "implementation_plan/export_changes/test-case.md",
     "implementation_plan/export_changes/spec.md",
-    "implementation_plan/export_changes/goal-prompt.md",
     "implementation_plan/export_changes/adversarial-review-prompt.md",
     "implementation_plan/web-ui/web-ui-design.md",
     "implementation_plan/export_changes/spec.md.tmp.39741.36a8d9f15dc1",
@@ -219,7 +220,6 @@
     "implementation_plan/daemon-command-syscall-hardening-spec.md",
     "implementation_plan/git-policy/test-case.md",
     "implementation_plan/file_operations/spec.md",
-    "implementation_plan/squash/test-case.md",
-    "implementation_plan/file_operations/acceptance_criteria.md"
+    "implementation_plan/squash/test-case.md"
   ]
 }
