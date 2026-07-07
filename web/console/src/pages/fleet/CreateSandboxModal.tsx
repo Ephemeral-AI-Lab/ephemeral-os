@@ -108,7 +108,7 @@ export function CreateSandboxModal({
                   }))
                 }
                 placeholder={arg.help}
-                className="font-mono"
+                className="w-full font-mono"
               />
               {errors[arg.name] ? (
                 <p className="mt-1 text-[11px] text-danger">{errors[arg.name]}</p>

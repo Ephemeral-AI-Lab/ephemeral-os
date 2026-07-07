@@ -60,7 +60,7 @@ export function ConfirmDestroyDialog({
           onChange={(event) => setTyped(event.target.value)}
           placeholder={sandboxId}
           disabled={busy}
-          className="font-mono"
+          className="w-full font-mono"
           autoFocus
         />
         {busy || logLines.length > 0 ? (

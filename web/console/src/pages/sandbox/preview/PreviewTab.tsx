@@ -141,7 +141,7 @@ export function PreviewTab() {
             value={pathDraft}
             onChange={(event) => setPathDraft(event.target.value)}
             placeholder="/"
-            className="font-mono"
+            className="w-full font-mono"
           />
         </form>
         <Button

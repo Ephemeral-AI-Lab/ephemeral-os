@@ -146,8 +146,28 @@ for port_pid in $port_pids; do
 done
 
 printf '==> starting sandbox-console on %s\n' "$bind"
-nohup "$repo_root/bin/start-sandbox-console" --bind "$bind" >>"$log_file" 2>&1 &
-console_pid=$!
+if command -v python3 >/dev/null 2>&1; then
+    console_pid=$(
+        CONSOLE_BIN=$repo_root/bin/start-sandbox-console BIND=$bind LOG_FILE=$log_file python3 - <<'PY'
+import os
+import subprocess
+
+log = open(os.environ["LOG_FILE"], "ab", buffering=0)
+process = subprocess.Popen(
+    ["nohup", os.environ["CONSOLE_BIN"], "--bind", os.environ["BIND"]],
+    stdin=subprocess.DEVNULL,
+    stdout=log,
+    stderr=subprocess.STDOUT,
+    start_new_session=True,
+    close_fds=True,
+)
+print(process.pid)
+PY
+    )
+else
+    nohup "$repo_root/bin/start-sandbox-console" --bind "$bind" </dev/null >>"$log_file" 2>&1 &
+    console_pid=$!
+fi
 printf '%s\n' "$console_pid" >"$pid_file"
 
 count=0

@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/wh-reserved-namespace/test-case.md",
+                "file": "implementation_plan/export_changes/spec.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "test-case"
+              "title": "spec"
             }
           }
         ]
@@ -185,20 +185,22 @@
   },
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
+    "implementation_plan/export_changes/adversarial-review-prompt.md",
+    "implementation_plan/web-ui/web-ui-design.md",
+    "implementation_plan/export_changes/spec.md.tmp.39741.36a8d9f15dc1",
+    "implementation_plan/web-ui/implementation-plan.md",
+    "implementation_plan/daemon-command-syscall-hardening.md",
+    "implementation_plan/wh-reserved-namespace/spec.md",
+    "implementation_plan/wh-reserved-namespace/test-case.md",
     "implementation_plan/web-ui/design.md.tmp.27160.33db0038bc43",
     "implementation_plan/web-ui/e2e-journey.md",
     "implementation_plan/web-ui/web-ui-design.md.tmp.27160.51841c7bb1e3",
     "implementation_plan/wh-reserved-namespace/goal-prompt.md",
-    "implementation_plan/wh-reserved-namespace/spec.md",
-    "implementation_plan/wh-reserved-namespace/test-case.md",
     "implementation_plan/export_changes/spec.md",
     "implementation_plan/wh-reserved-namespace",
     "implementation_plan/web-ui/implementation-plan.md.tmp.27160.d0630dc81f5c",
     "implementation_plan/web-ui/design.md",
     "implementation_plan/export_changes/spec.md.tmp.39741.653b0e79f70e",
-    "implementation_plan/web-ui/web-ui-design.md",
-    "implementation_plan/web-ui/implementation-plan.md",
-    "implementation_plan/export_changes/adversarial-review-prompt.md",
     "implementation_plan/web-ui/http-server.md",
     "implementation_plan/web-ui/web-ui-design.md.tmp.27160.ba29b6789139",
     "implementation_plan/daemon-command-child-policy-refined-spec.md.tmp.27022.bd36e5e3ce61",
@@ -213,13 +215,10 @@
     "implementation_plan/daemon-command-child-policy-refined-spec.md",
     "implementation_plan/daemon-command-child-policy-refined-adversarial-review-prompt.md",
     "implementation_plan/daemon-command-syscall-hardening-spec.md",
-    "implementation_plan/daemon-command-syscall-hardening.md",
     "implementation_plan/git-policy/test-case.md",
     "implementation_plan/file_operations/spec.md",
     "implementation_plan/squash/test-case.md",
     "implementation_plan/file_operations/acceptance_criteria.md",
-    "implementation_plan/cli_migration/operation.md",
-    "implementation_plan/git-policy",
-    "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/loadcombo-ab-diff.json"
+    "implementation_plan/cli_migration/operation.md"
   ]
 }

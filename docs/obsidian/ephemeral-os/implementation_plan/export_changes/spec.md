@@ -370,7 +370,7 @@ dir dest is recovered by re-running (invariant 4).
 | export lease | An ordinary `acquire_snapshot` lease held from fold start to spool completion. Its only job is the existing never-mutate-leased guarantee: squash/GC cannot delete a layer dir mid-read. Zero new lease API. |
 | winner fold | Pure newest-first fold over the delta layers' entries producing the winner map. Per path, the newest verdict wins: `File{layer_dir}`, `Symlink{layer_dir}`, `Directory`, `Delete` (whiteout winner), `OpaqueDir` (opaque cut — masks every older layer AND the base under that directory) — the same masking rules `MergedView`/`apply_layer` already encode (`is_kernel_whiteout_meta`, logical `.wh.` prefix, `OPAQUE_MARKER`). Reuses the per-layer walk idiom of `projection/apply.rs`; reads metadata only, never content. |
 | winner map | `BTreeMap<LayerPath, Winner>` — O(unique changed paths) memory, deterministic emit order for free. |
-| spool | The daemon's one intermediate artifact: winners streamed through `tar::Builder` into one zstd encoder, written to `<scratch_root>/.export/<nonce>.tar.zst`. Entries carry the source file's **mode and second-granular mtime** (tar's `mtime` is seconds); uid/gid, xattrs, and cross-winner hardlinks are NOT carried (invariant 10). `Delete` winners are emitted in the logical OCI encoding (`.wh.<name>`), opaque cuts as `.wh..wh..opq` — never kernel char-dev whiteouts, which need privileges to extract. A user file whose name begins with `.wh.` cannot appear here as content: capture already collapses such names to deletions at publish (`overlay/capture.rs:381-384`), so the ambiguity is inherited from the store, not introduced by export (invariant 10). Unlinked when the last chunk is served; each spool is `export_id`-keyed so a new export never unlinks another's; a leftover is removed by the export boot step, not the session reap. |
+| spool | The daemon's one intermediate artifact: winners streamed through `tar::Builder` into one zstd encoder, written to `<scratch_root>/.export/<nonce>.tar.zst`. Entries carry the source file's **mode and second-granular mtime** (tar's `mtime` is seconds); uid/gid, xattrs, and cross-winner hardlinks are NOT carried (invariant 10). `Delete` winners are emitted in the logical OCI encoding (`.wh.<name>`), opaque cuts as `.wh..wh..opq` — never kernel char-dev whiteouts, which need privileges to extract. A user file whose name begins with `.wh.` cannot appear here as content: `.wh.` is a reserved namespace and publish is fail-closed — any path component starting with `.wh.` is rejected as `ProtectedPath` at admission (`stack/publish/route.rs:22-33`), so no such name ever reaches a published layer. The logical `.wh.<name>` deletion encoding on the stream is therefore unambiguous by construction, not merely by convention (invariant 10). Unlinked when the last chunk is served; each spool is `export_id`-keyed so a new export never unlinks another's; a leftover is removed by the export boot step, not the session reap. |
 | chunk paging | `read_export_chunk` serves the spool by byte offset in base64 frames (≤ 2 MiB raw). The read_command_lines shape: stable offsets, caller-driven, stateless between calls except the spool file itself. |
 | host apply | The manager's dir-mode renderer. It is NOT a blind tar-order stream (that would let a dotfile child written before a later `.wh..wh..opq` be destroyed by the clear — invariant 2). It reproduces `apply_layer`'s per-directory three-pass order (`projection/apply.rs:11-63`): for each directory, (1) opaque clear, (2) whiteout deletions, (3) content — directories ensured, files compared and written, symlinks recreated. Path safety is a hard precondition, not a side effect (invariant 9): every entry name is rejected if absolute, if it contains a `..` component, or if it normalizes outside dest (whiteout targets validated AFTER the `.wh.` prefix strip); the applier reaches each entry by a dest-rooted `O_NOFOLLOW` open-parent fd walk, so a symlink at any path component — pre-existing or planted by an earlier entry — is never followed out of dest; hardlink tar entries are rejected. Within a directory: ensure-dir replaces a dest symlink/file at a directory position with a real directory; a file/symlink winner does `remove_path` then create (never writes through an existing symlink); `.wh.<name>` `remove_path`s the validated target; `.wh..wh..opq` clears the directory before its siblings apply — this is what removes base-origin files the sandbox masked with an opaque dir. |
 | skip-unchanged | (size, second-truncated mtime) equality between a tar entry and its dest file. Both sides are truncated to whole seconds before comparing (tar carries seconds; `File::set_times` writes nanoseconds — comparing at nanosecond precision would make every re-export re-copy). Sound because host apply stamps the entry's second-granular mtime on every write; stateless because the destination carries the watermark. Known hole (documented, not fixed): a same-second, same-size content change published and re-exported inside one wall-clock second false-skips — add content-hash comparison later if fidelity under sub-second churn matters. |
@@ -449,9 +449,12 @@ Invariants:
     cuts. It does NOT carry uid/gid (files land owned by the manager
     process), user xattrs, or cross-winner hardlinks (hardlinked winners are
     emitted as duplicate content). Filenames beginning with `.wh.` cannot be
-    represented as content — capture collapses them to deletions upstream
-    (`overlay/capture.rs:381-384`). "Lossless OCI-style layer" (B4) means
-    lossless for that carried set, not for ownership, xattrs, or hardlinks.
+    represented as content — `.wh.` is a reserved namespace and publish
+    fail-closes on any `.wh.`-prefixed path component (`ProtectedPath`,
+    `stack/publish/route.rs:22-33`), so the logical `.wh.<name>` deletion
+    encoding on the stream is unambiguous by construction. "Lossless
+    OCI-style layer" (B4) means lossless for that carried set, not for
+    ownership, xattrs, or hardlinks.
 
 ## A. Expected file/folder structure with LoC change
 
@@ -656,9 +659,10 @@ result: files_written 1, whiteouts_emitted 1, bytes_written = archive size
 
 The archive is a valid OCI-style layer for the carried set (invariant 10):
 content, mode, symlink targets, and deletions survive and apply later onto
-any base copy; uid/gid, xattrs, and hardlinks do not, and `.wh.`-prefixed
-filenames were already collapsed to deletions upstream. It compressed before
-crossing the wire.
+any base copy; uid/gid, xattrs, and hardlinks do not. `.wh.`-prefixed
+filenames never collide with the deletion encoding because publish
+fail-closes on them (reserved namespace, `stack/publish/route.rs:22-33`). It
+compressed before crossing the wire.
 
 ### B5. Concurrent squash — the lease does all the work
 
@@ -734,7 +738,13 @@ operations compose: squash to compact, export to deliver.
    base64-framed — fewer raw bytes is the dominant win.
 7. **Logical `.wh.` encoding on the stream** (kernel char-dev whiteouts
    need privileged extraction); host apply consumes whiteouts and opaque
-   markers directly and never writes them to a dir dest.
+   markers directly and never writes them to a dir dest. The encoding is
+   unambiguous by construction: `.wh.` is a reserved namespace and publish
+   fail-closes on any `.wh.`-prefixed path component (`ProtectedPath`,
+   `stack/publish/route.rs:22-33`, landed 2026-07-07), so no user file can
+   ever collide with a deletion marker on the wire. This closes the earlier
+   whiteout-name-collision concern at the source (publish admission), not in
+   the applier.
 8. **No fsync in dir mode**: idempotent re-run is the recovery story;
    tar dests get temp+rename because a partial archive is corrupt, not
    merely incomplete.

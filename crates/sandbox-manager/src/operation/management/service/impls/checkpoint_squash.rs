@@ -1,5 +1,5 @@
-use sandbox_protocol::{CliOperationScope, Request, Response};
-use serde_json::json;
+use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
+use serde_json::{json, Value};
 
 use crate::operation::ManagerServices;
 use crate::router::forward_sandbox_request;
@@ -27,7 +27,23 @@ pub(crate) fn dispatch_checkpoint_squash(
         json!({}),
     );
     match forward_sandbox_request(services, runtime_request) {
-        Ok(response) => response,
+        Ok(response) => translate_stale_daemon_response(response),
         Err(error) => error.into_response(),
     }
+}
+
+fn translate_stale_daemon_response(response: Response) -> Response {
+    let value = response.into_json_value();
+    if response_error_kind(&value) == Some("unknown_op") {
+        return Response::fault_with_details(
+            error_kind::OPERATION_FAILED,
+            "sandbox daemon does not support checkpoint_squash; recreate the sandbox so it uses the current daemon binary",
+            json!({ "daemon_op": RUNTIME_SQUASH_OP }),
+        );
+    }
+    Response::ok(value)
+}
+
+fn response_error_kind(value: &Value) -> Option<&str> {
+    value.get("error")?.get("kind")?.as_str()
 }

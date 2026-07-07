@@ -98,7 +98,7 @@ export function PortPreview({
               onChange={(event) => setPort(event.target.value)}
               placeholder="5173"
               inputMode="numeric"
-              className="font-mono"
+              className="w-full font-mono"
               autoFocus
             />
           </form>

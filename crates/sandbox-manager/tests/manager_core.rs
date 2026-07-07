@@ -980,6 +980,47 @@ fn checkpoint_squash_manager_cli_forwards_to_runtime() {
 }
 
 #[test]
+fn checkpoint_squash_reports_stale_daemon_unknown_op() {
+    struct UnknownOpClient;
+
+    impl SandboxDaemonClient for UnknownOpClient {
+        fn invoke_with_timeout(
+            &self,
+            _endpoint: &SandboxDaemonEndpoint,
+            _request: Request,
+            _timeout: Duration,
+        ) -> Result<Response, ManagerError> {
+            Ok(Response::unknown_op())
+        }
+    }
+
+    let (services, store) = services_with_client(Arc::new(UnknownOpClient));
+    store
+        .insert(sandbox_record(
+            "sbox-1",
+            SandboxState::Ready,
+            Some(endpoint("sbox-1")),
+        ))
+        .expect("insert ready sandbox");
+
+    let response = dispatch(
+        &services,
+        "checkpoint_squash",
+        json!({ "sandbox_id": "sbox-1" }),
+    );
+
+    assert_eq!(response["error"]["kind"], "operation_failed");
+    assert!(response["error"]["message"]
+        .as_str()
+        .expect("message string")
+        .contains("current daemon binary"));
+    assert_eq!(
+        response["error"]["details"]["daemon_op"],
+        "squash_layerstack"
+    );
+}
+
+#[test]
 fn checkpoint_squash_requires_sandbox_id_and_a_ready_sandbox() {
     let client = Arc::new(RecordingSnapshotClient::default());
     let (services, store) = services_with_client(client.clone());

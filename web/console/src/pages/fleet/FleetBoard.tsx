@@ -88,7 +88,7 @@ export function FleetBoard() {
               setSearchParams(next, { replace: true });
             }}
             placeholder="filter by id or state ( / )"
-            className="pl-7"
+            className="w-full pl-7"
           />
         </div>
         <div className="ml-auto">

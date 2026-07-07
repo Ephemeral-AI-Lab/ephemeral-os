@@ -185,6 +185,7 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/export_changes/spec.md.tmp.39741.36a8d9f15dc1",
     "ephemeral-os/implementation_plan/web-ui/design.md.tmp.27160.33db0038bc43",
     "ephemeral-os/implementation_plan/web-ui/e2e-journey.md",
     "ephemeral-os/implementation_plan/web-ui/web-ui-design.md.tmp.27160.51841c7bb1e3",
@@ -215,7 +216,6 @@
     "ephemeral-os/implementation_plan/daemon-command-syscall-hardening-test-case.md",
     "ephemeral-os/implementation_plan/daemon-command-syscall-hardening-spec.md",
     "ephemeral-os/implementation_plan/git-policy/test-case.md",
-    "ephemeral-os/implementation_plan/git-policy",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/W-tuning.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",

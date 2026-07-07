@@ -75,26 +75,26 @@ export function CommandComposer({
 
   return (
     <form
-      className="flex items-center gap-2 border-t border-line bg-surface px-3 py-2"
+      className="flex min-w-0 items-center gap-2 border-t border-line bg-surface px-3 py-2"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <span className="font-mono text-sm text-ink-faint">$</span>
+      <span className="shrink-0 font-mono text-sm text-ink-faint">$</span>
       <Input
         ref={inputRef}
         value={cmd}
         onChange={(event) => setCmd(event.target.value)}
         placeholder="run a command…"
-        className="flex-1 font-mono"
+        className="min-w-0 flex-1 font-mono"
         autoFocus
       />
-      <label className="text-[11px] text-ink-faint" htmlFor="composer-target">
+      <label className="shrink-0 text-[11px] text-ink-faint" htmlFor="composer-target">
         in
       </label>
       <Select value={target} onValueChange={setTarget}>
-        <SelectTrigger id="composer-target" className="w-48">
+        <SelectTrigger id="composer-target" className="w-48 shrink-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -106,7 +106,7 @@ export function CommandComposer({
           ))}
         </SelectContent>
       </Select>
-      <label className="text-[11px] text-ink-faint" htmlFor="composer-timeout">
+      <label className="shrink-0 text-[11px] text-ink-faint" htmlFor="composer-timeout">
         timeout (s)
       </label>
       <Input
@@ -114,10 +114,15 @@ export function CommandComposer({
         value={timeoutSeconds}
         onChange={(event) => setTimeoutSeconds(event.target.value)}
         placeholder="none"
-        className="w-20 font-mono"
+        className="w-14 shrink-0 font-mono"
         inputMode="numeric"
       />
-      <Button type="submit" variant="primary" disabled={busy || cmd.trim() === ""}>
+      <Button
+        type="submit"
+        variant="primary"
+        className="shrink-0"
+        disabled={busy || cmd.trim() === ""}
+      >
         <Play size={12} />
         run
       </Button>

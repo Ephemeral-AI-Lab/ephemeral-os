@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router";
+import { useSandbox } from "@/pages/sandbox/SandboxContext";
 
 const VIEWS = [
   { path: "resources", label: "Resources" },
@@ -13,6 +14,8 @@ const VIEWS = [
  * redirects into `resources` via the index route.
  */
 export function ObservabilityTab() {
+  const sandbox = useSandbox();
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <nav className="flex gap-1 border-b border-line bg-surface px-4 pt-1.5">
@@ -33,7 +36,7 @@ export function ObservabilityTab() {
         ))}
       </nav>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <Outlet />
+        <Outlet context={sandbox} />
       </div>
     </div>
   );
