@@ -18,7 +18,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 3 | Fleet Board | 2 | done (2026-07-07) |
 | 4 | Detail shell & Overview tab | 2 | done (2026-07-07) |
 | 5 | Terminal tab | 4 | done (2026-07-07) |
-| 6 | Preview tab | 4 | not started |
+| 6 | Preview tab | 4 | done (2026-07-07) |
 | 7 | `file_list` op + Files tab | 4 | not started |
 | 8 | Observability tab | 4 | not started |
 | 9 | Hardening & docs | 3–8 | not started |
@@ -241,12 +241,12 @@ implicit-session publish appear — all without leaving the tab.
 
 The second product priority: see anything serving HTTP, any port.
 
-- [ ] `WebPreviewPane`: iframe over `/s/:id/<scope>/<port>/<path>`; scope
+- [x] `WebPreviewPane`: iframe over `/s/:id/<scope>/<port>/<path>`; scope
       picker with the isolated bind hint (`0.0.0.0` / workspace IP),
       free-form port, editable path, refresh, open-in-new-tab.
-- [ ] Blocked-embed detection (`X-Frame-Options` / `frame-ancestors`) with
+- [x] Blocked-embed detection (`X-Frame-Options` / `frame-ancestors`) with
       new-tab fallback.
-- [ ] Wire every `PortPreview` launcher (header + running command cards) to
+- [x] Wire every `PortPreview` launcher (header + running command cards) to
       deep-link here pre-filled.
 
 Exit: **M3** — start a dev server in the Terminal tab, click preview on its

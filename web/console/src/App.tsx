@@ -8,6 +8,7 @@ import { NotFound } from "@/pages/NotFound";
 import { SandboxDetail } from "@/pages/sandbox/SandboxDetail";
 import { OverviewTab } from "@/pages/sandbox/overview/OverviewTab";
 import { TerminalTab } from "@/pages/sandbox/terminal/TerminalTab";
+import { PreviewTab } from "@/pages/sandbox/preview/PreviewTab";
 import { PlaceholderTab } from "@/pages/sandbox/PlaceholderTab";
 
 const queryClient = new QueryClient({
@@ -33,10 +34,7 @@ export default function App() {
                     path="files"
                     element={<PlaceholderTab title="Files" phase="Phase 7" />}
                   />
-                  <Route
-                    path="preview"
-                    element={<PlaceholderTab title="Preview" phase="Phase 6" />}
-                  />
+                  <Route path="preview" element={<PreviewTab />} />
                   <Route path="observability">
                     <Route
                       index
