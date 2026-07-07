@@ -15,7 +15,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 0 | Decisions & scaffolding | — | done (2026-07-07) |
 | 1 | `sandbox-console` HTTP server v0 | 0 | done (2026-07-07) |
 | 2 | SPA shell & shared components | 1 | done (2026-07-07) |
-| 3 | Fleet Board | 2 | not started |
+| 3 | Fleet Board | 2 | done (2026-07-07) |
 | 4 | Detail shell & Overview tab | 2 | not started |
 | 5 | Terminal tab | 4 | not started |
 | 6 | Preview tab | 4 | not started |
@@ -176,18 +176,19 @@ RPC renders an `ErrorToast`.
 
 ## Phase 3 — Fleet Board (`/`)
 
-- [ ] Poll `list_sandboxes` + no-arg `snapshot`; fast cadence for
+- [x] Poll `list_sandboxes` + no-arg `snapshot`; fast cadence for
       `Creating`/`Stopping` cards.
-- [ ] `FleetSummaryBar` — **client-side aggregation** (the no-arg snapshot
+- [x] `FleetSummaryBar` — **client-side aggregation** (the no-arg snapshot
       returns `{sandboxes: [...]}`, per-sandbox; nothing pre-aggregated).
-- [ ] `SandboxCard` with state-dependent layouts: Ready (sparkline, counts,
+- [x] `SandboxCard` with state-dependent layouts: Ready (sparkline, counts,
       actions), Creating (max-height scrolling `StreamLogPane`), Failed
       (error + Inspect).
-- [ ] Health dots — decide fan-out posture up front: batch endpoint or a
-      slower independent cadence (N probes per poll cycle doesn't scale).
-- [ ] `CreateSandboxModal` mirroring `create_sandbox` args (image,
+- [x] Health dots — posture decided: no batch endpoint; each card probes on
+      its own slower 10s cadence (accepted-risk option; revisit at fleet
+      scale in Phase 9).
+- [x] `CreateSandboxModal` mirroring `create_sandbox` args (image,
       workspace-bind-root, count) with SSE progress.
-- [ ] Squash action; Destroy behind `ConfirmDestroyDialog` (type-the-id).
+- [x] Squash action; Destroy behind `ConfirmDestroyDialog` (type-the-id).
 
 Exit: **M2** — full lifecycle from the browser against a real gateway.
 
