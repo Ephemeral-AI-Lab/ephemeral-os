@@ -26,8 +26,11 @@ pub use stack::publish::model::{
     SourceConflict,
 };
 pub use stack::{
+    delta_layer_refs, describe_layer_delta, emit_delta_stream, fold_delta_winners, DeltaFold,
+    DeltaStreamStats, DeltaWinner, LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind,
     LayerStack, Lease, MergedView, RewrittenLease, SquashOutcome, SquashedBlock, SweepReport,
 };
+pub use storage::whiteout::{LOGICAL_WHITEOUT_PREFIX, OPAQUE_MARKER};
 pub use workspace_base::{
     build_shared_workspace_base, build_workspace_base, ensure_workspace_base,
     read_workspace_binding, require_workspace_binding, SharedWorkspaceBase, WorkspaceBinding,

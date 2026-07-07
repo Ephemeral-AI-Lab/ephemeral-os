@@ -81,6 +81,7 @@ const OPERATION_ENTRY_GROUPS: &[&[OperationEntry]] = &[
     workspace_session_operations::operation_entries(),
     file_operations::operation_entries(),
     crate::layerstack::squash_operation_entries(),
+    crate::layerstack::export_operation_entries(),
 ];
 
 fn operation_entry_groups() -> &'static [&'static [OperationEntry]] {

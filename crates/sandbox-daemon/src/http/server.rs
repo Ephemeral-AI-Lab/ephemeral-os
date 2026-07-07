@@ -15,26 +15,41 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
+use crate::observability::DaemonObservability;
+use crate::rpc::ServerConfig;
+
 use super::response::BoxBody;
 use super::router;
 
 /// Shared state every request handler reads: runtime session state for target
 /// resolution and the observer for the forward span.
 pub(crate) struct HttpState {
+    pub(crate) config: ServerConfig,
     pub(crate) operations: Arc<SandboxRuntimeOperations>,
+    pub(crate) observability: Option<Arc<DaemonObservability>>,
     pub(crate) observer: Observer,
+}
+
+impl HttpState {
+    pub(crate) fn sandbox_id(&self) -> &str {
+        self.config.sandbox_id.as_deref().unwrap_or("daemon-http")
+    }
 }
 
 /// Spawn the accept loop on the daemon runtime; it returns when `shutdown`
 /// fires.
 pub(crate) fn spawn(
     listener: TcpListener,
+    config: ServerConfig,
     operations: Arc<SandboxRuntimeOperations>,
+    observability: Option<Arc<DaemonObservability>>,
     observer: Observer,
     shutdown: CancellationToken,
 ) -> JoinHandle<()> {
     let state = Arc::new(HttpState {
+        config,
         operations,
+        observability,
         observer,
     });
     tokio::spawn(accept_loop(listener, state, shutdown))

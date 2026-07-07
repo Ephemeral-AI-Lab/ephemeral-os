@@ -3,13 +3,14 @@ use std::path::PathBuf;
 use sandbox_observability::{LayerBytes, LayerStackBytes};
 use sandbox_runtime::workspace_session::FinalizePolicy;
 use sandbox_runtime::{
-    LayerStatus, NetworkProfile, RuntimeWorkspaceSnapshot, StackObservation, WorkspaceSessionId,
+    LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind, LayerStatus, NetworkProfile,
+    RuntimeWorkspaceSnapshot, StackObservation, WorkspaceSessionId,
 };
 use sandbox_runtime_layerstack::LayerRef;
 use serde_json::json;
 
 use crate::observability::layerstack::{
-    layerstack_view_value, stack_summary_value, workspace_layerstack_value,
+    layer_delta_value, layerstack_view_value, stack_summary_value, workspace_layerstack_value,
 };
 
 fn workspace(id: &str, layer_ids: &[&str]) -> RuntimeWorkspaceSnapshot {
@@ -159,4 +160,42 @@ fn workspace_view_lists_mounts_and_sharing() {
 fn workspace_view_is_none_for_unknown_session() {
     let workspaces = vec![workspace("ws-7", &["l0"])];
     assert!(workspace_layerstack_value(&workspaces, "missing", None).is_none());
+}
+
+#[test]
+fn layer_delta_view_lists_changed_paths() {
+    let delta = LayerDeltaDescription {
+        entries: vec![
+            LayerDeltaEntry {
+                path: sandbox_runtime_layerstack::LayerPath::parse("src/main.rs")
+                    .expect("path"),
+                kind: LayerDeltaEntryKind::File,
+            },
+            LayerDeltaEntry {
+                path: sandbox_runtime_layerstack::LayerPath::parse("src/old.rs").expect("path"),
+                kind: LayerDeltaEntryKind::Delete,
+            },
+            LayerDeltaEntry {
+                path: sandbox_runtime_layerstack::LayerPath::parse("config").expect("path"),
+                kind: LayerDeltaEntryKind::OpaqueDir,
+            },
+        ],
+        truncated: true,
+    };
+
+    let view = layer_delta_value("l1", &delta);
+
+    assert_eq!(
+        view,
+        json!({
+            "view": "layerstack",
+            "layer_id": "l1",
+            "truncated": true,
+            "entries": [
+                { "path": "src/main.rs", "kind": "file" },
+                { "path": "src/old.rs", "kind": "delete" },
+                { "path": "config", "kind": "opaque_dir" },
+            ],
+        })
+    );
 }

@@ -5,8 +5,10 @@ use std::path::{Path, PathBuf};
 
 use crate::error::LayerStackError;
 
-pub(crate) const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
-pub(crate) const OPAQUE_MARKER: &str = ".wh..wh..opq";
+/// The logical OCI whiteout prefix: `.wh.<name>` deletes `<name>`.
+pub const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
+/// The logical OCI opaque-directory marker entry name.
+pub const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
 pub(crate) const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
 pub(crate) const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";

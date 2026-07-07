@@ -3,8 +3,13 @@ use sandbox_protocol::{error_kind, Request, Response};
 use sandbox_runtime::SandboxRuntimeOperations;
 use serde_json::Value;
 
-use crate::observability::layerstack::{layerstack_view_value, workspace_layerstack_value};
+use crate::observability::layerstack::{
+    layer_delta_value, layerstack_view_value, workspace_layerstack_value,
+};
 use crate::observability::DaemonObservability;
+
+const DEFAULT_LAYER_DELTA_LIMIT: usize = 500;
+const MAX_LAYER_DELTA_LIMIT: usize = 5_000;
 
 pub(super) fn layerstack_view_response(
     operations: &SandboxRuntimeOperations,
@@ -15,6 +20,19 @@ pub(super) fn layerstack_view_response(
         Ok(workspace) => workspace.filter(|workspace| !workspace.trim().is_empty()),
         Err(response) => return response,
     };
+    let layer = match request.optional_string("layer_id") {
+        Ok(layer) => layer.filter(|layer| !layer.trim().is_empty()),
+        Err(response) => return response,
+    };
+    if workspace.is_some() && layer.is_some() {
+        return Response::fault(
+            error_kind::INVALID_REQUEST,
+            "layerstack request cannot include both workspace_id and layer_id".to_owned(),
+        );
+    }
+    if let Some(layer) = layer {
+        return layer_view_response(operations, request, layer.trim());
+    }
     if let Some(workspace) = workspace {
         return workspace_view_response(operations, observability, workspace.trim());
     }
@@ -44,6 +62,48 @@ pub(super) fn layerstack_view_response(
     Response::ok(view)
 }
 
+fn layer_view_response(
+    operations: &SandboxRuntimeOperations,
+    request: &Request,
+    layer_id: &str,
+) -> Response {
+    let limit = match layer_delta_limit(request) {
+        Ok(limit) => limit,
+        Err(response) => return response,
+    };
+    let observation = match operations.observe_layerstack() {
+        Ok(observation) => observation,
+        Err(error) => {
+            return Response::fault(
+                error_kind::INTERNAL_ERROR,
+                format!("layerstack observe failed: {error}"),
+            )
+        }
+    };
+    let Some(layer) = observation
+        .layers
+        .iter()
+        .map(|status| &status.layer)
+        .find(|layer| layer.layer_id == layer_id)
+    else {
+        return Response::fault(
+            error_kind::INVALID_REQUEST,
+            format!("unknown layer: {layer_id}"),
+        );
+    };
+    let layer_dir = operations.layer_stack_root().join(&layer.path);
+    let delta = match sandbox_runtime::describe_layer_delta(&layer_dir, limit) {
+        Ok(delta) => delta,
+        Err(error) => {
+            return Response::fault(
+                error_kind::INTERNAL_ERROR,
+                format!("layer delta inspect failed: {error}"),
+            )
+        }
+    };
+    Response::ok(layer_delta_value(&layer.layer_id, &delta))
+}
+
 fn workspace_view_response(
     operations: &SandboxRuntimeOperations,
     observability: Option<&DaemonObservability>,
@@ -59,4 +119,17 @@ fn workspace_view_response(
             format!("unknown workspace: {workspace}"),
         ),
     }
+}
+
+fn layer_delta_limit(request: &Request) -> Result<usize, Response> {
+    let limit = request
+        .optional_usize("limit")?
+        .unwrap_or(DEFAULT_LAYER_DELTA_LIMIT);
+    if limit > MAX_LAYER_DELTA_LIMIT {
+        return Err(Response::fault(
+            error_kind::INVALID_REQUEST,
+            format!("limit exceeds max ({MAX_LAYER_DELTA_LIMIT})"),
+        ));
+    }
+    Ok(limit)
 }

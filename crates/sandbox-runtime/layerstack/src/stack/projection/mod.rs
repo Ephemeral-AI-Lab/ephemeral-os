@@ -3,6 +3,14 @@ use std::io::{ErrorKind, Read};
 use std::path::{Path, PathBuf};
 
 mod apply;
+mod delta;
+mod emit_stream;
+
+pub use delta::{
+    delta_layer_refs, describe_layer_delta, fold_delta_winners, DeltaFold, DeltaWinner,
+    LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind,
+};
+pub use emit_stream::{emit_delta_stream, DeltaStreamStats};
 
 use crate::error::LayerStackError;
 use crate::fs::{join_layer_path, remove_path, resolve_layer_path, validate_layer_ref};

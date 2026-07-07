@@ -23,6 +23,9 @@ pub use namespace_execution::{
 };
 pub use observability::{RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot};
 pub use sandbox_runtime_layerstack::service::{LayerStatus, StackObservation};
+pub use sandbox_runtime_layerstack::{
+    describe_layer_delta, LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind,
+};
 pub use services::{
     NamespaceExecutionRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,

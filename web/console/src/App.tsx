@@ -36,6 +36,7 @@ export default function App() {
                   <Route index element={<OverviewTab />} />
                   <Route path="terminal" element={<TerminalTab />} />
                   <Route path="files" element={<FilesTab />} />
+                  <Route path="layerstack" element={<LayerStackView />} />
                   <Route path="preview" element={<PreviewTab />} />
                   <Route path="observability" element={<ObservabilityTab />}>
                     <Route index element={<Navigate to="resources" replace />} />

@@ -30,7 +30,7 @@ sandbox-config
 |---|---|---|---|
 | `sandbox-gateway` | bin+lib | own the public gateway listener | own manager or runtime behavior or any CLI client code |
 | `sandbox-cli-core` | lib | the gateway client, CLI config discovery, catalog-driven request building, and response/error/help rendering shared by the CLI binaries | know any concrete operation or space policy |
-| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and per-sandbox `daemon_http` (`/api/sandboxes/:id/health`, `/s/:id` preview proxy) as a client peer over `sandbox-cli-core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
+| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and per-sandbox `daemon_http` (`/api/sandboxes/:id/health`, `/api/sandboxes/:id/files/:op`, `/api/sandboxes/:id/observability/:view`, `/s/:id` preview proxy) as a client peer over `sandbox-cli-core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
 | `sandbox-manager-cli` | bin | operator CLI: manager + observability catalogs, system-scope requests, `--progress` | depend on manager/runtime/daemon/provider implementation crates |
 | `sandbox-runtime-cli` | bin | agent CLI: runtime catalog, sandbox-scope requests, required `--sandbox-id` | depend on manager/runtime/daemon/provider implementation crates |
 | `sandbox-manager-operations` | lib | manager CLI operation specs and catalog (spec-only) | contain dispatch or service code |

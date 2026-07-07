@@ -36,6 +36,7 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
     sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false)?;
     Ok(Arc::new(LayerStackService::new(
         root,
+        base.join("scratch"),
         Observer::disabled(),
         file_service(),
     )?))

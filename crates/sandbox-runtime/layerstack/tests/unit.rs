@@ -95,6 +95,10 @@ pub(crate) use model::*;
 #[path = "unit/test_fixture.rs"]
 mod test_fixture;
 
+#[path = "unit/export_delta.rs"]
+mod export_delta_tests;
+#[path = "unit/export_stream.rs"]
+mod export_stream_tests;
 #[path = "unit/merge.rs"]
 mod merge_tests;
 #[path = "unit/model.rs"]

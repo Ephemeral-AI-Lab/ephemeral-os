@@ -65,14 +65,14 @@ pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), La
 }
 
 #[derive(Debug)]
-struct ProjectEntry {
-    path: PathBuf,
-    rel: PathBuf,
-    kind: ProjectEntryKind,
+pub(super) struct ProjectEntry {
+    pub(super) path: PathBuf,
+    pub(super) rel: PathBuf,
+    pub(super) kind: ProjectEntryKind,
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ProjectEntryKind {
+pub(super) enum ProjectEntryKind {
     Opaque,
     LogicalWhiteout,
     KernelWhiteout,
@@ -81,7 +81,9 @@ enum ProjectEntryKind {
     Symlink,
 }
 
-fn collect_project_entries(layer_dir: &Path) -> Result<Vec<ProjectEntry>, LayerStackError> {
+pub(super) fn collect_project_entries(
+    layer_dir: &Path,
+) -> Result<Vec<ProjectEntry>, LayerStackError> {
     let mut entries = Vec::new();
     let mut stack = vec![layer_dir.to_path_buf()];
     while let Some(dir) = stack.pop() {

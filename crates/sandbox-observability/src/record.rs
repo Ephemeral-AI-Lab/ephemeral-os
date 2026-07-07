@@ -75,6 +75,8 @@ pub mod names {
     pub const NAMESPACE_EXEC_REMOUNT_OVERLAY: &str = "namespace.exec.remount_overlay";
     pub const WORKSPACE_SESSION_REMOUNT: &str = "workspace_session.remount";
     pub const LAYERSTACK_SQUASH: &str = "layerstack.squash";
+    /// Layerstack export span (fold + spool of the published delta).
+    pub const LAYERSTACK_EXPORT: &str = "layerstack.export";
     /// Namespace file-op span (sync request/result).
     pub const NAMESPACE_EXEC_FILE_OP: &str = "namespace.exec.file_op";
     /// Namespace-process child spawn span (cross-process).

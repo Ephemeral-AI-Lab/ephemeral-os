@@ -86,8 +86,13 @@ fn env() -> Env {
     sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false).expect("build base");
     let file = Arc::new(FileService::open(temp("audit")).expect("audit store"));
     let layerstack = Arc::new(
-        LayerStackService::new(root, Observer::disabled(), Arc::clone(&file))
-            .expect("layerstack service"),
+        LayerStackService::new(
+            root,
+            base.join("scratch"),
+            Observer::disabled(),
+            Arc::clone(&file),
+        )
+        .expect("layerstack service"),
     );
     let fake = Arc::new(FakeWorkspaceService::new());
     let workspace_session = Arc::new(WorkspaceSessionService::new(

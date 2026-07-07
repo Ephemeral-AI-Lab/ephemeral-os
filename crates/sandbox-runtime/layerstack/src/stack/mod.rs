@@ -12,7 +12,7 @@ pub(crate) mod file_read;
 mod layer;
 pub(crate) mod lease;
 mod ops;
-mod projection;
+pub(crate) mod projection;
 pub mod publish;
 pub(crate) mod squash;
 
@@ -23,7 +23,11 @@ use lease::{
 pub use lease::{RewrittenLease, SweepReport};
 pub use squash::{SquashOutcome, SquashedBlock};
 
-pub use projection::MergedView;
+pub use projection::{
+    delta_layer_refs, describe_layer_delta, emit_delta_stream, fold_delta_winners, DeltaFold,
+    DeltaStreamStats, DeltaWinner, LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind,
+    MergedView,
+};
 
 pub(crate) fn reset_shared_registries_for_tests() {
     lease::reset_shared_registries_for_tests();

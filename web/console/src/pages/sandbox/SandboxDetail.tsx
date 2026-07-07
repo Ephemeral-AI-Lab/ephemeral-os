@@ -11,6 +11,7 @@ const TABS = [
   { path: "", label: "Overview", end: true },
   { path: "terminal", label: "Terminal", end: false },
   { path: "files", label: "Files", end: false },
+  { path: "layerstack", label: "LayerStack", end: false },
   { path: "observability", label: "Observability", end: false },
   { path: "preview", label: "Preview", end: false },
 ];

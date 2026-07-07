@@ -4,7 +4,9 @@
 use std::collections::HashMap;
 
 use sandbox_observability::LayerStackBytes;
-use sandbox_runtime::{RuntimeWorkspaceSnapshot, StackObservation};
+use sandbox_runtime::{
+    LayerDeltaDescription, LayerDeltaEntryKind, RuntimeWorkspaceSnapshot, StackObservation,
+};
 use serde_json::{json, Value};
 
 /// Join per-layer bytes (by id) onto the lease observation and derive each
@@ -95,4 +97,33 @@ pub(crate) fn workspace_layerstack_value(
         "mounts": mounts,
         "upper_bytes": upper_bytes,
     }))
+}
+
+pub(crate) fn layer_delta_value(layer_id: &str, delta: &LayerDeltaDescription) -> Value {
+    let entries = delta
+        .entries
+        .iter()
+        .map(|entry| {
+            json!({
+                "path": entry.path.as_str(),
+                "kind": layer_delta_kind(entry.kind),
+            })
+        })
+        .collect::<Vec<_>>();
+    json!({
+        "view": "layerstack",
+        "layer_id": layer_id,
+        "entries": entries,
+        "truncated": delta.truncated,
+    })
+}
+
+const fn layer_delta_kind(kind: LayerDeltaEntryKind) -> &'static str {
+    match kind {
+        LayerDeltaEntryKind::File => "file",
+        LayerDeltaEntryKind::Symlink => "symlink",
+        LayerDeltaEntryKind::Directory => "directory",
+        LayerDeltaEntryKind::Delete => "delete",
+        LayerDeltaEntryKind::OpaqueDir => "opaque_dir",
+    }
 }

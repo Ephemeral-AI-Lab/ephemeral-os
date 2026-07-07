@@ -6,8 +6,7 @@ It is a **client peer** of `sandbox-manager-cli` and `sandbox-runtime-cli`,
 built on `sandbox-cli-core`'s `GatewayClient`.
 
 Boundary law: never define operation vocabulary, never contact the daemon
-RPC endpoint directly (every operation goes through the gateway), never
-expose the gateway auth token to the browser.
+RPC endpoint directly, never expose the gateway auth token to the browser.
 
 ## Routes
 
@@ -16,6 +15,8 @@ POST /api/rpc                                  one-shot operation dispatch
 POST /api/rpc   (Accept: text/event-stream)    same, streaming _stream_logs as SSE
 GET  /api/catalog                              manager+runtime+observability catalogs
 GET  /api/sandboxes/<id>/health                daemon_http /health probe
+POST /api/sandboxes/<id>/files/<op>            daemon_http file operation
+POST /api/sandboxes/<id>/observability/<view>  daemon_http observability view
 ANY  /s/<id>/shared/<port>/...                 preview proxy (prefix swap to /forward)
 ANY  /s/<id>/isolated=<ws-id>/<port>/...       preview proxy, isolated workspace
 GET  /*                                        SPA assets + client-route fallback

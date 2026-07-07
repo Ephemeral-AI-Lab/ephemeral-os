@@ -7,6 +7,7 @@ use bytes::Bytes;
 use http::header::CONTENT_TYPE;
 use http::{HeaderValue, Response, StatusCode};
 use http_body_util::{BodyExt as _, Full};
+use serde_json::Value;
 
 /// The single response body type: either a fixed buffer or a streamed proxy
 /// body, erased behind one boxed `Body`.
@@ -38,6 +39,16 @@ pub(crate) fn text(status: StatusCode, message: &str) -> Response<BoxBody> {
 /// An `application/json` response with the given status.
 pub(crate) fn json(status: StatusCode, body: &'static str) -> Response<BoxBody> {
     let mut response = Response::new(full(Bytes::from_static(body.as_bytes())));
+    *response.status_mut() = status;
+    response
+        .headers_mut()
+        .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+    response
+}
+
+pub(crate) fn json_value(status: StatusCode, value: &Value) -> Response<BoxBody> {
+    let body = serde_json::to_vec(value).unwrap_or_default();
+    let mut response = Response::new(full(body));
     *response.status_mut() = status;
     response
         .headers_mut()

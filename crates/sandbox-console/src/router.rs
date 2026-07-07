@@ -8,7 +8,7 @@ use hyper::body::Incoming;
 
 use crate::response::{self, BoxBody};
 use crate::state::AppState;
-use crate::{assets, catalog, health, proxy, rpc};
+use crate::{assets, catalog, daemon_api, health, proxy, rpc};
 
 pub async fn route(state: Arc<AppState>, req: Request<Incoming>) -> Response<BoxBody> {
     let path = req.uri().path().to_owned();
@@ -23,6 +23,12 @@ pub async fn route(state: Arc<AppState>, req: Request<Incoming>) -> Response<Box
             return response::text(StatusCode::METHOD_NOT_ALLOWED, "use GET");
         }
         return catalog::handle();
+    }
+    if let Some(route) = daemon_api::route(&path) {
+        if req.method() != Method::POST {
+            return response::text(StatusCode::METHOD_NOT_ALLOWED, "use POST");
+        }
+        return daemon_api::handle(&state, route, req).await;
     }
     if let Some(sandbox_id) = health_route(&path) {
         if req.method() != Method::GET {

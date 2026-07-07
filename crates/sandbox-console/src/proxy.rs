@@ -43,7 +43,7 @@ pub async fn handle(state: &Arc<AppState>, req: Request<Incoming>) -> Response<B
         Ok(endpoint) => endpoint,
         Err(error) => return error.into_response(),
     };
-    forward(&endpoint, &route, req).await
+    forward_to_endpoint(&endpoint, &route.forward_target, req).await
 }
 
 /// A parsed `/s/<id>/...` route: the sandbox id plus the daemon-side
@@ -97,9 +97,9 @@ fn validate_scope(scope_rest: &str) -> Result<(), &'static str> {
     }
 }
 
-async fn forward(
+pub async fn forward_to_endpoint(
     endpoint: &HttpEndpoint,
-    route: &PreviewRoute,
+    target: &str,
     req: Request<Incoming>,
 ) -> Response<BoxBody> {
     let stream = match timeout(
@@ -122,22 +122,22 @@ async fn forward(
     });
 
     if is_upgrade(req.headers()) {
-        tunnel(&mut sender, route, req).await
+        tunnel(&mut sender, target, req).await
     } else {
-        forward_plain(&mut sender, route, req).await
+        forward_plain(&mut sender, target, req).await
     }
 }
 
 async fn forward_plain(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
-    route: &PreviewRoute,
+    target: &str,
     req: Request<Incoming>,
 ) -> Response<BoxBody> {
     let (parts, body) = req.into_parts();
     let peer = parts.extensions.get::<SocketAddr>().copied();
     let outbound = build_request(
         &parts.method,
-        route,
+        target,
         &parts.headers,
         peer,
         body.boxed(),
@@ -151,13 +151,13 @@ async fn forward_plain(
 
 async fn tunnel(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
-    route: &PreviewRoute,
+    target: &str,
     mut req: Request<Incoming>,
 ) -> Response<BoxBody> {
     let peer = req.extensions().get::<SocketAddr>().copied();
     let outbound = build_request(
         req.method(),
-        route,
+        target,
         req.headers(),
         peer,
         response::empty(),
@@ -196,7 +196,7 @@ async fn send(
 
 fn build_request(
     method: &http::Method,
-    route: &PreviewRoute,
+    target: &str,
     src_headers: &HeaderMap,
     peer: Option<SocketAddr>,
     body: BoxBody,
@@ -204,8 +204,7 @@ fn build_request(
 ) -> Request<BoxBody> {
     let mut request = Request::new(body);
     *request.method_mut() = method.clone();
-    *request.uri_mut() = route
-        .forward_target
+    *request.uri_mut() = target
         .parse::<Uri>()
         .unwrap_or_else(|_| Uri::from_static("/"));
     let headers = request.headers_mut();

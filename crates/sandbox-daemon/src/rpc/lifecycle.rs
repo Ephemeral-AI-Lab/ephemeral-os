@@ -73,7 +73,9 @@ impl SandboxDaemonServer {
                 let listener = TcpListener::bind((host, port)).await?;
                 Some(crate::http::spawn(
                     listener,
+                    server.config.clone(),
                     Arc::clone(&server.operations),
+                    server.observability.clone(),
                     server.observer(),
                     server.shutdown.clone(),
                 ))

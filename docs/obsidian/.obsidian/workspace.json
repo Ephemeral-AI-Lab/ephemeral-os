@@ -185,6 +185,8 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/export_changes/goal-prompt.md",
+    "ephemeral-os/implementation_plan/export_changes/test-case.md",
     "ephemeral-os/implementation_plan/export_changes/spec.md.tmp.39741.36a8d9f15dc1",
     "ephemeral-os/implementation_plan/web-ui/design.md.tmp.27160.33db0038bc43",
     "ephemeral-os/implementation_plan/web-ui/e2e-journey.md",
@@ -206,7 +208,6 @@
     "ephemeral-os/implementation_plan/export_changes",
     "ephemeral-os/implementation_plan/web-ui/web-ui-design.md",
     "ephemeral-os/implementation_plan/web-ui",
-    "ephemeral-os/implementation_plan/Untitled",
     "ephemeral-os/implementation_plan/shell-security-e2e-goal-prompt.md",
     "ephemeral-os/implementation_plan/security-policy.md",
     "ephemeral-os/implementation_plan/daemon-shell-security-knob-removal-adversarial-review-prompt.md",
@@ -220,7 +221,6 @@
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",
-    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/RESULTS.md",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }

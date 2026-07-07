@@ -1,4 +1,5 @@
-import { rpc, sandboxScope, systemScope } from "@/api/rpc";
+import { postJson } from "@/api/http";
+import { rpc, systemScope } from "@/api/rpc";
 
 export interface ResourceSample {
   ts: number;
@@ -49,7 +50,9 @@ export function fetchFleetSnapshot(): Promise<SnapshotResult> {
 }
 
 export function fetchSandboxSnapshot(sandboxId: string): Promise<SnapshotResult> {
-  return rpc<SnapshotResult>("snapshot", systemScope, { sandbox_id: sandboxId });
+  return fetchObservabilityView<SandboxSnapshot>(sandboxId, "snapshot").then((snapshot) => ({
+    sandboxes: [snapshot],
+  }));
 }
 
 export function fetchObservabilityView<T = unknown>(
@@ -57,7 +60,11 @@ export function fetchObservabilityView<T = unknown>(
   view: string,
   args: Record<string, unknown> = {},
 ): Promise<T> {
-  return rpc<T>("get_observability", sandboxScope(sandboxId), { view, ...args });
+  return postJson<T>(observabilityUrl(sandboxId, view), args);
+}
+
+function observabilityUrl(sandboxId: string, view: string): string {
+  return `/api/sandboxes/${encodeURIComponent(sandboxId)}/observability/${view}`;
 }
 
 export function inFlightCount(snapshot: SandboxSnapshot): number {
@@ -155,4 +162,53 @@ export interface LayerStackResult {
 
 export function fetchLayerStack(sandboxId: string): Promise<LayerStackResult> {
   return fetchObservabilityView<LayerStackResult>(sandboxId, "layerstack");
+}
+
+export interface LayerStackWorkspaceMount {
+  layer_id: string;
+  shared_with: string[];
+}
+
+export interface LayerStackWorkspaceResult {
+  view: "layerstack";
+  workspace: string;
+  mounts: LayerStackWorkspaceMount[];
+  upper_bytes: number | null;
+}
+
+export function fetchLayerStackWorkspace(
+  sandboxId: string,
+  workspaceId: string,
+): Promise<LayerStackWorkspaceResult> {
+  return fetchObservabilityView<LayerStackWorkspaceResult>(sandboxId, "layerstack", {
+    workspace_id: workspaceId,
+  });
+}
+
+export type LayerStackLayerEntryKind =
+  | "file"
+  | "directory"
+  | "symlink"
+  | "delete"
+  | "opaque_dir";
+
+export interface LayerStackLayerEntry {
+  path: string;
+  kind: LayerStackLayerEntryKind;
+}
+
+export interface LayerStackLayerResult {
+  view: "layerstack";
+  layer_id: string;
+  entries: LayerStackLayerEntry[];
+  truncated: boolean;
+}
+
+export function fetchLayerStackLayer(
+  sandboxId: string,
+  layerId: string,
+): Promise<LayerStackLayerResult> {
+  return fetchObservabilityView<LayerStackLayerResult>(sandboxId, "layerstack", {
+    layer_id: layerId,
+  });
 }

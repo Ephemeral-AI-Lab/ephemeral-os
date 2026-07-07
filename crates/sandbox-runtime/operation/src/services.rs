@@ -45,6 +45,7 @@ impl SandboxRuntimeOperations {
     #[must_use]
     pub fn from_config(config: SandboxRuntimeConfig, observer: Observer) -> Self {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
+        let workspace_scratch_root = config.workspace.scratch_root.clone();
         let file = Arc::new(
             FileService::open(file_auditability_dir(&layer_stack_root))
                 .expect("file auditability store initialization failed"),
@@ -83,8 +84,13 @@ impl SandboxRuntimeOperations {
         }
         detach_workspace_bind_after_base(&config.workspace.workspace_root);
         let layerstack = Arc::new(
-            LayerStackService::new(layer_stack_root, observer.clone(), Arc::clone(&file))
-                .expect("layerstack service initialization failed"),
+            LayerStackService::new(
+                layer_stack_root,
+                workspace_scratch_root,
+                observer.clone(),
+                Arc::clone(&file),
+            )
+            .expect("layerstack service initialization failed"),
         );
         let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_root(
             workspace_runtime,
@@ -99,6 +105,7 @@ impl SandboxRuntimeOperations {
             },
             observer.clone(),
         ));
+        boot_remove_export_spools(&layerstack);
         boot_reap_then_sweep(&workspace_session, &layerstack, &observer);
         Self::new(command, workspace_session, layerstack, file)
     }
@@ -128,6 +135,22 @@ impl SandboxRuntimeOperations {
     #[must_use]
     pub fn layer_stack_root(&self) -> &std::path::Path {
         self.layerstack.layer_stack_root()
+    }
+}
+
+/// Export-owned boot step: remove `<scratch_root>/.export/` wholesale before
+/// serving. The session boot reap is registry-driven and never walks scratch
+/// for unknown directories, so a spool orphaned by a crashed export would
+/// leak forever without this.
+fn boot_remove_export_spools(layerstack: &Arc<LayerStackService>) {
+    let spool_dir = layerstack.export_spool_dir();
+    match std::fs::remove_dir_all(&spool_dir) {
+        Ok(()) => cli_log(format!("export boot reap removed {}", spool_dir.display())),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => cli_log(format!(
+            "export boot reap failed for {}: {error}",
+            spool_dir.display()
+        )),
     }
 }
 
