@@ -46,6 +46,9 @@ pub enum ManagerError {
 
     #[error("sandbox store lock poisoned")]
     StorePoisoned,
+
+    #[error("sandbox registry persistence failed: {message}")]
+    RegistryPersistFailed { message: String },
 }
 
 impl ManagerError {
@@ -63,7 +66,8 @@ impl ManagerError {
             Self::RuntimeFailed { .. }
             | Self::DaemonInstallFailed { .. }
             | Self::ForwardingFailed { .. }
-            | Self::StorePoisoned => sandbox_protocol::error_kind::INTERNAL_ERROR,
+            | Self::StorePoisoned
+            | Self::RegistryPersistFailed { .. } => sandbox_protocol::error_kind::INTERNAL_ERROR,
             Self::WorkspaceSetupFailed { .. } => sandbox_protocol::error_kind::OPERATION_FAILED,
         }
     }

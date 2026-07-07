@@ -42,7 +42,8 @@ standing per-arch maintenance liability.
 >    setup engine (§12). The live e2e suite is repointed to
 >    `runtime/shell_security/` (enforce-only).
 >
-> Remaining: superseded-spec frontmatter, Phase 3.
+> Remaining: superseded-spec frontmatter. Phase 3 (outer-container
+> de-privileging, §14) is **implemented and live-proven**.
 
 Enforce a security policy **only on the user-command child**, installed at its
 `pre_exec` boundary in this order:
@@ -110,7 +111,7 @@ or `ptrace` the daemon/ns-runner, because they live in a different PID namespace
   sandboxes / Bazel sandboxing / rootless Docker/Podman unless one becomes a
   declared product workload (then use the app's `--no-sandbox`).
 - No change to the outer container's `--privileged` posture in this phase (that
-  is Phase 3, §14).
+  is Phase 3, §14 — since implemented).
 
 ## 4. Non-goals vs goals summary (tiered privilege model)
 
@@ -118,7 +119,7 @@ or `ptrace` the daemon/ns-runner, because they live in a different PID namespace
 |---|---|---|
 | Setup admin | daemon, ns-holder, ns-runner, overlay/layerstack/workspace/network setup | Keep every cap and syscall these paths need. Untouched. |
 | User command | shell command child only | `no_new_privs` + targeted cap drop + seccomp-lite deny table at `pre_exec`. |
-| Outer container | Docker container | De-privilege later (Phase 3), only after live workflows prove the minimal caps/devices/security-opts. |
+| Outer container | Docker container | De-privileged (Phase 3, §14): `cap_add SYS_ADMIN,NET_ADMIN` + Docker default seccomp + `no-new-privileges`, live-proven against product workflows. |
 
 ## 5. Host compatibility model: Linux, macOS, Windows
 
@@ -217,8 +218,9 @@ to the minimum that still runs arbitrary developer workloads:
    mask or mint a fresh cap set via a new user namespace.
 5. Device-node denial — no char/block `mknod` (raw disk / `/dev/mem`).
 6. Kernel attack-surface denial — no `bpf`/`io_uring`/`userfaultfd`/`perf`.
-7. (Phase 3) outer-container de-privileging — restore Docker's own default
-   seccomp + drop container caps once live workflows prove the minimal set.
+7. (Phase 3 — done) outer-container de-privileging — Docker's own default
+   seccomp restored + container caps dropped to the live-proven minimal set
+   (§14).
 8. Clear unsupported-workload boundaries — namespace-creating tooling is
    unsupported (a future declared workload would need a gated mode or
    `--no-sandbox`).
@@ -455,6 +457,41 @@ normal `exec_command` · workspace read/write · overlay/layerstack whiteout ·
 package-install smoke · destroy cleanup. No browser/Bazel/rootless-Docker/Podman
 unless declared.
 
+### Status: implemented and live-proven (2026-07-07)
+
+The sandbox container now launches with `privileged: false` by default
+(`sandbox-config/src/configs/manager.rs`), which the Docker provider maps to
+`cap_add: [SYS_ADMIN, NET_ADMIN]` + `security_opt: [no-new-privileges]` with
+Docker's default seccomp profile active
+(`sandbox-provider-docker/src/engine.rs`). `manager.docker.privileged: true`
+remains as the legacy escape hatch.
+
+Requirements inventory (step 1) mapped every setup-path privileged operation
+and bisected it live in de-privileged containers:
+
+| Setup path | Kernel ops | Boundary need |
+|---|---|---|
+| ns-holder / ns-runner | `unshare`/`setns` user+mnt+pid+net | `SYS_ADMIN` |
+| overlay + gate-probe | `fsopen`/`fsconfig`/`fsmount`/`move_mount`, `userxattr` | `SYS_ADMIN` |
+| mount mask | tmpfs mount in sandbox mntns | `SYS_ADMIN` |
+| isolated network | bridge/veth rtnetlink in container root netns, veth move | `NET_ADMIN` |
+| layerstack whiteouts | `mknod` char 0:0 + user xattr fallback | default caps |
+| cgroup delegation | subtree writes under private cgroupns (v2) | none extra |
+
+Live proof (all suites against `Privileged=false CapAdd=[SYS_ADMIN NET_ADMIN]
+SecurityOpt=[no-new-privileges]`): e2e smoke + sandbox lifecycle + file smoke
+(22 passed); file-exec whiteouts + squash catalog + live-remount boot gate +
+network isolation (35 passed); shell-security easy/medium/hard (38 passed,
+2 environment skips: x32 is x86-only, apt blocked by a machine-level proxy 502
+reproduced identically in plain default-caps containers); package-install smoke
+(`apk add jq`) passed inside a de-privileged sandbox. The shell-exec child
+policy stacks intact on the container boundary: `CapBnd 0x880024ff` (exact
+keep set), `NoNewPrivs 1`, `Seccomp 2`.
+
+Known benign degradation: `disable_ipv6_ra` writes under `/proc/sys/net` are
+best-effort and silently no-op because Docker mounts `/proc/sys` read-only in
+non-privileged containers.
+
 ## 15. File / folder structure (every file touched)
 
 Landed workstreams: **(A)** allowlist removal, **(B)** rename
@@ -627,13 +664,14 @@ host-kernel syscall filtering.
   host/VM kernel and can cross to co-tenant sandboxes (§7). Only a separate
   kernel per sandbox would close this.
 - Denylist gap: unlike a default-deny allowlist, the deny table does not
-  auto-close *future/obscure* syscalls. Mitigation: the outer container's own
-  default seccomp returns in Phase 3 as the allowlist backstop; the highest-risk
-  *known* surfaces are explicitly denied.
+  auto-close *future/obscure* syscalls. Mitigation (in place since Phase 3): the
+  outer container runs Docker's own default seccomp as the allowlist backstop;
+  the highest-risk *known* surfaces are explicitly denied.
 - `TIOCSTI` terminal-injection `ioctl` is not filtered (too fragile to arg-filter;
   sysctl-mitigated on modern kernels). Documented gap, not closed here.
-- While the container is still `--privileged` (pre-Phase-3), device-node and mount
-  denials are doing acute work; do not defer Phase 3 indefinitely.
+- With Phase 3 implemented, the container boundary and the in-daemon deny table
+  are stacked layers: Docker's allowlist gates the container, the deny table
+  hardens each shell-exec child inside it.
 
 **Compatibility risk.**
 - **`io_uring` (rising).** Modern async runtimes increasingly use it (libuv,

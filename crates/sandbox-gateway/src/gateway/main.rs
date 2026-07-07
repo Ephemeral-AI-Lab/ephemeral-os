@@ -123,18 +123,21 @@ fn build_docker_services(
         .ok_or("config is missing the manager.docker section")?;
     docker_config.validate()?;
 
-    let store = Arc::new(SandboxStore::new());
+    let store = Arc::new(match manager_config.registry_path {
+        Some(path) => SandboxStore::load(path)?,
+        None => SandboxStore::new(),
+    });
     let runtime = DockerSandboxRuntime::new(docker_config.clone());
     match runtime.recover_sandboxes() {
-        Ok(records) => {
-            for record in records {
-                let id = record.id.clone();
-                if let Err(error) = store.insert(record) {
-                    eprintln!("skipping recovered sandbox {id}: {error}");
+        Ok(records) => match store.reconcile(records) {
+            Ok(orphaned) => {
+                for id in orphaned {
+                    eprintln!("sandbox {id} has no backing container; marked failed");
                 }
             }
-        }
-        Err(error) => eprintln!("sandbox recovery failed; starting with an empty store: {error}"),
+            Err(error) => eprintln!("sandbox registry reconcile failed: {error}"),
+        },
+        Err(error) => eprintln!("sandbox recovery failed; keeping loaded registry: {error}"),
     }
 
     Ok(Arc::new(ManagerServices::new(

@@ -1,9 +1,12 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use serde::{Deserialize, Serialize};
+
 use crate::ManagerError;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct SandboxId(String);
 
 impl SandboxId {
@@ -33,7 +36,21 @@ impl fmt::Display for SandboxId {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl TryFrom<String> for SandboxId {
+    type Error = ManagerError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl From<SandboxId> for String {
+    fn from(id: SandboxId) -> Self {
+        id.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SharedBaseMount {
     pub source: PathBuf,
     pub target: PathBuf,
@@ -41,7 +58,7 @@ pub struct SharedBaseMount {
     pub readonly: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SandboxRecord {
     pub id: SandboxId,
     pub workspace_root: PathBuf,
@@ -65,7 +82,8 @@ impl SandboxRecord {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SandboxState {
     Creating,
     Ready,
@@ -93,7 +111,7 @@ impl fmt::Display for SandboxState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SandboxDaemonEndpoint {
     pub host: String,
     pub port: u16,
@@ -113,7 +131,7 @@ impl SandboxDaemonEndpoint {
 
 /// The unauthenticated daemon HTTP endpoint published beside `daemon`. Carries
 /// only a host and port; the HTTP surface has no auth token.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SandboxHttpEndpoint {
     pub host: String,
     pub port: u16,

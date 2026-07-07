@@ -7,10 +7,12 @@ operation that exists today in `sandbox-manager-operations`,
 
 ## Architecture note (constrains everything below)
 
-The gateway speaks newline-delimited JSON over raw TCP, so the web app needs a
-thin **HTTP/WebSocket bridge** in front of it (or an HTTP listener added to
-`sandbox-gateway`). Operations map 1:1 — the bridge adds no vocabulary. Two
-streaming realities shape the UI:
+The gateway speaks newline-delimited JSON over raw TCP, so the browser talks
+to a thin **`sandbox-console` HTTP server** — a client peer of the two CLIs,
+built on `sandbox-cli-core`'s `GatewayClient` — that bridges RPC to the
+gateway and reverse-proxies the per-sandbox `daemon_http` surface (`/health`
+plus `/forward` port forwarding). Endpoint spec: [[http-server]]. Operations
+map 1:1 — the bridge adds no vocabulary. Three realities shape the UI:
 
 - **Command output is transcript-based, not raw PTY.** The exposed API is
   `exec_command` → `read_command_lines` (stable line offsets) →
@@ -19,6 +21,12 @@ streaming realities shape the UI:
   emulation. This fits the product — it's how agents use the sandbox too.
 - **Observability is pull-based NDJSON** (spans/events/samples), so charts and
   waterfalls poll on an interval rather than subscribing.
+- **App preview rides `daemon_http`.** Servers started inside the sandbox are
+  reachable through `/forward/shared/<port>/…` or
+  `/forward/isolated=<ws-id>/<port>/…`. The console proxies these same-origin
+  (`daemon_http` publishes on host loopback, so the browser can't be assumed
+  to reach it directly). Isolated-session servers must bind `0.0.0.0` or the
+  workspace IP — the UI surfaces this hint wherever preview appears.
 
 ## Page map
 
@@ -68,9 +76,10 @@ lifecycle actions.
   by state, total in-flight executions, total layers.
 - **`SandboxCard`** — one per `SandboxRecord`. Shows: id, `StateBadge`
   (Creating/Ready/Stopping/Stopped/Failed — the exact `SandboxState` enum),
-  workspace root, daemon endpoint health dot, workspace-session count +
-  in-flight execution count (from snapshot), `ResourceSparkline` (latest
-  cgroup sample), layer count. Actions: Open → detail page, Squash
+  workspace root, daemon endpoint health dot (backed by
+  `GET /api/sandboxes/:id/health` → `daemon_http` `/health`),
+  workspace-session count + in-flight execution count (from snapshot),
+  `ResourceSparkline` (latest cgroup sample), layer count. Actions: Open → detail page, Squash
   (`checkpoint_squash`), Destroy (`destroy_sandbox`, confirm dialog).
 - **`CreateSandboxModal`** — mirrors `create_sandbox` args exactly: image
   (required), workspace-bind-root (required), count (optional, ≥1 → creates N
@@ -92,8 +101,11 @@ The conversion of `sandbox-runtime-cli` plus per-sandbox observability.
 Persistent header, four tabs.
 
 **`SandboxHeader`** (always visible): id, StateBadge, image, workspace root,
-daemon endpoint (host:port, protocol + HTTP), shared-base indicator, and the
-two sandbox-level actions (Squash, Destroy). Backed by `inspect_sandbox`.
+daemon endpoints (RPC + HTTP) with health dot, shared-base indicator, a
+**`PortPreview`** launcher (enter a port + scope — shared, or an isolated
+workspace session — and open the app in a new tab through the console's
+`/s/:id/…` preview proxy), and the two sandbox-level actions (Squash,
+Destroy). Backed by `inspect_sandbox`.
 
 ### Tab 1 — Overview
 
@@ -144,6 +156,12 @@ The core interactive surface. Two-pane layout:
     line offsets make infinite scroll-back trivial).
   - **`StdinBar`** — text input plus Ctrl-C/Ctrl-D buttons, mapped to
     `write_command_stdin`; only rendered while status is running.
+  - **`PortPreview`** ("open in browser") — for running commands that serve
+    HTTP: pre-fills the command's session scope (shared vs. isolated ws-id),
+    asks only for the port, and opens the app through the preview proxy. For
+    isolated sessions it shows the bind hint inline: listen on `0.0.0.0` or
+    the workspace IP, not `127.0.0.1` (isolated loopback relay is an
+    explicitly skipped `daemon_http` feature).
 
 ### Tab 3 — Files
 
@@ -285,16 +303,19 @@ catalog exactly.
 ## Shared component library
 
 `StateBadge` · `ResourceSparkline` · `TranscriptViewer` · `BlameGutter` ·
-`ConfirmDestroyDialog` · `StreamLogPane` (renders `_stream_logs` progress
-lines; used by create/destroy/squash) · `ErrorToast` (renders the protocol's
+`ConfirmDestroyDialog` · `PortPreview` · `StreamLogPane` (renders
+`_stream_logs` progress lines, streamed to the browser over SSE; used by
+create/destroy/squash) · `ErrorToast` (renders the protocol's
 `{kind, message, details}` error shape uniformly) · `PollController`
 (per-page polling with fast/slow modes).
 
 ## API gaps to close before building
 
 1. **`file_list`** operation (directory listing) — blocks the file tree.
-2. **HTTP/WS bridge** for the gateway — blocks everything; a small adapter,
-   ops pass through 1:1.
+2. **`sandbox-console` HTTP server** — blocks everything; six routes, spec in
+   [[http-server]]. RPC and preview pass through 1:1 to the gateway protocol
+   and `daemon_http` respectively; no other backend work needed — `/health`
+   and `/forward` already exist on `daemon_http`.
 3. Optional, nice-to-have: a fleet-wide event feed (currently `events` is
    per-sandbox only) and binary file transfer (`file_read`/`file_write` are
    UTF-8-text-only).

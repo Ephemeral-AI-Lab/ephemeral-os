@@ -26,6 +26,11 @@ pub const DEFAULT_GATEWAY_INSTANCE_ID: &str = "eos-gateway";
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ManagerConfig {
+    /// Host path of the sandbox registry JSON snapshot. When set, the gateway
+    /// persists every registry mutation there and reloads it on restart,
+    /// reconciling against the containers the runtime actually recovers.
+    /// `None` keeps the registry in process memory only.
+    pub registry_path: Option<PathBuf>,
     pub docker: Option<DockerRuntimeConfig>,
 }
 
@@ -50,7 +55,11 @@ pub struct DockerRuntimeConfig {
     pub container_workspace_root: PathBuf,
     /// Explicit platform (for example `linux/amd64`) for image/container create.
     pub platform: Option<String>,
-    /// Whether containers run privileged (required for namespace/overlay/cgroup).
+    /// Whether containers run with Docker `--privileged`. `false` (the default)
+    /// runs the de-privileged boundary: `cap_add SYS_ADMIN,NET_ADMIN`,
+    /// Docker's default seccomp profile, and `no-new-privileges` — the minimal
+    /// set live-proven for namespace/overlay/network setup. `true` is the
+    /// legacy escape hatch.
     pub privileged: bool,
     /// Container TCP port the daemon listens on (published to a host port).
     pub daemon_port: u16,
@@ -84,7 +93,7 @@ impl Default for DockerRuntimeConfig {
             default_image: None,
             container_workspace_root: PathBuf::from(DEFAULT_CONTAINER_WORKSPACE_ROOT),
             platform: None,
-            privileged: true,
+            privileged: false,
             daemon_port: DEFAULT_DAEMON_PORT,
             daemon_http_port: DEFAULT_DAEMON_HTTP_PORT,
             gateway_instance_id: DEFAULT_GATEWAY_INSTANCE_ID.to_owned(),

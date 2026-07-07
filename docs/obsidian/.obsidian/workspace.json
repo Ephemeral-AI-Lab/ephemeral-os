@@ -185,6 +185,12 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/web-ui/web-ui-design.md.tmp.27160.ba29b6789139",
+    "ephemeral-os/implementation_plan/daemon-command-child-policy-refined-spec.md.tmp.27022.bd36e5e3ce61",
+    "ephemeral-os/implementation_plan/web-ui/http-server.md",
+    "ephemeral-os/implementation_plan/web-ui/Untitled.md",
+    "ephemeral-os/implementation_plan/export_changes/spec.md",
+    "ephemeral-os/implementation_plan/export_changes",
     "ephemeral-os/implementation_plan/web-ui/web-ui-design.md",
     "ephemeral-os/implementation_plan/web-ui",
     "ephemeral-os/implementation_plan/Untitled",
@@ -204,8 +210,6 @@
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W16.yml",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W8.yml",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/__pycache__/loadcombo_ab.cpython-314.pyc",
-    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/loadcombo_ab.py",
-    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/loadcombo_ab.py.tmp.35454.dadb5203070d",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",
@@ -217,10 +221,6 @@
     "ephemeral-os/implementation_plan/cli_migration/spec.md",
     "ephemeral-os/implementation_plan/squash/iteration-report.md",
     "ephemeral-os/implementation_plan/squash/Untitled.md",
-    "ephemeral-os/implementation_plan/squash/test_implementation_prompt.md",
-    "ephemeral-os/implementation_plan/squash/test-case.md",
-    "ephemeral-os/implementation_plan/squash/impl_plan_and_progress_tracker.md",
-    "ephemeral-os/implementation_plan/squash/simplicity_review_results.md",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }

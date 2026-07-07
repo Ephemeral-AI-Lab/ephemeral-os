@@ -10,6 +10,7 @@ sandbox-manager-operations.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime-layerstack.workspace = true
 nix = { workspace = true, features = ["process", "signal"] }
+serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

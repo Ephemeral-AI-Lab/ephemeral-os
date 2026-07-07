@@ -9,7 +9,8 @@ fn config_prd_manager_docker_section_deserializes_and_validates() {
     assert_eq!(docker.readiness_timeout_ms, 60_000);
     assert_eq!(docker.container_workspace_root, PathBuf::from("/workspace"));
     assert_eq!(docker.gateway_instance_id, "eos-gateway");
-    assert!(docker.privileged);
+    // Phase 3: prd runs the de-privileged container boundary.
+    assert!(!docker.privileged);
 }
 
 #[test]
@@ -59,6 +60,30 @@ fn manager_section_defaults_to_no_docker_backend() {
     // carries no docker backend.
     let manager = ManagerConfig::default();
     assert!(manager.docker.is_none());
+}
+
+#[test]
+fn manager_registry_path_defaults_to_none_and_deserializes_when_set() {
+    // The prd baseline sets no registry path, so the registry stays in-memory
+    // unless a deployment opts in.
+    let baseline: ManagerConfig = crate::load_baseline()
+        .expect("prd config loads")
+        .section("manager")
+        .expect("manager section deserializes");
+    assert!(baseline.registry_path.is_none());
+
+    let doc = crate::ConfigDocument::parse(
+        std::path::Path::new("<test>"),
+        "manager:\n  registry_path: /var/lib/eos/sandboxes.json\n",
+    )
+    .expect("document parses");
+    let manager: ManagerConfig = doc
+        .section("manager")
+        .expect("manager section deserializes");
+    assert_eq!(
+        manager.registry_path,
+        Some(PathBuf::from("/var/lib/eos/sandboxes.json"))
+    );
 }
 
 #[test]

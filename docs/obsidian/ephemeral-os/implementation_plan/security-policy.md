@@ -50,7 +50,7 @@ macOS/Windows kernel — that is the hypervisor's boundary.
 |---|---|---|
 | **Setup / admin** | daemon, ns-holder, ns-runner helper, overlay/layerstack/workspace/network setup | **Untouched** — keep every cap and syscall they need |
 | **Shell exec** | the child process spawned by `runner/shell_exec.rs` | `no_new_privs` + targeted cap drop + seccomp deny table |
-| **Outer container** | the Docker container | Still `--privileged` — de-privileging is Phase 3 (not yet done) |
+| **Outer container** | the Docker container | De-privileged (Phase 3, done): `cap_add SYS_ADMIN,NET_ADMIN` + Docker default seccomp + `no-new-privileges`; `--privileged` only via the `manager.docker.privileged: true` escape hatch |
 
 Setup/admin paths run through different ns-runner entry points
 (mount/remount/file) that **never** install the child policy, so they retain full
@@ -159,12 +159,13 @@ guarantee of sandbox-to-sandbox kernel isolation.**
   host/VM kernel and can cross to co-tenant sandboxes.
 - **`TIOCSTI`** terminal-injection `ioctl` is not filtered (too fragile to
   arg-filter; sysctl-mitigated on modern kernels).
-- **Denylist can't auto-close future/obscure syscalls.** The intended backstop is
-  **Phase 3** — restore Docker's own default seccomp at the container boundary and
-  de-privilege the container — which is **not yet implemented**. Until then the
-  deny table is the whole barrier and the container is still `--privileged`, so
-  the mount/device-node denials are doing acute work; do not defer Phase 3
-  indefinitely.
+- **Denylist can't auto-close future/obscure syscalls.** The backstop is
+  **Phase 3 — implemented**: the container boundary runs Docker's own default
+  seccomp (allowlist) with `cap_add SYS_ADMIN,NET_ADMIN` and
+  `no-new-privileges` instead of `--privileged`
+  ([[daemon-command-child-policy-refined-spec]] §14 has the requirements
+  inventory and live-proof evidence). The deny table is now the inner layer of
+  a stacked pair, not the whole barrier.
 
 ## 10. Enforcement invariants
 

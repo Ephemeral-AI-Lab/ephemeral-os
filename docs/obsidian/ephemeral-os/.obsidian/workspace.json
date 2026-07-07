@@ -183,16 +183,21 @@
       "bases:Create new base": false
     }
   },
-  "active": "d5fccc8ee65959ed",
+  "active": "7bfb5a3473fb43c0",
   "lastOpenFiles": [
+    "implementation_plan/web-ui/web-ui-design.md.tmp.27160.ba29b6789139",
+    "implementation_plan/daemon-command-child-policy-refined-spec.md.tmp.27022.bd36e5e3ce61",
+    "implementation_plan/web-ui/http-server.md",
+    "implementation_plan/web-ui/web-ui-design.md",
+    "implementation_plan/export_changes/spec.md",
+    "implementation_plan/security-policy.md",
+    "implementation_plan/o1_shared_workspace_base.md",
+    "implementation_plan/export_changes",
     "implementation_plan/daemon-command-child-policy-lite-spec.md",
     "implementation_plan/shell-security-e2e-goal-prompt.md",
-    "implementation_plan/web-ui/web-ui-design.md",
     "implementation_plan/web-ui",
     "implementation_plan/daemon-shell-security-knob-removal-adversarial-review-prompt.md",
-    "implementation_plan/o1_shared_workspace_base.md",
     "implementation_plan/daemon-command-syscall-hardening-test-case.md",
-    "implementation_plan/security-policy.md",
     "implementation_plan/daemon-command-child-policy-refined-spec.md",
     "implementation_plan/daemon-command-child-policy-refined-adversarial-review-prompt.md",
     "implementation_plan/daemon-command-syscall-hardening-spec.md",
@@ -211,15 +216,10 @@
     "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W8.yml",
     "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/__pycache__/loadcombo_ab.cpython-314.pyc",
     "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/loadcombo_ab.py",
-    "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/loadcombo_ab.py.tmp.35454.dadb5203070d",
-    "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W2.yml",
     "implementation_plan/finalize-policy/spec.md",
     "implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",
     "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/RESULTS.md",
-    "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",
-    "implementation_plan/squash/acceptance_criteria.md",
-    "implementation_plan/finalize-policy/adversarial_review_prompt.md",
-    "implementation_plan/squash/performance_parallelization_handoff.md"
+    "implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md"
   ]
 }

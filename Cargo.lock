@@ -1451,6 +1451,7 @@ dependencies = [
  "sandbox-manager-operations",
  "sandbox-protocol",
  "sandbox-runtime-layerstack",
+ "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
