@@ -1,15 +1,21 @@
 //! The manager-owned export transaction (the `checkpoint_squash` template):
 //! guard the host destination, forward `export_layerstack` to the sandbox
-//! daemon, page the compressed delta back in bounded `read_export_chunk`
-//! forwards (every forward reuses the manager request's `request_id`), hand
-//! the stream to the host-side applier, and merge one result line. The
-//! manager — a host process — is the only host writer; both CLIs stay pure
-//! catalog clients.
+//! daemon, pull the sealed spool back over one token-gated `daemon_http`
+//! octet-stream (spec decision 19; bounded `read_export_chunk` paging is the
+//! compatibility fallback), hand the stream to the host-side applier, and
+//! merge one result line. The manager — a host process — is the only host
+//! writer; both CLIs stay pure catalog clients.
 
+use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::path::{Component, Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use base64::Engine as _;
-use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
+use sandbox_protocol::{
+    error_kind, CliOperationScope, Request, Response, EXPORT_STREAM_PATH_PREFIX,
+    EXPORT_STREAM_TOKEN_FIELD, EXPORT_STREAM_TOKEN_HEADER, REQUEST_READ_TIMEOUT_S,
+};
 use serde_json::{json, Value};
 
 use crate::export_apply::{
@@ -17,11 +23,13 @@ use crate::export_apply::{
 };
 use crate::operation::ManagerServices;
 use crate::router::forward_sandbox_request;
-use crate::ManagerError;
+use crate::{ManagerError, SandboxHttpEndpoint, SandboxId};
 
 const RUNTIME_EXPORT_OP: &str = "export_layerstack";
 const RUNTIME_CHUNK_OP: &str = "read_export_chunk";
 const EXPORT_SPOOL_DIR: &str = ".export";
+const STREAM_READ_BYTES: usize = 256 * 1024;
+const MAX_STREAM_HEAD_BYTES: usize = 16 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExportFormat {
@@ -92,7 +100,13 @@ fn run_export_changes(
         .ok_or_else(|| export_failed("daemon start result carries no export_id").into_response())?;
     let dest_path =
         prepare_dest(services, dest, &normalized, format).map_err(ManagerError::into_response)?;
-    let compressed = page_stream(services, request, sandbox_id, export_id)?;
+    let compressed = match stream_delivery(services, &start, sandbox_id) {
+        Some((endpoint, stream_token)) => {
+            fetch_spool_stream(&endpoint, export_id, &stream_token)
+                .map_err(|message| export_failed(&message).into_response())?
+        }
+        None => page_stream(services, request, sandbox_id, export_id)?,
+    };
     match format {
         ExportFormat::Dir => {
             let stats = apply_dir_delta(&compressed, &dest_path)
@@ -169,6 +183,164 @@ fn page_stream(
         compressed.extend_from_slice(&bytes);
         if eof {
             return Ok(compressed);
+        }
+    }
+}
+
+/// Stream delivery is available when the start result carries a stream token
+/// (a daemon predating decision 19 sends none) and the sandbox record carries
+/// a `daemon_http` endpoint. Otherwise the chunk-paging fallback runs.
+fn stream_delivery(
+    services: &ManagerServices,
+    start: &Value,
+    sandbox_id: &str,
+) -> Option<(SandboxHttpEndpoint, String)> {
+    let stream_token = start[EXPORT_STREAM_TOKEN_FIELD].as_str()?.to_owned();
+    let id = SandboxId::new(sandbox_id.to_owned()).ok()?;
+    let endpoint = services.store.inspect(&id).ok()?.daemon_http?;
+    Some((endpoint, stream_token))
+}
+
+/// Pull the sealed spool as one `GET /export/<export_id>` octet-stream over a
+/// single blocking TCP connection — no base64, no JSON framing, no per-chunk
+/// round trips. `MAX_STREAM_BYTES` is enforced while bytes arrive and the
+/// whole exchange rides one `REQUEST_READ_TIMEOUT_S` deadline. Completeness
+/// is a hard gate: the response must carry `Content-Length` and the body must
+/// yield exactly that many bytes, because a truncated buffer would otherwise
+/// become a silently corrupt `tar-zst` archive.
+fn fetch_spool_stream(
+    endpoint: &SandboxHttpEndpoint,
+    export_id: &str,
+    stream_token: &str,
+) -> Result<Vec<u8>, String> {
+    let deadline = Instant::now() + Duration::from_secs_f64(REQUEST_READ_TIMEOUT_S);
+    let mut stream = TcpStream::connect((endpoint.host.as_str(), endpoint.port))
+        .map_err(|error| format!("connect export stream: {error}"))?;
+    let _ = stream.set_nodelay(true);
+    let request = format!(
+        "GET {EXPORT_STREAM_PATH_PREFIX}{export_id} HTTP/1.1\r\n\
+         host: {}:{}\r\n\
+         {EXPORT_STREAM_TOKEN_HEADER}: {stream_token}\r\n\
+         connection: close\r\n\r\n",
+        endpoint.host, endpoint.port
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("send export stream request: {error}"))?;
+    let (head, mut body) = read_stream_head(&mut stream, deadline)?;
+    let content_length = parse_stream_head(&head)?;
+    if content_length > MAX_STREAM_BYTES {
+        return Err(format!(
+            "export stream cap exceeded ({MAX_STREAM_BYTES} compressed bytes)"
+        ));
+    }
+    if body.len() as u64 > content_length {
+        return Err("export stream sent more bytes than its content-length".to_owned());
+    }
+    let mut buf = [0u8; STREAM_READ_BYTES];
+    while (body.len() as u64) < content_length {
+        let read = read_with_deadline(&mut stream, &mut buf, deadline)?;
+        if read == 0 {
+            return Err(format!(
+                "export stream truncated: {} of {content_length} bytes received",
+                body.len()
+            ));
+        }
+        if body.len() as u64 + read as u64 > content_length {
+            return Err("export stream sent more bytes than its content-length".to_owned());
+        }
+        body.extend_from_slice(&buf[..read]);
+    }
+    Ok(body)
+}
+
+/// Read until the end of the HTTP response head (`\r\n\r\n`), returning the
+/// head and whatever body bytes arrived with it. The head is capped so a
+/// hostile daemon cannot balloon it.
+fn read_stream_head(
+    stream: &mut TcpStream,
+    deadline: Instant,
+) -> Result<(String, Vec<u8>), String> {
+    let mut collected: Vec<u8> = Vec::new();
+    let mut buf = [0u8; 4096];
+    loop {
+        if let Some(split) = find_head_end(&collected) {
+            let head = String::from_utf8_lossy(&collected[..split]).into_owned();
+            let body = collected[split + 4..].to_vec();
+            return Ok((head, body));
+        }
+        if collected.len() > MAX_STREAM_HEAD_BYTES {
+            return Err("export stream response head too large".to_owned());
+        }
+        let read = read_with_deadline(stream, &mut buf, deadline)?;
+        if read == 0 {
+            return Err("export stream closed before a full response head".to_owned());
+        }
+        collected.extend_from_slice(&buf[..read]);
+    }
+}
+
+fn find_head_end(bytes: &[u8]) -> Option<usize> {
+    bytes.windows(4).position(|window| window == b"\r\n\r\n")
+}
+
+/// Accept exactly `HTTP/1.1 200` with a `content-length` header; anything
+/// else — 404 rejections, chunked encoding, a missing length — aborts the
+/// export (re-running mints a fresh token and spool).
+fn parse_stream_head(head: &str) -> Result<u64, String> {
+    let mut lines = head.split("\r\n");
+    let status = lines.next().unwrap_or_default();
+    let mut status_parts = status.split_ascii_whitespace();
+    let version = status_parts.next().unwrap_or_default();
+    let code = status_parts.next().unwrap_or_default();
+    if !version.starts_with("HTTP/1.") || code != "200" {
+        return Err(format!("export stream rejected: {status}"));
+    }
+    let mut content_length: Option<u64> = None;
+    for line in lines {
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        let name = name.trim().to_ascii_lowercase();
+        let value = value.trim();
+        if name == "transfer-encoding" {
+            return Err(format!("export stream used unsupported {name}: {value}"));
+        }
+        if name == "content-length" {
+            content_length = Some(
+                value
+                    .parse::<u64>()
+                    .map_err(|_| format!("export stream content-length invalid: {value}"))?,
+            );
+        }
+    }
+    content_length.ok_or_else(|| "export stream response carries no content-length".to_owned())
+}
+
+fn read_with_deadline(
+    stream: &mut TcpStream,
+    buf: &mut [u8],
+    deadline: Instant,
+) -> Result<usize, String> {
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(format!(
+                "export stream timed out after {REQUEST_READ_TIMEOUT_S} s"
+            ));
+        }
+        stream
+            .set_read_timeout(Some(remaining))
+            .map_err(|error| format!("set export stream timeout: {error}"))?;
+        match stream.read(buf) {
+            Ok(read) => return Ok(read),
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                ) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(error) => return Err(format!("read export stream: {error}")),
         }
     }
 }

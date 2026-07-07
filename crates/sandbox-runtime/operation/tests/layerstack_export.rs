@@ -177,7 +177,8 @@ fn export_spools_and_pages_to_eof() {
             "export_id",
             "layers_exported",
             "manifest_version",
-            "spool_bytes"
+            "spool_bytes",
+            "stream_token"
         ],
         "no live_workspace_sessions key when no session is alive"
     );
@@ -305,5 +306,107 @@ fn export_reports_live_workspace_sessions() {
     assert!(
         value.get("live_workspace_sessions").is_none(),
         "omitted when no session is alive"
+    );
+}
+
+// Decision 19: the stream claim is single-use, token-checked in constant
+// time, and atomic — a mismatch never consumes the entry, a claim unlinks
+// the spool, and a claimed export is gone for the fallback pager too.
+#[test]
+fn export_stream_claim_is_single_use_and_token_checked() {
+    use std::io::Read as _;
+
+    let (operations, root) = operations_with_real_layerstack();
+    publish(&root, &[write_change("src/a.rs", "v1\n")]);
+
+    let value =
+        sandbox_runtime::dispatch_operation(&operations, &export_request()).into_json_value();
+    assert!(value.get("error").is_none(), "export failed: {value}");
+    let export_id = value["export_id"].as_str().expect("export_id").to_owned();
+    let token = value["stream_token"]
+        .as_str()
+        .expect("stream_token")
+        .to_owned();
+    assert!(token.len() >= 60, "token carries real entropy: {token}");
+    let spool_bytes = value["spool_bytes"].as_u64().expect("spool_bytes");
+    let spool_path = scratch_export_dir(&root).join(format!("{export_id}.tar.zst"));
+    assert!(spool_path.is_file());
+
+    // A mismatched token rejects without consuming the entry.
+    assert!(operations
+        .layerstack
+        .claim_export_stream(&export_id, "not-the-token")
+        .is_none());
+    assert!(spool_path.is_file(), "mismatch must not consume the spool");
+
+    // An unknown export id rejects even with a valid token.
+    assert!(operations
+        .layerstack
+        .claim_export_stream("exp-unknown", &token)
+        .is_none());
+
+    // The correct claim yields the full spool bytes and unlinks the file.
+    let claimed = operations
+        .layerstack
+        .claim_export_stream(&export_id, &token)
+        .expect("claim succeeds");
+    assert_eq!(claimed.total, spool_bytes);
+    assert!(!spool_path.exists(), "claim unlinks the spool at once");
+    let mut file = claimed.file;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes).expect("read claimed spool");
+    assert_eq!(bytes.len() as u64, spool_bytes);
+    assert_eq!(decode_entry_names(&bytes), vec!["src/", "src/a.rs"]);
+
+    // Reuse of the same token is rejected — single use.
+    assert!(operations
+        .layerstack
+        .claim_export_stream(&export_id, &token)
+        .is_none());
+
+    // The claimed export is gone for the fallback pager as well.
+    let stray =
+        sandbox_runtime::dispatch_operation(&operations, &chunk_request(&export_id, 0, None))
+            .into_json_value();
+    assert_eq!(stray["error"]["kind"], json!("operation_failed"));
+}
+
+// Decision 19: an expired token is rejected and the expired entry is swept
+// (spool unlinked), so a later replay cannot resurrect it.
+#[test]
+fn export_stream_token_expires() {
+    let (operations, root) = operations_with_real_layerstack();
+    publish(&root, &[write_change("a.txt", "A\n")]);
+
+    let value =
+        sandbox_runtime::dispatch_operation(&operations, &export_request()).into_json_value();
+    assert!(value.get("error").is_none(), "export failed: {value}");
+    let export_id = value["export_id"].as_str().expect("export_id").to_owned();
+    let token = value["stream_token"]
+        .as_str()
+        .expect("stream_token")
+        .to_owned();
+    let spool_path = scratch_export_dir(&root).join(format!("{export_id}.tar.zst"));
+    assert!(spool_path.is_file());
+
+    let past_ttl = std::time::Instant::now()
+        + std::time::Duration::from_secs(sandbox_protocol::EXPORT_STREAM_TOKEN_TTL_S + 1);
+    assert!(
+        operations
+            .layerstack
+            .claim_export_stream_at(&export_id, &token, past_ttl)
+            .is_none(),
+        "an expired token is rejected even when it matches"
+    );
+    assert!(
+        !spool_path.exists(),
+        "the expired entry is swept with its spool"
+    );
+    assert!(
+        operations
+            .layerstack
+            .claim_export_stream(&export_id, &token)
+            .is_none(),
+        "the swept entry cannot be claimed later"
     );
 }

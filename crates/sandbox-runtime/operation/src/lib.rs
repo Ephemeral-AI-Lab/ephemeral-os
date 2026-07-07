@@ -17,7 +17,7 @@ pub use cli_definition::{
     CliOperationFamilySpec, CliOperationSpec, CliSpec,
 };
 pub use command::CommandOperationService;
-pub use layerstack::LayerStackService;
+pub use layerstack::{ClaimedExportStream, LayerStackService};
 pub use namespace_execution::{
     NamespaceExecutionId, NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };

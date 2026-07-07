@@ -17,8 +17,8 @@ use std::time::Duration;
 use base64::Engine as _;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
-    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore, StartedDaemon,
+    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxHttpEndpoint, SandboxId, SandboxRecord,
+    SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
 use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
 use serde_json::{json, Value};
@@ -1141,5 +1141,254 @@ fn stale_daemon_unknown_op_is_translated() {
     assert!(
         error_message(&result).contains("export_changes"),
         "error tells the operator to recreate: {result}"
+    );
+}
+
+// ----------------------------------------------------------------- stream path
+// Decision 19: the sealed spool arrives over one token-gated daemon-HTTP
+// octet-stream. These tests script the HTTP side with a real listener so the
+// manager's sync client, cap, completeness gate, and fallback are all pinned.
+
+fn stream_start_value(stream_token: &str, spool_bytes: u64) -> Value {
+    let mut value = start_value(2, &["L000002-a"], (2, 0, 0, 0), spool_bytes, None);
+    value["stream_token"] = json!(stream_token);
+    value
+}
+
+fn env_with_daemon_http(label: &str, port: u16) -> Env {
+    let store = Arc::new(SandboxStore::new());
+    let daemon = Arc::new(ExportDaemon::default());
+    let services = Arc::new(ManagerServices::new(
+        Arc::clone(&store),
+        Arc::new(FakeRuntime),
+        Arc::new(FakeInstaller),
+        Arc::clone(&daemon) as Arc<dyn SandboxDaemonClient>,
+    ));
+    store
+        .insert(SandboxRecord {
+            id: sandbox_id("sbox-1"),
+            workspace_root: PathBuf::from("/testbed"),
+            state: SandboxState::Ready,
+            daemon: Some(SandboxDaemonEndpoint::new("127.0.0.1", 7000, "token")),
+            daemon_http: Some(SandboxHttpEndpoint {
+                host: "127.0.0.1".to_owned(),
+                port,
+            }),
+            shared_base: None,
+        })
+        .expect("insert sandbox");
+    Env {
+        services,
+        daemon,
+        base: temp_base(label),
+    }
+}
+
+/// One-shot scripted HTTP responder: accepts a single connection, captures
+/// the request head, writes `status`/`headers`/`body` verbatim, and returns
+/// the captured head. Writes are tolerant so cap-abort tests (client closes
+/// early) cannot panic the server thread.
+fn spawn_stream_server(
+    status: &'static str,
+    headers: Vec<String>,
+    body: Vec<u8>,
+) -> (u16, std::thread::JoinHandle<String>) {
+    use std::io::Write as _;
+
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind stream server");
+    let port = listener.local_addr().expect("local addr").port();
+    let handle = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("accept");
+        let mut head = Vec::new();
+        let mut buf = [0u8; 1024];
+        while !head.windows(4).any(|window| window == b"\r\n\r\n") {
+            let Ok(read) = stream.read(&mut buf) else {
+                break;
+            };
+            if read == 0 {
+                break;
+            }
+            head.extend_from_slice(&buf[..read]);
+        }
+        let mut response = format!("HTTP/1.1 {status}\r\n").into_bytes();
+        for header in &headers {
+            response.extend_from_slice(header.as_bytes());
+            response.extend_from_slice(b"\r\n");
+        }
+        response.extend_from_slice(b"\r\n");
+        response.extend_from_slice(&body);
+        let _ = stream.write_all(&response);
+        let _ = stream.flush();
+        let _ = stream.shutdown(std::net::Shutdown::Both);
+        String::from_utf8_lossy(&head).into_owned()
+    });
+    (port, handle)
+}
+
+#[test]
+fn stream_delivery_pulls_the_spool_and_skips_chunk_paging() {
+    let stream = honest_delta_stream();
+    let (port, server) = spawn_stream_server(
+        "200 OK",
+        vec![
+            "content-type: application/octet-stream".to_owned(),
+            format!("content-length: {}", stream.len()),
+        ],
+        stream.clone(),
+    );
+    let env = env_with_daemon_http("stream-happy", port);
+    env.daemon
+        .push_start(stream_start_value("tok-secret", stream.len() as u64));
+    let dest = env.base.join("dest");
+
+    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+    assert!(
+        value.get("error").is_none(),
+        "stream export failed: {value}"
+    );
+    assert_eq!(value["files_written"], json!(1));
+    assert_eq!(value["deletes_applied"], json!(1));
+    assert_eq!(read_to_string(&dest.join("src/a.rs")), "v2\n");
+
+    let head = server.join().expect("server thread");
+    assert!(
+        head.starts_with("GET /export/exp-test HTTP/1.1\r\n"),
+        "request line: {head}"
+    );
+    assert!(
+        head.to_ascii_lowercase()
+            .contains("x-eos-export-token: tok-secret"),
+        "token header rides the claim: {head}"
+    );
+    let ops: Vec<String> = env
+        .daemon
+        .invocations()
+        .into_iter()
+        .map(|(op, _)| op)
+        .collect();
+    assert_eq!(
+        ops,
+        vec!["export_layerstack".to_owned()],
+        "no read_export_chunk forwards on the stream path"
+    );
+}
+
+#[test]
+fn stream_rejection_aborts_with_dest_untouched() {
+    let (port, _server) = spawn_stream_server(
+        "404 Not Found",
+        vec!["content-length: 25".to_owned()],
+        b"export stream unavailable".to_vec(),
+    );
+    let env = env_with_daemon_http("stream-reject", port);
+    env.daemon.push_start(stream_start_value("tok-secret", 64));
+    let dest = env.base.join("dest");
+
+    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert!(
+        error_message(&value).contains("export stream rejected"),
+        "error names the rejection: {value}"
+    );
+    assert_eq!(dir_entries(&dest), Vec::<String>::new(), "dest untouched");
+}
+
+#[test]
+fn stream_truncation_aborts_before_any_render() {
+    let stream = honest_delta_stream();
+    let (port, _server) = spawn_stream_server(
+        "200 OK",
+        vec![format!("content-length: {}", stream.len() + 100)],
+        stream,
+    );
+    let env = env_with_daemon_http("stream-truncated", port);
+    env.daemon.push_start(stream_start_value("tok-secret", 64));
+    let dest = env.base.join("delta.tar.zst");
+
+    let value = dispatch(&env, &export_request("sbox-1", &dest, Some("tar-zst")));
+    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert!(
+        error_message(&value).contains("truncated"),
+        "error names the truncation: {value}"
+    );
+    assert!(!dest.exists(), "no archive written from a truncated stream");
+    assert_eq!(
+        dir_entries(&env.base),
+        Vec::<String>::new(),
+        "no temp sibling left behind"
+    );
+}
+
+#[test]
+fn stream_overrun_beyond_content_length_is_rejected() {
+    let stream = honest_delta_stream();
+    let declared = stream.len() - 10;
+    let (port, _server) = spawn_stream_server(
+        "200 OK",
+        vec![format!("content-length: {declared}")],
+        stream,
+    );
+    let env = env_with_daemon_http("stream-overrun", port);
+    env.daemon.push_start(stream_start_value("tok-secret", 64));
+    let dest = env.base.join("dest");
+
+    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert!(
+        error_message(&value).contains("more bytes than its content-length"),
+        "error names the overrun: {value}"
+    );
+    assert_eq!(dir_entries(&dest), Vec::<String>::new(), "dest untouched");
+}
+
+#[test]
+fn stream_cap_rejects_an_oversized_content_length_before_reading() {
+    let (port, _server) = spawn_stream_server(
+        "200 OK",
+        vec![format!("content-length: {}", 2u64 * 1024 * 1024 * 1024 + 1)],
+        Vec::new(),
+    );
+    let env = env_with_daemon_http("stream-cap", port);
+    env.daemon.push_start(stream_start_value("tok-secret", 64));
+    let dest = env.base.join("dest");
+
+    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert!(
+        error_message(&value).contains("export stream cap exceeded"),
+        "error names the cap: {value}"
+    );
+    assert_eq!(dir_entries(&dest), Vec::<String>::new(), "dest untouched");
+}
+
+#[test]
+fn missing_stream_token_falls_back_to_chunk_paging() {
+    let stream = honest_delta_stream();
+    let env = env_with_daemon_http("stream-fallback", 1);
+    env.daemon.push_start(start_value(
+        2,
+        &["L000002-a"],
+        (2, 0, 0, 0),
+        stream.len() as u64,
+        None,
+    ));
+    env.daemon.set_stream(stream);
+    let dest = env.base.join("dest");
+
+    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+    assert!(
+        value.get("error").is_none(),
+        "fallback export failed: {value}"
+    );
+    assert_eq!(read_to_string(&dest.join("src/a.rs")), "v2\n");
+    let ops: Vec<String> = env
+        .daemon
+        .invocations()
+        .into_iter()
+        .map(|(op, _)| op)
+        .collect();
+    assert!(
+        ops.contains(&"read_export_chunk".to_owned()),
+        "a token-less start pages chunks: {ops:?}"
     );
 }

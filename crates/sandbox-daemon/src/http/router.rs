@@ -9,7 +9,7 @@ use hyper::body::Incoming;
 
 use super::response::{self, BoxBody};
 use super::server::HttpState;
-use super::{api, forward, health};
+use super::{api, export, forward, health};
 
 /// Dispatch one request to its responder.
 pub(crate) async fn route(state: Arc<HttpState>, req: Request<Incoming>) -> Response<BoxBody> {
@@ -19,6 +19,9 @@ pub(crate) async fn route(state: Arc<HttpState>, req: Request<Incoming>) -> Resp
     }
     if path.starts_with("/files/") || path.starts_with("/observability/") {
         return api::handle(state, req).await;
+    }
+    if path.starts_with(sandbox_protocol::EXPORT_STREAM_PATH_PREFIX) {
+        return export::handle(state, req).await;
     }
     if path.starts_with("/forward/") {
         return forward::handle(state, req).await;

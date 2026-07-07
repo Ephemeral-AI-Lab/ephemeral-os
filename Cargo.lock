@@ -1578,6 +1578,7 @@ dependencies = [
  "sha2",
  "tar",
  "thiserror 2.0.18",
+ "uuid",
  "zstd",
 ]
 
