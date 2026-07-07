@@ -185,6 +185,9 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/web-ui/web-ui-design.md",
+    "ephemeral-os/implementation_plan/web-ui",
+    "ephemeral-os/implementation_plan/Untitled",
     "ephemeral-os/implementation_plan/shell-security-e2e-goal-prompt.md",
     "ephemeral-os/implementation_plan/security-policy.md",
     "ephemeral-os/implementation_plan/daemon-shell-security-knob-removal-adversarial-review-prompt.md",
@@ -195,7 +198,6 @@
     "ephemeral-os/implementation_plan/daemon-command-syscall-hardening-spec.md",
     "ephemeral-os/implementation_plan/git-policy/test-case.md",
     "ephemeral-os/implementation_plan/git-policy",
-    "ephemeral-os/implementation_plan/Untitled",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/loadcombo-ab-diff.json",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/W-tuning.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/width-wtune.json",
@@ -204,7 +206,6 @@
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/__pycache__/loadcombo_ab.cpython-314.pyc",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/loadcombo_ab.py",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/loadcombo_ab.py.tmp.35454.dadb5203070d",
-    "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning/generated/bench-W2.yml",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/HANDOFF.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/E2E_BENCHMARK_SPEC.md",
     "ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/DESIGN.md",
@@ -220,7 +221,6 @@
     "ephemeral-os/implementation_plan/squash/test-case.md",
     "ephemeral-os/implementation_plan/squash/impl_plan_and_progress_tracker.md",
     "ephemeral-os/implementation_plan/squash/simplicity_review_results.md",
-    "ephemeral-os/implementation_plan/squash/implementation_prompt.md",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }

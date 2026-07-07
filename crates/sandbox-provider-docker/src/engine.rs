@@ -30,6 +30,13 @@ const CONNECT_TIMEOUT_SECS: u64 = 120;
 const LOG_CAPTURE_TAIL: &str = "200";
 const LOG_CAPTURE_CAP_BYTES: usize = 8192;
 
+/// Capabilities the de-privileged sandbox container grants the daemon's setup
+/// paths: `SYS_ADMIN` for namespace/overlay/mount setup and `NET_ADMIN` for
+/// bridge/veth provisioning. Docker's default seccomp profile stays active and
+/// gates the corresponding syscalls on these capabilities.
+const DEPRIVILEGED_CAPABILITIES: &[&str] = &["SYS_ADMIN", "NET_ADMIN"];
+const NO_NEW_PRIVILEGES_SECURITY_OPT: &str = "no-new-privileges";
+
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum DockerError {
     #[error("docker connection failed: {0}")]
@@ -145,6 +152,8 @@ impl DockerEngine {
                 binds: Some(binds),
                 port_bindings: Some(port_bindings),
                 privileged: Some(spec.privileged),
+                cap_add: deprivileged_cap_add(spec.privileged),
+                security_opt: deprivileged_security_opt(spec.privileged),
                 cgroupns_mode: Some(HostConfigCgroupnsModeEnum::PRIVATE),
                 init: Some(true),
                 memory: spec.memory_bytes,
@@ -430,6 +439,19 @@ impl DockerEngine {
             Ok(inspected.state.as_ref().and_then(container_exit_reason))
         })
     }
+}
+
+fn deprivileged_cap_add(privileged: bool) -> Option<Vec<String>> {
+    (!privileged).then(|| {
+        DEPRIVILEGED_CAPABILITIES
+            .iter()
+            .map(ToString::to_string)
+            .collect()
+    })
+}
+
+fn deprivileged_security_opt(privileged: bool) -> Option<Vec<String>> {
+    (!privileged).then(|| vec![NO_NEW_PRIVILEGES_SECURITY_OPT.to_owned()])
 }
 
 async fn create_volume(docker: &Docker, volume: &VolumeSpec) -> Result<(), DockerError> {

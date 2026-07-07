@@ -22,6 +22,9 @@ runner:
 # Optional. Host paths resolve against the gateway's working directory.
 manager:
   docker:
+    # De-privileged container boundary (Phase 3): cap_add SYS_ADMIN+NET_ADMIN,
+    # Docker's default seccomp, and no-new-privileges instead of --privileged.
+    privileged: false
     # Host-built Linux musl sandbox-daemon artifact uploaded into each sandbox
     # container. create_sandbox does not build a custom container image.
     daemon_binary_path: dist/sandbox-daemon-linux-arm64
