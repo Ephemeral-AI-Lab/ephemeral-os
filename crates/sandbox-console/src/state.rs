@@ -1,13 +1,15 @@
-//! Shared per-request state: the gateway client and the resolved console
-//! configuration every route handler reads.
+//! Shared per-request state: the gateway client, the endpoint-resolution
+//! cache, and the resolved console configuration every route handler reads.
 
 use sandbox_cli_core::client::GatewayClient;
 
 use crate::config::ConsoleConfig;
+use crate::endpoint::EndpointCache;
 
 #[derive(Debug)]
 pub struct AppState {
     pub gateway: GatewayClient,
+    pub endpoints: EndpointCache,
     pub config: ConsoleConfig,
 }
 
@@ -18,6 +20,10 @@ impl AppState {
             config.gateway.gateway_socket_path.to_string_lossy(),
             config.gateway.gateway_auth_token.clone(),
         );
-        Self { gateway, config }
+        Self {
+            gateway,
+            endpoints: EndpointCache::default(),
+            config,
+        }
     }
 }

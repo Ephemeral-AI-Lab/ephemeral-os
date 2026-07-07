@@ -2,12 +2,14 @@
 //! token (via the shared CLI discovery), and the SPA asset directory.
 
 use std::path::PathBuf;
+use std::time::Duration;
 
 use sandbox_cli_core::{ConfigError, GatewayConfig, GatewayConfigOverrides};
 
 pub const SANDBOX_CONSOLE_BIND_ENV: &str = "SANDBOX_CONSOLE_BIND";
 pub const SANDBOX_CONSOLE_ASSETS_ENV: &str = "SANDBOX_CONSOLE_ASSETS";
 pub const DEFAULT_CONSOLE_BIND: &str = "127.0.0.1:7880";
+pub const DEFAULT_RPC_TIMEOUT: Duration = Duration::from_secs(120);
 
 const DEFAULT_ASSET_DIRS: &[&str] = &["dist/console", "web/console/dist"];
 
@@ -16,12 +18,14 @@ pub struct ConsoleConfig {
     pub bind: String,
     pub gateway: GatewayConfig,
     pub assets_dir: Option<PathBuf>,
+    pub rpc_timeout: Duration,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct ConsoleConfigOverrides {
     pub bind: Option<String>,
     pub assets_dir: Option<PathBuf>,
+    pub rpc_timeout_ms: Option<u64>,
     pub gateway: GatewayConfigOverrides,
 }
 
@@ -40,10 +44,14 @@ impl ConsoleConfig {
             .assets_dir
             .or_else(|| std::env::var_os(SANDBOX_CONSOLE_ASSETS_ENV).map(PathBuf::from))
             .or_else(default_assets_dir);
+        let rpc_timeout = overrides
+            .rpc_timeout_ms
+            .map_or(DEFAULT_RPC_TIMEOUT, Duration::from_millis);
         Ok(Self {
             bind,
             gateway,
             assets_dir,
+            rpc_timeout,
         })
     }
 }

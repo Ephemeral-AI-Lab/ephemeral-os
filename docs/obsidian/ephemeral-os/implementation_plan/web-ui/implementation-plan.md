@@ -13,7 +13,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | Phase | Title | Depends on | Status |
 |---|---|---|---|
 | 0 | Decisions & scaffolding | — | done (2026-07-07) |
-| 1 | `sandbox-console` HTTP server v0 | 0 | not started |
+| 1 | `sandbox-console` HTTP server v0 | 0 | done (2026-07-07) |
 | 2 | SPA shell & shared components | 1 | not started |
 | 3 | Fleet Board | 2 | not started |
 | 4 | Detail shell & Overview tab | 2 | not started |
@@ -131,21 +131,21 @@ workspace builds and clippy passes.
 
 Goal: the full backend surface of [[http-server]]; no UI work.
 
-- [ ] `POST /api/rpc` one-shot: inject `request_id` + auth, pass through
+- [x] `POST /api/rpc` one-shot: inject `request_id` + auth, pass through
       verbatim; protocol errors in body with HTTP 200, transport errors as
       400/502/504.
-- [ ] `POST /api/rpc` SSE variant (`Accept: text/event-stream`): sets
+- [x] `POST /api/rpc` SSE variant (`Accept: text/event-stream`): sets
       `_stream_logs: true`, emits `log` events then one `result` event.
-- [ ] `GET /api/catalog`: manager + runtime + observability catalogs.
-- [ ] `GET /api/sandboxes/:id/health`: resolve record → probe `daemon_http`
+- [x] `GET /api/catalog`: manager + runtime + observability catalogs.
+- [x] `GET /api/sandboxes/:id/health`: resolve record → probe `daemon_http`
       `/health` with short timeout → `{status: ok|unreachable}`.
-- [ ] `/s/:id/...` preview proxy: prefix swap to `/forward/...`, preserve
+- [x] `/s/:id/...` preview proxy: prefix swap to `/forward/...`, preserve
       method/headers/body/query, stream bodies, tunnel WebSocket/upgrades,
       append `X-Forwarded-*`, short-TTL endpoint-resolution cache.
-- [ ] Console error mapping (400/404/503/502) with `daemon_http` errors
+- [x] Console error mapping (400/404/503/502) with `daemon_http` errors
       passed through verbatim.
-- [ ] Static SPA serving with client-route fallback.
-- [ ] Integration tests in `tests/`: fake gateway for RPC/SSE/catalog, fake
+- [x] Static SPA serving with client-route fallback.
+- [x] Integration tests in `tests/`: fake gateway for RPC/SSE/catalog, fake
       `daemon_http` for health/proxy (including an upgrade round-trip).
 
 Exit: all six routes pass integration tests; manual smoke against a real

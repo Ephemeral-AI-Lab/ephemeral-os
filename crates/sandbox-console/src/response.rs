@@ -2,13 +2,43 @@
 //! and streamed proxy bodies share one boxed body type at the listener
 //! boundary.
 
+use std::pin::Pin;
+use std::task::{Context, Poll};
+
 use bytes::Bytes;
 use http::header::{HeaderValue, CACHE_CONTROL, CONTENT_TYPE};
 use http::{Response, StatusCode};
 use http_body_util::{BodyExt as _, Full};
+use hyper::body::Frame;
 use serde_json::Value;
+use tokio::sync::mpsc;
 
 pub type BoxBody = http_body_util::combinators::BoxBody<Bytes, hyper::Error>;
+
+struct ChannelBody {
+    receiver: mpsc::UnboundedReceiver<Bytes>,
+}
+
+impl hyper::body::Body for ChannelBody {
+    type Data = Bytes;
+    type Error = hyper::Error;
+
+    fn poll_frame(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Option<Result<Frame<Self::Data>, Self::Error>>> {
+        match self.receiver.poll_recv(cx) {
+            Poll::Ready(Some(chunk)) => Poll::Ready(Some(Ok(Frame::data(chunk)))),
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
+
+pub fn channel_body() -> (mpsc::UnboundedSender<Bytes>, BoxBody) {
+    let (sender, receiver) = mpsc::unbounded_channel();
+    (sender, ChannelBody { receiver }.boxed())
+}
 
 pub fn full(bytes: impl Into<Bytes>) -> BoxBody {
     Full::new(bytes.into())

@@ -25,6 +25,9 @@ struct Cli {
 
     #[arg(long = "assets", value_name = "DIR")]
     assets_dir: Option<PathBuf>,
+
+    #[arg(long = "rpc-timeout-ms", value_name = "MS")]
+    rpc_timeout_ms: Option<u64>,
 }
 
 #[tokio::main]
@@ -33,6 +36,7 @@ async fn main() -> ExitCode {
     let overrides = ConsoleConfigOverrides {
         bind: cli.bind,
         assets_dir: cli.assets_dir,
+        rpc_timeout_ms: cli.rpc_timeout_ms,
         gateway: GatewayConfigOverrides {
             gateway_socket_path: cli.gateway_socket_path,
             gateway_auth_token: cli.gateway_auth_token,

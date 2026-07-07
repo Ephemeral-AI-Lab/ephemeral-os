@@ -28,6 +28,16 @@ pub async fn run(state: AppState) -> std::io::Result<()> {
         "sandbox-console listening on http://{local} (gateway {})",
         state.config.gateway.gateway_socket_path.display()
     );
+    serve(listener, state).await
+}
+
+/// Serve console connections from an already-bound listener until the
+/// process exits.
+///
+/// # Errors
+/// Never returns `Ok`; the error type keeps the signature aligned with
+/// [`run`].
+pub async fn serve(listener: TcpListener, state: AppState) -> std::io::Result<()> {
     let state = Arc::new(state);
     loop {
         let Ok((stream, peer)) = listener.accept().await else {

@@ -56,10 +56,15 @@ GET  /*                                        SPA assets + route fallback
 ```json
 {
   "op": "exec_command",
-  "scope": { "execution_space": "runtime", "sandbox_id": "eos-abc" },
-  "args": { "command": "pwd" }
+  "scope": { "kind": "sandbox", "sandbox_id": "eos-abc" },
+  "args": { "cmd": "pwd" }
 }
 ```
+
+The `scope` value is the protocol's `CliOperationScope` wire shape verbatim:
+`{ "kind": "system" }` for manager/aggregate operations, `{ "kind":
+"sandbox", "sandbox_id": "..." }` for sandbox-scoped ones. A client-supplied
+`request_id` passes through; otherwise the console mints one.
 
 The console injects `request_id` and `ephemeral_sandbox_gateway_auth`, sends
 via `GatewayClient`, and returns the protocol `result`/`error` body verbatim
@@ -82,7 +87,10 @@ data: {"result":{...}}
 ```
 
 This is the web equivalent of the manager CLI's `--progress`; it feeds
-`StreamLogPane` during create/destroy/squash.
+`StreamLogPane` during create/destroy/squash. Protocol errors still arrive
+as the `result` event (the body carries `error`); if the gateway transport
+fails after the stream opened, the console emits one terminal `error` event
+(`{"kind", "message"}`) instead of a `result`.
 
 ## Catalog
 
