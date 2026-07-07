@@ -197,6 +197,13 @@ impl SandboxStore {
         Ok(record)
     }
 
+    /// Host path of the registry snapshot, when this store persists one.
+    /// The export dest guard denies destinations that would overwrite it.
+    #[must_use]
+    pub fn registry_path(&self) -> Option<&Path> {
+        self.registry_path.as_deref()
+    }
+
     fn records(&self) -> Result<MutexGuard<'_, HashMap<SandboxId, SandboxRecord>>, ManagerError> {
         self.records.lock().map_err(|_| ManagerError::StorePoisoned)
     }

@@ -112,6 +112,14 @@ async fn hidden_squash_layerstack_op_is_not_in_runtime_catalog() {
 }
 
 #[tokio::test]
+async fn daemon_http_file_ops_are_not_in_runtime_catalog() {
+    let (code, _, stderr) =
+        run(&["sandbox-runtime-cli", "--sandbox-id", "eos-x", "file_list"]).await;
+    assert_eq!(code, 2);
+    assert!(stderr.contains("unknown operation: file_list"));
+}
+
+#[tokio::test]
 async fn destroy_workspace_session_rejects_non_float_grace() {
     let (code, _, stderr) = run(&[
         "sandbox-runtime-cli",

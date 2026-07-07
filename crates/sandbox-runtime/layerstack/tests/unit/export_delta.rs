@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use crate::stack::squash::flatten::flatten_block_into_with_lower;
 use crate::stack::{
     delta_layer_refs, describe_layer_delta, fold_delta_winners, DeltaFold, DeltaWinner,
-    LayerDeltaEntryKind,
+    LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind,
 };
 use crate::whiteout::OPAQUE_MARKER;
 use crate::{LayerPath, LayerRef, Manifest, MergedView, MANIFEST_SCHEMA_VERSION};
@@ -87,7 +87,8 @@ fn describe_layer_delta_reports_normalized_entries() {
     write_opaque_marker(&layer.join("config"));
     write(&layer.join("config/new.toml"), "");
 
-    let delta = describe_layer_delta(&layer, 10).expect("describe delta");
+    let delta: LayerDeltaDescription = describe_layer_delta(&layer, 10).expect("describe delta");
+    let _first_entry: Option<&LayerDeltaEntry> = delta.entries.first();
     let entries = delta
         .entries
         .iter()

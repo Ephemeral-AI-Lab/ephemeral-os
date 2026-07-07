@@ -23,8 +23,7 @@ use sandbox_protocol::{
     CliOperationCatalog, CliOperationExecutionSpace, CliOperationFamilySpec, CliOperationSpec,
 };
 
-const FAMILIES: &[&CliOperationFamilySpec] =
-    &[&COMMAND_FAMILY, &WORKSPACE_SESSION_FAMILY, &FILE_FAMILY];
+const FAMILIES: &[&CliOperationFamilySpec] = &[&COMMAND_FAMILY, &WORKSPACE_SESSION_FAMILY];
 
 const SPECS: &[&CliOperationSpec] = &[
     &EXEC_COMMAND_SPEC,
@@ -32,11 +31,6 @@ const SPECS: &[&CliOperationSpec] = &[
     &READ_LINES_SPEC,
     &CREATE_WORKSPACE_SESSION_SPEC,
     &DESTROY_WORKSPACE_SESSION_SPEC,
-    &FILE_BLAME_SPEC,
-    &FILE_LIST_SPEC,
-    &FILE_READ_SPEC,
-    &FILE_WRITE_SPEC,
-    &FILE_EDIT_SPEC,
 ];
 
 #[must_use]

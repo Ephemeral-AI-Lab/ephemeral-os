@@ -187,7 +187,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "workspace_session", "file"]
+        ["command", "workspace_session"]
     );
     assert_eq!(
         names,
@@ -197,11 +197,6 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             "read_command_lines",
             "create_workspace_session",
             "destroy_workspace_session",
-            "file_blame",
-            "file_list",
-            "file_read",
-            "file_write",
-            "file_edit",
         ]
     );
     assert!(catalog.operations.iter().all(|spec| spec.cli.is_some()));
@@ -248,6 +243,11 @@ fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
         "transcript",
         "status_lookup",
         "finalize_command",
+        "file_blame",
+        "file_list",
+        "file_read",
+        "file_write",
+        "file_edit",
     ] {
         assert!(!names.contains(&helper), "{helper} leaked into catalog");
     }
@@ -266,6 +266,10 @@ fn runtime_known_operation_name_uses_registered_operation_entries() {
     assert_eq!(
         sandbox_runtime::known_operation_name("destroy_workspace_session"),
         Some("destroy_workspace_session")
+    );
+    assert_eq!(
+        sandbox_runtime::known_operation_name("file_list"),
+        Some("file_list")
     );
     assert_eq!(
         sandbox_runtime::known_operation_name("RAW_UNKNOWN_OPERATION_SECRET"),

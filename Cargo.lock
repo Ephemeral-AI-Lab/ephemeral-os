@@ -1485,15 +1485,19 @@ dependencies = [
 name = "sandbox-manager"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "nix 0.29.0",
+ "rustix 0.38.44",
  "sandbox-manager-operations",
  "sandbox-protocol",
  "sandbox-runtime-layerstack",
  "serde",
  "serde_json",
+ "tar",
  "thiserror 2.0.18",
  "tokio",
  "uuid",
+ "zstd",
 ]
 
 [[package]]
@@ -1572,7 +1576,9 @@ dependencies = [
  "sandbox-runtime-workspace",
  "serde_json",
  "sha2",
+ "tar",
  "thiserror 2.0.18",
+ "zstd",
 ]
 
 [[package]]

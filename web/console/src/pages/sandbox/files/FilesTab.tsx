@@ -18,8 +18,8 @@ const PUBLISHED = "__published__";
 /**
  * Files tab: FileTree + SessionScopePicker driving both tree and viewer.
  * The scope picker mirrors the API's dual mode — the latest published
- * snapshot (no session id) or a live session's mounted workspace — and
- * blame only exists in published scope (`file_blame` takes no session id).
+ * snapshot (no session id) or a live session's mounted workspace. Blame only
+ * exists in published scope.
  */
 export function FilesTab() {
   const { sandboxId, snapshot } = useSandbox();

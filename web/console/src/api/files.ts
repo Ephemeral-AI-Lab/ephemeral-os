@@ -88,8 +88,8 @@ export interface WholeFile {
 }
 
 /**
- * Page file_read to completion: the whole-file buffer FileEditor needs
- * before editing, since file_write replaces everything (saving a truncated
+ * Page file reads to completion: the whole-file buffer FileEditor needs
+ * before editing, since file writes replace everything (saving a truncated
  * window would destroy the rest).
  */
 export async function fileReadToEnd(

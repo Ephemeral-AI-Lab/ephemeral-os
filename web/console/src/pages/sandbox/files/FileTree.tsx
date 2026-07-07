@@ -13,8 +13,8 @@ import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 /**
- * Lazy directory tree over `file_list`: each expanded directory fetches one
- * level in the active scope (published snapshot or live session).
+ * Lazy directory tree over the daemon HTTP file list endpoint: each expanded
+ * directory fetches one level in the active scope.
  */
 export function FileTree({
   sandboxId,

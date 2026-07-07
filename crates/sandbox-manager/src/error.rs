@@ -44,6 +44,12 @@ pub enum ManagerError {
     #[error("sandbox daemon forwarding failed: {message}")]
     ForwardingFailed { message: String },
 
+    #[error("invalid export destination {value}: {reason}")]
+    InvalidExportDest { value: String, reason: String },
+
+    #[error("export failed: {message}")]
+    ExportFailed { message: String },
+
     #[error("sandbox store lock poisoned")]
     StorePoisoned,
 
@@ -62,13 +68,16 @@ impl ManagerError {
             | Self::DuplicateSandbox { .. }
             | Self::MissingSandbox { .. }
             | Self::InvalidStateTransition { .. }
+            | Self::InvalidExportDest { .. }
             | Self::DaemonUnavailable { .. } => sandbox_protocol::error_kind::INVALID_REQUEST,
             Self::RuntimeFailed { .. }
             | Self::DaemonInstallFailed { .. }
             | Self::ForwardingFailed { .. }
             | Self::StorePoisoned
             | Self::RegistryPersistFailed { .. } => sandbox_protocol::error_kind::INTERNAL_ERROR,
-            Self::WorkspaceSetupFailed { .. } => sandbox_protocol::error_kind::OPERATION_FAILED,
+            Self::WorkspaceSetupFailed { .. } | Self::ExportFailed { .. } => {
+                sandbox_protocol::error_kind::OPERATION_FAILED
+            }
         }
     }
 

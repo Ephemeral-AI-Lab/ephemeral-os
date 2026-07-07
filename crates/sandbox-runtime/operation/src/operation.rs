@@ -35,7 +35,6 @@ impl OperationEntry {
 const CLI_FAMILIES: &[&CliOperationFamilySpec] = &[
     &sandbox_runtime_operations::COMMAND_FAMILY,
     &sandbox_runtime_operations::WORKSPACE_SESSION_FAMILY,
-    &sandbox_runtime_operations::FILE_FAMILY,
 ];
 static CLI_SPECS: OnceLock<&'static [&'static CliOperationSpec]> = OnceLock::new();
 
