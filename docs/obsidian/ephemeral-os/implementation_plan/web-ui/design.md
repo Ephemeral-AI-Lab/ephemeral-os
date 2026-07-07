@@ -144,3 +144,12 @@ Explicitly **not** used:
 
 Adding any dependency beyond this table needs a reason written into this
 file — the repo's "prefer less" rule applies to `package.json` too.
+
+As-built additions under that rule: the Radix primitives the shadcn-style
+vendoring produces (`@radix-ui/react-{dialog,tabs,select,toast,tooltip,
+dropdown-menu,popover}` — the popover hosts the `PortPreview` launcher),
+the CodeMirror 6 packages behind the table's CodeMirror row
+(`@codemirror/{state,view,commands}`), and dev-only tooling
+(`@types/node` for `vite.config.ts` typing). `react-router` is pinned to
+`^7` — npm now resolves v8 by default, and this doc's routing rationale
+was validated on v7.
