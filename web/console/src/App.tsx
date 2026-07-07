@@ -7,6 +7,7 @@ import { FleetBoard } from "@/pages/fleet/FleetBoard";
 import { NotFound } from "@/pages/NotFound";
 import { SandboxDetail } from "@/pages/sandbox/SandboxDetail";
 import { OverviewTab } from "@/pages/sandbox/overview/OverviewTab";
+import { TerminalTab } from "@/pages/sandbox/terminal/TerminalTab";
 import { PlaceholderTab } from "@/pages/sandbox/PlaceholderTab";
 
 const queryClient = new QueryClient({
@@ -27,10 +28,7 @@ export default function App() {
                 <Route index element={<FleetBoard />} />
                 <Route path="sandboxes/:sandboxId" element={<SandboxDetail />}>
                   <Route index element={<OverviewTab />} />
-                  <Route
-                    path="terminal"
-                    element={<PlaceholderTab title="Terminal" phase="Phase 5" />}
-                  />
+                  <Route path="terminal" element={<TerminalTab />} />
                   <Route
                     path="files"
                     element={<PlaceholderTab title="Files" phase="Phase 7" />}

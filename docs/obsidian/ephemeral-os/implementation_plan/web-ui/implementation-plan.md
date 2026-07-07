@@ -17,7 +17,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 2 | SPA shell & shared components | 1 | done (2026-07-07) |
 | 3 | Fleet Board | 2 | done (2026-07-07) |
 | 4 | Detail shell & Overview tab | 2 | done (2026-07-07) |
-| 5 | Terminal tab | 4 | not started |
+| 5 | Terminal tab | 4 | done (2026-07-07) |
 | 6 | Preview tab | 4 | not started |
 | 7 | `file_list` op + Files tab | 4 | not started |
 | 8 | Observability tab | 4 | not started |
@@ -208,28 +208,28 @@ Terminal tab route (cards arrive in Phase 5).
 
 The first product priority: sessions + exec + stdin + live transcript.
 
-- [ ] `SessionSidebar`: list under an **all** entry (selection filters the
+- [x] `SessionSidebar`: list under an **all** entry (selection filters the
       ledger and pre-fills the composer; **all** = unfiltered), create with
       network-profile picker, destroy with grace seconds and the
       refusal path listing `active_command_session_ids` as `#cmd-` jump
       links.
-- [ ] `CommandComposer`: command text, target session or "auto-publish"
+- [x] `CommandComposer`: command text, target session or "auto-publish"
       (implicit `publish_then_destroy`), optional timeout (user-visible;
       `yield_time_ms` is agent-only, pinned to 0 and hidden); submit opens
       the new command's terminal expanded and focused.
-- [ ] `CommandCard`: a terminal frame when expanded (integrated input line,
+- [x] `CommandCard`: a terminal frame when expanded (integrated input line,
       tail-pinned autoscroll), a one-line ledger row when collapsed; session
       chip, running/completed/failed/timed-out states, addressable as
       `#cmd-<command-session-id>`. Line discipline only — no PTY/raw mode.
-- [ ] `TranscriptViewer`: offset-tracked tail via `read_command_lines`
+- [x] `TranscriptViewer`: offset-tracked tail via `read_command_lines`
       (≤1000 lines/fetch), infinite scroll-back, **plus the inline path** —
       a command that beats the initial wait returns terminal output with no
       `command_session_id`, and the card renders it without polling.
-- [ ] `StdinBar`: the terminal's input line while running — Enter →
+- [x] `StdinBar`: the terminal's input line while running — Enter →
       `write_command_stdin` (yield 0) + an immediate `read_command_lines`
       poll nudge for instant reaction; Ctrl-C/Ctrl-D captured as keystrokes
       when the frame is focused, explicit buttons kept for discoverability.
-- [ ] Ledger persistence + catch-up: known command ids (text, timestamps)
+- [x] Ledger persistence + catch-up: known command ids (text, timestamps)
       in `localStorage` per sandbox; reload rebuilds the ledger from
       storage plus snapshot in-flight executions; on return to the tab,
       transcripts resume from their last offset with a catch-up nudge.
