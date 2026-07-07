@@ -4,9 +4,9 @@ The Phase 9 acceptance journey: create → exec → stdin → preview → blame 
 squash → destroy, exercised through the exact console endpoints the browser
 uses. Run it against a fresh gateway to validate a build end to end.
 
-Prereqs: Docker running, `bin/start-sandbox-docker-gateway` done (it
-repackages the in-container daemon when sources changed), and the console
-up via `bin/start-sandbox-console` (default `127.0.0.1:7880`).
+Prereqs: Docker running and the stack up — `bin/start-sandbox-console-stack`
+bootstraps everything in order (gateway, which repackages the in-container
+daemon when sources changed; SPA assets; console on `127.0.0.1:7880`).
 
 In the browser the same journey is: Fleet Board `[+ New Sandbox]` → detail
 Terminal tab (create session, run the server, type into stdin, Ctrl-C) →

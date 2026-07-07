@@ -78,6 +78,9 @@ export PATH="$PWD/bin:$PATH"
 # package the Docker daemon binary if needed and start/restart the public gateway
 start-sandbox-docker-gateway
 
+# bootstrap the whole web console stack (gateway + SPA build + console server)
+start-sandbox-console-stack        # then open http://127.0.0.1:7880
+
 # in another shell, use the gateway clients directly
 sandbox-manager-cli list_sandboxes
 sandbox-runtime-cli --sandbox-id eos-abc exec_command pwd

@@ -28,6 +28,15 @@ Preview requests stream bodies, tunnel WebSocket/HTTP upgrades, append
 
 ## Running
 
+One-command bootstrap (gateway → SPA build → console, in token order):
+
+```sh
+bin/start-sandbox-console-stack             # then open http://127.0.0.1:7880
+bin/start-sandbox-console-stack --skip-gateway   # keep the running gateway
+```
+
+Or piece by piece:
+
 ```sh
 cargo run -p xtask -- package-console       # build SPA into dist/console
 bin/start-sandbox-console                   # reads /tmp/eos-gateway.token
