@@ -1,8 +1,8 @@
 use serde_json::{json, Value};
 
 use crate::file::{
-    BlameRange, EditInput, EditOp, EditOutput, FileError, FileOperationError, ReadInput,
-    ReadOutput, WriteInput, WriteOutput,
+    BlameRange, EditInput, EditOp, EditOutput, FileError, FileOperationError, ListInput,
+    ListOutput, ReadInput, ReadOutput, WriteInput, WriteOutput,
 };
 use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
@@ -10,18 +10,19 @@ use crate::SandboxRuntimeOperations;
 use sandbox_protocol::{error_kind, Request, Response};
 use sandbox_runtime_layerstack::LayerPath;
 use sandbox_runtime_operations::{
-    FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC,
+    FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_LIST_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC,
 };
 
 const FILE_NOT_FOUND: &str = "not_found";
 const READ_LIMIT_MAX: u64 = 2000;
 
 const FILE_BLAME: OperationEntry = OperationEntry::cli(&FILE_BLAME_SPEC, dispatch_file_blame);
+const FILE_LIST: OperationEntry = OperationEntry::cli(&FILE_LIST_SPEC, dispatch_file_list);
 const FILE_READ: OperationEntry = OperationEntry::cli(&FILE_READ_SPEC, dispatch_file_read);
 const FILE_WRITE: OperationEntry = OperationEntry::cli(&FILE_WRITE_SPEC, dispatch_file_write);
 const FILE_EDIT: OperationEntry = OperationEntry::cli(&FILE_EDIT_SPEC, dispatch_file_edit);
 
-const OPERATIONS: &[OperationEntry] = &[FILE_BLAME, FILE_READ, FILE_WRITE, FILE_EDIT];
+const OPERATIONS: &[OperationEntry] = &[FILE_BLAME, FILE_LIST, FILE_READ, FILE_WRITE, FILE_EDIT];
 
 pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
@@ -49,6 +50,21 @@ fn dispatch_file_blame(operations: &SandboxRuntimeOperations, request: &Request)
             format!("no auditability record for path: {missing}"),
             json!({ "path": missing }),
         ),
+    }
+}
+
+fn dispatch_file_list(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+    let input = match parse_list_input(request) {
+        Ok(input) => input,
+        Err(response) => return response,
+    };
+    match operations.file.list(
+        operations.layerstack.as_ref(),
+        operations.workspace_session.as_ref(),
+        input,
+    ) {
+        Ok(output) => Response::ok(file_list_value(&output)),
+        Err(error) => file_operation_error_response(error),
     }
 }
 
@@ -95,6 +111,15 @@ fn dispatch_file_edit(operations: &SandboxRuntimeOperations, request: &Request) 
         Ok(output) => Response::ok(file_edit_value(&output)),
         Err(error) => file_operation_error_response(error),
     }
+}
+
+fn parse_list_input(request: &Request) -> Result<ListInput, Response> {
+    Ok(ListInput {
+        path: request
+            .optional_string("path")?
+            .filter(|path| !path.trim().is_empty()),
+        workspace_session_id: parse_workspace_session_id(request)?,
+    })
 }
 
 fn parse_read_input(request: &Request) -> Result<ReadInput, Response> {
@@ -205,6 +230,7 @@ fn file_operation_error_response(error: FileOperationError) -> Response {
         FileOperationError::InvalidPath(_)
         | FileOperationError::NotUtf8(_)
         | FileOperationError::NotRegular { .. }
+        | FileOperationError::NotDirectory(_)
         | FileOperationError::FileTooLarge { .. }
         | FileOperationError::OutputTooLarge { .. }
         | FileOperationError::EditNotFound { .. }
@@ -230,6 +256,23 @@ fn file_blame_value(path: &str, ranges: &[BlameRange]) -> Value {
                 })
             })
             .collect::<Vec<_>>(),
+    })
+}
+
+fn file_list_value(output: &ListOutput) -> Value {
+    json!({
+        "path": output.path,
+        "entries": output.entries
+            .iter()
+            .map(|entry| {
+                json!({
+                    "name": entry.name,
+                    "kind": entry.kind.as_str(),
+                    "size": entry.size,
+                })
+            })
+            .collect::<Vec<_>>(),
+        "truncated": output.truncated,
     })
 }
 

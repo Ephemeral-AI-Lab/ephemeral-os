@@ -244,11 +244,11 @@ ledger context.
 
 #### Components
 
-- **`FileTree`** — ⚠️ **API gap**: the file family has read/write/edit/blame
-  but **no directory-listing operation**. Options: (a) add a `file_list` op
-  to `sandbox-runtime-operations` (recommended — cheap, spec-only crate makes
-  it additive), or (b) back the tree with `exec_command find` (ugly: creates
-  implicit sessions and pollutes the audit trail). The design assumes (a).
+- **`FileTree`** — backed by the `file_list` op (closed API gap; option (a)
+  as designed). As-built note: the spec-only addition wasn't sufficient by
+  itself — snapshot listings needed a merged-view walk in
+  `sandbox-runtime-layerstack` (`LayerStack::list_dir`) and live-session
+  listings a `FileRunnerOp::ListDir` namespace runner op, both additive.
 - **`SessionScopePicker`** — the most important control on this tab: view
   either the **latest published snapshot** (no session id) or a **live
   session's mounted workspace** (with session id). This mirrors the API's

@@ -197,6 +197,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             "create_workspace_session",
             "destroy_workspace_session",
             "file_blame",
+            "file_list",
             "file_read",
             "file_write",
             "file_edit",

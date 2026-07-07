@@ -6,6 +6,47 @@
 use crate::workspace_crate::WorkspaceSessionId;
 
 #[derive(Debug, Clone)]
+pub struct ListInput {
+    pub path: Option<String>,
+    pub workspace_session_id: Option<WorkspaceSessionId>,
+}
+
+/// Kind of one listed directory entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileListEntryKind {
+    File,
+    Directory,
+    Symlink,
+    Other,
+}
+
+impl FileListEntryKind {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::File => "file",
+            Self::Directory => "directory",
+            Self::Symlink => "symlink",
+            Self::Other => "other",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FileListEntry {
+    pub name: String,
+    pub kind: FileListEntryKind,
+    pub size: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListOutput {
+    pub path: String,
+    pub entries: Vec<FileListEntry>,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone)]
 pub struct ReadInput {
     pub path: String,
     pub offset: Option<u64>,

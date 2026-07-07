@@ -61,6 +61,31 @@ impl LayerStackService {
         })
     }
 
+    /// List one directory level of the active snapshot's merged view.
+    /// `rel = None` lists the workspace root.
+    ///
+    /// # Errors
+    /// Returns [`LayerStackServiceError`] when the stack cannot be opened or
+    /// read.
+    pub fn list_current_dir(
+        &self,
+        rel: Option<&LayerPath>,
+        limit: usize,
+    ) -> Result<sandbox_runtime_layerstack::ManifestDirList, LayerStackServiceError> {
+        let stack = LayerStack::open(self.layer_stack_root.clone()).map_err(|error| {
+            LayerStackServiceError::LayerStack {
+                operation: "open",
+                error,
+            }
+        })?;
+        stack
+            .list_dir(rel, limit)
+            .map_err(|error| LayerStackServiceError::LayerStack {
+                operation: "list",
+                error,
+            })
+    }
+
     /// The workspace root the active snapshot is bound to, for absolute-path
     /// mapping. Reads the existing layerstack binding; adds no state.
     ///

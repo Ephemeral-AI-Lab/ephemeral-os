@@ -19,7 +19,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 4 | Detail shell & Overview tab | 2 | done (2026-07-07) |
 | 5 | Terminal tab | 4 | done (2026-07-07) |
 | 6 | Preview tab | 4 | done (2026-07-07) |
-| 7 | `file_list` op + Files tab | 4 | not started |
+| 7 | `file_list` op + Files tab | 4 | done (2026-07-07) |
 | 8 | Observability tab | 4 | not started |
 | 9 | Hardening & docs | 3–8 | not started |
 
@@ -95,6 +95,8 @@ web/console/
 | `crates/sandbox-runtime-operations/src/lib.rs` | export + register in family/catalog arrays | 7 |
 | `crates/sandbox-runtime/operation/src/file/service/impls/` | new `list.rs` beside read/write/edit/blame, plus `mod.rs` and the service trait | 7 |
 | `crates/sandbox-runtime/operation/src/cli_definition/file_operations.rs` | `FILE_LIST` `OperationEntry` + `dispatch_file_list` in `OPERATIONS` | 7 |
+| `crates/sandbox-runtime/layerstack` | as-built addition: public `LayerStack::list_dir` (merged one-level listing) — the snapshot scope needs a merged-view walk only this crate can do | 7 |
+| `crates/sandbox-runtime/namespace-process` + `workspace` re-export | as-built addition: `FileRunnerOp::ListDir` runner op — the live-session scope must list inside the mount namespace | 7 |
 | `crates/sandbox-runtime/.../tests/` (and e2e suites as applicable) | `file_list` coverage | 7 |
 | this file + the two specs | tracker updates per phase; specs corrected against as-built | all / 9 |
 
@@ -254,20 +256,22 @@ card, see the site embedded; WebSocket HMR works through the proxy.
 
 ## Phase 7 — `file_list` op + Files tab
 
-- [ ] Backend: `file_list` spec in `sandbox-runtime-operations` (path,
+- [x] Backend: `file_list` spec in `sandbox-runtime-operations` (path,
       optional `workspace_session_id` for the dual scope, entries with
       kind/size), implementation in `sandbox-runtime/operation`
       (`file/service/impls/list.rs` plus a dispatch entry in
       `cli_definition/file_operations.rs`), tests in `tests/`. The CLI picks
-      it up from the spec for free.
-- [ ] `FileTree` over `file_list`; `SessionScopePicker` (published snapshot
+      it up from the spec for free. As-built: also a public
+      `LayerStack::list_dir` (snapshot merge) and a `FileRunnerOp::ListDir`
+      runner op (in-namespace session listing) — see the footprint table.
+- [x] `FileTree` over `file_list`; `SessionScopePicker` (published snapshot
       vs live session) driving tree + viewer.
-- [ ] `FileViewer`: 2000-line windows, offset paging, truncation indicator.
-- [ ] `BlameGutter`: owner coloring + legend + click-through (session →
+- [x] `FileViewer`: 2000-line windows, offset paging, truncation indicator.
+- [x] `BlameGutter`: owner coloring + legend + click-through (session →
       Terminal, operation → trace deep link); **enabled only in published
       scope** — `file_blame` takes no session id; disabled with hint in
       live-session scope.
-- [ ] `FileEditor`: edit mode pages `file_read` to the end first (whole-file
+- [x] `FileEditor`: edit mode pages `file_read` to the end first (whole-file
       buffer — `file_write` replaces everything), size threshold →
       read-only, save guard: re-read + compare, refuse with reload prompt on
       concurrent change.

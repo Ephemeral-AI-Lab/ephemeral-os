@@ -43,7 +43,62 @@ fn perform(root: &Path, op: FileRunnerOp) -> Result<FileRunnerResult, FileRunner
         } => read_window(root, &rel, offset, limit, output_cap),
         FileRunnerOp::ReadFile { rel, max_bytes } => read_file(root, &rel, max_bytes),
         FileRunnerOp::Write { rel, content } => write(root, &rel, &content),
+        FileRunnerOp::ListDir { rel, limit } => list_dir(root, &rel, limit),
     }
+}
+
+fn list_dir(root: &Path, rel: &str, limit: usize) -> Result<FileRunnerResult, FileRunnerError> {
+    use crate::runner::file_op::{FileRunnerDirEntry, FileRunnerDirEntryKind};
+    let components: Vec<&str> = rel
+        .split('/')
+        .filter(|component| !component.is_empty() && *component != ".")
+        .collect();
+    if components.contains(&"..") {
+        return Err(io_message(rel, "invalid path"));
+    }
+    let Some(dir) = walk_parents(open_root(root, rel)?, &components, rel, false)? else {
+        return Ok(FileRunnerResult::ListDir {
+            existed: false,
+            entries: Vec::new(),
+            truncated: false,
+        });
+    };
+    let mut entries = Vec::new();
+    let mut truncated = false;
+    let reader = rustix::fs::Dir::read_from(&dir).map_err(|err| io_errno(rel, err))?;
+    for dirent in reader {
+        let dirent = dirent.map_err(|err| io_errno(rel, err))?;
+        let Ok(name) = dirent.file_name().to_str() else {
+            continue;
+        };
+        if name == "." || name == ".." {
+            continue;
+        }
+        if entries.len() >= limit {
+            truncated = true;
+            break;
+        }
+        let (kind, size) = match statat(&dir, name, AtFlags::SYMLINK_NOFOLLOW) {
+            Ok(stat) => match FileType::from_raw_mode(stat.st_mode) {
+                FileType::RegularFile => (FileRunnerDirEntryKind::File, Some(file_size(&stat))),
+                FileType::Directory => (FileRunnerDirEntryKind::Directory, None),
+                FileType::Symlink => (FileRunnerDirEntryKind::Symlink, None),
+                _ => (FileRunnerDirEntryKind::Other, None),
+            },
+            Err(_) => continue,
+        };
+        entries.push(FileRunnerDirEntry {
+            name: name.to_owned(),
+            kind,
+            size,
+        });
+    }
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(FileRunnerResult::ListDir {
+        existed: true,
+        entries,
+        truncated,
+    })
 }
 
 fn read_window(

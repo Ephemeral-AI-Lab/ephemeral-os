@@ -33,6 +33,8 @@ pub enum FileOperationError {
     NotUtf8(String),
     #[error("path is not a regular file ({kind:?}): {path}")]
     NotRegular { path: String, kind: FileEntryKind },
+    #[error("path is not a directory: {0}")]
+    NotDirectory(String),
     #[error("file is too large ({size} bytes; limit {limit}): {path}")]
     FileTooLarge {
         path: String,

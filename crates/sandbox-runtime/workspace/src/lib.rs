@@ -36,7 +36,7 @@ pub use model::{
     WorkspaceHandle, WorkspaceSessionId,
 };
 pub use sandbox_runtime_namespace_process::runner::file_op::{
-    decode_file_op_payload, run_result_err, run_result_ok, FileRunnerEntryKind, FileRunnerError,
-    FileRunnerOp, FileRunnerResult,
+    decode_file_op_payload, run_result_err, run_result_ok, FileRunnerDirEntry,
+    FileRunnerDirEntryKind, FileRunnerEntryKind, FileRunnerError, FileRunnerOp, FileRunnerResult,
 };
 pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};

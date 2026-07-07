@@ -170,6 +170,56 @@ impl MergedView {
         Ok(ManifestFileRead::Absent)
     }
 
+    /// Merged one-level listing of `rel` (or the workspace root for `None`)
+    /// across the layer chain: the first layer to carry a name wins, layer
+    /// whiteouts hide lower entries, and an opaque directory marker cuts
+    /// lower layers off. Read-only.
+    pub(crate) fn list_dir(
+        &self,
+        rel: Option<&LayerPath>,
+        manifest: &Manifest,
+        limit: usize,
+    ) -> Result<crate::stack::dir_list::ManifestDirList, LayerStackError> {
+        use crate::stack::dir_list::{ManifestDirEntry, ManifestDirList};
+        if let Some(rel) = rel {
+            match self.read_entry(rel.as_str(), manifest)? {
+                MergedEntry::Absent => return Ok(ManifestDirList::Absent),
+                MergedEntry::File { .. } | MergedEntry::Symlink { .. } => {
+                    return Ok(ManifestDirList::NotDirectory)
+                }
+                MergedEntry::Directory => {}
+            }
+        }
+        let mut seen = std::collections::BTreeMap::new();
+        let mut hidden: BTreeSet<String> = BTreeSet::new();
+        let mut truncated = false;
+        for layer in &manifest.layers {
+            let layer_dir = self.layer_dir(layer)?;
+            let dir = match rel {
+                Some(rel) => {
+                    if Self::is_whiteouted(&layer_dir, rel.as_str())
+                        || Self::lookup_blocked_by_layer(&layer_dir, rel.as_str())
+                    {
+                        break;
+                    }
+                    let target = join_layer_path(&layer_dir, rel.as_str());
+                    match std::fs::symlink_metadata(&target) {
+                        Ok(meta) if meta.is_dir() => target,
+                        Ok(_) => break,
+                        Err(_) => continue,
+                    }
+                }
+                None => layer_dir.clone(),
+            };
+            collect_dir_level(&dir, &mut seen, &mut hidden, limit, &mut truncated)?;
+            if truncated || dir.join(OPAQUE_MARKER).exists() {
+                break;
+            }
+        }
+        let entries: Vec<ManifestDirEntry> = seen.into_values().collect();
+        Ok(ManifestDirList::Entries { entries, truncated })
+    }
+
     pub(crate) fn visible_descendants(
         &self,
         dir: &LayerPath,
@@ -259,6 +309,62 @@ impl MergedView {
         }
         false
     }
+}
+
+fn collect_dir_level(
+    dir: &Path,
+    seen: &mut std::collections::BTreeMap<String, crate::stack::dir_list::ManifestDirEntry>,
+    hidden: &mut BTreeSet<String>,
+    limit: usize,
+    truncated: &mut bool,
+) -> Result<(), LayerStackError> {
+    use crate::stack::dir_list::{ManifestDirEntry, ManifestDirEntryKind};
+    use crate::whiteout::LOGICAL_WHITEOUT_PREFIX;
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) if err.kind() == ErrorKind::NotADirectory => return Ok(()),
+        Err(err) => return Err(err.into()),
+    };
+    for entry in entries {
+        let entry = entry?;
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
+        if name == OPAQUE_MARKER {
+            continue;
+        }
+        if let Some(target) = name.strip_prefix(LOGICAL_WHITEOUT_PREFIX) {
+            hidden.insert(target.to_owned());
+            continue;
+        }
+        let path = entry.path();
+        let Ok(meta) = std::fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if is_kernel_whiteout(&path) {
+            hidden.insert(name);
+            continue;
+        }
+        if hidden.contains(&name) || seen.contains_key(&name) {
+            continue;
+        }
+        if seen.len() >= limit {
+            *truncated = true;
+            return Ok(());
+        }
+        let (kind, size) = if meta.file_type().is_symlink() {
+            (ManifestDirEntryKind::Symlink, None)
+        } else if meta.is_dir() {
+            (ManifestDirEntryKind::Directory, None)
+        } else if meta.is_file() {
+            (ManifestDirEntryKind::File, Some(meta.len()))
+        } else {
+            (ManifestDirEntryKind::Other, None)
+        };
+        seen.insert(name.clone(), ManifestDirEntry { name, kind, size });
+    }
+    Ok(())
 }
 
 fn collect_candidate_descendants(

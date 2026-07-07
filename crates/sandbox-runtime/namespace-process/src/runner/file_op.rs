@@ -32,6 +32,10 @@ pub enum FileRunnerOp {
         rel: String,
         content: String,
     },
+    ListDir {
+        rel: String,
+        limit: usize,
+    },
 }
 
 /// File-type of a non-regular path the runner refused to read or write.
@@ -41,6 +45,24 @@ pub enum FileRunnerEntryKind {
     Directory,
     Symlink,
     Other,
+}
+
+/// Kind of one listed directory entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FileRunnerDirEntryKind {
+    File,
+    Directory,
+    Symlink,
+    Other,
+}
+
+/// One entry of a `ListDir` result.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FileRunnerDirEntry {
+    pub name: String,
+    pub kind: FileRunnerDirEntryKind,
+    pub size: Option<u64>,
 }
 
 /// A successful file-op result. `existed` reflects pre-operation regular-file
@@ -67,6 +89,11 @@ pub enum FileRunnerResult {
     Write {
         existed: bool,
         bytes_written: usize,
+    },
+    ListDir {
+        existed: bool,
+        entries: Vec<FileRunnerDirEntry>,
+        truncated: bool,
     },
 }
 

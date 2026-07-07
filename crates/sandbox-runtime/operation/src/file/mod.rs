@@ -10,6 +10,6 @@ mod service;
 
 pub use error::{FileEntryKind, FileError, FileOperationError};
 pub use service::{
-    BlameRange, EditInput, EditOp, EditOutput, FileService, ReadInput, ReadOutput, WriteInput,
-    WriteKind, WriteOutput,
+    BlameRange, EditInput, EditOp, EditOutput, FileListEntry, FileListEntryKind, FileService,
+    ListInput, ListOutput, ReadInput, ReadOutput, WriteInput, WriteKind, WriteOutput,
 };

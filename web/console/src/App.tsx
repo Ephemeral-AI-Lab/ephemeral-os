@@ -8,6 +8,7 @@ import { NotFound } from "@/pages/NotFound";
 import { SandboxDetail } from "@/pages/sandbox/SandboxDetail";
 import { OverviewTab } from "@/pages/sandbox/overview/OverviewTab";
 import { TerminalTab } from "@/pages/sandbox/terminal/TerminalTab";
+import { FilesTab } from "@/pages/sandbox/files/FilesTab";
 import { PreviewTab } from "@/pages/sandbox/preview/PreviewTab";
 import { PlaceholderTab } from "@/pages/sandbox/PlaceholderTab";
 
@@ -30,10 +31,7 @@ export default function App() {
                 <Route path="sandboxes/:sandboxId" element={<SandboxDetail />}>
                   <Route index element={<OverviewTab />} />
                   <Route path="terminal" element={<TerminalTab />} />
-                  <Route
-                    path="files"
-                    element={<PlaceholderTab title="Files" phase="Phase 7" />}
-                  />
+                  <Route path="files" element={<FilesTab />} />
                   <Route path="preview" element={<PreviewTab />} />
                   <Route path="observability">
                     <Route

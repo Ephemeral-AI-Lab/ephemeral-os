@@ -33,6 +33,47 @@ const FILE_BLAME_ARGS: &[ArgSpec] = &[ArgSpec::required(
     }),
 )];
 
+pub const FILE_LIST_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "file_list",
+    family: "file",
+    summary: "List one directory level from the snapshot or a session.",
+    description: "List the entries of a repository-relative or workspace-root-absolute directory (name, kind, size). With workspace_session_id the listing reads that live session's mounted workspace; without it the listing projects the latest published snapshot. Omit path to list the workspace root.",
+    args: FILE_LIST_ARGS,
+    cli: Some(CliSpec {
+        path: &["runtime", "file_list"],
+        usage: "sandbox-runtime-cli --sandbox-id ID file_list [--path DIR] [--workspace-session-id ID]",
+        examples: &[
+            "sandbox-runtime-cli --sandbox-id ID file_list",
+            "sandbox-runtime-cli --sandbox-id ID file_list --path src",
+            "sandbox-runtime-cli --sandbox-id ID file_list --path src --workspace-session-id ws-1",
+        ],
+    }),
+    related: &["file_read", "file_write", "file_blame"],
+};
+
+const FILE_LIST_ARGS: &[ArgSpec] = &[
+    ArgSpec::optional(
+        "path",
+        ArgKind::String,
+        "Repository-relative or workspace-root-absolute directory to list. Omit for the workspace root.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--path"),
+            positional: None,
+        }),
+    ),
+    ArgSpec::optional(
+        "workspace_session_id",
+        ArgKind::String,
+        "Existing workspace session id to list inside. Omit to list the snapshot.",
+        None,
+        Some(ArgCliSpec {
+            flag: Some("--workspace-session-id"),
+            positional: None,
+        }),
+    ),
+];
+
 pub const FILE_READ_SPEC: CliOperationSpec = CliOperationSpec {
     name: "file_read",
     family: "file",

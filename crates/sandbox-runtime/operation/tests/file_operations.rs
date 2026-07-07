@@ -15,8 +15,8 @@ use base64::Engine;
 use sandbox_observability::{Observer, SpanRegistry};
 use sandbox_protocol::{CliOperationScope, Request};
 use sandbox_runtime::file::{
-    EditInput, EditOp, FileEntryKind, FileOperationError, FileService, ReadInput, ReadOutput,
-    WriteInput,
+    EditInput, EditOp, FileEntryKind, FileListEntryKind, FileOperationError, FileService,
+    ListInput, ListOutput, ReadInput, ReadOutput, WriteInput,
 };
 use sandbox_runtime::layerstack::{LayerStackService, ManifestReadWindow};
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
@@ -25,8 +25,8 @@ use sandbox_runtime_layerstack::LayerPath;
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceTarget};
 use sandbox_runtime_namespace_process::runner::protocol::NsFds;
 use sandbox_runtime_workspace::{
-    run_result_err, run_result_ok, FileRunnerEntryKind, FileRunnerError, FileRunnerOp,
-    FileRunnerResult, NetworkProfile, WorkspaceSessionId,
+    run_result_err, run_result_ok, FileRunnerDirEntry, FileRunnerDirEntryKind, FileRunnerEntryKind,
+    FileRunnerError, FileRunnerOp, FileRunnerResult, NetworkProfile, WorkspaceSessionId,
 };
 use serde_json::json;
 
@@ -136,6 +136,10 @@ impl Env {
     ) -> Result<sandbox_runtime::file::EditOutput, FileOperationError> {
         self.file
             .edit(&self.layerstack, &self.workspace_session, input)
+    }
+    fn list(&self, input: ListInput) -> Result<ListOutput, FileOperationError> {
+        self.file
+            .list(&self.layerstack, &self.workspace_session, input)
     }
     fn create_session(&self) -> WorkspaceSessionId {
         self.fake.push_create_result(Ok(workspace_handle(
@@ -920,4 +924,190 @@ fn target() -> NamespaceTarget {
             net: None,
         },
     }
+}
+
+// ---------- file_list ----------
+
+fn list_of(path: Option<&str>) -> ListInput {
+    ListInput {
+        path: path.map(str::to_owned),
+        workspace_session_id: None,
+    }
+}
+
+fn names_of(output: &ListOutput) -> Vec<&str> {
+    output
+        .entries
+        .iter()
+        .map(|entry| entry.name.as_str())
+        .collect()
+}
+
+#[test]
+fn sessionless_list_of_root_and_subdirectory() {
+    let env = env();
+    let root = env.list(list_of(None)).expect("list root");
+    assert_eq!(root.path, "");
+    assert!(!root.truncated);
+    let names = names_of(&root);
+    for expected in ["readme.txt", "sub", "link.txt", "linkdir", "binary.dat"] {
+        assert!(names.contains(&expected), "missing {expected} in {names:?}");
+    }
+    let readme = root
+        .entries
+        .iter()
+        .find(|entry| entry.name == "readme.txt")
+        .expect("readme entry");
+    assert_eq!(readme.kind, FileListEntryKind::File);
+    assert_eq!(readme.size, Some(18));
+    let sub = root
+        .entries
+        .iter()
+        .find(|entry| entry.name == "sub")
+        .expect("sub entry");
+    assert_eq!(sub.kind, FileListEntryKind::Directory);
+    assert_eq!(sub.size, None);
+    let link = root
+        .entries
+        .iter()
+        .find(|entry| entry.name == "link.txt")
+        .expect("link entry");
+    assert_eq!(link.kind, FileListEntryKind::Symlink);
+
+    let nested = env.list(list_of(Some("sub"))).expect("list sub");
+    assert_eq!(nested.path, "sub");
+    assert_eq!(names_of(&nested), vec!["nested.txt"]);
+
+    let by_absolute = env
+        .list(list_of(Some(
+            env.workspace_root.to_str().expect("utf8 root"),
+        )))
+        .expect("list absolute root");
+    assert_eq!(names_of(&by_absolute), names);
+}
+
+#[test]
+fn sessionless_list_sees_freshly_published_layer() {
+    let env = env();
+    env.write(write_of("fresh/new.txt", "content", "req-list"))
+        .expect("publish write");
+    let root = env.list(list_of(None)).expect("list root");
+    assert!(names_of(&root).contains(&"fresh"), "{root:?}");
+    let fresh = env.list(list_of(Some("fresh"))).expect("list fresh");
+    assert_eq!(names_of(&fresh), vec!["new.txt"]);
+    assert_eq!(fresh.entries[0].size, Some(7));
+}
+
+#[test]
+fn sessionless_list_missing_and_file_paths_classify() {
+    let env = env();
+    assert!(matches!(
+        env.list(list_of(Some("missing-dir"))),
+        Err(FileOperationError::NotFound(_))
+    ));
+    assert!(matches!(
+        env.list(list_of(Some("readme.txt"))),
+        Err(FileOperationError::NotDirectory(_))
+    ));
+    assert!(matches!(
+        env.list(list_of(Some("../escape"))),
+        Err(FileOperationError::InvalidPath(_))
+    ));
+}
+
+#[test]
+fn session_list_runs_through_run_file_op() {
+    let env = env();
+    let id = env.create_session();
+    env.fake
+        .push_run_file_op_result(Ok(run_result_ok(&FileRunnerResult::ListDir {
+            existed: true,
+            entries: vec![
+                FileRunnerDirEntry {
+                    name: "a.txt".into(),
+                    kind: FileRunnerDirEntryKind::File,
+                    size: Some(3),
+                },
+                FileRunnerDirEntry {
+                    name: "dir".into(),
+                    kind: FileRunnerDirEntryKind::Directory,
+                    size: None,
+                },
+            ],
+            truncated: false,
+        })));
+    let listed = env
+        .list(ListInput {
+            path: None,
+            workspace_session_id: Some(id.clone()),
+        })
+        .expect("session list");
+    assert_eq!(names_of(&listed), vec!["a.txt", "dir"]);
+    assert_eq!(listed.entries[0].kind, FileListEntryKind::File);
+    assert_eq!(listed.entries[1].kind, FileListEntryKind::Directory);
+
+    let ops = env.fake.run_file_op_calls();
+    assert!(
+        matches!(
+            &ops[0].1,
+            FileRunnerOp::ListDir { rel, .. } if rel.is_empty()
+        ),
+        "root listing sends an empty rel: {ops:?}"
+    );
+
+    env.fake
+        .push_run_file_op_result(Ok(run_result_ok(&FileRunnerResult::ListDir {
+            existed: false,
+            entries: Vec::new(),
+            truncated: false,
+        })));
+    assert!(matches!(
+        env.list(ListInput {
+            path: Some("gone".into()),
+            workspace_session_id: Some(id),
+        }),
+        Err(FileOperationError::NotFound(_))
+    ));
+}
+
+#[test]
+fn dispatch_file_list_shapes_json_and_validates() {
+    let env = env();
+    let operations = dispatch_operations(&env);
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request("file_list", json!({ "path": "sub" })),
+    )
+    .into_json_value();
+    assert_eq!(response["path"], "sub");
+    assert_eq!(response["truncated"], false);
+    assert_eq!(response["entries"][0]["name"], "nested.txt");
+    assert_eq!(response["entries"][0]["kind"], "file");
+    assert_eq!(response["entries"][0]["size"], 4);
+
+    let response =
+        sandbox_runtime::dispatch_operation(&operations, &runtime_request("file_list", json!({})))
+            .into_json_value();
+    assert!(
+        response["entries"]
+            .as_array()
+            .expect("entries array")
+            .iter()
+            .any(|entry| entry["name"] == "readme.txt"),
+        "omitted path lists the workspace root: {response}"
+    );
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request("file_list", json!({ "path": "readme.txt" })),
+    )
+    .into_json_value();
+    assert_eq!(response["error"]["kind"], "invalid_request");
+
+    let response = sandbox_runtime::dispatch_operation(
+        &operations,
+        &runtime_request("file_list", json!({ "path": "missing" })),
+    )
+    .into_json_value();
+    assert_eq!(response["error"]["kind"], "not_found");
 }
