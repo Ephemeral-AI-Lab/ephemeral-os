@@ -89,6 +89,12 @@ export function ResourcesView() {
         </span>
       </div>
 
+      {series.isError && !series.data ? (
+        <div className="rounded border border-danger/40 bg-danger-soft p-2 text-xs text-ink">
+          {(series.error as Error).message} — retrying automatically.
+        </div>
+      ) : null}
+
       {unavailable ? (
         <div className="rounded border border-warn/40 bg-warn-soft p-2 text-xs text-ink">
           cgroup metrics are unavailable in this container (

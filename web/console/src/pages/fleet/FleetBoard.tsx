@@ -99,7 +99,14 @@ export function FleetBoard() {
       <FleetSummaryBar list={list.data} snapshot={snapshot.data} />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {visible.length === 0 && list.data ? (
+        {list.isError && !list.data ? (
+          <div className="mx-auto mt-16 max-w-md rounded-lg border border-danger/40 bg-danger-soft p-8 text-center">
+            <div className="text-sm font-semibold text-danger">Gateway unreachable</div>
+            <p className="mt-2 break-words text-xs text-ink-mid">
+              {(list.error as Error).message} — retrying automatically.
+            </p>
+          </div>
+        ) : visible.length === 0 && list.data ? (
           <div className="mx-auto mt-16 max-w-md rounded-lg border border-line bg-surface p-8 text-center">
             <div className="text-sm font-semibold">
               {records.length === 0 ? "No sandboxes yet" : "No matches"}

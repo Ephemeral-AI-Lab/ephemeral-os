@@ -21,7 +21,7 @@ Update the Status column and the phase checkboxes as work lands. Statuses:
 | 6 | Preview tab | 4 | done (2026-07-07) |
 | 7 | `file_list` op + Files tab | 4 | done (2026-07-07) |
 | 8 | Observability tab | 4 | done (2026-07-07) |
-| 9 | Hardening & docs | 3–8 | not started |
+| 9 | Hardening & docs | 3–8 | done (2026-07-07) |
 
 Milestones:
 
@@ -303,41 +303,42 @@ cross-tab deep links resolve end to end.
 
 ## Phase 9 — Hardening & docs
 
-- [ ] Empty states for every list surface (no sandboxes, no sessions, no
+- [x] Empty states for every list surface (no sandboxes, no sessions, no
       commands, no traces, empty directory).
-- [ ] Error-path sweep: gateway down, sandbox not ready, daemon unreachable,
+- [x] Error-path sweep: gateway down, sandbox not ready, daemon unreachable,
       preview 403 (isolated without reachable IP) — each renders its mapped
       error, not a blank pane.
-- [ ] Poll audit: cadences, tab-hidden pauses, health fan-out posture
-      revisited at fleet scale.
-- [ ] Manual e2e journey scripted in the repo docs: create → exec → stdin →
-      preview → blame → squash → destroy.
-- [ ] Docs: crate README, `README.md` component-table row finalized, both
-      specs re-read and corrected against as-built behavior.
+- [x] Poll audit: cadences, tab-hidden pauses, health fan-out posture
+      revisited at fleet scale (kept: independent 10s per-card probes; a
+      batch endpoint stays the escape hatch if fleets grow).
+- [x] Manual e2e journey scripted in the repo docs ([[e2e-journey]]):
+      create → exec → stdin → preview → blame → squash → destroy.
+- [x] Docs: crate README (`crates/sandbox-console/README.md`), `README.md`
+      component-table row finalized, both specs re-read and corrected
+      against as-built behavior.
 
-Exit: journey script passes clean against a fresh gateway; tracker above
-fully `done`.
+Exit: journey script passes clean against a fresh gateway (verified
+2026-07-07); tracker above fully `done`.
 
 ---
 
-## Risks & open questions
+## Risks & open questions (resolutions as-built)
 
-- **SPA stack** — fixed in [[design]] (React 19 + TS + Vite + the listed
-  packages); revisit only if a listed package fails a Phase 2 spike.
-- **`sandbox-cli-core` reuse** (Phase 1): consumed as-is, but if
-  `GatewayClient`'s streaming interface (`send_with_logs`) or config surface
-  isn't public enough for the console, it needs a small visibility-only
-  change — flag it, don't fork the client.
-- **Health fan-out** (Phase 3): per-card probes may need a batch endpoint;
-  that would be the console's first non-pass-through route — keep it dumb
-  (fan-out server-side, same probe), or accept slower cadence instead.
-- **Squash estimate** (Phase 8): "12 → est. 4" in the mockup assumes a
-  derivable post-squash count; unverified.
-- **Frame-blocked apps** (Phase 6): apps sending `X-Frame-Options` can't
-  embed; fallback is new-tab, accepted as v0 behavior.
-- **Binary / non-UTF-8 files** (Phase 7): `file_read`/`file_write` are
-  UTF-8-text-only; Files tab shows a "binary file" placeholder in v0.
-- **Command history is per-browser** (Phase 5): no `list_command_sessions`
-  op exists; `localStorage` rebuilds the ledger, but a fresh browser sees
-  only in-flight commands. Add the listing op later if shared history
-  matters.
+- **SPA stack** — held as fixed in [[design]]; no package failed. (One
+  deviation: npm resolves react-router to v8 by default now — the console
+  pins `react-router@^7` per the design doc.)
+- **`sandbox-cli-core` reuse** (Phase 1): consumed as-is; `send_with_logs`
+  and the config surface were public enough — no visibility change needed.
+- **Health fan-out** (Phase 3): resolved by accepting the slower cadence —
+  each card probes independently every 10s; no batch endpoint added.
+- **Squash estimate** (Phase 8): verified **not derivable** — the UI shows
+  the before-count and reports the after-count from the post-squash
+  refetch; the result carries `squashed_blocks`.
+- **Frame-blocked apps** (Phase 6): as accepted — header-probe detection
+  (`X-Frame-Options` / `frame-ancestors`) with the new-tab fallback.
+- **Binary / non-UTF-8 files** (Phase 7): as accepted — the Files tab shows
+  a "binary file" placeholder in v0.
+- **Command history is per-browser** (Phase 5): shipped as designed;
+  `localStorage` rebuilds the ledger and a fresh browser sees only
+  in-flight commands. `list_command_sessions` remains a candidate op if
+  shared history matters.
