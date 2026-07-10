@@ -3,6 +3,14 @@
 
 use serde_json::Value;
 
+pub(crate) fn readiness_request_line(
+    sandbox_id: &str,
+    auth_token: &str,
+) -> Result<Vec<u8>, String> {
+    sandbox_protocol::daemon_readiness_request_line(sandbox_id, auth_token)
+        .map_err(|error| format!("encode readiness request: {error}"))
+}
+
 /// Treat a daemon response as ready only when it is newline-terminated, valid
 /// JSON, reports `status: "ready"`, and echoes the expected sandbox id. A bare
 /// TCP connect through Docker's port proxy is not a reliable readiness signal.

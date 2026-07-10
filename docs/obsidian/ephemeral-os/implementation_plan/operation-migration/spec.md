@@ -1172,9 +1172,46 @@ At cutover, the architecture command must enforce all of these exact gates:
   `crates/sandbox-runtime/operation` and
   `crates/sandbox-observability/primitives` as the two listed exceptions.
 
-References in explicitly marked historical documents are not production
-violations. Normative docs, executable scripts, manifests, CI, and
-maintained tests have no exemption.
+References in explicitly marked historical documents and in explicitly
+inventoried immutable evidence artifacts are not production violations. The
+Phase 0 evidence bundle at
+`docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0/`
+preserves required pre-purge command outputs and snapshots verbatim. Its
+adjacent `IMMUTABLE.md` manifest must carry the immutable-evidence marker and
+enumerate every exempt payload file exactly; the architecture check fails on
+a missing, unlisted, additional, or duplicate payload entry. The manifest
+itself remains subject to the stale-reference scan, and only its listed
+payloads are exempt. This is the only immutable-evidence exemption established
+by this paragraph and does not broaden any separately and locally marked
+historical bundle.
+
+The generic raw-token stale-reference scan has exactly two metalinguistic
+authority exceptions: this specification and its execution tracker,
+`phase-plan.md`. Those two authorities must quote deleted names and paths when
+they define negative requirements, describe the migration's before-state, and
+preserve immutable command or deviation evidence. This exception applies only
+to generic raw-token matching; it does not exempt either file's current
+normative assertions. At Phase 8 cutover, a command must enumerate every
+forbidden-token match in both files, and the progress log or linked evidence
+must classify each match as a negative requirement, a before-state
+description, or immutable evidence. A targeted review of the Target filesystem
+and package structure, Target dependency law, Required removals and
+stale-reference gates, Acceptance criteria, and current Phase 8 sections must
+verify their positive cutover assertions against the architecture check. Any
+unclassified match fails the gate. Every other normative document, executable
+script, manifest, CI file, and maintained test remains unexempt.
+
+The machine-validated linked evidence is
+`docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-8/authoritative-forbidden-token-inventory.tsv`.
+Each row records `path`, one-based `line` and character `column`, `category`,
+and `pattern`. The architecture check derives every occurrence from the same
+generic token, path, and protocol-vocabulary matchers used by the stale scan
+and requires an exact bijection with no duplicate rows. Categories are limited
+to `negative-requirement`, `before-state`, and `immutable-evidence`. Because
+its pattern field necessarily quotes the classified tokens, that exact TSV is
+omitted from the generic scan while it is parsed and validated; this is not a
+third authority exception and does not exempt its directory or any other
+evidence file.
 
 ## Verification matrix
 

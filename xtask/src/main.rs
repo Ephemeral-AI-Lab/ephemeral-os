@@ -15,6 +15,7 @@ use std::process::Command;
 use anyhow::{bail, Context, Result};
 use ignore::WalkBuilder;
 use sha2::{Digest, Sha256};
+use xtask::operation_architecture;
 
 const AMD64_TARGET: &str = "x86_64-unknown-linux-musl";
 const ARM64_TARGET: &str = "aarch64-unknown-linux-musl";
@@ -48,6 +49,11 @@ fn main() -> Result<()> {
         Some("check-test-support") => {
             check_test_support_policy(&TestSupportPolicyArgs::parse(args)?)
         }
+        Some("operation-architecture-check") => operation_architecture::check(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .context("xtask must be inside the workspace root")?,
+        ),
         Some("help" | "--help" | "-h") | None => {
             print_help();
             Ok(())
@@ -1411,6 +1417,8 @@ xtask commands:
           (defaults to crates/sandbox-daemon)
   check-test-support [--root <path> ...]
           fail if crate src/ Rust files contain test-support feature gates
+  operation-architecture-check
+          enforce sandbox operation ownership, dependency, route, and stale-reference laws
   package [--target <triple>] [--out-dir <dir>]
           [--builder auto|zigbuild|cross|rust-lld|cargo]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]

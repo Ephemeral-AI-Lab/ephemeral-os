@@ -1,13 +1,17 @@
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use base64::Engine as _;
 use sandbox_manager::{
     manager_handler_keys, CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices,
     SandboxDaemonClient, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId,
     SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
-use sandbox_operation_catalog::{internal, observability::SNAPSHOT_SPEC, routes};
+use sandbox_operation_catalog::{
+    internal, manager::EXPORT_CHANGES_SPEC, observability::SNAPSHOT_SPEC, routes,
+};
 use sandbox_operation_contract::{
     error, OperationExecutionOwner, OperationRequest, OperationResponse, OperationScope,
     OperationScopeKind, OperationVisibility,
@@ -67,6 +71,8 @@ struct RecordingDaemonClient {
     invocations: Mutex<Vec<(u16, String, OperationScope)>>,
 }
 
+const EXPORTED_BYTES: &[u8] = b"phase-8-export";
+
 impl SandboxDaemonClient for RecordingDaemonClient {
     fn invoke(
         &self,
@@ -79,7 +85,29 @@ impl SandboxDaemonClient for RecordingDaemonClient {
             request.op.clone(),
             request.scope.clone(),
         ));
-        Ok(OperationResponse::ok(json!({"forwarded": true})))
+        let result = match request.op.as_str() {
+            internal::runtime::EXPORT_LAYERSTACK => json!({
+                "export_id": "phase-8-export",
+                "manifest_version": 3,
+                "layers_exported": ["L000001-phase-8"],
+                "entries": {
+                    "files": 1,
+                    "symlinks": 0,
+                    "whiteouts": 0,
+                    "opaques": 0,
+                },
+                "spool_bytes": EXPORTED_BYTES.len(),
+            }),
+            internal::runtime::READ_EXPORT_CHUNK => json!({
+                "chunk": base64::engine::general_purpose::STANDARD.encode(EXPORTED_BYTES),
+                "offset": 0,
+                "len": EXPORTED_BYTES.len(),
+                "total": EXPORTED_BYTES.len(),
+                "eof": true,
+            }),
+            _ => json!({"forwarded": true}),
+        };
+        Ok(OperationResponse::ok(result))
     }
 }
 
@@ -300,7 +328,7 @@ async fn manager_router_forwards_every_sandbox_observability_route() {
 }
 
 #[tokio::test]
-async fn manager_router_rejects_every_canonical_internal_route_before_forwarding() {
+async fn manager_router_rejects_internal_routes_while_public_export_uses_direct_daemon_port() {
     let (router, daemon_client) = ready_router();
 
     for route in internal::runtime::ROUTES {
@@ -326,6 +354,43 @@ async fn manager_router_rejects_every_canonical_internal_route_before_forwarding
         .lock()
         .expect("invocations lock")
         .is_empty());
+
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let directory = std::env::temp_dir().join(format!(
+        "manager-router-export-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    let _ = std::fs::remove_dir_all(&directory);
+    std::fs::create_dir_all(&directory).expect("create export directory");
+    let destination = directory.join("delta.tar.zst");
+    let response = router
+        .dispatch_request(request(
+            EXPORT_CHANGES_SPEC.name,
+            OperationScope::System,
+            json!({
+                "sandbox_id": "sbox-1",
+                "dest": destination,
+                "format": "tar-zst",
+            }),
+        ))
+        .await
+        .into_json_value();
+
+    assert!(response.get("error").is_none(), "{response}");
+    assert_eq!(
+        std::fs::read(&destination).expect("read exported archive"),
+        EXPORTED_BYTES
+    );
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 2);
+    assert_eq!(invocations[0].1, internal::runtime::EXPORT_LAYERSTACK);
+    assert_eq!(invocations[1].1, internal::runtime::READ_EXPORT_CHUNK);
+    assert!(invocations
+        .iter()
+        .all(|(port, _, scope)| *port == 7000 && scope == &OperationScope::sandbox("sbox-1")));
+    drop(invocations);
+    std::fs::remove_dir_all(directory).expect("remove export directory");
 }
 
 #[tokio::test]
