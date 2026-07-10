@@ -472,9 +472,9 @@ Its existing serialized catalog field remains unchanged for baseline
 compatibility. `OperationExecutionOwner` in the route manifest makes execution
 ownership explicit and may differ from the domain.
 
-The client input separates `scope_selector: Option<String>` from operation
-`args`; `sandbox_id` is interpreted according to policy rather than by its
-field name alone:
+The value-based builder used by CLI and MCP separates
+`scope_selector: Option<String>` from operation `args`; `sandbox_id` is
+interpreted according to policy rather than by its field name alone:
 
 - `System` constructs `OperationScope::System`. A `sandbox_id` declared by a
   manager operation remains a business argument in `args`; an out-of-band
@@ -519,13 +519,15 @@ assign different owners; this is how system `snapshot` belongs to the manager
 application while sandbox `snapshot` belongs to the observability application.
 Route and scope-policy metadata are not added to the serialized
 `OperationCatalogDocument`, so public catalog JSON keeps the Phase 0 shape and
-bytes. The Rust CLI, MCP, and console-server adapters resolve routes through
-the catalog manifests and pass the resulting policy/spec into the shared
-client. The TypeScript web console sends its existing selected sandbox context
-and raw operation values; the Rust console server performs the manifest lookup
-and scope/argument split, so the browser neither consumes a Rust-only manifest
-nor needs a new route-policy API. The gateway client does not depend on
-concrete catalog packages or switch on operation-name/domain literals.
+bytes. The Rust CLI and MCP adapters resolve routes through the catalog
+manifests and pass the resulting policy/spec into the shared client's
+value-based builder. The TypeScript web console preserves its existing
+`/api/rpc` request shape, `{ op, scope, args }`; the Rust console server
+validates that fully scoped `OperationRequest` against public/internal route
+manifests and passes it to the shared client's lower-level send API. The
+browser neither consumes a Rust-only manifest nor needs a new route-policy API.
+The gateway client does not depend on concrete catalog packages or switch on
+operation-name/domain literals.
 
 Each application has two explicit registries:
 
@@ -546,14 +548,16 @@ Phases 2–5 retain one canonical, migration-only internal declaration for
 `(Sandbox, get_observability)` in the observability catalog. The temporary
 catalog projection and manager aggregate path import that declaration instead
 of copying the literal. The projection returns a contract-owned neutral
-dispatch target/argument set that catalog-aware CLI, MCP, and console-server
-adapters pass into the generic gateway client; the client does not import the
-observability catalog or switch on operation names. The declaration is
-excluded from public catalog JSON and from the final route set. Phase 4 may
-make manager routing scope-kind-first, but concrete public sandbox
-observability routes are not activated until the atomic Phase 6
-client/manager/daemon cutover. Phase 6 deletes this declaration, projection,
-all temporary translations, and the synthetic `view` argument together.
+dispatch target/argument set that catalog-aware CLI and MCP adapters pass into
+the generic gateway client; the client does not import the observability
+catalog or switch on operation names. During the transition, console's
+existing fully scoped `get_observability` request is validated against the same
+internal declaration and sent directly. The declaration is excluded from
+public catalog JSON and from the final route set. Phase 4 may make manager
+routing scope-kind-first, but concrete public sandbox observability routes are
+not activated until the atomic Phase 6 client/manager/daemon cutover. Phase 6
+deletes this declaration, projection, all temporary translations, and the
+synthetic `view` argument together.
 
 ### Remove the observability multiplexer
 
@@ -703,9 +707,13 @@ bijection is deferred to the application phases.
 - Preserve the existing observability mapping table in one explicitly
   temporary, catalog-aware observability projection. It imports the
   migration-only declaration and returns a neutral contract dispatch target
-  for CLI, MCP, and console-server to pass to the generic client; the client
-  itself remains catalog-independent. Delete the projection when Phase 6
-  changes client and server atomically.
+  for CLI and MCP to pass to the generic client; the client itself remains
+  catalog-independent. Delete the projection when Phase 6 changes client and
+  server atomically.
+- Preserve console `/api/rpc` as a fully scoped request API. The console server
+  validates its `OperationRequest` against the route manifests and calls the
+  shared client's send API; it does not force the browser request back through
+  the CLI/MCP value builder.
 - Change MCP and console to depend on `sandbox-operation-client`, never
   `sandbox-cli`.
 - Remove direct `sandbox-protocol` dependencies and imports from CLI, MCP, and
@@ -713,9 +721,10 @@ bijection is deferred to the application phases.
   the wire protocol.
 - Split request-builder tests according to their new owners.
 
-Exit gate: CLI, MCP, and console use the same value-based request API; none
-depends on or imports `sandbox-protocol`; and no code outside the CLI adapter
-imports CLI parsing/help/output modules.
+Exit gate: CLI and MCP share the value-based builder, console shares the same
+client transport through its validated-request send API, none depends on or
+imports `sandbox-protocol`, and no code outside the CLI adapter imports CLI
+parsing/help/output modules.
 
 ### Phase 4 — Move and clean the manager application
 
@@ -773,6 +782,8 @@ handler.
 - Delete `get_observability` and the synthetic `view` argument from CLI,
   manager, daemon, the migration manifest, console, MCP tests, and E2E
   expectations.
+- Keep the console `/api/rpc` envelope stable while changing its observability
+  `op` values from the temporary multiplexer to concrete public names.
 - Prove that the system `snapshot` and sandbox `snapshot` routes cannot
   shadow each other.
 
