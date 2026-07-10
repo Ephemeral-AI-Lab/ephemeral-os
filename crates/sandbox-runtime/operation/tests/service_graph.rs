@@ -311,7 +311,8 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 
     let file_adapter = include_str!("../src/operation_adapter/file_operations.rs");
-    assert!(file_adapter.contains("const FILE_LIST: OperationEntry = OperationEntry {"));
+    assert!(file_adapter.contains("const FILE_LIST_ENTRY: OperationEntry = OperationEntry {"));
+    assert!(file_adapter.contains("name: FILE_LIST,"));
     assert_eq!(file_adapter.matches("spec: None").count(), 1);
 
     for (path, source) in rust_sources("src/command") {
