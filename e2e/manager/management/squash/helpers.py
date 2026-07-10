@@ -1110,7 +1110,7 @@ def _scenario_catalog(case, rec, sandbox_factory):
     # the dispatch table imports the semantic spec by name.
     spec_source = (REPO_ROOT / "crates/sandbox-operations/catalog/src/manager.rs").read_text()
     projection_source = (REPO_ROOT / "crates/sandbox-cli/src/projection/manager.rs").read_text()
-    dispatch_source = (REPO_ROOT / "crates/sandbox-manager/src/operation/cli_definition/management_operations.rs").read_text()
+    dispatch_source = (REPO_ROOT / "crates/sandbox-manager/src/operations/registry/management_operations.rs").read_text()
     runtime_source = (REPO_ROOT / "crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs").read_text()
     internal_source = (REPO_ROOT / "crates/sandbox-operations/catalog/src/internal/runtime.rs").read_text()
     assert 'name: "squash_layerstacks"' in spec_source
