@@ -13,6 +13,11 @@ aliases:
 
 # MCP public surface and implementation design
 
+> **Ownership-layout note (operation-layout exempt, 2026-07-11):** The public
+> MCP behavior in this document remains applicable. Package names, source
+> paths, and ownership/dependency sections describing the pre-migration
+> implementation are historical and superseded by `operation-migration/spec.md`.
+
 This document is the detailed design for the MCP boundary. It is the
 authoritative public-tool contract after the cutover. The sibling documents
 [[cli]] and [[http]] describe the same product boundary projected as command
@@ -91,8 +96,8 @@ roots, server-specific RPC methods, or a fourth all-operations server.
   canonical request handler; schema descriptions carry the constraints listed
   below.
 - Unknown properties are rejected by the MCP adapter. A caller cannot inject
-  `request_id`, gateway credentials, protocol scope, daemon endpoint, `view`,
-  export token, or other transport/internal fields.
+  `request_id`, gateway credentials, protocol scope, daemon endpoint, export
+  token, or other transport/internal fields.
 - Every call has one JSON-object result. The result is returned as structured
   tool content, not serialized prose. Unspecified extra fields are not a
   compatibility promise.
@@ -108,12 +113,11 @@ value appears in a tool schema.
 | management | tool operation name, `system` scope | `sandbox_id` is an ordinary operation argument where needed |
 | runtime | tool operation name, `sandbox(sandbox_id)` scope | every tool requires `sandbox_id` |
 | observability `snapshot` without `sandbox_id` | `snapshot`, `system` scope | omitted `sandbox_id` means aggregate ready manager-known sandboxes |
-| observability with `sandbox_id` | `get_observability`, `sandbox(sandbox_id)` scope; adapter adds internal `view` | every view except aggregate `snapshot` requires `sandbox_id` |
+| observability with `sandbox_id` | tool operation name, `sandbox(sandbox_id)` scope | every operation except aggregate `snapshot` requires `sandbox_id` |
 
-The last row is intentionally a transport translation. MCP callers use tools
-named `trace`, `events`, `cgroup`, `layerstack`, and sandbox-scoped `snapshot`;
-they never see the daemon-local `get_observability` operation or its `view`
-argument.
+MCP callers use tools named `trace`, `events`, `cgroup`, `layerstack`, and
+sandbox-scoped `snapshot`; the same concrete operation name is routed directly
+to the selected sandbox daemon.
 
 ### Success and failure result
 
@@ -333,7 +337,6 @@ mechanics only. They must be absent from every MCP `tools/list` result:
 | `destroy_workspace_session` | internal lifecycle primitive; exposing it would reveal/require manual session ownership |
 | `file_list` | sole direct daemon HTTP operation exception |
 | `sandbox_daemon_ready` | daemon readiness protocol |
-| `get_observability` | daemon view multiplexer behind public observability tools |
 | `squash_layerstack` | daemon-local singular operation behind `squash_layerstacks` |
 | `export_layerstack` | starts internal published-delta spool/chunk composition |
 | `read_export_chunk` | reads internal export chunks |
@@ -378,10 +381,10 @@ projection, and gateway dispatch must not become duplicated operation logic.
 | `crates/sandbox-mcp/src/config.rs` | require exactly one `--set management|runtime|observability`; accept normal `--gateway-socket` / `--gateway-auth-token` overrides and use existing config discovery |
 | `crates/sandbox-mcp/src/catalog.rs` | map the selected set to the existing catalog and cache its owned `CliOperationCatalogDocument`; no hand-maintained tool list |
 | `crates/sandbox-mcp/src/schema.rs` | generate descriptions, required arrays, defaults, types, and `sandbox_id` additions from catalog data; reject internal/unlisted entries |
-| `crates/sandbox-mcp/src/tools.rs` | add value-object validation via `sandbox_cli::core`; mint request id; construct scope; translate observability tool name to daemon `get_observability` only after validation; call `GatewayClient` |
+| `crates/sandbox-mcp/src/tools.rs` | add value-object validation via `sandbox_cli::core`; mint request id; construct scope; send the validated concrete operation through `GatewayClient` |
 | `crates/sandbox-mcp/src/server.rs` | expose only MCP lifecycle/tool protocol handlers and turn result/error JSON into structured MCP content |
 | `crates/sandbox-cli/src/core/request_builder.rs` | add a value-based sibling of argv parsing so CLI and MCP share coercion, defaults, requiredness, operation lookup, scope construction, and error shape |
-| operation catalog crates | rename public `checkpoint_squash` spec to `squash_layerstacks`; remove workspace lifecycle specs from the runtime public catalog; move canonical `snapshot` ownership to observability catalog |
+| operation catalog crates | align the public squash spec with `squash_layerstacks`; remove workspace lifecycle specs from the runtime public catalog; move canonical `snapshot` ownership to observability catalog |
 
 ### Tool-call sequence
 
@@ -422,8 +425,8 @@ fake gateway and prove:
    required runtime `sandbox_id` and optional observability `snapshot`
    `sandbox_id`.
 5. A tool call constructs the expected wire operation/scope; sandbox-scoped
-   observability calls become `get_observability` with private `view`, and
-   aggregate `snapshot` remains system-scoped.
+   observability calls keep their concrete operation name, and aggregate
+   `snapshot` remains system-scoped.
 6. Unknown input, missing required input, wrong integer type, and tool not in
    selected set fail before gateway dispatch with the documented error shape.
 7. Gateway error envelopes preserve `kind`, `message`, and `details` in MCP

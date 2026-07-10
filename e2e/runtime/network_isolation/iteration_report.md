@@ -1,5 +1,9 @@
 # Network Isolation Experiment Iteration Report
 
+> **Historical append-only evidence (operation-layout exempt, 2026-07-11):**
+> Commands and paths below are preserved exactly as executed before the
+> operation-ownership migration; do not use them as current instructions.
+
 ## Iteration 1
 
 - Goal: create one sandbox and one `--network-profile isolated` workspace session.

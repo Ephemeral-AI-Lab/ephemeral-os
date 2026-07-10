@@ -5,8 +5,8 @@ tags:
   - layerstack
   - git-policy
   - testing
-status: draft
-updated: 2026-07-03
+status: verified
+updated: 2026-07-11
 ---
 
 # Git Policy Test Catalog — 30 cases, exec_command-driven
@@ -87,7 +87,7 @@ sandbox-runtime-cli --sandbox-id "$SID" exec_command "apt-get update -qq && apt-
 ```
 
 Cases are implemented in this folder:
-`cli-operation-e2e-live-test/runtime/command/`, alongside the existing
+`e2e/runtime/command/`, alongside the existing
 `test_exec_command_layer_depth_benchmark.py`, one file per tier
 (`test_git_policy_easy.py` / `test_git_policy_medium.py` /
 `test_git_policy_complex.py`, markers `git and easy` / `git and medium` /

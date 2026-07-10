@@ -5,8 +5,8 @@ tags:
   - layerstack
   - testing
   - observability
-status: draft
-updated: 2026-07-02
+status: verified
+updated: 2026-07-11
 ---
 
 # Squash Test Catalog — 50 cases, 3 axes each
@@ -34,7 +34,7 @@ live-environment suite. It **subsumes G1–G3 and E1–E10** (traceability in
 **Runnability by phase** (tracker): phases 0–3 are done — storage squash
 exists behind `LayerStack::squash()` but is not yet wired to an operation.
 Every case below drives the product surface
-(`sandbox-cli manager checkpoint_squash`), so the catalog becomes runnable
+(`sandbox-manager-cli squash_layerstacks`), so the catalog becomes runnable
 after phase 9 (CLI) and fully green only at phase 10 (enablement). Cases
 marked ⛔gate additionally require live remount enabled (G1–G3 proven).
 
@@ -42,7 +42,7 @@ marked ⛔gate additionally require live remount enabled (G1–G3 proven).
 CLI-driven pytest harness, one folder per family:
 
 ```text
-cli-operation-e2e-live-test/manager/management/squash/
+e2e/manager/management/squash/
 ├── helpers.py               squash-family CLI wrappers + fixture toolkit (§1.2)
 ├── measure.py               timers, disk snapshots, mountinfo poller, verdict writer (§2)
 ├── test_squash_smoke.py     SMK-01…10   (pytest -m "squash and smoke")
@@ -53,7 +53,7 @@ cli-operation-e2e-live-test/manager/management/squash/
 ```
 
 Conventions inherited from the harness: every operation goes through
-`sandbox-cli` and asserts on its structured JSON (never log scraping);
+the public CLI binaries and asserts on structured JSON (never log scraping);
 sandbox lifecycle lives in `conftest.py` fixtures so teardown runs on
 failure; markers `smoke` / `medium` / `hard` gate the tiers.
 
@@ -69,7 +69,7 @@ bin/start-sandbox-docker-gateway --rebuild-binary        # rebuild + start gatew
 
 RUN_ID=sq-$(date +%Y%m%d-%H%M%S)                         # one run id per suite run
 SEED=$(mktemp -d /tmp/$RUN_ID-seed.XXXX); echo seed > "$SEED/seed.txt"
-bin/sandbox-cli manager create_sandbox --image ubuntu:24.04 \
+bin/sandbox-manager-cli create_sandbox --image ubuntu:24.04 \
   --workspace-bind-root "$SEED" > /tmp/$RUN_ID-create.json
 SID=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["id"])' /tmp/$RUN_ID-create.json)
 ```
@@ -140,7 +140,7 @@ the three records.
 
 | Signal | Source | What it answers |
 | --- | --- | --- |
-| Result JSON (stdout, 1 line) | `manager checkpoint_squash` | the contract: `manifest_version`, per-block `reclaimed/leased` + `blocked_reasons`, `faulty_sessions` |
+| Result JSON (stdout, 1 line) | `squash_layerstacks` | the contract: `manifest_version`, per-block `reclaimed/leased` + `blocked_reasons`, `faulty_sessions` |
 | `layerstack.squash` span | NDJSON log / `observability trace` | storage-commit duration + phase decomposition (attrs, §2.4) |
 | `workspace_session.remount` span (per session) | same | per-session sweep outcome + quiesce/switch decomposition |
 | `namespace.exec.remount_overlay` span (per session) | same | runner staged-switch duration; two-boolean report facts |
@@ -240,7 +240,7 @@ directly.
 ### 2.5 Artifact bundle & per-case verdict (audit trail)
 
 Every case writes one directory —
-`cli-operation-e2e-live-test/manager/management/squash/test-reports/<RUN_ID>/<CASE_ID>/`
+`e2e/manager/management/squash/test-reports/<RUN_ID>/<CASE_ID>/`
 — capturing enough to re-diagnose without re-running:
 
 ```text
@@ -362,48 +362,48 @@ Fast, single-feature, happy-path. Whole tier ≤ 5 min. These are the
 
 #### SMK-01 — idle block reclaims at commit (B1)
 - **Spec**: §B1; unit 1, 20 · AC §2. **Fixture**: `stack(3×distinct 1 MiB)`, no sessions.
-- **Steps**: snapshot `S0` → `checkpoint_squash` under `/usr/bin/time` → `S2` → fresh `ws-idle` reads all three files → destroy.
+- **Steps**: snapshot `S0` → `squash_layerstacks` under `/usr/bin/time` → `S2` → fresh `ws-idle` reads all three files → destroy.
 - **Correctness**: result = one block, `replaced_layers:"reclaimed"`, `replaced_layer_ids` = `[L3,L2,L1]` newest-first, `manifest_version` = old+1, no `faulty_sessions` key; exit 0, exactly one stdout line. `layers/` = `{B, S…}` exactly; `staging/` empty; all three file contents byte-identical via the fresh session.
 - **Space**: distinct content ⇒ byte-neutral: `S2.layers_bytes ≈ S0.layers_bytes` (±5%), layer count 4→2, sources gone at commit (no sweep needed).
 - **Time**: `T_squash` ≤ 2 000 ms; assert **zero** `workspace_session.remount` spans (no sessions ⇒ `T_quiesce`/`T_remount` n/a); `T_e2e` ≤ 10 s.
 
 #### SMK-02 — nothing to squash is a clean no-op
 - **Spec**: §CLI output ("nothing to squash"); unit 17. **Fixture**: fresh stack, `B` + 1 layer.
-- **Steps**: `S0` → `checkpoint_squash` → `S2` → repeat once.
+- **Steps**: `S0` → `squash_layerstacks` → `S2` → repeat once.
 - **Correctness**: `squashed_blocks: []`, exit 0; **no** `no_op` field, no `layers`/`leases` fields; manifest untouched (same version, same file mtime); no `S*` dir, `staging/` empty. Second run identical.
 - **Space**: `S2 == S0` exactly (byte-for-byte `du` equality, not tolerance).
 - **Time**: `T_squash` ≤ 500 ms (plan-only path); `T_e2e` ≤ 10 s.
 
 #### SMK-03 — singleton run below a boundary is never touched
 - **Spec**: vocabulary `SquashBlock` (runs ≥ 2); unit 1. **Fixture**: `stack(2×distinct 1 MiB)` + `ws-idle` leased at newest (its lease head `L2` is the boundary; below it only `[L1]`, a singleton).
-- **Steps**: `S0` → `checkpoint_squash` → `S2` → session still reads both files → destroy → final squash.
+- **Steps**: `S0` → `squash_layerstacks` → `S2` → session still reads both files → destroy → final squash.
 - **Correctness**: `squashed_blocks: []`; `L1`,`L2` dirs untouched (same inode/mtime); session lease intact (`active_lease_count` unchanged); after destroy, the follow-up squash still reports empty (2-layer stack: `[L2,L1]` becomes one block only when no boundary splits it — assert exactly the block arithmetic the plan produces with zero leases: one block `[L2,L1]` → now `reclaimed`).
 - **Space**: unchanged until the final squash; after it, layer count 3→2, bytes ±5% of `S0`.
 - **Time**: first run `T_squash` ≤ 500 ms; final run ≤ 2 000 ms.
 
 #### SMK-04 — result contract shape, success and fault
 - **Spec**: §Output contract; unit 17; AC §6. **Fixture**: `stack(3×distinct 1 MiB)`; fault leg: invoke against a nonexistent sandbox id.
-- **Steps**: success run; then `checkpoint_squash --sandbox-id eos-nonexistent`.
+- **Steps**: success run; then `squash_layerstacks --sandbox-id eos-nonexistent`.
 - **Correctness**: success = one stdout JSON line, key set exactly `{manifest_version, squashed_blocks}` (+`faulty_sessions` only when non-empty — assert absent), block keys exactly `{squashed_layer_id, replaced_layer_ids, replaced_layers}` (+`blocked_reasons` only when `leased`); fault = one stderr `{"error":{"kind":…}}` line, empty stdout, exit 1. No byte totals anywhere in the result.
 - **Space**: n/a (SMK-01 covers) — assert only that the fault leg wrote nothing (`S` snapshot equality on the healthy sandbox).
 - **Time**: fault leg `T_e2e` ≤ 5 s (fast rejection, no daemon work).
 
 #### SMK-05 — CLI catalog placement
 - **Spec**: §CLI surface; unit 18; AC §6. **Fixture**: none (catalog only).
-- **Steps**: `sandbox-cli manager --help` / catalog dump; runtime catalog dump.
-- **Correctness**: `checkpoint_squash` appears under the existing `management` family with exactly one arg `--sandbox-id`; `squash_layerstack` appears in **no** CLI catalog (`cli: None`); grep of catalogs finds no `--progress`/trigger/policy options for squash.
+- **Steps**: `sandbox-manager-cli --help` / catalog dump; runtime catalog dump.
+- **Correctness**: `squash_layerstacks` appears under the existing `management` family with exactly one arg `--sandbox-id`; `squash_layerstack` appears in **no** CLI catalog (`cli: None`); grep of catalogs finds no `--progress`/trigger/policy options for squash.
 - **Space/Time**: n/a — this case is the one pure-inspection smoke; it still writes a verdict (axes marked `n/a`, not `pass`).
 
 #### SMK-06 — ⛔gate idle session migrates via plain staged switch (B2)
 - **Spec**: §B2; C1 "no observable tasks" leg. **Fixture**: build order 3 layers → `ws-idle` (leases `[L3,L2,L1,B]`; its head `L3` is the boundary) → publish `L4`. Plan: `[L4]` singleton kept; block `[L2,L1]` below the boundary → `S1`; ws chain rewrites `[L3,L2,L1,B] → [L3,S1,B]`.
-- **Steps**: `S0` → `checkpoint_squash` → `S2` → witness reads through the session (pre-created marker files) → destroy → `S3`.
+- **Steps**: `S0` → `squash_layerstacks` → `S2` → witness reads through the session (pre-created marker files) → destroy → `S3`.
 - **Correctness**: block reports `reclaimed` (idle session migrated in-sweep, old run deleted on old-lease release); result has no `faulty_sessions`; session's reads unchanged post-switch; `observability layerstack --workspace-id` shows chain length 4→3; `lease.acquired`(replacement) precedes `lease.released`(old) in `events.json` (pin-overlap order); no rollback/staging residue in holder mountinfo.
 - **Space**: `S2 = B + F + U + L4` with `F ≈ 2 MiB` (distinct content byte-neutral for the block, old run reclaimed): layer count 5→4; `S2.layers_bytes ≈ S0 ± 5%` (distinct-content case), old `L2,L1` dirs gone.
 - **Time**: `T_squash` ≤ 2 000 ms; `T_remount` ≤ 2 000 ms; `T_quiesce` ≤ 500 ms (allowlist-only discovery: freeze may be skipped — accept `quiesce_ms ≤ 50` or absent with `outcome=migrated`); `T_e2e` ≤ 10 s.
 
 #### SMK-07 — interactive PTY shell blocks cleanly (leased)
 - **Spec**: §C6 (cwd is physics); C1 pin leg. **Fixture**: `stack(3×distinct 1 MiB)` + `ws-pty` (bash at prompt, cwd `/workspace`).
-- **Steps**: `S0` → `checkpoint_squash` → `S2` → type a command into the PTY (`write_command_stdin "pwd; echo alive"` → `read_command_lines`) → exit shell → second squash → `S3`.
+- **Steps**: `S0` → `squash_layerstacks` → `S2` → type a command into the PTY (`write_command_stdin "pwd; echo alive"` → `read_command_lines`) → exit shell → second squash → `S3`.
 - **Correctness**: block `leased`, `blocked_reasons` non-empty containing a `pinned:cwd_pinned_workspace` diagnostic; shell answers normally after resume (never observed the freeze beyond a stall); old lease intact; **second** squash (shell exited) migrates: block flips effect to reclaimed (`S3` confirms deletion); result classification derived from commit GC, not plan snapshot.
 - **Space**: `S2 = S0 + F` (117%-shaped: old run retained by the lease, S added); `S3 = B + F + U` (old run reclaimed after convergence).
 - **Time**: run-1 `T_quiesce` ≤ 500 ms (freeze+inspect on a ~2-task PTY tree: expect ≤ 50 ms); no `namespace.exec.remount_overlay` span in run-1 (blocked before stage); run-2 `T_remount` ≤ 2 000 ms.
@@ -417,7 +417,7 @@ Fast, single-feature, happy-path. Whole tier ≤ 5 min. These are the
 
 #### SMK-09 — immediate idempotence
 - **Spec**: convergence policy ("no retry machinery"). **Fixture**: SMK-01 state after its squash.
-- **Steps**: run `checkpoint_squash` again immediately; then once more.
+- **Steps**: run `squash_layerstacks` again immediately; then once more.
 - **Correctness**: both reruns return `squashed_blocks: []` (an S singleton above base with no second layer forms no ≥ 2 run); no new `S*` dirs, no staging writes, manifest version stable; substitution map unchanged (indirectly: no rewrite spans).
 - **Space**: `du` byte-identical across both reruns.
 - **Time**: rerun `T_squash` ≤ 500 ms — idempotent runs must be plan-only cheap.
@@ -464,13 +464,13 @@ commit-only; most others are ⛔gate.
 
 #### MED-05 — racing publishes: run-presence recheck, tail preserved, no starvation
 - **Spec**: `commit recheck`; unit 4; §Storage phase table. **Fixture**: `stack(6×churn 10 MiB)`; a background publisher loop firing 10 one-shot `exec_command`s (~1 layer each) for the whole squash window.
-- **Steps**: start publisher loop → `checkpoint_squash` → join loop → `S2`.
+- **Steps**: start publisher loop → `squash_layerstacks` → join loop → `S2`.
 - **Correctness**: exit 0; every racing publish also succeeded (10 new `L` layers exist); final active manifest = `[tail…, S, B]` with the tail **above** `S` in publish order; `manifest_version` = latest-at-commit + 1; block classification unaffected by the race; no `operation_failed` (recheck is run-presence, publishes only prepend — a conflict abort here is a defect).
 - **Space**: `S2 = B + F + tail bytes + U`; sources reclaimed.
 - **Time**: `T_squash` ≤ 5 000 ms under publish load; record `commit_ms` (the exclusive section must stay small — flag > 500 ms).
 
 #### MED-06 — singleflight per root under concurrent invocations
-- **Spec**: unit 5; §Storage singleflight. **Fixture**: `stack(6×distinct 5 MiB)`; two `checkpoint_squash` processes launched simultaneously (`&` + `wait`).
+- **Spec**: unit 5; §Storage singleflight. **Fixture**: `stack(6×distinct 5 MiB)`; two `squash_layerstacks` processes launched simultaneously (`&` + `wait`).
 - **Steps**: launch both → collect both results → `S2`.
 - **Correctness**: both exit cleanly — one commits the block, the other waits and reports `squashed_blocks: []` (or the documented clean failure; either way **no** interleaved build); exactly **one** `S` layer exists for the block; peak polling never observes two staging trees; combined stdout parses as two valid single-line results.
 - **Space**: identical to a single SMK-01-style run — peak = one builder's staging.
@@ -485,7 +485,7 @@ commit-only; most others are ⛔gate.
 
 #### MED-08 — ⛔gate live migration under a running batch command (E5)
 - **Spec**: E5; B5 ws-3; unit 22 core. **Fixture**: `stack(6×churn 20 MiB)` (`P0 = 120 MiB`, `F ≈ 20 MiB`); `ws-batch` running `sh -c 'cd /; echo start >> /workspace/hb; sleep 45; echo done >> /workspace/hb'`; a `file_write` upperdir write lands **before** the squash.
-- **Steps**: `S0` → `checkpoint_squash` mid-sleep → `S2` → wait for command exit → read `hb` + witnesses → destroy → `S3`.
+- **Steps**: `S0` → `squash_layerstacks` mid-sleep → `S2` → wait for command exit → read `hb` + witnesses → destroy → `S3`.
 - **Correctness**: outcome `migrated`; the command never errors — after natural wake it appends `done` (both lines present, exit 0: the fd was reopened by `>>` post-migration on NEW); pre-freeze upperdir writes visible post-resume; absolute-path witness reads land on NEW (block content via `S`); chain shortened (view `--workspace-id` + witness reads, never mount options); old source dirs deleted from disk **within the invocation**; block reports `reclaimed` (this was the only pinning session).
 - **Space**: the §D "17%" row: `S2 ≈ B + 20 MiB + U` vs `S0 ≈ B + 120 MiB + U` — assert ≥ 75% reduction of candidate-run bytes.
 - **Time**: `T_quiesce` ≤ 500 ms (record `freeze_ms`, ~2 tasks ⇒ expect ≪ 50 ms); `t_switch` ≤ 1 000 ms; `T_remount` ≤ 2 000 ms; `T_e2e` ≤ 10 s.
@@ -528,7 +528,7 @@ commit-only; most others are ⛔gate.
 #### MED-14 — daemon crash between promote and manifest rename (E10, single leg)
 - **Spec**: E10 point 4; unit 6; X3.3 rehearsal. **Fixture**: `stack(2 layers × 2 500 small files)` (the 5 k-entry build + ~33 ms syncfs stretch the promote→rename window); an outside poller watching `layers/S*` appear.
 - **Steps**: start squash → the instant `layers/S…` exists while `manifest.json` is still old, `SIGKILL` the daemon (`docker exec pkill -9`) → if the rename already landed, destroy/rebuild and retry (cap 5 attempts, log attempts) → restart daemon → `S2` → fresh squash.
-- **Correctness**: post-restart: **old manifest intact**, orphan `S` dir swept by boot (it has no sidecars to leak), `staging/` empty, layers on disk == old manifest exactly; no session state resurrects; a fresh `checkpoint_squash` then commits normally.
+- **Correctness**: post-restart: **old manifest intact**, orphan `S` dir swept by boot (it has no sidecars to leak), `staging/` empty, layers on disk == old manifest exactly; no session state resurrects; a fresh `squash_layerstacks` then commits normally.
 - **Space**: post-boot `S2` == pre-squash `S0` byte-identical; post-resquash == SMK-01 shape.
 - **Time**: boot reap+sweep ≤ 2 s added to ready; record which attempt hit the window (flakiness telemetry).
 
@@ -555,7 +555,7 @@ commit-only; most others are ⛔gate.
 
 #### MED-18 — ⏱ OVL_MAX_STACK creation boundary: 500 mounts, 501 fails with the documented error
 - **Spec**: §D chain-length; E9 creation half; X0.7. **Fixture**: publish 500 tiny distinct layers (batched one-shot execs; ⏱ slow case — budget the build loop, not just the squash).
-- **Steps**: at 500 layers `create_workspace_session` → succeeds (500 lowerdirs mount) → destroy it → publish layer 501 → `create_workspace_session` → must fail → `checkpoint_squash` (idle) → create again → `S2`.
+- **Steps**: at 500 layers `create_workspace_session` → succeeds (500 lowerdirs mount) → destroy it → publish layer 501 → `create_workspace_session` → must fail → `squash_layerstacks` (idle) → create again → `S2`.
 - **Correctness**: the 501-layer creation fails with the **distinct documented error** (fsconfig `lowerdir+` EINVAL surfaced as the mount-build error shape — assert kind/message, exit 1); after squash the stack is `{B, S, (tail)}` and creation succeeds again; repeated squash runs stable (idempotent, no side effects).
 - **Space**: 501 tiny layers → `{B,S}`; layer-dir count 502 → 2.
 - **Time**: `T_squash` for a 501-source block ≤ 15 s (walk-dominated; record `build_ms` for the scaling table); creation-attempt failure fast (≤ 5 s).
@@ -582,7 +582,7 @@ artifact bundle exists — every one has failed-run forensics designed in.
 
 #### HRD-01 — B3 replay: multi-block plan, mixed classification, reclaim cascade
 - **Spec**: §B3 exactly; units 1, 3, 13. **Fixture**: 5 MiB distinct layers, built in lease-interleaved order: `L0–L3` → `ws-C` → `L4,L5` → `ws-B`,`ws-D` → `L6–L9` → `ws-A` → `L10–L12`; `ws-D` gets a PTY (cwd pin); A/B/C idle.
-- **Steps**: `S0` → one `checkpoint_squash` → `S2` → per-session chain checks → exit ws-D's shell → second squash → `S3` → destroy all → final assertions.
+- **Steps**: `S0` → one `squash_layerstacks` → `S2` → per-session chain checks → exit ws-D's shell → second squash → `S3` → destroy all → final assertions.
 - **Correctness** (spec B3's squashed layers, written `Sa`/`Sb`/`Sc` here to avoid colliding with snapshot names): plan = boundaries `{L9,L5,L3}`, blocks `[L11,L10]→Sa`, `[L8,L7,L6]→Sb`, `[L2,L1,L0]→Sc`; result: `Sa` `reclaimed` (commit GC — no lease), `Sb` `reclaimed` (ws-A migrated in-sweep), `Sc` `leased` + `blocked_reasons` = cwd diagnostic (ws-D); singleton `L4` and boundary layers untouched byte-identical; post-sweep chains (view + witness reads): ws-A `[L9 Sb L5 L4 L3 Sc B]` (11→7), ws-B `[L5 L4 L3 Sc B]` (7→5), ws-C `[L3 Sc B]` (5→3); disk after run-1: `L11,L10,L8,L7,L6` gone, `L2,L1,L0` present (the cascade's pinned tail); run-2 (shell exited) migrates ws-D and reclaims `L2,L1,L0`.
 - **Space**: distinct content is byte-neutral overall (`F ≈ P0 = 40 MiB` across the three blocks), so the assertion is the Π ledger: after run-1 disk = `S0 + 15 MiB` (the `Sc` sources ws-D still pins), after run-2 disk = `S0 ± 5%`; on-disk layer dirs 14 → 12 (run-1: 9 manifest layers + 3 pinned sources) → 9 (run-2); manifest layers 14 → 9.
 - **Time**: run-1 sweeps 4 sessions serially — `Σ T_remount ≤ 8 s`, each ≤ 2 s; `T_quiesce(ws-D)` ≤ 500 ms; `T_e2e` ≤ 20 s.
@@ -603,7 +603,7 @@ artifact bundle exists — every one has failed-run forensics designed in.
 
 #### HRD-04 — E4 full pin matrix: eleven classes, one sweep, zero moves, zero leaks
 - **Spec**: E4; §C4 map; blocked-class table. **Fixture**: eleven sessions on one stack, one pin each: (1) PTY cwd; (2) root pin — static busybox planted in workspace, `chroot /workspace /busybox sleep 300`; (3) fd pin; (4) mmap of `/workspace/a b.txt` (space in path — probe binary); (5) mmap then unlink (`(deleted)` suffix); (6) child mount by exited task; (7) `io_uring` anon fd (probe); (8) ptrace tracer outside the frozen set (`docker exec strace -p <tid>` from outside → task in `t`); (9) unreadable `/proc` entry — **best-effort** (env-sensitive, verdict may record `skipped:not_constructible`); (10) fork loop → `membership_changed`; (11) D-state freeze straggler via a test-controlled `fsfreeze`-frozen nested fs → `freeze_timeout` — **best-effort** per spec.
-- **Steps**: `S0` → one `checkpoint_squash` → per-session classification → follow-up command in **every** session → `S2` → teardown.
+- **Steps**: `S0` → one `squash_layerstacks` → per-session classification → follow-up command in **every** session → `S2` → teardown.
 - **Correctness**: each session yields its exact expected `class:detail` (matrix table in the test source mirrors §C4); **zero `MS_MOVE`s** across the entire sweep (every session's mount id unchanged in `mountinfo.log`); every session resumes and runs a follow-up command successfully; all old leases intact; replacement-lease accounting returns to baseline — `lease.acquired`/`lease.released` events pair exactly (none leaked); classes (9)/(11) may be skipped-with-reason but never mis-classified.
 - **Space**: everything retained: `S2 = S0 + F` exactly (the sweep must not delete a single source byte).
 - **Time**: per-session `T_quiesce` ≤ 500 ms (except (11): `freeze_timeout` fires **at** the budget — assert it, and that the sweep proceeds to the remaining sessions); `T_e2e` ≤ 30 s for 11 sessions.
@@ -617,14 +617,14 @@ artifact bundle exists — every one has failed-run forensics designed in.
 
 #### HRD-06 — E10 crash matrix: four kill points, one recovery path
 - **Spec**: E10; boot cleanup; environment facts 1–2. **Fixture**: rebuilt per leg: (a) daemon SIGKILL **mid-freeze** (victim tasks observed in `T`); (b) **mid-switch** (workspace mount-id change observed, kill immediately); (c) **post-switch, pre-release** (staging gone + id changed, kill in the release window — accept retry loop, cap 5); (d) **promote→rename** (MED-14's leg, rerun inside the matrix for one-suite completeness).
-- **Steps**: per leg: arm → squash → kill daemon at point → poll holder + pid-ns init death (bounded — PDEATHSIG assertion; leg (a) additionally proves SIGKILL works on stopped tasks) → restart → `S2` → fresh session + fresh `checkpoint_squash`.
+- **Steps**: per leg: arm → squash → kill daemon at point → poll holder + pid-ns init death (bounded — PDEATHSIG assertion; leg (a) additionally proves SIGKILL works on stopped tasks) → restart → `S2` → fresh session + fresh `squash_layerstacks`.
 - **Correctness**: every leg: no session state resurrects; restart runs reap-then-sweep once before serving; disk == active manifest **exactly** (old manifest for leg (d)); no orphan staging/rollback mounts anywhere; fresh session and fresh squash both succeed. **No remount-specific recovery branch exists to test — that absence is the assertion** (the same three boot steps handle all four legs identically; the harness asserts the boot records are shape-identical across legs).
 - **Space**: post-restart byte-exact manifest match per leg.
 - **Time**: restart-to-ready ≤ 5 s every leg; retry telemetry for legs (b)/(c) windows.
 
 #### HRD-07 — EBUSY park convergence: Identity next run, both leases to destroy, reclaim at death
 - **Spec**: E6 second half; unit 15; C5 park row. **Fixture**: MED-12's parked end-state (scm-fd park, both leases held).
-- **Steps**: parked `S2` → **second** `checkpoint_squash` → no-op assertions → exercise session on NEW (reads + copy-up `file_write`) → `destroy_workspace_session` → `S3` → final squash.
+- **Steps**: parked `S2` → **second** `squash_layerstacks` → no-op assertions → exercise session on NEW (reads + copy-up `file_write`) → `destroy_workspace_session` → `S3` → final squash.
 - **Correctness**: second squash sees **Identity**: no second freeze (task states sampled at 10 ms never leave `S`/`R` during run-2), no second switch (mount id unchanged), result `squashed_blocks: []`; session fully usable on NEW throughout; destroy: namespace death releases **both** leases (registry → baseline), the parked rollback mount vanishes with the namespace, old run reclaims on disk. Pins the restore-ladder deletion end to end — any second freeze/switch in run-2 is a defect.
 - **Space**: `S2` holds `F + Π(parked)`; `S3 = B + F` — the park's Π reclaims exactly at destroy, not before.
 - **Time**: run-2 `T_e2e` ≤ 5 s (plan-only + identity sweep); destroy ≤ 5 s.
@@ -652,7 +652,7 @@ artifact bundle exists — every one has failed-run forensics designed in.
 
 #### HRD-11 — ⏱ deep chain: 200-layer churn collapses to 3 lowerdirs live
 - **Spec**: §D chain-length row ("the killer"); E5 at depth. **Fixture**: `stack(200×churn 1 MiB)` (`P0 = 200 MiB`, `F ≈ 1 MiB`); one `ws-batch` session created at v200 (leases all 200 layers) with its zero-pin command running when the squash fires.
-- **Steps**: `S0` (+ record session-mount chain length via view) → `checkpoint_squash` → `S2` → witness reads → destroy → `S3`.
+- **Steps**: `S0` (+ record session-mount chain length via view) → `squash_layerstacks` → `S2` → witness reads → destroy → `S3`.
 - **Correctness**: block `[L199…L1]` (199 sources — boundary `L200` kept) → one `S`; session migrates live; chain 201 → `[L200, S, B]` = 3 lowerdirs (view + witness); the hot file's final content exact; old 199 dirs deleted in-invocation.
 - **Space**: the flagship reclaim: candidate-run bytes 199 MiB → ≈ 1 MiB (**< 1%**, §D churn row); layer dirs 201 → 3 (`{L200, S, B}`); `du` before/after both recorded in the verdict for the report's headline.
 - **Time** (scaling probe): `t_build` walks 199 dirs (record; linear extrapolation from MED-04/MED-07 numbers); `t_switch` at 3 lowerdirs ≈ trivial; staged-mount build of the **old** 201-lowerdir chain never happens (only NEW mounts — assert). Budgets: `T_squash` ≤ 20 s, `T_remount` ≤ 3 s, `T_quiesce` ≤ 500 ms.
@@ -672,7 +672,7 @@ artifact bundle exists — every one has failed-run forensics designed in.
 - **Time** (the point): `syncfs_ms` clean ≤ 500 ms (baseline 33 ms), dirty ≤ 2 000 ms (baseline 197 ms @ 256 MiB); `commit_ms − syncfs_ms` ≤ 200 ms (recheck+promote+rename are µs–ms scale); flag any per-entry-fsync regression: `commit_ms` scaling with entry count is the sentinel (5 k entries must not cost 5 k barriers — compare against MED-04's 1 k-entry `commit_ms`, ratio must be ≈ 1×, not 5×).
 
 #### HRD-14 — ⏱ re-squash across 5 generations: flat cost, no write amplification, rolling cross-generation rewrites
-- **Spec**: §D re-squash cost ($\Theta(G·F)$ avoided); unit 8's generation shapes, live. **Fixture**: rolling pattern, g = 1…5: publish 5 churn layers (1 MiB hot file) → create `ws_g` (its head pins the new run, so this gen's sources stay individually on disk) → destroy `ws_{g-1}` (frees the *previous* run for squashing) → `checkpoint_squash`. Each gen-g block is therefore `[…prior gen's L run…, S_{g-1}]` — a raw run **containing the previous S id** — and each sweep must rewrite the surviving `ws_g` across it.
+- **Spec**: §D re-squash cost ($\Theta(G·F)$ avoided); unit 8's generation shapes, live. **Fixture**: rolling pattern, g = 1…5: publish 5 churn layers (1 MiB hot file) → create `ws_g` (its head pins the new run, so this gen's sources stay individually on disk) → destroy `ws_{g-1}` (frees the *previous* run for squashing) → `squash_layerstacks`. Each gen-g block is therefore `[…prior gen's L run…, S_{g-1}]` — a raw run **containing the previous S id** — and each sweep must rewrite the surviving `ws_g` across it.
 - **Steps**: per gen: `S0(g)`, squash, `S2(g)`, `df` delta, timings, `ws_g` chain + witness check; final: destroy `ws_5`, last squash, teardown.
 - **Correctness**: every gen: the block re-squashes the prior S (S layers are not boundaries); the map's raw runs compose across generations (`S_g → […, S_{g-1}]`) and `ws_g`'s live rewrite applies them oldest-first in one bounded pass — chain returns to `[head, S_g, B]` shape each gen, witness reads exact; hot-file content exact after every gen; zero faulty anywhere.
 - **Space**: fs free-space delta per generation ≤ ε (hardlink re-link, only re-encoded bytes written); steady-state disk after each gen ≈ `B + F + tail` — never grows with g.
@@ -680,7 +680,7 @@ artifact bundle exists — every one has failed-run forensics designed in.
 
 #### HRD-15 — ⏱ sweep at k=8: mixed outcomes, exact classification, additive cost
 - **Spec**: §D sweep budget ($O(\sum procs + \sum fds) + k$ staged mounts); C1 tree at scale. **Fixture**: one stack, eight sessions in one sweep: 3× `ws-batch` (migrate live), 1× identity (post-squash creation), 2× PTY (cwd), 1× `pin(scm-fd)` (park), 1× `pin(child-mount)`.
-- **Steps**: `S0` → one `checkpoint_squash` → 8-way classification → `S2` → clear pins → squash #2 → `S3` → destroy all.
+- **Steps**: `S0` → one `squash_layerstacks` → 8-way classification → `S2` → clear pins → squash #2 → `S3` → destroy all.
 - **Correctness**: exactly 8 `workspace_session.remount` outcomes, each the expected class (3 migrated, 1 identity, 2 `pinned:cwd…`, 1 `pinned:rollback_unmount_busy`, 1 `pinned:child_mount…`); `blocked_reasons` on the shared block = the union of the distinct still-pinning diagnostics (B5's multi-reason example); **zero faulty**; run-2 converges everything except the park (destroyed → reclaims); teardown registry exact.
 - **Space**: `S2` Π = exactly the 4 non-migrated sessions' old runs; `S3` = `B + F` — the two-step ledger asserted numerically.
 - **Time** (the point): total sweep ≈ Σ per-session (serial loop — no session exceeds its 2 s budget; the 3 live migrations dominate); `T_e2e` ≤ 30 s; per-outcome timing distribution attached (parked vs pinned vs migrated cost profile becomes the regression baseline).
@@ -712,7 +712,7 @@ artifact bundle exists — every one has failed-run forensics designed in.
 - **Time**: restart ≤ 5 s both legs.
 
 #### HRD-20 — ⏱ soak marathon: 20 randomized iterations, invariants after every one
-- **Spec**: everything at once; the teardown contract as a *standing* invariant. **Fixture**: 20 iterations of seeded-random composition: publish batch (churn/distinct/delete-heavy, 1–8 layers), create 0–3 sessions (mixed `ws-idle`/`ws-batch`/`ws-pty`, occasionally `pin(scm-fd)`), destroy 0–2 existing sessions, `checkpoint_squash`. Seed logged for replay.
+- **Spec**: everything at once; the teardown contract as a *standing* invariant. **Fixture**: 20 iterations of seeded-random composition: publish batch (churn/distinct/delete-heavy, 1–8 layers), create 0–3 sessions (mixed `ws-idle`/`ws-batch`/`ws-pty`, occasionally `pin(scm-fd)`), destroy 0–2 existing sessions, `squash_layerstacks`. Seed logged for replay.
 - **Steps**: per iteration: mutate → squash → **invariant sweep**; final: destroy all → final squash → full teardown.
 - **Correctness (standing invariants, checked ×20)**: result JSON parses and satisfies the contract every time; `Σ active_lease_count` consistent with live sessions' chains (+parks); no `.remount-staging-*`/`.remount-rollback-*` residue; `staging/` empty after every invocation; every live session answers a probe command; zero faulty outcomes across the whole soak (nothing in the mix is post-PONR-lethal); observability log parses 100% (no malformed/truncated records at the default cap); daemon fd count stable (±16) across iterations — the leak sentinel.
 - **Space**: after every iteration, disk within ±10% of the Θ formula computed from live state (`B + F_cum + U_live + Π_live + tail`); final state = `B + F` exactly.
@@ -783,5 +783,3 @@ Budget for a full run: smoke ≈ 5 min, medium ≈ 30 min (MED-18's 500-layer
 build dominates), hard ≈ 60–90 min (soak ≈ 20 min). Kill-point cases carry
 retry caps and log their trigger telemetry so flakes are diagnosable from
 the bundle alone.
-
-

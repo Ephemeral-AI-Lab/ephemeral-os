@@ -1,6 +1,10 @@
 # Span-Trace Observability — Adversarial Review Spec
 
-Status: ready-to-run after the span-trace slice lands. Drives an evidence-gated
+> **Historical review specification (operation-layout exempt, 2026-07-11):**
+> Source paths below identify the implementation reviewed at the time and are
+> preserved as evidence.
+
+Status: archived after review. Drove an evidence-gated
 review of the implementation against `span-trace-impl.md` and its expected
 outcome shape.
 

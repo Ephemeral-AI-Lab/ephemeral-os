@@ -4,11 +4,15 @@ tags:
   - ephemeral-os
   - layerstack
   - acceptance
-status: acceptance_criteria
-updated: 2026-07-02
+status: accepted
+updated: 2026-07-11
 ---
 
 # Acceptance Criteria
+
+> **Historical sign-off record (operation-layout exempt, 2026-07-11):**
+> Checked commands and paths are preserved exactly as accepted. Use the current
+> `e2e/` suite and operation-migration architecture documents for new runs.
 
 Feature is accepted when **every criterion below is checked**, with the
 listed verification. Criteria are derived from `spec.md` (post

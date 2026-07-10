@@ -1,3 +1,7 @@
+> **Historical execution prompt (operation-layout exempt, 2026-07-11):** The
+> completed goal and its commands retain the paths used when the work landed;
+> use the maintained specs and current `e2e/` tree for new work.
+
 /goal Execute the config consolidation implementation plan in ephemeral-os, phase by phase, gated on acceptance criteria.
 
 Design truth — read all three, in order of authority; all live in docs/obsidian/ephemeral-os/implementation_plan/config/:

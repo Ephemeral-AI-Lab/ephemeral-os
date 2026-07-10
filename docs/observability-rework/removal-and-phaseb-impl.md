@@ -1,6 +1,11 @@
 # Removal Closeout + Cross-Process Threading (Phase B)
 
-Status: ready-to-implement (depends on `crate-core-impl.md` + `span-trace-impl.md`).
+Status: archived completed implementation record.
+
+> **Historical implementation specification (operation-layout exempt,
+> 2026-07-11):** The removal and threading work landed before the concrete
+> observability-operation migration. Retired route names and source paths below
+> are preserved as implementation evidence, not current routing guidance.
 
 This is the **implementation** spec for the rework's tail — the main spec's
 (`README.md` §9) **Phase 5 (removal checklist) and Phase 6 (Phase B)**. Two

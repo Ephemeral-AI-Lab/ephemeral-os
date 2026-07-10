@@ -1,5 +1,9 @@
 # Squash performance attribution — RESULTS
 
+> **Historical experiment snapshot (operation-layout exempt, 2026-07-11):**
+> This result bundle, including the adjacent `wtuning/*.json` measurements,
+> preserves artifact paths exactly as recorded and is not current guidance.
+
 Run id: `perf-20260703-052525`
 Benchmark: `LOAD-COMBO-HTTP` (live Docker, `ubuntu:24.04`).
 Environment: sandbox container = **4 CPUs** (`nproc`), host = 14. Daemon binary

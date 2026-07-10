@@ -67,7 +67,7 @@ post "{\"op\":\"file_list\",\"scope\":{\"kind\":\"sandbox\",\"sandbox_id\":\"$ID
   | jqf "['entries'][0]['name']"
 
 # 7. squash (SquashButton), then 8. destroy (ConfirmDestroyDialog)
-sse "{\"op\":\"checkpoint_squash\",\"scope\":{\"kind\":\"system\"},\
+sse "{\"op\":\"squash_layerstacks\",\"scope\":{\"kind\":\"system\"},\
 \"args\":{\"sandbox_id\":\"$ID\"}}" | grep '^data: ' | tail -1
 sse "{\"op\":\"destroy_sandbox\",\"scope\":{\"kind\":\"system\"},\
 \"args\":{\"sandbox_id\":\"$ID\"}}" | grep '^data: ' | tail -1 | sed 's/^data: //' | jqf "['state']"

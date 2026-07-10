@@ -5,11 +5,15 @@ tags:
   - layerstack
   - implementation
   - tracker
-status: in_progress
-updated: 2026-07-02
+status: landed
+updated: 2026-07-11
 ---
 
 # Implementation Plan & Progress Tracker
+
+> **Completed implementation record (operation-layout exempt, 2026-07-11):**
+> Checked steps, commands, and paths below are preserved as executed when this
+> work landed; they are not current repository-layout guidance.
 
 Companion to `spec.md` (design) and `acceptance_criteria.md` (definition of
 done). This file is the working document: it is updated **during** the work,

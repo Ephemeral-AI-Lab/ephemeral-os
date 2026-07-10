@@ -4,7 +4,7 @@ Status: draft v2 — adversarial design review findings incorporated (see
 `review.md` in this folder if archived; finding ids F1–F14 referenced inline)
 Scope: `crates/sandbox-runtime/operation` (primary), `crates/sandbox-runtime/namespace-execution`
 (completed-entry retention), `crates/sandbox-runtime/workspace` (doc-only), `sandbox-daemon`
-(observability field), CLI specs
+(observability field), operation specs
 Non-goals: protocol changes (`sandbox-protocol` untouched), session persistence across daemon
 restart, `finalize_workspace_session` op (phase 2), a `--finalize-policy` flag on
 `create_workspace_session` (deferred until a caller demonstrates a guaranteed-overlap usage —
@@ -293,11 +293,14 @@ beyond the operation layer.
 
 `sandbox-protocol` unchanged (args ride the generic `Request` fields).
 
-### create_workspace_session — flags unchanged
+### create_workspace_session — internal request arguments unchanged
 
-```
-sandbox-cli runtime create_workspace_session
-    [--network-profile shared|isolated]                        existing, default shared
+```json
+{
+  "op": "create_workspace_session",
+  "scope": { "kind": "sandbox", "sandbox_id": "ID" },
+  "args": { "network_profile": "shared" }
+}
 ```
 
 Response: `{ workspace_session_id, network_profile, finalize_policy }` — `finalize_policy` is
@@ -310,10 +313,10 @@ the only sound pattern (guaranteed-overlap riders) is exactly the implicit path.
 operation-layer `CreateSessionRequest` carries the policy so `exec_command` can set it
 internally; the flag is added later if a real caller appears.
 
-### exec_command — flags unchanged
+### exec_command — public flags unchanged
 
 ```
-sandbox-cli runtime exec_command [--workspace-session-id ID] [--timeout-ms N] [--yield-time-ms N] COMMAND
+sandbox-runtime-cli --sandbox-id ID exec_command [--workspace-session-id ID] [--timeout-ms N] [--yield-time-ms N] COMMAND
 ```
 
 - Without `--workspace-session-id`: implicitly creates a session with
@@ -448,7 +451,7 @@ crates/sandbox-runtime/operation/src/
 
 crates/sandbox-runtime/namespace-execution/src/registry.rs   — → +~35  (MAX_TERMINAL_ENTRIES cap, oldest-terminal eviction dropping values)
 crates/sandbox-runtime/workspace/src/model.rs       485 →  485  (doc reword only at :103)
-crates/sandbox-observability/src/record.rs            — →  +6   (finalize span/event names; attr doc reword :58,:60,:113)
+crates/sandbox-observability/primitives/src/record.rs — →  +6   (finalize span/event names; attr doc reword :58,:60,:113)
 crates/sandbox-daemon/src/observability/service.rs    — →  +2   (workspace_value: finalize_policy field)
 ```
 

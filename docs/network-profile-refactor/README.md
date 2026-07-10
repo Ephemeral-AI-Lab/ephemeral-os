@@ -1,7 +1,11 @@
 # Spec: workspace & command operation naming refactor
 
-Status: **approved** — ready to implement
+Status: **archived after implementation**
 Depends on: commit `10b70de64` (NetworkProfile / shared rename)
+
+> **Historical implementation specification (operation-layout exempt,
+> 2026-07-11):** CLI names and source paths below describe the tree in which
+> this naming change landed and are not current execution instructions.
 
 ## Overview
 

@@ -6,8 +6,8 @@ tags:
   - workspace
   - capture
   - testing
-status: draft
-updated: 2026-07-07
+status: verified
+updated: 2026-07-11
 ---
 
 # Reserved `.wh.` Namespace — live e2e catalog (16 cases)
@@ -21,7 +21,7 @@ sessions, one-shot execs, and sessionless file ops through
 never log scraping. 6 easy (EZ), 6 medium (MED), 4 complex (CX).
 
 Cases are implemented in
-`cli-operation-e2e-live-test/runtime/reserved_paths/`, one file per tier
+`e2e/runtime/reserved_paths/`, one file per tier
 (`test_wh_reserved_easy.py` / `test_wh_reserved_medium.py` /
 `test_wh_reserved_complex.py`, markers `whreserved and easy` / `whreserved
 and medium` / `whreserved and complex`), reusing the primitives of the
@@ -116,7 +116,7 @@ case depends on it.
 | `session` | one live workspace session | `create_workspace_session`; finalize = destroy with capture/publish; result via `wait_finalized` |
 | `poisoned(session, P)` | session in which an exec created reserved entry `P` | `exec_command --workspace-session-id … "…"` (`touch`, `printf`, `mkdir -p`, `ln -s` per case) |
 | `agentA` / `agentB` | two sessions leased at the same base revision | two `create_workspace_session` before either finalizes |
-| `squashed` | stack after `checkpoint_squash` | `sandbox-cli manager checkpoint_squash`, squash-suite pattern |
+| `squashed` | stack after `squash_layerstacks` | `sandbox-manager-cli squash_layerstacks --sandbox-id ID`, squash-suite pattern |
 
 Shared assertion helpers are imported from the sibling suites
 (`assert_ok`, `assert_error`, `assert_content`, `assert_manifest_delta`,
@@ -287,8 +287,8 @@ Multi-session, interplay with squash, storm, scale.
 - **Isolation**: a fresh session/exec sees exactly A's world; B's reject left no residue (`_assert_stack_unchanged` relative to post-A state).
 
 #### CX-02 — squash interplay: internal markers squash cleanly, the reservation survives squash
-- **Spec**: invariants 4+6+7 across `checkpoint_squash`. **Fixture**: `base({"d/x.txt": "X", "d/y.txt": "Y", "solo.txt": "S"})`.
-- **Steps**: publish real churn via execs (delete `solo.txt`; `rm -rf d` + recreate `d/new.txt`) → `checkpoint_squash` → verify merged view (deleted stay deleted, `d/new.txt` readable, no `.wh.*` visible) → then in a fresh session attempt `.wh.z` → finalize.
+- **Spec**: invariants 4+6+7 across `squash_layerstacks`. **Fixture**: `base({"d/x.txt": "X", "d/y.txt": "Y", "solo.txt": "S"})`.
+- **Steps**: publish real churn via execs (delete `solo.txt`; `rm -rf d` + recreate `d/new.txt`) → `squash_layerstacks` → verify merged view (deleted stay deleted, `d/new.txt` readable, no `.wh.*` visible) → then in a fresh session attempt `.wh.z` → finalize.
 - **Correctness**: squash result `ok`; post-squash attempt still rejects `protected_path` — the gate is stack-shape-independent.
 - **Data-safety**: post-squash reads identical to pre-squash merged view; no marker name ever surfaces via `file_read`/`ls`.
 - **Isolation**: n/a (single session at a time; squash is the interleaved actor).

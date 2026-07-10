@@ -6,9 +6,13 @@ tags:
   - export
   - benchmark
   - prompt
-status: draft
-updated: 2026-07-07
+status: archived
+updated: 2026-07-11
 ---
+
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its paths and package names describe the tree
+> used for the recorded benchmark.
 
 /goal Benchmark the export_changes CLI end-to-end on the EXPLORATION trio only — 1, 5, 20 MiB (plus an empty-delta fixed-cost control) — fit the cost model, and publish falsifiable predictions for the deferred large sizes. The only time measured, reported, or compared anywhere is the export OPERATION's wall clock. Expected walls (estimates the measurements replace): empty delta ~0.3–1 s, 1 MiB ~1 s, 5 MiB ~1–2 s, 20 MiB ~2–4 s — every stage-1 export is seconds; if one takes ≥ 30 s, stop and investigate, do not wait it out. The large ladder (50 MiB, 250 MiB, 1 GiB) is stage 2, run later by explicit request only — do NOT run anything ≥ 50 MiB in this goal. Measurement only: no timing SLO is enforced or invented.
 

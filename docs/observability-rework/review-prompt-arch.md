@@ -1,5 +1,9 @@
 # Adversarial Review Prompt — Architecture, Wiring, API & Naming (post-rework)
 
+> **Frozen historical review prompt (operation-layout exempt, 2026-07-11):**
+> CLI spelling and source paths below identify the implementation reviewed at
+> the time; do not execute this prompt as current architecture guidance.
+
 Use this to drive a skeptical, **subagent** review of the observability rework
 **after** the crate-core / span-trace updates landed (drop-`component`, time-free
 emit API, generic `SpanObserver<K>`, `NamespaceExecutionObserver`, `exit_code`-in-

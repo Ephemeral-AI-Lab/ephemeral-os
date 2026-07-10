@@ -1,5 +1,9 @@
 # File Operation Live E2E Iteration Report
 
+> **Historical append-only evidence (operation-layout exempt, 2026-07-11):**
+> Commands and paths below are preserved exactly as executed before the
+> operation-ownership migration; do not use them as current instructions.
+
 ## Test Rounds
 
 | Round | Timestamp (CST)  | Command                                                                              | Scope                                     | Result                                    | Notes                                                                                                                                                                                                  |

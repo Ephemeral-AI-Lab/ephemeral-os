@@ -5,11 +5,15 @@ tags:
   - layerstack
   - performance
   - sandbox
-status: implementation_plan
-updated: 2026-06-30
+status: landed
+updated: 2026-07-11
 ---
 
 # O(1) Shared Workspace Base For N Sandboxes
+
+> **Completed implementation record (operation-layout exempt, 2026-07-11):**
+> Commands and paths below are preserved as executed when this work landed;
+> they are not current CLI or repository-layout guidance.
 
 ## Goal
 

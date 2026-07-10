@@ -6,8 +6,8 @@ tags:
   - manager
   - export
   - testing
-status: draft
-updated: 2026-07-07
+status: verified
+updated: 2026-07-11
 ---
 
 # Manager Export Changes — live e2e catalog (30 cases)
@@ -20,17 +20,17 @@ destination, and asserts on structured JSON and the resulting on-disk tree —
 never log scraping. **10 easy (EZ), 10 medium (MED), 10 hard (HRD).**
 
 Export is a **manager** operation, so cases live beside the squash suite in
-`cli-operation-e2e-live-test/manager/management/export/`, one file per tier
+`e2e/manager/management/export/`, one file per tier
 (`test_export_easy.py` / `test_export_medium.py` / `test_export_hard.py`,
 markers `export and easy` / `export and medium` / `export and hard`).
 They reuse:
 
-- `manager/management/helpers.py` — `create_sandbox`, `inspect_sandbox`,
-  `destroy_sandbox`, `get_observability_tree`.
+- `manager/management/helpers.py` — `create_sandbox`, `inspect_sandbox`, and
+  `destroy_sandbox`.
 - `manager/management/squash/helpers.py` — publish-churn scenarios
-  (`file_write`/exec/session publishes), `checkpoint_squash`, layerstack
+  (`file_write`/exec/session publishes), `squash_layerstacks`, layerstack
   observability, deep-stack builders.
-- a new `manager/management/export/helpers.py` — `export_changes(sandbox_id,
+- `manager/management/export/helpers.py` — `export_changes(sandbox_id,
   dest, format="dir")`, `read_tree(dest)`, `assert_delta_equivalence`,
   `assert_result_contract`, `zstd_entries(path)`, `sentinel_guard(outside)`,
   and the fault-injection primitives (`inject_spool`, `hostile_daemon`) the
@@ -39,10 +39,9 @@ They reuse:
 Every executed case writes
 `manager/management/export/test-reports/<RUN_ID>/<CASE_ID>/verdict.json`.
 
-> **Runnability.** The design is a spec, not yet code. Every case drives the
-> product surface (`sandbox-manager-cli export_changes`), so the catalog
-> becomes runnable when the operation and the `sandbox-manager/src/export_apply.rs`
-> applier land (spec §A build order). The Rust unit suite
+> **Runnability.** The implemented catalog drives the product surface
+> (`sandbox-manager-cli export_changes`) through the operation and the
+> `crates/sandbox-manager/src/export_apply.rs` applier. The Rust unit suite
 > (`sandbox-manager/tests/manager_export.rs` — fake **and** hostile daemon)
 > is the fast gate and is not repeated here; this catalog is the
 > live-environment suite. Host-boundary cases (HRD-01…05, HRD-10) that need a
@@ -118,7 +117,7 @@ catalog pins the spec's ten invariants plus the four adversarial axes:
 | `--dest /`, `$HOME`, manager state dir | deny-list reject, pre-forward | HRD-04 |
 | zstd bomb / entry-count bomb | capped; abort without disk exhaustion | HRD-05 |
 | two concurrent exports, same sandbox | singleflight; `export_id`-keyed spools; no cross-corruption | HRD-06 |
-| export during `checkpoint_squash` | lease pins sources; both converge | HRD-07 |
+| export during `squash_layerstacks` | lease pins sources; both converge | HRD-07 |
 | export during a publish | snapshot excludes new layers | HRD-08 |
 | 499-layer / ~1 GB delta | converges, or clean start-request-ceiling fail | HRD-09 |
 | daemon restart mid-paging | `export-not-found` abort → re-run converges; `.export/` reaped | HRD-10 |
@@ -166,7 +165,7 @@ P4 pins the boot-reap correction before HRD-10 depends on it.
 | `dest_archive` | a host archive path + nonce `.tmp` sibling | for `tar`/`tar-zst` |
 | `sentinel(outside)` | a canary file/dir **outside** dest | proves no host-boundary escape (HRD tier) |
 | `hostile` | a fault-injecting daemon or a crafted spool | authors traversal/bomb entries the honest daemon cannot (§1.4) |
-| `squashed` | stack after `checkpoint_squash` | squash-suite pattern |
+| `squashed` | stack after `squash_layerstacks` | squash-suite pattern |
 
 ### 1.3 Teardown contract (part of every case)
 
@@ -426,10 +425,10 @@ catalog's weight (adversarial Axis 4 outranks the rest).
 - **Host-safety**: each dest is internally consistent; no cross-spool bytes; `.export/` holds at most the in-flight spools and is empty at teardown.
 - **Incremental**: n/a.
 
-#### HRD-07 — export under concurrent `checkpoint_squash` (B5, inv 3)
-- **Spec**: B5, lease pinning. **Fixture**: a multi-layer delta at `@v13`; start `export_changes`, then fire `checkpoint_squash` mid-export.
+#### HRD-07 — export under concurrent `squash_layerstacks` (B5, inv 3)
+- **Spec**: B5, lease pinning. **Fixture**: a multi-layer delta at `@v13`; start `export_changes`, then fire `squash_layerstacks` mid-export.
 - **Steps**: interleave; collect both results and the exported tree.
-- **Correctness**: export completes on its snapshot; the exported tree equals the `@v13` merged delta (not the squashed shape); `checkpoint_squash` also succeeds; net stack is the squashed manifest.
+- **Correctness**: export completes on its snapshot; the exported tree equals the `@v13` merged delta (not the squashed shape); `squash_layerstacks` also succeeds; net stack is the squashed manifest.
 - **Host-safety**: the export lease pinned its source layers (a leased layer dir was never deleted mid-read — `observability` shows the lease boundary); nothing outside dest.
 - **Incremental**: n/a.
 
@@ -443,7 +442,7 @@ catalog's weight (adversarial Axis 4 outranks the rest).
 #### HRD-09 — deep / large delta: converge or fail cleanly at the start-request ceiling (adversarial H5)
 - **Spec**: H5 (30 s `REQUEST_READ_TIMEOUT_S` start-request bound; ~2 MiB/chunk loop). **Fixture**: (a) a 499-layer delta (squash-suite deep builder); (b) a ~1 GiB compressed delta. **Dest**: `dest_fresh`.
 - **Steps**: `export_changes(dir)`; record wall-clock, chunk count, and the start-request duration.
-- **Correctness**: **either** the export converges and the tree equals the merged view, **or** it fails with a clean, structured start-request-timeout / ceiling error (never a hang, partial-dest corruption, or orphaned lease). "Squash first" is verified as the mitigation: after `checkpoint_squash`, the same export converges.
+- **Correctness**: **either** the export converges and the tree equals the merged view, **or** it fails with a clean, structured start-request-timeout / ceiling error (never a hang, partial-dest corruption, or orphaned lease). "Squash first" is verified as the mitigation: after `squash_layerstacks`, the same export converges.
 - **Host-safety**: on the fail path, no partial dest is left in a corrupt state (dir converges on re-run; archive is temp+rename); `.export/` reaped.
 - **Incremental**: wall-clock, chunk count, and start-request duration recorded (informational; no hard budget in v1).
 

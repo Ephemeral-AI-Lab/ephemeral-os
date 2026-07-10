@@ -1,3 +1,7 @@
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this completed goal verbatim. Its five-view multiplexer, CLI paths,
+> and ownership statements predate the concrete-operation migration.
+
 /goal Implement the observability CLI to match docs/observability-rework/cli-observability.md — the source of truth for the operation family (§2), the rendered help (§3), and the command matrix (§4). Target the post-review surface: FIVE views (snapshot, trace, events, cgroup, layerstack), --sandbox-id required on every view, id-valued flags carry -id, and NO raw view.
 
 Tasks, smallest first:

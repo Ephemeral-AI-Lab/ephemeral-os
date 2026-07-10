@@ -1,5 +1,9 @@
 # Span Trace Expected Outcome Shape
 
+> **Historical implementation record (operation-layout exempt, 2026-07-11):**
+> Source paths below describe the pre-migration tree and are preserved as the
+> outcome recorded when this slice landed.
+
 Source: `docs/observability-rework/span-trace-impl.md`
 
 This is a compact shape checklist for the span/trace instrumentation slice. It

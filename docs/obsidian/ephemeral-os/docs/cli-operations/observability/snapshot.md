@@ -22,7 +22,7 @@ Show live sandbox state.
 
 Show current state from the runtime registry: sandbox lifecycle state, workspaces (with layer counts), in-flight executions, and the latest resource sample per scope. Served live; does not read the log.
 
-When `--sandbox-id` is omitted, the manager fans out private daemon snapshot requests to every ready sandbox with a daemon endpoint and returns one `sandboxes` array. Per-sandbox failures are reported as `availability: "unavailable"` nodes instead of failing the whole aggregate response.
+When `--sandbox-id` is omitted, the manager fans out direct sandbox-scoped `snapshot` requests to every ready sandbox with a daemon endpoint and returns one `sandboxes` array. Per-sandbox failures are reported as `availability: "unavailable"` nodes instead of failing the whole aggregate response.
 
 | Argument | Flag | Kind | Required | Default | Description |
 |---|---|---|---|---|---|

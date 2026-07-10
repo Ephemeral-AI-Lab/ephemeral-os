@@ -6,11 +6,16 @@ tags:
   - workspace
   - namespace
   - storage
-status: implementation_plan
-updated: 2026-07-02
+status: landed
+updated: 2026-07-11
 ---
 
 # LayerStack Squash + Live Workspace Remount
+
+> **Landed design record (operation-layout exempt, 2026-07-11):** The storage
+> and remount invariants remain design history for the implemented feature.
+> CLI names, package ownership, and source paths below describe the tree in
+> which it landed and are not current operation-layout guidance.
 
 Revised after the 2026-07-02 adversarial multi-agent review
 (`adversarial_multi_agent_review_results.md`) and the same-day simplicity

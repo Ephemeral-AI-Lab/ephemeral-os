@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# FROZEN HISTORICAL ARTIFACT (operation-layout exempt, 2026-07-11).
+# Preserves pre-migration E2E paths and is intentionally non-executable.
 # Run the LOAD-COMBO-HTTP squash benchmark with span harvesting.
 # Usage: run_combo.sh <label> <sessions> [extra pytest args...]
 #   label    : names the report dir + log (e.g. baseline-s50, proto-s200)

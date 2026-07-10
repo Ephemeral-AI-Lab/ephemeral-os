@@ -5,10 +5,14 @@ tags:
   - sandbox
   - security
   - implementation-plan
-status: draft
+status: superseded
+superseded-by: daemon-command-child-policy-refined-spec.md
 ---
 
 # Daemon Command Syscall Hardening
+
+> **Superseded design record (operation-layout exempt, 2026-07-11):** Commands
+> and source paths below are retained for decision history, not current use.
 
 ## Decision
 

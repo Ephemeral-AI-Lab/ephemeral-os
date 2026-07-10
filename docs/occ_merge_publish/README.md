@@ -1,6 +1,10 @@
 # OCC Merge Publish Spec
 
-Status: draft
+Status: superseded by `c3_spec.md`
+
+> **Superseded design record (operation-layout exempt, 2026-07-11):** This
+> earlier draft is retained for decision history. Use `c3_spec.md` for the
+> selected design and its current phase disposition.
 
 This document specifies a narrow publish-time auto-merge policy for
 `sandbox-runtime-layerstack`.

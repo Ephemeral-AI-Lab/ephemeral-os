@@ -13,6 +13,11 @@ aliases:
 
 # CLI public surface and implementation design
 
+> **Ownership-layout note (operation-layout exempt, 2026-07-11):** The public
+> CLI behavior in this document remains applicable. Package names, source
+> paths, and ownership/dependency sections describing the pre-migration
+> implementation are historical and superseded by `operation-migration/spec.md`.
+
 This document defines the target command-line API and its implementation. The
 same public operation definitions project into MCP in [[mcp]]. Direct daemon
 HTTP has a deliberately smaller allowlist in [[http]].
@@ -229,9 +234,9 @@ The adapter’s routing behaviour is hidden from the user:
 
 - `snapshot` without `--sandbox-id` reaches manager `snapshot` at system
   scope and aggregates ready sandboxes.
-- Every selected-sandbox observability command, including `snapshot --sandbox-id`,
-  reaches its daemon via internal `get_observability` with the public command
-  name converted to an internal `view` argument.
+- Every selected-sandbox observability command, including
+  `snapshot --sandbox-id`, reaches its daemon with the same concrete operation
+  name at sandbox scope.
 
 The public single-sandbox snapshot object has stable top-level fields
 `sandbox_id`, `lifecycle_state`, `availability`, `sampled_at_unix_ms`,

@@ -1,3 +1,7 @@
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its commands and paths describe the tree used
+> for the completed squash verification.
+
 /goal Implement the LayerStack Squash live-Docker test suite exactly as cataloged in docs/obsidian/ephemeral-os/implementation_plan/squash/test-case.md — all 50 cases (SMK-01…10, MED-01…20, HRD-01…20) plus the §2 measurement kit — under cli-operation-e2e-live-test/manager/management/squash/, finishing only when every case's verdict.json passes all three axes (correctness, space, time) with zero unexplained skips.
 
 First read, fully: test-case.md (source of truth: §1 fixtures, §2 measurement, §3 budgets, §4 cases, §5 traceability, §6 order); spec.md (behavior truth); acceptance_criteria.md; impl_plan_and_progress_tracker.md (phase state + measured baselines); cli-operation-e2e-live-test/{README.md, conftest.py, manager/management/*} (harness conventions).

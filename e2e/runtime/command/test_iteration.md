@@ -1,5 +1,9 @@
 # Git Policy Test Iterations
 
+> **Historical append-only evidence (operation-layout exempt, 2026-07-11):**
+> Commands and paths below are preserved exactly as executed before the
+> operation-ownership migration; do not use them as current instructions.
+
 Append-only run ledger for the git-policy live E2E catalog.
 
 | Iteration | Command | Success | Fail | Finding | Wall time |

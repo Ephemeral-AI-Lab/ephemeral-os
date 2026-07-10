@@ -191,6 +191,6 @@ guarantee of sandbox-to-sandbox kernel isolation.**
 - Adversarial reviews:
   [[daemon-command-child-policy-refined-adversarial-review-prompt]],
   [[daemon-shell-security-knob-removal-adversarial-review-prompt]]
-- Live e2e: `cli-operation-e2e-live-test/runtime/shell_security/`
+- Live e2e: `e2e/runtime/shell_security/`
 - Enforcement: `crates/sandbox-runtime/namespace-process/src/runner/shell_exec.rs`
   (install site) and `.../runner/shell_security.rs` (deny-table + cap builder)

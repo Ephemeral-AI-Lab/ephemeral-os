@@ -1,6 +1,10 @@
 # Crate-Core Observability — Subagent Adversarial Review Spec
 
-Status: ready-to-run. Drives a parallel, evidence-gated review of the landed
+> **Historical review specification (operation-layout exempt, 2026-07-11):**
+> Source paths below identify the implementation reviewed at the time and are
+> preserved as evidence.
+
+Status: archived after review. Drove a parallel, evidence-gated review of the landed
 crate-core slice (`crate-core-impl.md` + `crate-core-impl-expected-outcomeshape.md`).
 
 ## 0. Why this exists

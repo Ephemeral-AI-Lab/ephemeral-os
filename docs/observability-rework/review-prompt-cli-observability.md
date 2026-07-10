@@ -1,5 +1,9 @@
 # Adversarial Review Prompt - CLI Observability Display, Protocol, and Implementation
 
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its package names and source paths identify the
+> implementation reviewed at the time.
+
 Use this to drive a skeptical, subagent-led review of the CLI observability docs:
 
 - `docs/observability-rework/cli-observability.md`

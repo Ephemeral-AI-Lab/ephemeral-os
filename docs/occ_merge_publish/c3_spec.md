@@ -1,6 +1,6 @@
 # C3 Spec — Three-Way Merge, Full-File Concrete Layers, and Line Provenance
 
-Status: draft for review
+Status: Phase 1 landed; Phase 2 deferred
 
 One spec for the publish-time design selected in
 [`experiment_report.md`](./experiment_report.md) (§8): a text-only three-way
@@ -447,7 +447,7 @@ file/
 cli_definition/file_operations.rs   FILE_FAMILY + FILE_BLAME_SPEC + dispatch_file_blame
 ```
 
-**CLI:** `sandbox-cli runtime file_blame --path FILE`. The op **name is one token**
+**CLI:** `sandbox-runtime-cli --sandbox-id ID file_blame --path FILE`. The op **name is one token**
 (`file_blame`) and the cli path is `["runtime", "file_blame"]` — the gateway
 dispatches by op name and a **family is never a path segment** (e.g.
 `create_workspace_session` is in family `workspace_session` but its path is
@@ -497,7 +497,7 @@ verification/reconcile only and is **not** on blame's path.
 - **No `serde` derive** — `AuditEvent`/`BlameRange` (de)serialize via `json!` +
   `serde_json::Value`, matching `command_operations` and layerstack `model.rs`.
 
-**Live E2E (`sandbox-cli runtime file_blame`):** after
+**Live E2E (`sandbox-runtime-cli --sandbox-id ID file_blame`):** after
 `bin/start-sandbox-docker-gateway --rebuild-binary`, create a workspace, produce a
 two-owner file (a session writes lines via `exec_command`, then an `edit` op
 changes one line), then run the CLI and assert: ranges **tile the file with no

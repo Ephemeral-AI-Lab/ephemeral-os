@@ -1,5 +1,9 @@
 # Handoff — Squash sweep benchmark harness + W tuning
 
+> **Historical handoff (operation-layout exempt, 2026-07-11):** Commands and
+> paths below are preserved from the completed benchmark and tuning work; they
+> are not current suite instructions.
+
 Follow-up to the shipped remount-sweep parallelization. Implements the
 **highest-leverage subset** of `E2E_BENCHMARK_SPEC.md` so the correctness and
 scaling checks can run, and tunes the default sweep width.

@@ -73,16 +73,17 @@ an operator can expose or install observability without lifecycle authority.
 
 ### One CLI package, three binaries
 
-`sandbox-cli` is one workspace package and library. It owns the shared CLI
-transport/configuration/request-building code plus three set adapters:
-`manager`, `runtime`, and `observability`. Its three feature-gated binary
-targets remain the public executables named in the table above; this is one
-code module, not one combined command or grant.
+`sandbox-cli` is one workspace package with three presentation adapters:
+`manager`, `runtime`, and `observability`. It owns argv parsing, projections,
+help, output rendering, and the three feature-gated binary targets named in
+the table above. Shared transport, configuration discovery, and typed request
+construction live in `sandbox-operation-client`; this remains three public
+executables, not one combined command or grant.
 
 Each binary enables only its matching set feature and therefore links only the
 matching operation catalog and adapter. `sandbox-mcp` and the browser console
-may depend on `sandbox-cli::core` with no set feature, but they must not use a
-CLI adapter to access an operation catalog.
+depend on `sandbox-operation-client` directly and must not depend on or reuse a
+CLI presentation adapter.
 
 ### Hidden transport fields
 
@@ -261,7 +262,7 @@ records; the named top-level keys above are stable.
 ## Non-public implementation operations
 
 The following protocol operations remain internal composition details and are
-not MCP tools or CLI commands: `sandbox_daemon_ready`, `get_observability`,
+not MCP tools or CLI commands: `sandbox_daemon_ready`,
 `create_workspace_session`, `destroy_workspace_session`, `squash_layerstack`,
 `export_layerstack`, and `read_export_chunk`.
 

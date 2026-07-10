@@ -280,7 +280,7 @@ sandbox checks:
 bin/start-sandbox-docker-gateway --rebuild-binary
 ```
 
-Use `sandbox-cli` for manual sandbox operations.
+Use the public CLI binaries for manual sandbox operations.
 
 Live e2e coverage is a 110-case matrix against a real sandbox: 39 session
 cases and 71 sessionless cases. Cases prefixed `[complex]` (33 of 110) are
@@ -302,12 +302,12 @@ capture) must assert `file_blame` ownership of the touched lines as part of
 its expected outcome — in addition to the content and layerstack checks, and
 even where the checklist entry does not spell the blame assertion out.
 
-The test implementation lives in `cli-operation-e2e-live-test/runtime/file/`
+The test implementation lives in `e2e/runtime/file/`
 (pytest; the gateway/sandbox lifecycle fixtures come from
-`cli-operation-e2e-live-test/conftest.py`). One module per checklist group:
+`e2e/conftest.py`). One module per checklist group:
 
 ```
-cli-operation-e2e-live-test/runtime/file/
+e2e/runtime/file/
 ├── README.md                            # layout + run instructions
 ├── helpers.py                           # file-op CLI wrappers + blame assertions
 ├── smoke/
@@ -340,7 +340,7 @@ Run through pytest (preferred — fixtures own gateway bring-up and
 sandbox/session teardown):
 
 ```sh
-cd cli-operation-e2e-live-test
+cd e2e
 pytest runtime/file                      # whole file-op matrix
 pytest runtime/file/blame                # one group
 pytest runtime/file -m "not slow"        # skip [complex] cases
@@ -361,18 +361,14 @@ Manual spot-checks use the same verified command shapes:
 
 ```sh
 export PATH="$PWD/bin:$PATH"
-sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-root <host-dir>
-sandbox-cli runtime --sandbox-id <id> file_write --path notes.txt --content 'hello'
-sandbox-cli runtime --sandbox-id <id> file_read  --path notes.txt [--offset N --limit N]
-sandbox-cli runtime --sandbox-id <id> file_edit  --path notes.txt \
+sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root <host-dir>
+sandbox-runtime-cli --sandbox-id <id> file_write --path notes.txt --content 'hello'
+sandbox-runtime-cli --sandbox-id <id> file_read  --path notes.txt [--offset N --limit N]
+sandbox-runtime-cli --sandbox-id <id> file_edit  --path notes.txt \
     --edits '[{"old_string":"a","new_string":"b","replace_all":false}]'
-sandbox-cli runtime --sandbox-id <id> file_blame --path notes.txt
-sandbox-cli runtime --sandbox-id <id> exec_command 'sed -i "s/a/b/" notes.txt'
-sandbox-cli runtime --sandbox-id <id> create_workspace_session
-sandbox-cli runtime --sandbox-id <id> file_write --path draft.txt --content 'x' \
-    --workspace-session-id <ws-id>
-sandbox-cli runtime --sandbox-id <id> destroy_workspace_session --workspace-session-id <ws-id>
-sandbox-cli manager destroy_sandbox --sandbox-id <id>
+sandbox-runtime-cli --sandbox-id <id> file_blame --path notes.txt
+sandbox-runtime-cli --sandbox-id <id> exec_command 'sed -i "s/a/b/" notes.txt'
+sandbox-manager-cli destroy_sandbox --sandbox-id <id>
 ```
 
 The CLI prints one JSON line per operation — to stdout on success, to stderr
@@ -428,7 +424,7 @@ a transcript for each.
 ### Concurrent Operations — Sessionless (17)
 
 - [x] Two concurrent sessionless `file_write` requests to the same path with
-      different multi-line contents (parallel `sandbox-cli runtime file_write`
+      different multi-line contents (parallel `sandbox-runtime-cli file_write`
       invocations).
       Expected: both return `type = create`/`update` with no `operation_failed`;
       the writes serialize under the `amend_path` exclusive writer lock, so a
@@ -538,7 +534,7 @@ a transcript for each.
 - [x] [complex] Sustained hot-path churn: 5 concurrent workers each issue 10
       sequential sessionless `file_write` requests with unique contents to one
       path (50 writes) while a poller repeatedly calls
-      `sandbox-cli observability layerstack --sandbox-id ID`.
+      `sandbox-observability-cli layerstack --sandbox-id ID`.
       Expected: all 50 writes return ok; the poller's `manifest_version` samples
       are strictly non-decreasing and finish at baseline + 50; the final
       `file_read` and `file_blame` owner match exactly one of the 50 request

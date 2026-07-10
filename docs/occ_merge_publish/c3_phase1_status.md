@@ -1,5 +1,11 @@
 # C3 Phase 1 (blame) — implementation status
 
+Status: complete
+
+> **Completed implementation record (operation-layout exempt, 2026-07-11):**
+> Commands and source paths below are preserved as executed when Phase 1
+> landed; they are not current operation-layout guidance.
+
 Status of implementing `docs/occ_merge_publish/c3_spec.md` **Phase 1** (publish-time
 three-way merge + line origin, one append-after-commit auditability log, the
 `file` blame domain + CLI). Work done directly on `main`, additive edits.

@@ -250,6 +250,10 @@ become a holder for manager, gateway client, or CLI/MCP state.
 
 ### Required file changes by location
 
+> **Historical implementation map (operation-layout exempt, 2026-07-11):**
+> This completed cutover table retains its original source paths as evidence.
+> The HTTP allowlist above remains the current behavioral contract.
+
 | Location | Target change |
 | --- | --- |
 | `crates/sandbox-daemon/src/http/router.rs` | dispatch only exact `GET /health`, exact `POST /files/list` (hand method mismatch to list handler only for `/files/list`), and paths beginning `/forward/`; default `404` |

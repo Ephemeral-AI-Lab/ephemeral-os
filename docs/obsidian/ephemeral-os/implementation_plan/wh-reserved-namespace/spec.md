@@ -7,8 +7,8 @@ tags:
   - capture
   - publish
   - implementation-plan
-status: draft
-updated: 2026-07-07
+status: landed
+updated: 2026-07-11
 ---
 
 # Reserved `.wh.` Namespace — honest capture + fail-closed publish admission
@@ -322,7 +322,7 @@ marker encoding inside layer dirs, which remains valid.
 ## Live e2e
 
 See `test-case.md` in this folder: the live-Docker catalog (16 cases,
-EZ/MED/CX) implemented under `cli-operation-e2e-live-test/runtime/reserved_paths/`.
+EZ/MED/CX) implemented under `e2e/runtime/reserved_paths/`.
 
 ## Alternatives considered
 

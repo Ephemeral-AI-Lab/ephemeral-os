@@ -530,7 +530,7 @@ crates/sandbox-config/src/configs/manager.rs           DONE B+D (ShellSecurityCo
 crates/sandbox-daemon/src/serve.rs                     DONE B+D (manager section no longer loaded; command engine hardcoded enforce)
 config/prd.yml                                         DONE B+D (manager.shell_security key removed)
 
-cli-operation-e2e-live-test/runtime/shell_security/    DONE B+D (git mv from command_security/; enforce-only, mode config dropped)
+e2e/runtime/shell_security/                           DONE B+D (git mv from command_security/; enforce-only, mode config dropped)
 ```
 
 The Rust unit/behavioral suites stay green: removing the allowlist only changes
@@ -618,12 +618,12 @@ Unit assertions to update/keep:
   engine) produces no seccomp filter but still drops caps.
 - `mknod`/`mknodat` char/block → `EPERM`; regular/FIFO → `ALLOW`.
 
-**Live e2e** (`cli-operation-e2e-live-test/runtime/shell_security/`; rebuild
+**Live e2e** (`e2e/runtime/shell_security/`; rebuild
 first with `bin/start-sandbox-docker-gateway --rebuild-binary`):
 
 ```sh
 export PATH="$PWD/bin:$PATH"
-cd cli-operation-e2e-live-test
+cd e2e
 E2E_REBUILD_BINARY=1 pytest runtime/shell_security -v
 ```
 

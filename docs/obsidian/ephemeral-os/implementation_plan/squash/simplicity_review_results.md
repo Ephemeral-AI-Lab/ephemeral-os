@@ -10,6 +10,10 @@ updated: 2026-07-02
 
 # Adversarial Multi-Agent Simplicity Review — Results
 
+> **Historical review record (operation-layout exempt, 2026-07-11):** Source
+> paths below identify the pre-migration tree reviewed at the time and are
+> preserved as evidence.
+
 Target: `spec.md` (revision of 2026-07-02, post first adversarial review).
 Six agents (A–F) attacked the spec in parallel, each grounding claims in the
 actual crates before proposing deletions. Coordinator synthesis first; full

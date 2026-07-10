@@ -15,6 +15,10 @@ aliases:
 
 # MCP, CLI, and daemon HTTP phase plan
 
+> **Completed implementation record (operation-layout exempt, 2026-07-11):**
+> Checked steps, commands, and paths below are preserved as executed. Current
+> operation ownership is defined by `operation-migration/spec.md`.
+
 This is the execution and progress-tracking plan for the MCP/CLI/daemon HTTP
 boundary migration. It converts [[implementation-spec]] into independently
 verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and

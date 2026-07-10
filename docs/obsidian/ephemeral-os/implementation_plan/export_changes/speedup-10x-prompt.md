@@ -6,9 +6,13 @@ tags:
   - export
   - performance
   - prompt
-status: draft
-updated: 2026-07-07
+status: archived
+updated: 2026-07-11
 ---
+
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its paths and package names describe the tree
+> used for the completed optimization work.
 
 /goal Make the export_changes operation itself at least 10x faster at ANY delta size — the acceptance is one number per size: the wall time of a cold dir export. If an export measures T at baseline, the same export must measure ≤ T/10 after (an export that took 10 minutes must take under 1 minute; one that took 2 seconds must take under 200 ms, floor-permitting). The ONLY time that matters anywhere in this task is the export operation's wall clock — no other duration is tracked, reported, or budgeted. Constraint: the speedup must come from eliminating waste on a single stream, NOT from added parallelism — no multi-connection fan-out, no worker/thread pools, no parallel apply; one connection, one worker. Overlap that falls out of streaming (the socket buffer fills while the applier drains) is fine; spawning fetchers is not. If a design needs concurrency to reach 10x, it fails the constraint — find the waste instead.
 

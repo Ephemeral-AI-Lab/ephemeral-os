@@ -1,6 +1,10 @@
 # CLI Observability — Concrete Span/Trace Examples (per-operation)
 
-Status: ready-to-implement (extends `cli-observability.md` + `README.md` §4).
+Status: archived after implementation.
+
+> **Historical rendered examples (operation-layout exempt, 2026-07-11):** CLI
+> spelling, record ownership, and source paths below preserve the observability
+> rework snapshot and are not current execution instructions.
 
 `cli-observability.md` fixes the *rendered* trace/cgroup/events shapes; `README.md`
 §4.1 gives one worked case (one-shot exec). This doc grounds the span/event/trace

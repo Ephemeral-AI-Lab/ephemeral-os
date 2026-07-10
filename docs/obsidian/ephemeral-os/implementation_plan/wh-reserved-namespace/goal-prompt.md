@@ -1,3 +1,7 @@
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** This
+> completed execution prompt is retained for provenance; use `spec.md`,
+> `test-case.md`, and the current `e2e/` tree for maintained guidance.
+
 /goal Implement the reserved `.wh.` namespace fix in ephemeral-os, then build and pass its live e2e catalog.
 
 Design truth — read both first, follow exactly:

@@ -1,3 +1,7 @@
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its commands and paths are preserved from the
+> completed live verification.
+
 /goal Execute the Manager Export Changes live-Docker e2e catalog (30 cases) to 30/30 green and produce its sign-off bundle.
 
 Truth - read first, follow exactly:

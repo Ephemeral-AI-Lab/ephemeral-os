@@ -1,5 +1,10 @@
 # Web Console — Implementation Plan & Progress Tracker
 
+> **Completed implementation record (operation-layout exempt, 2026-07-11):**
+> Checked steps and decision notes retain the paths and package names in effect
+> when they landed. Use `http-server.md` and `web-ui-design.md` for current
+> architecture guidance.
+
 Execution plan for [[web-ui-design]] (pages/components) and [[http-server]]
 (`sandbox-console` HTTP surface). Phases are ordered so the two product
 priorities land earliest: (1) workspace sessions + exec/stdin/transcript in

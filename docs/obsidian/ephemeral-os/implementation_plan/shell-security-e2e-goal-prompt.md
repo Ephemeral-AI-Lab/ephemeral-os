@@ -1,3 +1,8 @@
+> **Historical operation-layout exemption (2026-07-11):** The goal, paths, and
+> commands below are preserved as completed execution evidence, not current
+> ownership guidance. Do not rerun them without translating them to the current
+> repository layout.
+
 /goal Complete and verify the shell-exec security e2e suite defined in `cli-operation-e2e-live-test/runtime/shell_security/test_cases.md` (40 cases: 10 easy, 15 medium, 15 hard). Turn the catalog from a spec into runnable, green pytest coverage.
 
 DELIVERABLES

@@ -1,13 +1,20 @@
 # CLI Observability — Side Spec (operation manual + command matrix)
 
-Status: ready-to-implement (additive to the main spec).
+Status: archived after implementation.
 
-The formal CLI surface for observability, written in the repo's **operation-family
+> **Historical implementation specification (operation-layout exempt,
+> 2026-07-11):** The CLI shapes below record the observability surface that
+> landed, but the package ownership, semantic type names, binary spelling, and
+> `get_observability` transport design describe the pre-migration tree. Current
+> ownership and concrete-route semantics are defined by
+> `docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md`.
+
+The original CLI surface for observability, written in the repo's **operation-family
 / operation-spec** format (`sandbox-protocol/src/cli_operation_spec.rs`,
 `catalog.rs`, rendered by `help.rs`). Companion to `README.md` — the data model,
 views, and the `get_observability` transport op.
 
-This document is the source of truth for: **(§2)** the `CliOperationFamilySpec` +
+This document records: **(§2)** the `CliOperationFamilySpec` +
 `CliOperationSpec`s, **(§3)** the rendered `help` manual those specs produce, and
 **(§4)** every command permutation with its exact output shape.
 

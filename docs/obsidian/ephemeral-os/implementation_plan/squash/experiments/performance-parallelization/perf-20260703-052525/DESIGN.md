@@ -1,5 +1,9 @@
 # Squash remount-sweep parallelization — DESIGN
 
+> **Historical experiment design (operation-layout exempt, 2026-07-11):**
+> Operation names and source paths below are preserved from the measured
+> optimization snapshot and are not current execution instructions.
+
 Backed by `RESULTS.md` (run `perf-20260703-052525`). Selected optimization:
 **bounded-parallel remount sweep with a phase-split per-session transaction and a
 single batched handle persist.** No production implementation is asserted here;

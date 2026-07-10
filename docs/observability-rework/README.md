@@ -1,6 +1,10 @@
 # Observability Rework — Spec
 
-Status: ready-to-implement.
+> **Historical implementation specification (operation-layout exempt,
+> 2026-07-11):** Package names and paths below describe the tree in which this
+> rework landed and are not current ownership guidance.
+
+Status: archived after implementation.
 
 Collapse all observability into **one dependency-light crate**
 (`sandbox-observability`) backed by an **append-only NDJSON event stream**,

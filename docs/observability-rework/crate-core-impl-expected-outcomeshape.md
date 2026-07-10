@@ -1,5 +1,9 @@
 # Crate Core Expected Outcome Shape
 
+> **Historical implementation record (operation-layout exempt, 2026-07-11):**
+> Source paths below describe the pre-migration tree and are preserved as the
+> outcome recorded when this slice landed.
+
 Source: `docs/observability-rework/crate-core-impl.md`
 
 This is a compact shape checklist for the crate-core observability rework. It

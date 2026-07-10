@@ -6,7 +6,8 @@ tags:
   - security
   - implementation-plan
   - spec
-status: draft
+status: superseded
+superseded-by: daemon-command-child-policy-refined-spec.md
 supersedes: daemon-command-syscall-hardening-spec.md
 ---
 

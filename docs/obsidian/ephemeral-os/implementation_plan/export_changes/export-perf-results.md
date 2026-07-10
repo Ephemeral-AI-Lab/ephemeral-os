@@ -12,6 +12,10 @@ updated: 2026-07-08
 
 # Export stage-1 benchmark — trio results, cost model, attribution
 
+> **Historical measurement record (operation-layout exempt, 2026-07-11):**
+> Commands and artifact paths below are preserved exactly as measured and are
+> not current execution instructions.
+
 Stage-1 run of `bench-prompt.md` (PERF-0 + the 1/5/20 MiB exploration trio +
 shape/compressibility contrasts). Every number is the export **operation's
 client wall clock** (`RawResult.elapsed_ms` of one `sandbox-manager-cli

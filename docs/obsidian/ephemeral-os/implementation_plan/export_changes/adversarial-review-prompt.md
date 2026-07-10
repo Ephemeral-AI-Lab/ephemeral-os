@@ -7,12 +7,16 @@ tags:
   - export
   - implementation-plan
   - adversarial-review
-status: draft
+status: archived
 reviews:
   - implementation_plan/export_changes/spec.md
 ---
 
 # Adversarial Review Prompt — Manager Export Changes Spec
+
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its paths and package names describe the tree
+> in which the export implementation landed.
 
 Use this prompt to run a hostile review of the **export_changes spec**
 (`implementation_plan/export_changes/spec.md`) — a design document, not yet

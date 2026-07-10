@@ -4,11 +4,15 @@ tags:
   - ephemeral-os
   - config
   - implementation-plan
-status: implementation_plan
-updated: 2026-07-10
+status: landed
+updated: 2026-07-11
 ---
 
 # config — phased implementation plan
+
+> **Completed implementation record (operation-layout exempt, 2026-07-11):**
+> Commands and paths in checked evidence are preserved as executed. Use
+> `cli-e2e-test-spec.md` and the current `e2e/` tree for maintained guidance.
 
 Execution plan for the two specs in this folder:
 

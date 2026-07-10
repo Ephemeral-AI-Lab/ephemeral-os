@@ -1,5 +1,9 @@
 # Live E2E Benchmark Spec — Squash Remount-Sweep (performance + correctness)
 
+> **Historical experiment specification (operation-layout exempt, 2026-07-11):**
+> Paths below identify the benchmark snapshot used for the recorded results;
+> they are not current suite instructions.
+
 Status: highest-leverage subset **implemented + measured** (see `W-tuning.md`);
 the remainder (straggler/fault/crash injection, RSS sampler, full N×W×M×B
 nightly matrix) stays proposed. Extends the existing squash live-Docker suite

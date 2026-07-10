@@ -14,10 +14,10 @@ protocol 1:1, preview passes through to `daemon_http` 1:1.
 ## Position
 
 New bin crate `sandbox-console`. It is a **client peer** of the three CLI
-executables, built on `sandbox_cli::core::GatewayClient` — not an extension
+executables, built on `sandbox_operation_client::GatewayClient` — not an extension
 of `sandbox-gateway` (the gateway must never own client code) and not a
-vocabulary owner (operation vocabulary stays in the three canonical catalog
-crates).
+vocabulary owner (operation vocabulary stays in the manager, runtime, and
+observability modules of the canonical `sandbox-operation-catalog`).
 
 ```text
 browser
@@ -98,10 +98,9 @@ fails after the stream opened, the console emits one terminal `error` event
 ## Catalog
 
 `GET /api/catalog` returns the manager, runtime, and observability operation
-catalogs. The catalogs are already spec-only crates
-(`sandbox-manager-operations`, `sandbox-runtime-operations`,
-`sandbox-observability-operations`), so web forms, argument validation, and
-help text render from the same specs the CLIs use and cannot drift.
+catalogs. These domains are modules of the spec-only
+`sandbox-operation-catalog`, so web forms, argument validation, and help text
+render from the same semantic specs the adapters use and cannot drift.
 
 ## Health
 
@@ -174,7 +173,8 @@ session layer only when the console leaves localhost.
 ## Non-goals (v0)
 
 - REST-per-resource endpoints (`GET /api/sandboxes`, …) — vocabulary belongs
-  to `sandbox-protocol`; the UI calls `/api/rpc` with `list_sandboxes`.
+  to the operation contract and catalog; the UI calls `/api/rpc` with
+  `list_sandboxes`.
 - WebSocket RPC multiplexer — polling (`read_command_lines`) plus SSE covers
   the UI design; revisit only if transcript tailing needs push.
 - TLS, host-based routing, HTML rewriting — front with a standard reverse
@@ -193,7 +193,7 @@ extra work.
 V0:
 
 - `sandbox-console` bin crate: HTTP server over
-  `sandbox_cli::core::GatewayClient`.
+  `sandbox_operation_client::GatewayClient`.
 - `/api/rpc` (one-shot + SSE), `/api/catalog`,
   `/api/sandboxes/<id>/health`, and exact
   `/api/sandboxes/<id>/files/list`.

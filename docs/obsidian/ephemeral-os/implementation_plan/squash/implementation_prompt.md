@@ -1,3 +1,7 @@
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this completed goal verbatim; its CLI names, source paths, and phase
+> instructions describe the tree in which squash originally landed.
+
 /goal Implement the LayerStack Squash + Live Workspace Remount feature end to end, exactly as designed in docs/obsidian/ephemeral-os/implementation_plan/squash/spec.md, working phase by phase through impl_plan_and_progress_tracker.md in the same folder, finishing only when every box in acceptance_criteria.md is checked.
 
 First read, fully: spec.md (source of truth), the tracker (your working document), acceptance_criteria.md (definition of done), simplicity_review_results.md (rationale — consult before adding any type, file, fallback, or field; the answer is almost always no).

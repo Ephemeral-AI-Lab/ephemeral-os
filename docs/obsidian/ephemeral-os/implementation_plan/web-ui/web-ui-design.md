@@ -2,14 +2,14 @@
 
 A web UI for sandbox management: the conversion of `sandbox-manager-cli` and
 `sandbox-runtime-cli` to the browser. Every page below is grounded in an
-operation that exists today in `sandbox-manager-operations`,
-`sandbox-runtime-operations`, or `sandbox-observability-operations`.
+operation that exists today in the manager, runtime, or observability module
+of `sandbox-operation-catalog`.
 
 ## Architecture note (constrains everything below)
 
 The gateway speaks newline-delimited JSON over raw TCP, so the browser talks
 to a thin **`sandbox-console` HTTP server** — a client peer of the three CLI
-executables, built on `sandbox_cli::core::GatewayClient` — that bridges RPC
+executables, built on `sandbox_operation_client::GatewayClient` — that bridges RPC
 to the gateway and reverse-proxies the per-sandbox `daemon_http` surface
 (`/health` plus `/forward` port forwarding and exact `/files/list`). Endpoint
 spec: [[http-server]]. Operations map 1:1 — the bridge adds no vocabulary.
@@ -99,7 +99,7 @@ lifecycle actions.
   `GET /api/sandboxes/:id/health` → `daemon_http` `/health`),
   workspace-session count + in-flight execution count (from snapshot),
   `ResourceSparkline` (latest cgroup sample), layer count. Actions: Open → detail page, Squash
-  (`checkpoint_squash`), Destroy (`destroy_sandbox`, confirm dialog).
+  (`squash_layerstacks`), Destroy (`destroy_sandbox`, confirm dialog).
 - **`CreateSandboxModal`** — mirrors `create_sandbox` args exactly: image
   (required), workspace-bind-root (required), count (optional, ≥1 → creates N
   cards). Uses `_stream_logs: true` so the card shows the streamed progress
@@ -376,7 +376,7 @@ catalog exactly.
   from the mockup aren't derivable; squashable runs are bracketed
   (contiguous unleased, unbooked layers) and the depth trend accumulates
   client-side across polls.
-- **`SquashButton`** — the natural home for `checkpoint_squash`. A pre-run
+- **`SquashButton`** — the natural home for `squash_layerstacks`. A pre-run
   "est. after" count is **not derivable** (risk confirmed): the header shows
   the before-count and the after-count comes from the post-squash refetch;
   the result body reports `squashed_blocks`. Runs with `_stream_logs` into a

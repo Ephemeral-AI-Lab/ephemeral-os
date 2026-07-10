@@ -1,3 +1,7 @@
+> **Frozen historical prompt (operation-layout exempt, 2026-07-11):** Do not
+> execute this prompt verbatim; its paths and package names describe the tree
+> in which the export implementation landed.
+
 /goal Implement the Manager Export Changes spec in ephemeral-os, then build and pass its live e2e catalog.
 
 Design truth - read both, follow exactly:

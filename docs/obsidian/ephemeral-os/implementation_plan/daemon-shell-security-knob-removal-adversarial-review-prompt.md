@@ -64,7 +64,7 @@ code.
   engine (`workspace/src/namespace/mod.rs`) and tests; it is not selectable via
   config.
 - **`command_security` naming scrubbed.** The live e2e dir is `git mv`'d to
-  `cli-operation-e2e-live-test/runtime/shell_security/`, the test rewritten
+  `e2e/runtime/shell_security/`, the test rewritten
   enforce-only (no `E2E_COMMAND_SECURITY_MODE` branching), `prd.yml` no longer
   carries `manager.shell_security`.
 - **Spec reconciled.** §1/§3/§6/§8/§9/§10/§12/§15/§18/§19/§20 updated to describe
@@ -77,7 +77,7 @@ Key files: `namespace-process/src/runner/protocol.rs`,
 `operation/src/services.rs`, `operation/src/command/service/core.rs`,
 `namespace-execution/src/engine.rs`, `workspace/src/namespace/mod.rs`,
 `config/prd.yml`, `sandbox-gateway/src/gateway/main.rs`,
-`cli-operation-e2e-live-test/runtime/shell_security/`.
+`e2e/runtime/shell_security/`.
 
 ## Axis 1 — Architecture cleanness
 

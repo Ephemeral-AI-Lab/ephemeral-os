@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# FROZEN HISTORICAL ARTIFACT (operation-layout exempt, 2026-07-11).
+# Preserves pre-migration E2E paths and is intentionally non-executable.
 """A/B + PERF-WIDTH driver for the squash remount-sweep benchmark.
 
 Runs the SAME deterministic bench scenario across sweep widths. The width is the

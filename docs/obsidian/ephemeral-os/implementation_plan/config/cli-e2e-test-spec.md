@@ -11,7 +11,7 @@ updated: 2026-07-10
 
 # config — CLI e2e test spec
 
-Test plan for a new `config` family in `cli-operation-e2e-live-test/`,
+Test plan for the `config` family in `e2e/`,
 verifying that YAML config values actually govern behavior end to end:
 `config file → gateway/daemon load → observable CLI JSON difference`. Two
 parts per area, following `manager/management/test_spec.md`:
@@ -57,7 +57,7 @@ undisturbed.
 
 ## Conventions
 
-- **CLI-driven, JSON-verified**: every action goes through `sandbox-cli`;
+- **CLI-driven, JSON-verified**: every action goes through a public CLI binary;
   assertions read structured JSON, never gateway/daemon logs.
 - **Generated config, never mutated baseline**: `helpers.make_config(overrides)`
   loads `config/prd.yml` with pyyaml, applies the documented merge semantics
@@ -78,7 +78,7 @@ undisturbed.
 ## Suite layout
 
 ```text
-cli-operation-e2e-live-test/
+e2e/
 └── config/
     ├── __init__.py
     ├── conftest.py                 # family gateway fixture + baseline restore
@@ -285,7 +285,7 @@ Phase 3 (`runtime.command`, `runtime.file`, `runtime.namespace_execution`):
   `TestPhase3`. Phase 4 (gateway/console sections) is intentionally absent:
   gateway bind/PID knobs are exercised implicitly by the family's own gateway
   bring-up, `max_concurrent_connections` has no deterministic CLI observable,
-  and the console is outside this suite's `sandbox-cli` charter.
+  and the console is outside this suite's CLI charter.
 
 ---
 
@@ -376,7 +376,7 @@ Drift between this spec and what landed, per the plan's cross-phase rule:
 ## Decision log — phases 2-4 landed reality (2026-07-10)
 
 1. **P2-F2 probes the layerstack delta view through the authenticated
-   internal call** (`get_observability {"view": "layerstack", ...}`) against
+   concrete call** (`layerstack {"layer_id": ..., ...}`) against
    a materialized layer id (ids not prefixed `B`), since the base layer
    answers no delta and the public CLI carries no delta-limit argument.
 2. **TestPhase3 adaptations** (detailed in the plan's phase-3 drift note):
@@ -388,5 +388,5 @@ Drift between this spec and what landed, per the plan's cross-phase rule:
    rationale held: the family's own gateway bring-up exercised the enlarged
    manager schema plus the (absent → defaults) `gateway` section live, and
    the console got a scripted smoke recorded in the plan instead of a
-   sandbox-cli case. `test_phase_knobs.py` carries zero skip markers; the
+   CLI case. `test_phase_knobs.py` carries zero skip markers; the
    config lane runs 32 tests green.

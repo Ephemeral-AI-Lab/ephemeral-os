@@ -11,6 +11,12 @@ updated: 2026-07-10
 
 # MCP and three-set CLI implementation specification
 
+> **Completed pre-migration implementation record (operation-layout exempt,
+> 2026-07-11):** Package ownership, source paths, and dependency directions in
+> this document describe the tree in which the MCP/CLI cutover landed and are
+> superseded by `operation-migration/spec.md`. The public product-surface
+> decisions remain documented in `cli.md`, `mcp.md`, and `http.md`.
+
 Companion contract: [[operation-contract]]. Progress tracker: [[phase-plan]].
 This plan makes every public
 operation available through exactly one of the three CLI and MCP sets, except

@@ -8,11 +8,16 @@ tags:
   - file
   - namespace
   - implementation-plan
-status: implementation_plan
-updated: 2026-07-02
+status: landed
+updated: 2026-07-11
 ---
 
 # Runtime File Operations — read / write / edit
+
+> **Landed design record (operation-layout exempt, 2026-07-11):** Behavioral
+> contracts remain applicable. Implementation paths below describe the tree in
+> which the feature landed; current ownership follows the operation-migration
+> architecture.
 
 ## Goal
 
@@ -706,9 +711,9 @@ register them in `OPERATIONS`. Refresh the family `description` (blame is no
 longer the only member).
 
 ```text
-sandbox-cli runtime file_read  --path FILE [--offset N] [--limit N] [--workspace-session-id ID]
-sandbox-cli runtime file_write --path FILE --content TEXT [--workspace-session-id ID]
-sandbox-cli runtime file_edit  --path FILE --edits JSON   [--workspace-session-id ID]
+sandbox-runtime-cli --sandbox-id ID file_read  --path FILE [--offset N] [--limit N] [--workspace-session-id ID]
+sandbox-runtime-cli --sandbox-id ID file_write --path FILE --content TEXT [--workspace-session-id ID]
+sandbox-runtime-cli --sandbox-id ID file_edit  --path FILE --edits JSON   [--workspace-session-id ID]
 ```
 
 The protocol/request field is `path`; `--path` maps directly to it.

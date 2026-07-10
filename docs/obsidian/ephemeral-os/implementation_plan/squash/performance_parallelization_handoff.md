@@ -1,5 +1,9 @@
 # LayerStack Squash Performance Parallelization Handoff
 
+> **Historical handoff (operation-layout exempt, 2026-07-11):** The commands,
+> paths, and source anchors below are preserved from the completed optimization
+> investigation and are not current execution instructions.
+
 ## Problem Statement
 
 `sandbox-cli manager checkpoint_squash` is currently correct under live Docker E2E coverage, but its latency is too high for heavy interactive workloads with hundreds of active workspace sessions. The current user-facing concern is that a worst-case live squash invocation near 800-900 ms may be noticeable, and may scale poorly as active workspace/session count rises.

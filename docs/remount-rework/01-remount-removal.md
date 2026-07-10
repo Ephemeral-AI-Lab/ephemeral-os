@@ -1,6 +1,10 @@
 # Doc 1 — Mechanical Removal of Remount
 
-Status: ready-to-implement. Goal: a **deep, mechanical removal** of all remount
+> **Historical implementation specification (operation-layout exempt,
+> 2026-07-11):** Source paths below describe the tree in which the removal
+> landed and are not current ownership guidance.
+
+Status: archived after implementation. Goal: a **deep, mechanical removal** of all remount
 code so the tree builds and tests green with **zero remount references left**.
 This is a pure subtraction — no behavior is re-expressed, nothing is renamed.
 The mechanism is preserved separately in Doc 2 so it can be rebuilt later.

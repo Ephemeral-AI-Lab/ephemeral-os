@@ -6,8 +6,8 @@ tags:
   - manager
   - export
   - implementation-plan
-status: implementation_plan
-updated: 2026-07-07
+status: landed
+updated: 2026-07-11
 ---
 
 # Manager Export Changes — sandbox delta to local filesystem
@@ -18,7 +18,7 @@ Revised four times on 2026-07-07. First, the CLI-surface simplification:
 (`operation/src/services.rs:84`, `detach_workspace_bind_after_base` — it
 panics if the unmount fails), so the daemon has no host-visible write path,
 ever; delivery streams the delta over the daemon protocol. Third, the
-ownership move: export is a **manager operation** (`checkpoint_squash`
+ownership move: export is a **manager operation** (`squash_layerstacks`
 precedent), not a runtime one. Crossing the host boundary is operator
 authority — the manager is the component that already owns host filesystem
 actions (it seeds the base from a host directory at create) and sandbox
@@ -109,8 +109,8 @@ and host writes still converge to O(new bytes) via the skip rule.
 ## CLI surface
 
 One manager operation under the existing `management` family (no new
-family), spec'd in the `sandbox-manager-operations` catalog beside
-`checkpoint_squash`:
+family), declared in the manager module of `sandbox-operation-catalog` beside
+`squash_layerstacks`:
 
 ```text
 sandbox-manager-cli export_changes --sandbox-id ID --dest PATH [--format dir|tar|tar-zst]
@@ -154,7 +154,7 @@ pub const EXPORT_CHANGES_SPEC: CliOperationSpec = CliOperationSpec {
             "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /tmp/delta.tar.zst --format tar-zst",
         ],
     }),
-    related: &["inspect_sandbox", "checkpoint_squash"],
+    related: &["inspect_sandbox", "squash_layerstacks"],
 };
 
 const EXPORT_CHANGES_ARGS: &[ArgSpec] = &[
@@ -240,11 +240,11 @@ partial-progress or resumption path. The bound is O(Σ delta-layer entries)
 for the fold plus O(compressed delta bytes) for the spool write — not the
 image. Squash first collapses the delta layer count and is the documented
 mitigation, but the spec names the ceiling honestly rather than calling
-this "the same profile as `checkpoint_squash`": squash hardlinks winners
+this "the same profile as `squash_layerstacks`": squash hardlinks winners
 and splices the manifest, while export walks metadata, reads winner
 content, and writes a full compressed spool — a strictly heavier call.
 
-Scope and trace follow the checkpoint_squash idiom exactly: the manager CLI
+Scope and trace follow the `squash_layerstacks` idiom exactly: the manager CLI
 op arrives system-scoped with `sandbox_id` in args, and the dispatcher
 rebuilds each forwarded runtime request sandbox-scoped
 (`CliOperationScope::sandbox(...)`). Every forward — start and all chunks —
@@ -536,6 +536,11 @@ Invariants:
 
 ## A. Expected file/folder structure with LoC change
 
+> **Historical implementation estimate (operation-layout exempt, 2026-07-11):**
+> The paths and package names in this estimated footprint describe the tree in
+> which export originally landed. They are retained as design-history evidence,
+> not current ownership guidance.
+
 `(new ~N)` = new file with estimated LoC; `(+N)` = lines added to existing
 file. Calibrated against existing module sizes (`projection/apply.rs` 157,
 `projection/mod.rs` 350, service impls 26–110, manager forward impls ~30).
@@ -811,7 +816,7 @@ compressed before crossing the wire.
 
 ```text
 export starts @v13, lease snapshot [L12 L11 L10 … B]
-checkpoint_squash runs mid-spool:
+squash_layerstacks runs mid-spool:
   export lease's newest layer is a boundary → squash blocks straddling it;
   replaced layers the export still reads stay on disk (never mutate or
   delete a leased layer dir — existing law, no new code)
@@ -858,6 +863,10 @@ operations compose: squash to compact, export to deliver.
   layer digests in `.layer-metadata/` remain the integrity story.
 
 ## Decision log
+
+> **Historical decision record (operation-layout exempt):** Dated operation
+> names and source paths below are preserved as recorded and are not current
+> routing or ownership guidance.
 
 1. **Two user arguments beyond the sandbox selector** (user review,
    2026-07-07): `--dest`, `--format`. Incrementality, deletion policy,

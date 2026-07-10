@@ -1,6 +1,10 @@
 # Crate Core — Record Model + Observer + Daemon Swap (drop SQLite)
 
-Status: ready-to-implement.
+> **Historical implementation specification (operation-layout exempt,
+> 2026-07-11):** Package names and source paths below describe the tree in
+> which this slice landed and are not current ownership guidance.
+
+Status: archived after implementation.
 
 This is the **implementation** spec for the crate-core slice of the observability
 rework — the second vertical to ship after the layerstack slice
