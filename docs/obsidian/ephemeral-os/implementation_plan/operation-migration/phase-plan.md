@@ -52,7 +52,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 2 | Merge and refeature the catalogs | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 3 | Extract the shared gateway client | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 5 | Clean the runtime application in place | blocked | — | — | — |
+| 5 | Clean the runtime application in place | in progress | 2026-07-10 | — | — |
 | 6 | Extract observability application, remove multiplexing | blocked | — | — | — |
 | 7 | Update documentation, scripts, law statements | blocked | — | — | — |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
@@ -482,7 +482,7 @@ repointing are one commit.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
-| | | | | |
+| 2026-07-10 | Phase 5 started | Dashboard entry criteria and Phase 4 acceptance checklist | Phase 4 is approved and every Phase 4 acceptance item is checked; Phase 5 is unblocked. | None. |
 
 ---
 
