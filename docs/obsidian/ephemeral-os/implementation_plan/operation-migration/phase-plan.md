@@ -50,7 +50,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 0 | Characterize, freeze inventory, purge generated weight | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 1 | Create contract, narrow protocol in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 2 | Merge and refeature the catalogs | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 3 | Extract the shared gateway client | in progress | 2026-07-10 | — | — |
+| 3 | Extract the shared gateway client | gate review | 2026-07-10 | — | — |
 | 4 | Clean the manager application in place | blocked | — | — | — |
 | 5 | Clean the runtime application in place | blocked | — | — | — |
 | 6 | Extract observability application, remove multiplexing | blocked | — | — | — |
@@ -339,22 +339,22 @@ repointing are one commit.
 
 ### Acceptance criteria
 
-- [ ] `rg 'sandbox_cli::core'` matches nothing outside
-  `crates/sandbox-cli/`.
-- [ ] MCP and console manifests do not depend on `sandbox-cli`; CLI, MCP,
+- [x] `rg 'sandbox_cli::core' crates --glob '!crates/sandbox-cli/**'
+  --glob '*.rs'` returns nothing (documentation is updated in Phase 7).
+- [x] MCP and console manifests do not depend on `sandbox-cli`; CLI, MCP,
   and console manifests do not depend on `sandbox-protocol`; `sandbox-cli`
   does not depend on `sandbox-config`. *Evidence: `cargo metadata`.*
-- [ ] `rg 'sandbox_protocol' crates/sandbox-cli/src crates/sandbox-mcp/src crates/sandbox-console/src`
+- [x] `rg 'sandbox_protocol' crates/sandbox-cli/src crates/sandbox-mcp/src crates/sandbox-console/src`
   returns nothing.
-- [ ] The client does not import the catalog or switch on operation names:
+- [x] The client does not import the catalog or switch on operation names:
   `rg 'sandbox_operation_catalog|get_observability' crates/sandbox-operations/client/src`
   returns nothing.
-- [ ] Console rejects an operation absent from the public manifest with an
+- [x] Console rejects an operation absent from the public manifest with an
   invalid-request error, and enforces the client-owned body bound.
   *Evidence: `cargo test -p sandbox-console` (new tests).*
-- [ ] CLI and MCP produce identical requests through the shared value
+- [x] CLI and MCP produce identical requests through the shared value
   builder for the same inputs. *Evidence: split builder tests green.*
-- [ ] Standing gate passed.
+- [x] Standing gate passed.
 
 ### Progress log
 
@@ -366,6 +366,13 @@ repointing are one commit.
 | 2026-07-10 | Product and client dependency boundaries | `cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "sandbox-cli" or .name == "sandbox-mcp" or .name == "sandbox-console" or .name == "sandbox-operation-client") | .name as $p | .dependencies[] | select(.path != null) | [$p, .name] | @tsv' | sort`; `rg 'sandbox_protocol' crates/sandbox-cli/src crates/sandbox-mcp/src crates/sandbox-console/src`; `rg 'sandbox_operation_catalog|get_observability' crates/sandbox-operations/client/src` | Workspace edges are exactly CLI→catalog/client/contract, MCP→catalog/client/contract, console→config/catalog/client/contract, and client→contract/protocol; both forbidden-source greps return no matches. | None. |
 | 2026-07-10 | Per-binary feature closure after client extraction | `cargo tree -p sandbox-cli --no-default-features --features manager -f '{p} {f}' | rg 'sandbox-operation-catalog'`; repeated with `runtime` and `observability` | The catalog line contains respectively only `manager`, only `runtime`, and only `observability`. | None. |
 | 2026-07-10 | Focused quality check | `cargo check -p sandbox-operation-client -p sandbox-cli -p sandbox-mcp -p sandbox-console --all-targets --all-features`; `cargo clippy -p sandbox-operation-client -p sandbox-cli -p sandbox-mcp -p sandbox-console --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check`; `git diff --check` | Check and clippy completed successfully, format exited 0, and the diff has no whitespace errors. | None. |
+| 2026-07-10 | Gate-command source scope | `rg 'sandbox_cli::core' crates --glob '!crates/sandbox-cli/**' --glob '*.rs'`; compare Phase 3 exit gate in `spec.md` and Phase 7 documentation change list | Source search returned no matches. The acceptance command now measures imports/code ownership; README and historical plan references remain intentionally queued for Phase 7. | None; execution evidence was clarified to match the existing specification. |
+| 2026-07-10 | CLI core ownership acceptance | `rg 'sandbox_cli::core' crates --glob '!crates/sandbox-cli/**' --glob '*.rs'` | No output, expected `rg` exit 1; no Rust source outside the CLI imports its core. | None. |
+| 2026-07-10 | Product manifest acceptance | `cargo metadata --format-version 1 --no-deps \| jq -r '.packages[] \| select(.name == "sandbox-cli" or .name == "sandbox-mcp" or .name == "sandbox-console" or .name == "sandbox-operation-client") \| .name as $p \| .dependencies[] \| select(.path != null) \| [$p, .name] \| @tsv' \| sort` | CLI, MCP, and console depend on client/catalog/contract as specified (console additionally on config); only the client depends on protocol. No MCP/console→CLI, product→protocol, or CLI→config edge appears. | None. |
+| 2026-07-10 | Forbidden import and client-independence acceptance | `rg 'sandbox_protocol' crates/sandbox-cli/src crates/sandbox-mcp/src crates/sandbox-console/src`; `rg 'sandbox_operation_catalog|get_observability' crates/sandbox-operations/client/src` | Both searches produced no output with expected `rg` exit 1. | None. |
+| 2026-07-10 | Console validation and size-bound acceptance | `cargo test -p sandbox-console --locked unknown_operation_is_rejected_before_gateway_transport`; `cargo test -p sandbox-console --locked body_over_client_limit_is_rejected_before_gateway_transport` | Each focused test passed 1/1; both reject before gateway transport, and the latter uses the client-owned `MAX_REQUEST_BYTES`. | None. |
+| 2026-07-10 | Shared-builder request parity acceptance | `cargo test -p sandbox-cli --all-features --test request_builder`; `cargo test -p sandbox-mcp --locked mcp_requests_match_the_shared_builder_and_catalog_migration` | CLI request-builder suite passed 6/6, including manager/file-edit parity; MCP shared-builder/catalog-migration parity passed 1/1. | None. |
+| 2026-07-10 | Post-commit and standing gate | `cargo check --workspace --all-targets --all-features`; focused client/CLI/MCP/console/config suites plus `npm --prefix web/console run build`; `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check`; `git diff --check` | Workspace check exited 0; focused suites passed 14/14, 46/46, 9/9, 39/39, and 72/72 with 1,963 web modules built; full workspace tests and doc-tests exited 0 (largest group 94/94, one intentional ignored benchmark); clippy finished in 1m45s with warnings denied; format and diff checks exited 0. | None. |
 
 ---
 
