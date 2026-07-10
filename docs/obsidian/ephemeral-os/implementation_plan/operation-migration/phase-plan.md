@@ -512,16 +512,16 @@ one commit.
   `crates/sandbox-observability/application/`; update workspace member
   paths, `[workspace.dependencies]` path entries, and the
   `bin/start-sandbox-docker-gateway` freshness watch.
-- [ ] Extract structured query/response behavior from
+- [x] Extract structured query/response behavior from
   `sandbox-daemon/src/observability/{service,layerstack,view/**}` into the
   application (`query.rs`, `registry.rs`, `response.rs`, `ports.rs`);
   sampling, rotation, and lifecycle stay in daemon.
-- [ ] Define the app-owned input port with neutral DTOs for the runtime
+- [x] Define the app-owned input port with neutral DTOs for the runtime
   snapshot types; use `sandbox-observability` primitives
   (`Reader`/`RawFilter`) and `sandbox-runtime-layerstack` data types
   (`LayerRef`, `StackObservation`, `LayerDeltaDescription`,
   `LayerDeltaEntryKind`) directly; add the daemon-owned adapter newtype.
-- [ ] Move the pure query/structured-response tests from
+- [x] Move the pure query/structured-response tests from
   `sandbox-daemon/tests/unit/{observability,observability_layerstack}.rs`;
   keep daemon wiring/lifecycle tests in place.
 - [ ] Route the six declared `(scope kind, operation)` combinations from
@@ -565,6 +565,7 @@ one commit.
 | --- | --- | --- | --- | --- |
 | 2026-07-10 | Phase 6 started | Dashboard entry criteria and Phase 5 acceptance checklist | Phase 5 is approved and every Phase 5 acceptance item is checked; Phase 6 is unblocked. | None. |
 | 2026-07-10 | Atomic observability namespace conversion | `git diff-tree -r -M100% --summary d50d77c77^ d50d77c77 -- crates/sandbox-observability`; `find crates/sandbox-observability -mindepth 1 -maxdepth 1 -print \| sort`; `cargo metadata --format-version 1 --no-deps`; `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-observability -p sandbox-observability-application --all-features` | Commit `d50d77c77` moved the primitives manifest, source, and all nine tests at 100% identity; the namespace contains exactly `application/` and `primitives/`; metadata resolves both packages at their new paths; workspace check and both package suites passed. The gateway freshness watch now covers contract, catalog, primitives, and application inputs. | None. |
+| 2026-07-10 | Observability application extraction, input port, daemon adapter, and pure tests | `cargo metadata --format-version 1 --no-deps \| jq -r '.packages[] \| select(.name == "sandbox-observability-application") \| .dependencies[] \| [.name, .kind, (.features \| join(",")), (.uses_default_features \| tostring)] \| @tsv'`; `cargo clippy -p sandbox-observability-application -p sandbox-daemon --all-targets --all-features -- -D warnings`; `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-observability-application -p sandbox-daemon --all-features` | Commit `1431b41e5` moved query/response behavior into the application, introduced neutral snapshot DTOs plus the app-owned input port and daemon adapter, and retained sampling/rotation/lifecycle in daemon. Metadata showed exactly the four permitted workspace dependencies plus external `serde_json`; strict clippy and workspace check passed; daemon passed 51/51 and application passed 8/8, including registry bijection, error precedence, nested trace/event folding, layerstack, and concrete DTO mapping. | None. |
 
 ---
 
