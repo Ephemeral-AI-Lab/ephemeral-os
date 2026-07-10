@@ -1,0 +1,349 @@
+---
+title: config — phased implementation plan
+tags:
+  - ephemeral-os
+  - config
+  - implementation-plan
+status: implementation_plan
+updated: 2026-07-10
+---
+
+# config — phased implementation plan
+
+Execution plan for the two specs in this folder:
+
+- `spec.md` — config consolidation: hardcoded policy values into `prd.yml`
+- `cli-e2e-test-spec.md` — the `config` CLI e2e test family
+
+## Plan rules
+
+```text
+Gate rule: a phase is DONE only when every box in its acceptance
+criteria is checked. No work item of phase N+1 starts before phase N is
+done. Acceptance boxes are checked with evidence (a passing command, a
+grep with empty output, a green pytest id) — never on intent.
+Ordering rule: the e2e harness lands first (phase 0). Every production
+phase after it ships together with the e2e tests that observe it, in
+the same phase — landing a knob and deferring its test is not done.
+Shipping rule: each phase is independently shippable and committed to
+main (project convention: no branches). config/prd.yml is not edited in
+any phase; config/bench.yml changes only in phase 1, exactly as spec'd.
+```
+
+Resolution of a spec ambiguity: `daemon.http.export.token_ttl_s` reads
+`sandbox-protocol/src/export_stream.rs:16`, so it needs the protocol
+injection pattern. It lands in **phase 2** with `ProtocolLimits`, not phase
+1. Phase 1's `daemon.http.export` covers the two daemon-owned constants
+(`frame_bytes`, `channel_frames`) only.
+
+## Phase tracker
+
+| Phase | Name | Depends on | Status |
+| --- | --- | --- | --- |
+| 0 | e2e config family — harness + present-day coverage | — | not started |
+| 1 | bench-path knobs + env-var retirement | 0 | blocked |
+| 2 | daemon service limits + injection patterns | 1 | blocked |
+| 3 | runtime operation caps | 2 | blocked |
+| 4 | host-side surfaces (gateway, console, docker timing) | 3 | blocked |
+
+## Global definition of done (applies to every phase, in addition to its own criteria)
+
+- [ ] `cargo build` succeeds
+- [ ] `cargo test` (whole workspace) passes
+- [ ] `cargo clippy --all-targets` passes with no new violations
+- [ ] `cargo fmt` produces no diff
+- [ ] No inline comments added to production code; no test code under any `src/`
+- [ ] `git diff config/prd.yml` is empty
+- [ ] Crate boundaries hold: no leaf crate (`sandbox-protocol`,
+      `sandbox-observability`, `sandbox-runtime/layerstack`,
+      `namespace-execution`) gains a `sandbox-config` dependency
+      (`grep -l sandbox-config crates/{sandbox-protocol,sandbox-observability}/Cargo.toml crates/sandbox-runtime/{layerstack,namespace-execution}/Cargo.toml` → empty)
+- [ ] Phase committed to `main`
+
+---
+
+## Phase 0 — e2e config family: harness + present-day coverage
+
+Builds `cli-operation-e2e-live-test/config/` per `cli-e2e-test-spec.md`. No
+production Rust changes. Proves the two-lane loading model against the
+config surface that exists today, so phases 1–4 each land against a working
+verification harness.
+
+### Work items
+
+- [ ] `config/__init__.py`, `config/conftest.py` — family-scoped gateway
+      fixture + session finalizer restoring the baseline gateway
+- [ ] `config/helpers.py` — `make_config(overrides)` (pyyaml deep-merge:
+      objects merge, scalars/arrays replace, output under pytest tmp),
+      `rewrite_daemon_yaml`, `gateway_with_config` context manager,
+      in-sandbox command/transcript helpers
+- [ ] `pytest.ini` — add `config` marker (serial family)
+- [ ] `test_daemon_reload.py` — A1 features F1–F7
+- [ ] `test_validation.py` — A2 features F1–F6
+- [ ] `test_manager_section.py` — A3 features F1–F5
+- [ ] `test_phase_knobs.py` — `TestPhase1/2/3` classes, all skip-marked with
+      reason `"config consolidation phase N not landed"`
+
+### Acceptance criteria
+
+- [ ] `pytest -m config` runs the family serially and green on a machine with
+      Docker up (`pytest config` equivalent)
+- [ ] `pytest -m "not config"` still selects the pre-existing suite; running
+      `manager/` after a full `config/` run passes (baseline gateway restore
+      verified in practice, not just in teardown code)
+- [ ] Lane A mechanics proven: `test_rewrite_applies_to_next_sandbox` green
+      (rewrite observed by next create; prior sandbox unaffected)
+- [ ] Deterministic behavior probes green: mount-mask visibility (A1-F3),
+      `setup_timeout_s: 0.001` session failure with timeout-classed error
+      (A1-F4), observability toggle (A1-F6)
+- [ ] Validation negatives green on both lanes: unknown daemon key and
+      invalid values fail `create_sandbox` with structured error + rollback
+      (A2-F1..F3, F6); unknown/invalid manager key fails gateway start
+      (A2-F4, F5)
+- [ ] Lane B probes green: `container_env` nonce round-trip (A3-F1/F2);
+      `memory_bytes` vs `/sys/fs/cgroup/memory.max` (A3-F3, conditional
+      skip allowed only on missing cgroup file)
+- [ ] `test_phase_knobs.py` collects as skipped (3 classes, reasons name the
+      pending phase)
+- [ ] `git status` shows `config/prd.yml` and `config/bench.yml` untouched;
+      generated YAMLs live only under pytest tmp
+- [ ] Suite README (`cli-operation-e2e-live-test/README.md`) layout section
+      updated to list the `config/` family
+
+---
+
+## Phase 1 — bench-path knobs + env-var retirement
+
+`spec.md` tier 1 minus `token_ttl_s` (see resolution note). The set with
+demonstrated tuning demand; retires all three `EOS_*` side channels and the
+`bench.yml` container_env smuggle.
+
+### Work items
+
+- [ ] Schema: `configs/runtime.rs` — new `runtime.layerstack` subsection
+      (`remount_sweep_width`, `export_chunk_bytes`, `spool_zstd_level`),
+      `#[serde(default)]`, validation (`width >= 1`, `chunk >= 1`,
+      `zstd level 1..=22`)
+- [ ] Schema: `configs/manager.rs` — new `manager.export` subsection
+      (`max_stream_bytes`, `max_decompressed_bytes`, `max_apply_entries`),
+      defaults preserving today's values, validation `>= 1`
+- [ ] Schema: `configs/daemon.rs` — new `daemon.http.export` subsection
+      (`frame_bytes >= 4096`, `channel_frames >= 1`)
+- [ ] `configs/validate.rs` — range helpers needed above
+- [ ] Wiring: squash remount sweep reads width from `RuntimeConfig`
+      (constructor path); `sweep_width()` env fn deleted
+      (`operation/src/layerstack/service/impls/squash.rs`)
+- [ ] Wiring: export chunk fallback cap and spool zstd level flow from
+      `RuntimeConfig` through the operation layer (`emit_stream` takes the
+      level as a parameter; layerstack crate stays config-free)
+- [ ] Wiring: `sandbox-manager/src/export_apply.rs` — three caps from
+      `ManagerConfig`; `env_cap`, `max_decompressed_bytes()`,
+      `max_apply_entries()` env fns deleted
+- [ ] Wiring: daemon HTTP export stream takes `frame_bytes`/`channel_frames`
+      as constructor params (`sandbox-daemon/src/http/export.rs`)
+- [ ] `config/bench.yml` — `container_env.EOS_REMOUNT_SWEEP_WIDTH` smuggle
+      replaced by `runtime.layerstack.remount_sweep_width: __SWEEP_WIDTH__`;
+      header comment updated
+- [ ] Bench driver (`ab_driver.py`) substitution updated to the YAML key
+- [ ] Schema tests in `crates/sandbox-config/tests/` — defaults, overrides,
+      validation rejections for all three new subsections
+- [ ] Unskip + adapt `TestPhase1` in `test_phase_knobs.py` (P1-F1..P1-F4)
+
+### Acceptance criteria
+
+- [ ] `grep -rn "EOS_REMOUNT_SWEEP_WIDTH\|EOS_EXPORT_MAX_DECOMPRESSED_BYTES\|EOS_EXPORT_MAX_ENTRIES" crates/ config/ cli-operation-e2e-live-test/` → empty
+- [ ] `grep -rn "env_cap\|std::env::var" crates/sandbox-manager/src/export_apply.rs crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs` → empty
+- [ ] `cargo test -p sandbox-config` passes with new schema tests covering:
+      field defaults equal today's constants; unknown key under each new
+      subsection rejected; each validation bound rejected at its edge
+      (width 0, zstd 0 and 23, frame_bytes 4095)
+- [ ] A YAML without any of the new keys deserializes to today's behavior
+      (defaults test asserts exact values: 4, 2 MiB, 3, 2 GiB, 8 GiB, 1e6,
+      1 MiB, 4)
+- [ ] `pytest -m config` fully green including unskipped `TestPhase1`:
+      P1-F1 sweep-width 1 vs 4 squash invariance, P1-F2 stream cap error,
+      P1-F3 entry cap error, P1-F4 frame-shape checksum invariance
+- [ ] Bench config round-trip: generated bench arm YAML (width substituted)
+      loads through `sandbox-config` (schema test or bench dry-run) and
+      `bench.yml` contains no `EOS_` string (`grep EOS_ config/bench.yml` →
+      empty)
+- [ ] Squash + export e2e regressions green: existing
+      `manager/management/squash` and `export` suites pass unchanged
+- [ ] Global definition of done checked
+
+---
+
+## Phase 2 — daemon service limits + injection patterns
+
+`spec.md` tier 2. Establishes the two injection patterns (protocol value
+type, leaf observability mapping) that phase 3 reuses.
+
+### Work items
+
+- [ ] Schema: `configs/daemon.rs` — `daemon.server` gains
+      `max_concurrent_connections >= 1`, `max_request_bytes >= 65536`,
+      `request_read_timeout_s > 0`; `daemon.http.export` gains
+      `token_ttl_s >= 1`; new `daemon.http.forward`
+      (`connect_timeout_s`, `response_timeout_s`, both `> 0`)
+- [ ] Schema: `configs/observability.rs` — `max_line_bytes`, new `sampling`
+      (`max_walk_nodes >= 1`, `max_walk_depth >= 1`) and `views`
+      (`resource_window_ms >= 1`, `layer_delta_default_limit >= 1`,
+      `layer_delta_max_limit >= 1`, cross-field default ≤ max)
+- [ ] `sandbox-protocol/src/limits.rs` — `ProtocolLimits` value type
+      (`max_request_bytes`, `request_read_timeout_s`) with `Default`
+      preserving today's constants; export-stream token TTL moved to the
+      same pattern; protocol crate gains no config dependency
+- [ ] Daemon wiring: `serve.rs` constructs `ProtocolLimits` from
+      `daemon.server` and threads it down the request read path; RPC
+      connection semaphore takes the config value
+      (`rpc/lifecycle.rs` const deleted); forward proxy timeouts as
+      constructor params; export token TTL from config
+- [ ] Observability wiring: daemon's `ObserverConfig` mapping extended with
+      `max_line_bytes` and the two sampling budgets; leaf consts in
+      `record.rs`, `collect/disk.rs`, `collect/layerstack.rs` replaced by
+      injected values (one shared budget for both walks, decision 8)
+- [ ] Views wiring: `observability/mod.rs` window cap and
+      `view/layerstack.rs` delta limits from config
+- [ ] Schema tests: defaults, rejections, cross-field rule
+- [ ] Unskip + adapt `TestPhase2` (P2-F1 request cap, P2-F2 view limit)
+
+### Acceptance criteria
+
+- [ ] `grep -rn "const MAX_CONCURRENT_CONNECTIONS\|const MAX_REQUEST_BYTES\|const REQUEST_READ_TIMEOUT_S\|const EXPORT_STREAM_TOKEN_TTL_S" crates/sandbox-daemon/src crates/sandbox-protocol/src` shows only the `ProtocolLimits`
+      `Default` impl values, no call-site consts
+- [ ] `sandbox-protocol/Cargo.toml` and `sandbox-observability/Cargo.toml`
+      unchanged w.r.t. dependencies (no `sandbox-config` edge)
+- [ ] `cargo test -p sandbox-config` passes: new fields default to today's
+      values (256, 16 MiB, 30.0, 30, 10.0, 30.0, 16 KiB, 1024, 64, 600000,
+      500, 5000); `layer_delta_default_limit > layer_delta_max_limit`
+      rejected
+- [ ] `cargo test -p sandbox-daemon -p sandbox-protocol` passes, including a
+      test that a daemon config with a lowered `max_request_bytes` rejects
+      an oversized request envelope
+- [ ] `pytest -m config` fully green including unskipped `TestPhase2`:
+      P2-F1 64 KiB request cap rejects an oversized `write_file` while the
+      default arm accepts it; P2-F2 layer-delta view honors a lowered
+      default limit
+- [ ] Observability e2e regression: phase 0's `test_observability_toggle`
+      still green (mapping extension didn't break enable/disable)
+- [ ] Export e2e regression: token-gated export stream suite passes with the
+      default TTL (existing export tests) — TTL now flowing through config
+- [ ] Global definition of done checked
+
+---
+
+## Phase 3 — runtime operation caps
+
+`spec.md` tier 3. Mechanical application of phase 2's construction-injection
+pattern across command/file/namespace-execution services.
+
+### Work items
+
+- [ ] Schema: `configs/runtime.rs` — new `runtime.command`
+      (`max_active >= 1`, `read_lines_default >= 1`, `read_lines_max >= 1`,
+      cross-field default ≤ max), new `runtime.file`
+      (`read_lines_default`, `max_output_bytes`, `max_edit_bytes`,
+      `max_list_entries`, all `>= 1`), `runtime.namespace_execution` gains
+      `freeze_budget_s >= 0`, `stdin_write_deadline_s > 0`,
+      `max_terminal_entries >= 1`, `max_transcript_window_bytes >= 1`,
+      `max_runner_result_bytes >= 1`
+- [ ] Wiring: command service (`core.rs` consts deleted;
+      `COMMAND_ENGINE_SETUP_TIMEOUT_S` collapsed into
+      `runtime.workspace.setup_timeout_s` — decision 6);
+      `read_command_lines.rs` limits from config
+- [ ] Wiring: file service (`support.rs`, `impls/list.rs` consts deleted;
+      values via service construction)
+- [ ] Wiring: namespace-execution (freeze budget already parameterized via
+      `QuiesceSpec.freeze_budget` — `remount.rs:235` passes the config value
+      instead of `DEFAULT_FREEZE_BUDGET`; stdin deadline, terminal retention
+      via existing `set_terminal_retention`, transcript window, runner
+      result cap through construction)
+- [ ] Schema tests: defaults, rejections, both cross-field rules
+- [ ] Unskip + adapt `TestPhase3` (P3-F1..P3-F5)
+
+### Acceptance criteria
+
+- [ ] `grep -rn "COMMAND_ENGINE_SETUP_TIMEOUT_S" crates/` → empty (collapsed,
+      not renamed)
+- [ ] `grep -rn "const MAX_ACTIVE_COMMANDS\|const MAX_OUTPUT_BYTES\|const MAX_EDIT_BYTES\|const MAX_LIST_ENTRIES\|const MAX_TERMINAL_ENTRIES\|const MAX_TRANSCRIPT_WINDOW_BYTES\|const MAX_RUNNER_RESULT_BYTES\|const STDIN_WRITE_DEADLINE\|const DEFAULT_FREEZE_BUDGET" crates/sandbox-runtime` shows at most `Default`-impl
+      definitions in config-value types, no live call-site consts
+- [ ] `cargo test -p sandbox-config -p sandbox-runtime` passes; defaults
+      equal today's constants (256, 200/1000, 2000, 256 KiB, 4 MiB, 2000,
+      0.5, 2.0, 512, 1 MiB, 8 MiB)
+- [ ] `pytest -m config` fully green including unskipped `TestPhase3`:
+      P3-F1 list truncation at 5, P3-F2 read default 10 lines, P3-F3 1 KiB
+      edit cap error, P3-F4 `max_active: 1` admission error, P3-F5
+      `max_terminal_entries: 2` eviction (oldest drain → missing entry)
+- [ ] Runtime e2e regressions green: existing file-operation and
+      workspace-session suites pass with default config (behavioral
+      defaults unchanged end to end)
+- [ ] Global definition of done checked
+
+---
+
+## Phase 4 — host-side surfaces
+
+`spec.md` tier 4: gateway and console sections, Docker/manager timing knobs.
+No new e2e knob tests per `cli-e2e-test-spec.md` (phase 4 exclusion
+rationale recorded there); coverage is implicit — the config family's own
+gateway bring-up and the whole suite exercise these paths.
+
+### Work items
+
+- [ ] Schema: `configs/gateway.rs` reworked from bare constants into a
+      `Deserialize` `gateway` section (`bind_addr` non-empty socket addr,
+      `pid_path`, `max_concurrent_connections >= 1`), defaults preserving
+      today's constants
+- [ ] Schema: new `configs/console.rs` — `console` section (bind + five
+      timeouts + cache TTL, `_s` f64, all `> 0`)
+- [ ] Schema: `configs/manager.rs` — `manager.docker` gains
+      `connect_timeout_s`, `stop_timeout_s`, `readiness_poll_ms`,
+      `port_publish_attempts`, `port_publish_retry_delay_ms`; new
+      `manager.observability_snapshot` (`max_concurrent_requests >= 1`,
+      `timeout_ms >= 1`); new `manager.local_daemon` (`ready_timeout_s`,
+      `stop_timeout_s`, both `> 0`)
+- [ ] Wiring: gateway `main.rs` reads optional `gateway` section; precedence
+      CLI flag > YAML > default implemented and unit-tested
+- [ ] Wiring: console gains `--config-yaml` / `SANDBOX_CONSOLE_CONFIG_YAML`
+      reading the `console` section; existing flag/env overrides outrank
+      YAML
+- [ ] Wiring: provider-docker consts (`engine.rs:29,571-572`,
+      `installer.rs:21-23`) and manager consts
+      (`observability_snapshot.rs:13-14`, `daemon_install.rs:27-30`
+      timeouts; polls stay hardcoded per spec non-goals) replaced by config
+      values
+- [ ] Schema tests: defaults, rejections, gateway/console precedence tests
+- [ ] `config/README.md` updated: section list now includes `gateway` and
+      `console`; static-values paragraph unchanged
+
+### Acceptance criteria
+
+- [ ] `cargo test -p sandbox-config -p sandbox-gateway -p sandbox-console`
+      passes; precedence tests prove flag > YAML > default for gateway
+      socket and console bind
+- [ ] A config with only today's `prd.yml` sections starts the gateway and
+      console unchanged (defaults test + live check via phase 0 family
+      gateway bring-up, which passes an explicit `SANDBOX_GATEWAY_CONFIG_YAML`)
+- [ ] `grep -rn "const CONNECT_TIMEOUT_SECS\|const STOP_TIMEOUT_SECS\|const READINESS_POLL\|const PORT_PUBLISH\|const DAEMON_READY_TIMEOUT\|const DAEMON_STOP_TIMEOUT\|const MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS\|const DEFAULT_DAEMON_SNAPSHOT_TIMEOUT_MS" crates/sandbox-provider-docker/src crates/sandbox-manager/src` shows at most `Default`-impl definitions
+      (readiness/stop *poll* constants may remain — spec non-goal — but the
+      four timeout/attempt knobs must be config-fed)
+- [ ] Full live suite green end to end: `pytest` (all families) — the
+      gateway the suite starts now loads its own `gateway` section
+- [ ] `pytest -m config` green: A2-F4/F5 (invalid manager key/value fails
+      gateway start) still behave identically with the enlarged manager
+      schema
+- [ ] Console smoke: console starts against a YAML with a `console` section
+      and serves its health probe (manual or scripted check recorded here)
+- [ ] Global definition of done checked
+
+---
+
+## Cross-phase completion checklist (the plan is done when)
+
+- [ ] All four consolidation phases + phase 0 committed to `main`, each gated
+- [ ] `test_phase_knobs.py` contains zero skip markers
+- [ ] The maximal YAML shape in `spec.md` loads through `sandbox-config` in
+      one piece (a final schema test deserializes the full example document)
+- [ ] `spec.md` and `cli-e2e-test-spec.md` statuses flipped from
+      `implementation_plan` to done/landed, with any drift between spec and
+      landed reality recorded in their decision logs
