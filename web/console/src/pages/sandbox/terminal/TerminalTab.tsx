@@ -151,7 +151,6 @@ export function TerminalTab() {
   return (
     <div className="flex h-full min-h-0">
       <SessionSidebar
-        sandboxId={sandboxId}
         workspaces={workspaces}
         selected={selectedSession}
         onSelect={(sessionId) => {
@@ -160,11 +159,6 @@ export function TerminalTab() {
           else next.delete("session");
           setSearchParams(next, { replace: true });
         }}
-        onChanged={() =>
-          void queryClient.invalidateQueries({
-            queryKey: ["sandbox", sandboxId, "snapshot"],
-          })
-        }
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div ref={ledgerPaneRef} className="min-h-0 flex-1 overflow-y-auto p-3">

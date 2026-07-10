@@ -779,9 +779,13 @@ inserts a `view` argument or rewrites the operation name.
    remain unchanged after all in-repository clients and servers are migrated
    together; the web console changes only its observability `op` values.
 3. The console `/api/rpc` endpoint rejects operations absent from the public
-   route manifest with a console-side invalid-request error. Today such
-   requests are forwarded and fail downstream; the error origin moves, the
-   envelope shape does not.
+   route manifest with a console-side invalid-request error. Requests for
+   canonical internal operations were previously forwarded and could be
+   accepted downstream; the public endpoint no longer exposes that path.
+   Consequently, the web console retires its manual workspace-session create
+   and destroy controls, while preserving session browsing, filtering,
+   selection, and public command auto-publish behavior. The rejected request
+   envelope shape is unchanged.
 4. The console's HTTP request-body size bound is owned by the shared client
    (which re-exports the wire limit it enforces); console no longer imports
    `sandbox-protocol` for it. The numeric bound is unchanged.
