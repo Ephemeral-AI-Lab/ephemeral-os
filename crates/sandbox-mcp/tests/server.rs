@@ -400,7 +400,6 @@ fn lifecycle_and_tools_list_match_all_three_catalogs() {
             "file_list",
             "create_workspace_session",
             "destroy_workspace_session",
-            "get_observability",
             "squash_layerstack",
             "export_layerstack",
             "read_export_chunk",
@@ -469,7 +468,7 @@ fn assert_matches_shared_value_builder(
     let request_id = received["request_id"]
         .as_str()
         .expect("received request id");
-    let mut expected = build_request_from_values_with_id(
+    let expected = build_request_from_values_with_id(
         BuildRequestValueInput {
             spec,
             scope_policy: route.scope_policy,
@@ -479,18 +478,6 @@ fn assert_matches_shared_value_builder(
         request_id,
     )
     .expect("shared value request");
-    if let Some(target) =
-        sandbox_operation_catalog::internal::migration::resolve(&expected.op, expected.scope.kind())
-    {
-        expected.op = target.operation.to_owned();
-        let expected_arguments = expected.args.as_object_mut().expect("request arguments");
-        for argument in target.arguments {
-            expected_arguments.insert(
-                argument.name.to_owned(),
-                Value::String(argument.value.to_owned()),
-            );
-        }
-    }
     let mut expected = serde_json::to_value(expected).expect("serialize expected request");
     let expected = expected.as_object_mut().expect("expected request object");
     expected.insert(
@@ -502,7 +489,7 @@ fn assert_matches_shared_value_builder(
 }
 
 #[test]
-fn mcp_requests_match_the_shared_builder_and_catalog_migration() {
+fn mcp_requests_match_the_shared_builder() {
     let cases = [
         (
             OperationSet::Management,
@@ -521,7 +508,27 @@ fn mcp_requests_match_the_shared_builder_and_catalog_migration() {
         ),
         (
             OperationSet::Observability,
+            "snapshot",
+            json!({"sandbox_id": "sbox-observe"}),
+        ),
+        (
+            OperationSet::Observability,
             "trace",
+            json!({"sandbox_id": "sbox-observe"}),
+        ),
+        (
+            OperationSet::Observability,
+            "events",
+            json!({"sandbox_id": "sbox-observe", "last_n": 10}),
+        ),
+        (
+            OperationSet::Observability,
+            "cgroup",
+            json!({"sandbox_id": "sbox-observe"}),
+        ),
+        (
+            OperationSet::Observability,
+            "layerstack",
             json!({"sandbox_id": "sbox-observe"}),
         ),
     ];
@@ -587,15 +594,12 @@ fn tools_call_routes_every_scope_and_preserves_native_edit_arrays() {
         success.clone(),
     );
     assert_eq!(structured(&response), &success);
-    assert_eq!(request["op"], "get_observability");
+    assert_eq!(request["op"], "trace");
     assert_eq!(
         request["scope"],
         json!({"kind": "sandbox", "sandbox_id": "sbox-observe"})
     );
-    assert_eq!(
-        request["args"],
-        json!({"trace_id": "last", "view": "trace"})
-    );
+    assert_eq!(request["args"], json!({"trace_id": "last"}));
     assert_common_wire_fields(&request);
 
     let edits = json!([
@@ -677,11 +681,6 @@ fn invalid_and_hidden_calls_fail_before_gateway_dispatch() {
             "create_sandbox",
             json!({"sandbox_id": "sbox"}),
             "unknown operation: create_sandbox",
-        ),
-        (
-            "get_observability",
-            json!({"sandbox_id": "sbox"}),
-            "unknown operation: get_observability",
         ),
     ];
     for (tool, arguments, message) in cases {

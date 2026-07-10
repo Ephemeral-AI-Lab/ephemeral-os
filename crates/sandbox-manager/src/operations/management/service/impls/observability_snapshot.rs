@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
 use sandbox_operation_contract::{OperationRequest, OperationScope};
 use serde_json::{json, Map, Value};
 
@@ -102,25 +103,23 @@ fn sandbox_node(
     let Some(endpoint) = record.daemon.clone() else {
         return unavailable_node(&record, None, "sandbox daemon endpoint is unavailable");
     };
-    let request = private_snapshot_request(&record, request_id);
+    let request = sandbox_snapshot_request(&record, request_id);
     match daemon_client.invoke(&endpoint, request, Some(Duration::from_millis(timeout_ms))) {
         Ok(response) => node_from_daemon_response(&record, &endpoint, response.into_json_value()),
         Err(error) => unavailable_node(&record, Some(&endpoint), error.to_string()),
     }
 }
 
-fn private_snapshot_request(record: &SandboxRecord, request_id: &str) -> OperationRequest {
-    let mut args = Map::new();
-    args.insert("view".to_owned(), json!("snapshot"));
+fn sandbox_snapshot_request(record: &SandboxRecord, request_id: &str) -> OperationRequest {
     OperationRequest::new(
-        sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
+        SNAPSHOT_SPEC.name,
         format!(
             "{}:{}:observability_snapshot",
             request_id,
             record.id.as_str()
         ),
         OperationScope::sandbox(record.id.as_str()),
-        Value::Object(args),
+        json!({}),
     )
 }
 

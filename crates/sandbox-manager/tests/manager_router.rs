@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use sandbox_manager::{
     manager_handler_keys, CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices,
-    ProgressSink, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId,
+    SandboxDaemonClient, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId,
     SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
 use sandbox_operation_catalog::{internal, observability::SNAPSHOT_SPEC, routes};
@@ -196,19 +196,56 @@ fn manager_public_routes_and_handler_keys_are_bijective() {
 }
 
 #[tokio::test]
-async fn manager_router_dispatches_hidden_observability_snapshot_locally() {
+async fn manager_router_routes_system_and_sandbox_snapshot_to_distinct_owners() {
     let (router, daemon_client) = ready_router();
 
-    let response = router
-        .dispatch_request(request("snapshot", OperationScope::System, json!({})))
+    let system_route = routes::observability_routes()
+        .iter()
+        .find(|route| {
+            route.operation == SNAPSHOT_SPEC.name && route.scope_kind == OperationScopeKind::System
+        })
+        .expect("system snapshot route");
+    let sandbox_route = routes::observability_routes()
+        .iter()
+        .find(|route| {
+            route.operation == SNAPSHOT_SPEC.name && route.scope_kind == OperationScopeKind::Sandbox
+        })
+        .expect("sandbox snapshot route");
+    assert_eq!(
+        system_route.execution_owner,
+        OperationExecutionOwner::Manager
+    );
+    assert_eq!(
+        sandbox_route.execution_owner,
+        OperationExecutionOwner::Observability
+    );
+
+    let system_response = router
+        .dispatch_request(request(
+            SNAPSHOT_SPEC.name,
+            OperationScope::System,
+            json!({}),
+        ))
         .await
         .into_json_value();
+    assert_eq!(system_response["sandboxes"][0]["sandbox_id"], "sbox-1");
 
-    assert_eq!(response["sandboxes"][0]["sandbox_id"], "sbox-1");
+    let sandbox_response = router
+        .dispatch_request(request(
+            SNAPSHOT_SPEC.name,
+            OperationScope::sandbox("sbox-1"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+    assert_eq!(sandbox_response["forwarded"], true);
+
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
-    assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].1, "get_observability");
-    assert_eq!(invocations[0].2, OperationScope::sandbox("sbox-1"));
+    assert_eq!(invocations.len(), 2);
+    assert!(invocations
+        .iter()
+        .all(|(_, operation, scope)| operation == SNAPSHOT_SPEC.name
+            && scope == &OperationScope::sandbox("sbox-1")));
 }
 
 #[tokio::test]
@@ -229,44 +266,37 @@ async fn manager_router_rejects_manager_operation_with_sandbox_scope() {
 }
 
 #[tokio::test]
-async fn manager_router_forwards_sandbox_snapshot_instead_of_using_system_handler() {
+async fn manager_router_forwards_every_sandbox_observability_route() {
     let (router, daemon_client) = ready_router();
 
-    let response = router
-        .dispatch_request_with_progress(
-            request(
-                SNAPSHOT_SPEC.name,
+    let expected = routes::observability_routes()
+        .iter()
+        .filter(|route| route.execution_owner == OperationExecutionOwner::Observability)
+        .map(|route| route.operation)
+        .collect::<Vec<_>>();
+    for operation in &expected {
+        let response = router
+            .dispatch_request(request(
+                operation,
                 OperationScope::sandbox("sbox-1"),
                 json!({}),
-            ),
-            ProgressSink::noop(),
-        )
-        .await
-        .into_json_value();
+            ))
+            .await
+            .into_json_value();
+        assert_eq!(response["forwarded"], true, "{operation}");
+    }
 
-    assert_eq!(response["forwarded"], true);
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
-    assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].1, SNAPSHOT_SPEC.name);
-}
-
-#[tokio::test]
-async fn manager_router_forwards_the_exact_observability_migration_route() {
-    let (router, daemon_client) = ready_router();
-
-    let response = router
-        .dispatch_request(request(
-            internal::migration::ROUTE.operation,
-            OperationScope::sandbox("sbox-1"),
-            json!({"view": "snapshot"}),
-        ))
-        .await
-        .into_json_value();
-
-    assert_eq!(response["forwarded"], true);
-    let invocations = daemon_client.invocations.lock().expect("invocations lock");
-    assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].1, internal::migration::ROUTE.operation);
+    assert_eq!(
+        invocations
+            .iter()
+            .map(|(_, operation, _)| operation.as_str())
+            .collect::<Vec<_>>(),
+        expected
+    );
+    assert!(invocations
+        .iter()
+        .all(|(_, _, scope)| scope == &OperationScope::sandbox("sbox-1")));
 }
 
 #[tokio::test]

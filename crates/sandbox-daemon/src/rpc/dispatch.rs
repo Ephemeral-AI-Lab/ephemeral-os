@@ -4,7 +4,9 @@ use super::SandboxDaemonServer;
 use crate::rpc::error::SandboxDaemonError;
 use sandbox_observability::record::names;
 use sandbox_observability::{SpanStatus, TraceContext};
-use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
+use sandbox_operation_contract::{
+    error, OperationExecutionOwner, OperationRequest, OperationResponse, OperationVisibility,
+};
 use sandbox_protocol::{
     decode_request_value, error as wire_error, DAEMON_AUTH_FIELD, DAEMON_READINESS_OPERATION,
 };
@@ -51,8 +53,8 @@ impl SandboxDaemonServer {
         if request.op == DAEMON_READINESS_OPERATION {
             return daemon_readiness_response(self.config.sandbox_id.as_deref(), &request);
         }
-        if request.op == sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY {
-            return self.dispatch_private_observability(request).await;
+        if is_public_observability_route(&request) {
+            return self.dispatch_observability(request).await;
         }
         let operations = Arc::clone(&self.operations);
         let observer = self.observer();
@@ -89,15 +91,15 @@ impl SandboxDaemonServer {
         }
     }
 
-    async fn dispatch_private_observability(&self, request: OperationRequest) -> OperationResponse {
+    async fn dispatch_observability(&self, request: OperationRequest) -> OperationResponse {
         let operations = Arc::clone(&self.operations);
         let observability = self.observability.clone();
         let task = tokio::task::spawn_blocking(move || {
-            crate::observability::observability_view_response(
+            let input = crate::observability::adapter::DaemonObservabilityAdapter::new(
                 &operations,
                 observability.as_deref(),
-                &request,
-            )
+            );
+            sandbox_observability_application::dispatch_operation(&input, &request)
         });
         match task.await {
             Ok(response) => response,
@@ -113,6 +115,17 @@ impl SandboxDaemonServer {
             ),
         }
     }
+}
+
+fn is_public_observability_route(request: &OperationRequest) -> bool {
+    sandbox_operation_catalog::routes::observability_routes()
+        .iter()
+        .any(|route| {
+            route.scope_kind == request.scope.kind()
+                && route.operation == request.op
+                && route.execution_owner == OperationExecutionOwner::Observability
+                && route.visibility == OperationVisibility::Public
+        })
 }
 
 /// Strip and verify the TCP-only daemon auth token. When a token is configured,

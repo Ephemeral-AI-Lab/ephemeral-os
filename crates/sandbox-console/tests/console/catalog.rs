@@ -1,8 +1,12 @@
 use http::StatusCode;
-use sandbox_operation_catalog::internal::migration;
 use serde_json::Value;
 
 use crate::support;
+
+const PHASE0_CATALOG: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0/console-catalog.json"
+));
 
 fn operation_names(catalog: &Value) -> Vec<String> {
     let mut names = catalog["operations"]
@@ -24,6 +28,26 @@ fn names(values: &[&str]) -> Vec<String> {
     names
 }
 
+fn remove_cli_fields(value: &mut Value) {
+    match value {
+        Value::Array(values) => values.iter_mut().for_each(remove_cli_fields),
+        Value::Object(object) => {
+            object.remove("cli");
+            object.values_mut().for_each(remove_cli_fields);
+        }
+        _ => {}
+    }
+}
+
+fn remove_routes(value: &mut Value) {
+    for catalog in ["management", "runtime", "observability"] {
+        value[catalog]
+            .as_object_mut()
+            .expect("catalog object")
+            .remove("routes");
+    }
+}
+
 #[tokio::test]
 async fn catalog_returns_all_three_execution_spaces() {
     let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
@@ -32,6 +56,12 @@ async fn catalog_returns_all_three_execution_spaces() {
     let response = support::get(console, "/api/catalog").await;
     assert_eq!(response.status(), StatusCode::OK);
     let body = support::body_json(response).await;
+
+    let mut phase0: Value = serde_json::from_str(PHASE0_CATALOG).expect("Phase 0 catalog fixture");
+    remove_cli_fields(&mut phase0);
+    let mut current_semantics = body.clone();
+    remove_routes(&mut current_semantics);
+    assert_eq!(current_semantics, phase0);
 
     let mut keys = body
         .as_object()
@@ -95,7 +125,7 @@ async fn catalog_returns_all_three_execution_spaces() {
             .as_array()
             .expect("catalog routes")
             .iter()
-            .all(|route| route["operation"] != migration::ROUTE.operation));
+            .all(|route| route["visibility"] == "public"));
     }
 
     assert_eq!(gateway.request_count(), 0, "catalog never hits the gateway");

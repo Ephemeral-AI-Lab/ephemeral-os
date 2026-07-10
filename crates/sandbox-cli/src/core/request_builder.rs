@@ -1,4 +1,3 @@
-use sandbox_operation_catalog::internal::migration;
 use sandbox_operation_client::{
     build_request_from_values, build_request_from_values_with_id, BuildRequestValueInput,
     RequestBuildError,
@@ -30,13 +29,12 @@ pub fn build_request_from_catalog(
     catalog: &CatalogDocument,
 ) -> Result<OperationRequest, RequestBuildError> {
     let (spec, scope_policy, scope_selector, arguments) = prepare_request(input, catalog)?;
-    let request = build_request_from_values(BuildRequestValueInput {
+    build_request_from_values(BuildRequestValueInput {
         spec,
         scope_policy,
         scope_selector,
         arguments,
-    })?;
-    Ok(resolve_migration(request))
+    })
 }
 
 /// Build a wire request for `input` against `catalog` with an explicit request id.
@@ -50,7 +48,7 @@ pub fn build_request_from_catalog_with_id(
     request_id: impl Into<String>,
 ) -> Result<OperationRequest, RequestBuildError> {
     let (spec, scope_policy, scope_selector, arguments) = prepare_request(input, catalog)?;
-    let request = build_request_from_values_with_id(
+    build_request_from_values_with_id(
         BuildRequestValueInput {
             spec,
             scope_policy,
@@ -58,8 +56,7 @@ pub fn build_request_from_catalog_with_id(
             arguments,
         },
         request_id,
-    )?;
-    Ok(resolve_migration(request))
+    )
 }
 
 fn prepare_request(
@@ -151,22 +148,6 @@ fn observability_scope_selector(arguments: &Value) -> Result<Option<String>, Req
         Some(_) => Err(build_error("--sandbox-id must be a string")),
         None => Ok(None),
     }
-}
-
-fn resolve_migration(mut request: OperationRequest) -> OperationRequest {
-    let Some(target) = migration::resolve(&request.op, request.scope.kind()) else {
-        return request;
-    };
-    request.op = target.operation.to_owned();
-    if let Value::Object(args) = &mut request.args {
-        for argument in target.arguments {
-            args.insert(
-                argument.name.to_owned(),
-                Value::String(argument.value.to_owned()),
-            );
-        }
-    }
-    request
 }
 
 /// Resolve the sandbox id for a runtime operation.

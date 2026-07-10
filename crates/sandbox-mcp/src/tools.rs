@@ -97,14 +97,13 @@ impl ToolDispatcher {
         }) {
             return Err(invalid_request(format!("unknown operation: {operation}")));
         }
-        let request = build_request_from_values(BuildRequestValueInput {
+        build_request_from_values(BuildRequestValueInput {
             spec,
             scope_policy,
             scope_selector,
             arguments: Value::Object(arguments),
         })
-        .map_err(|error| error.to_error_envelope())?;
-        apply_migration(request)
+        .map_err(|error| error.to_error_envelope())
     }
 
     fn scope_selector(
@@ -138,25 +137,6 @@ impl ToolDispatcher {
             None => Ok(None),
         }
     }
-}
-
-fn apply_migration(mut request: OperationRequest) -> Result<OperationRequest, Value> {
-    let Some(target) =
-        sandbox_operation_catalog::internal::migration::resolve(&request.op, request.scope.kind())
-    else {
-        return Ok(request);
-    };
-    let Some(arguments) = request.args.as_object_mut() else {
-        return Err(invalid_request("operation arguments must be an object"));
-    };
-    request.op = target.operation.to_owned();
-    for argument in target.arguments {
-        arguments.insert(
-            argument.name.to_owned(),
-            Value::String(argument.value.to_owned()),
-        );
-    }
-    Ok(request)
 }
 
 fn gateway_error(error: &GatewayClientError) -> Value {

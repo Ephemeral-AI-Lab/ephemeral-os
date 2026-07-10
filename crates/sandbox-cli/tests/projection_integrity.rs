@@ -59,7 +59,6 @@ fn assert_projection_integrity(catalog: OperationCatalog, projection: CatalogPro
         "export_layerstack",
         "read_export_chunk",
         "file_list",
-        "get_observability",
     ] {
         assert!(document
             .projection

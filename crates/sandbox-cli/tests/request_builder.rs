@@ -212,7 +212,7 @@ fn file_edit_keeps_cli_labels_while_sharing_value_validation() {
 }
 
 #[test]
-fn observability_adapter_applies_the_catalog_migration_resolver() {
+fn observability_adapter_builds_concrete_scoped_requests() {
     let catalog = observability_catalog_document();
     let aggregate = build_request_from_catalog_with_id(
         BuildRequestInput {
@@ -240,7 +240,7 @@ fn observability_adapter_applies_the_catalog_migration_resolver() {
     assert_eq!(aggregate.op, "snapshot");
     assert_eq!(aggregate.scope, OperationScope::system());
     assert_eq!(aggregate.args, json!({}));
-    assert_eq!(scoped.op, "get_observability");
+    assert_eq!(scoped.op, "trace");
     assert_eq!(scoped.scope, OperationScope::sandbox("eos-observe"));
-    assert_eq!(scoped.args, json!({"view": "trace", "trace_id": "last"}));
+    assert_eq!(scoped.args, json!({"trace_id": "last"}));
 }

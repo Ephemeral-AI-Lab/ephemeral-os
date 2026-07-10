@@ -606,7 +606,7 @@ fn create_sandbox_rolls_back_runtime_and_store_when_check_fails() {
 }
 
 #[test]
-fn observability_snapshot_aggregates_ready_sandboxes_with_private_daemon_requests() {
+fn observability_snapshot_aggregates_ready_sandboxes_with_concrete_daemon_requests() {
     let client = Arc::new(RecordingSnapshotClient::default());
     let (services, store) = services_with_client(client.clone());
     store
@@ -644,7 +644,7 @@ fn observability_snapshot_aggregates_ready_sandboxes_with_private_daemon_request
     assert_eq!(invocations.len(), 2);
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.op == "get_observability"));
+        .all(|invocation| invocation.op == "snapshot"));
     assert!(invocations.iter().all(|invocation| {
         matches!(
             &invocation.scope,
@@ -654,7 +654,7 @@ fn observability_snapshot_aggregates_ready_sandboxes_with_private_daemon_request
     }));
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.args == json!({ "view": "snapshot" })));
+        .all(|invocation| invocation.args == json!({})));
     assert!(invocations
         .iter()
         .all(|invocation| invocation.timeout_override == Some(Duration::from_millis(1_500))));
@@ -696,7 +696,7 @@ fn observability_snapshot_converts_one_daemon_failure_to_one_unavailable_node() 
     assert!(client
         .invocations()
         .iter()
-        .all(|invocation| invocation.args == json!({ "view": "snapshot" })));
+        .all(|invocation| invocation.args == json!({})));
 }
 
 #[test]

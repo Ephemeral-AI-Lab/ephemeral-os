@@ -22,7 +22,7 @@ Test plan for the `management` family. Two parts per operation:
   `E2E_WORKSPACE_VARIANT` or `config.workspace_variant("name")`.
 - **Helpers**: thin wrappers in `manager/management/helpers.py`
   (`create_sandbox`, `inspect_sandbox`, `list_sandboxes`, `destroy_sandbox`,
-  `get_observability_tree`).
+  `snapshot`).
 - **Error shape**: failures return `{"error": {"kind", "message", "details"}}`;
   missing required CLI flags are a usage error (exit 2), not a request.
 
@@ -34,7 +34,7 @@ Test plan for the `management` family. Two parts per operation:
 | `inspect_sandbox`        | `test_inspect_sandbox.py`          | active   |
 | `list_sandboxes`         | `test_list_sandboxes.py`           | active   |
 | `destroy_sandbox`        | `test_destroy_sandbox.py`          | active   |
-| `get_observability_tree` | `test_get_observability_tree.py`   | deferred |
+| `snapshot`               | `test_snapshot.py`                | deferred |
 | (cross-operation)        | `test_management.py` (existing)    | active   |
 
 `test_management.py` stays as a single end-to-end lifecycle/integration test
@@ -181,7 +181,7 @@ fails the record is left `failed`.
 
 ---
 
-## 5. get_observability_tree — DEFERRED
+## 5. snapshot — DEFERRED
 
 `--sandbox-id` (opt), `--resource-window-ms` (opt) → `{sandboxes: [node, …]}`.
 `availability` ∈ `available | partial | unavailable`; unreachable/non-ready
@@ -201,7 +201,7 @@ observability is verified **through runtime** later, so these tests are deferred
 - **F5** — `--resource-window-ms` bounds the returned resource history.
 
 ### (b) Test files (planned)
-- `test_get_observability_tree.py` — skipped placeholder (`@pytest.mark.skip`)
+- `test_snapshot.py` — skipped placeholder (`@pytest.mark.skip`)
   until the observability phase; then it lands here and/or under
   `observability/` per the runtime-verified plan.
 

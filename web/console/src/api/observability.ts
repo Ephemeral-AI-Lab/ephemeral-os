@@ -56,10 +56,10 @@ export function fetchSandboxSnapshot(sandboxId: string): Promise<SnapshotResult>
 
 export function fetchObservabilityView<T = unknown>(
   sandboxId: string,
-  view: string,
+  operation: string,
   args: Record<string, unknown> = {},
 ): Promise<T> {
-  return rpc<T>("get_observability", sandboxScope(sandboxId), { ...args, view });
+  return rpc<T>(operation, sandboxScope(sandboxId), args);
 }
 
 export function inFlightCount(snapshot: SandboxSnapshot): number {

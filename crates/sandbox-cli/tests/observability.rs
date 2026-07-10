@@ -72,46 +72,41 @@ async fn aggregate_snapshot_uses_system_scope() {
 }
 
 #[tokio::test]
-async fn scoped_views_use_hidden_observability_operation_and_catalog_defaults() {
+async fn scoped_operations_use_concrete_names_and_catalog_defaults() {
     let cases = [
-        ("snapshot", json!({"view": "snapshot"})),
-        ("trace", json!({"view": "trace", "trace_id": "last"})),
-        ("events", json!({"view": "events"})),
-        (
-            "cgroup",
-            json!({"view": "cgroup", "scope": "sandbox", "window_ms": 60000}),
-        ),
-        (
-            "layerstack",
-            json!({"view": "layerstack", "window_ms": 60000}),
-        ),
+        ("snapshot", json!({})),
+        ("trace", json!({"trace_id": "last"})),
+        ("events", json!({})),
+        ("cgroup", json!({"scope": "sandbox", "window_ms": 60000})),
+        ("layerstack", json!({"window_ms": 60000})),
     ];
 
-    for (view, expected_args) in cases {
-        let response = json!({"view": view});
+    for (operation, expected_args) in cases {
+        let response = json!({"view": operation});
         let (addr, received) = fake_gateway(response.clone()).await;
         let (code, stdout, stderr) = run(&[
             "sandbox-observability-cli",
             "--gateway-socket",
             &addr,
-            view,
+            operation,
             "--sandbox-id",
             "eos-x",
         ])
         .await;
 
-        assert_eq!(code, 0, "{view}");
-        assert!(stderr.is_empty(), "{view}: {stderr}");
+        assert_eq!(code, 0, "{operation}");
+        assert!(stderr.is_empty(), "{operation}: {stderr}");
         assert_eq!(parse_json_line(&stdout), response);
         let request = received.await.expect("fake gateway task");
-        assert_eq!(request["op"], "get_observability", "{view}");
+        assert_eq!(request["op"], operation, "{operation}");
         assert_eq!(
             request["scope"],
             json!({"kind": "sandbox", "sandbox_id": "eos-x"}),
-            "{view}"
+            "{operation}"
         );
-        assert_eq!(request["args"], expected_args, "{view}");
-        assert_eq!(request["_stream_logs"], false, "{view}");
+        assert_eq!(request["args"], expected_args, "{operation}");
+        assert!(request["args"].get("view").is_none(), "{operation}");
+        assert_eq!(request["_stream_logs"], false, "{operation}");
     }
 }
 

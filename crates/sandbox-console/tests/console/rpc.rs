@@ -1,13 +1,20 @@
 use std::time::Duration;
 
 use http::StatusCode;
-use sandbox_operation_catalog::internal::{migration, runtime::EXPORT_LAYERSTACK};
+use sandbox_operation_catalog::internal::runtime::EXPORT_LAYERSTACK;
+use sandbox_operation_catalog::observability::{
+    CGROUP_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TRACE_SPEC,
+};
 use sandbox_operation_client::MAX_REQUEST_BYTES;
 use serde_json::json;
 
 use crate::support;
 
 const GATEWAY_AUTH_FIELD: &str = "_sandbox_gateway_auth_token";
+const PHASE0_LIST_RESPONSE: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0/console-rpc-list.json"
+));
 
 fn rpc_body(op: &str) -> serde_json::Value {
     json!({
@@ -19,9 +26,13 @@ fn rpc_body(op: &str) -> serde_json::Value {
 
 #[tokio::test]
 async fn one_shot_injects_credentials_server_side_and_passes_result_through() {
-    let gateway =
-        support::FakeGateway::spawn(|_| vec![json!({"sandboxes": [{"id": "eos-1"}]}).to_string()])
-            .await;
+    let expected: serde_json::Value =
+        serde_json::from_str(PHASE0_LIST_RESPONSE).expect("Phase 0 list fixture");
+    let gateway = support::FakeGateway::spawn({
+        let expected = expected.clone();
+        move |_| vec![expected.to_string()]
+    })
+    .await;
     let console = support::spawn_console_default(gateway.addr).await;
 
     let mut request = rpc_body("list_sandboxes");
@@ -38,7 +49,7 @@ async fn one_shot_injects_credentials_server_side_and_passes_result_through() {
                 .contains(support::TEST_AUTH_TOKEN))
     );
     let body = support::body_json(response).await;
-    assert_eq!(body, json!({"sandboxes": [{"id": "eos-1"}]}));
+    assert_eq!(body, expected);
     let rendered = body.to_string();
     assert!(!rendered.contains(support::TEST_AUTH_TOKEN));
     assert!(!rendered.contains("browser-supplied-token"));
@@ -100,34 +111,43 @@ async fn runtime_file_call_uses_authenticated_gateway_rpc() {
 }
 
 #[tokio::test]
-async fn scoped_observability_call_uses_authenticated_gateway_rpc() {
-    let gateway = support::FakeGateway::spawn(|_| {
-        vec![json!({"view": "cgroup", "scope": "sandbox", "series": []}).to_string()]
-    })
-    .await;
+async fn concrete_observability_calls_preserve_the_rpc_envelope() {
+    let gateway =
+        support::FakeGateway::spawn(|_| vec![json!({"accepted": true}).to_string()]).await;
     let console = support::spawn_console_default(gateway.addr).await;
-    let body = json!({
-        "op": migration::ROUTE.operation,
-        "scope": {"kind": "sandbox", "sandbox_id": "eos-observe"},
-        "args": {"view": "cgroup", "scope": "sandbox", "window_ms": 30000},
-    });
+    let expected = [
+        (SNAPSHOT_SPEC.name, json!({})),
+        (TRACE_SPEC.name, json!({"trace_id": "last"})),
+        (EVENTS_SPEC.name, json!({"last_n": 10})),
+        (
+            CGROUP_SPEC.name,
+            json!({"scope": "sandbox", "window_ms": 30000}),
+        ),
+        (LAYERSTACK_SPEC.name, json!({"window_ms": 30000})),
+    ];
+    for (operation, args) in &expected {
+        let body = json!({
+            "op": operation,
+            "scope": {"kind": "sandbox", "sandbox_id": "eos-observe"},
+            "args": args,
+        });
+        let response = support::post_rpc(console, &body).await;
+        assert_eq!(response.status(), StatusCode::OK, "{operation}");
+        assert_eq!(support::body_json(response).await["accepted"], true);
+    }
 
-    let response = support::post_rpc(console, &body).await;
-
-    assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(support::body_json(response).await["view"], "cgroup");
     let seen = gateway.requests();
-    assert_eq!(seen.len(), 1);
-    assert_eq!(seen[0]["op"], "get_observability");
-    assert_eq!(
-        seen[0]["scope"],
-        json!({"kind": "sandbox", "sandbox_id": "eos-observe"})
-    );
-    assert_eq!(
-        seen[0]["args"],
-        json!({"view": "cgroup", "scope": "sandbox", "window_ms": 30000})
-    );
-    assert_eq!(seen[0][GATEWAY_AUTH_FIELD], support::TEST_AUTH_TOKEN);
+    assert_eq!(seen.len(), expected.len());
+    for (request, (operation, args)) in seen.iter().zip(expected) {
+        assert_eq!(request["op"], operation);
+        assert_eq!(
+            request["scope"],
+            json!({"kind": "sandbox", "sandbox_id": "eos-observe"})
+        );
+        assert_eq!(request["args"], args);
+        assert!(request["args"].get("view").is_none());
+        assert_eq!(request[GATEWAY_AUTH_FIELD], support::TEST_AUTH_TOKEN);
+    }
 }
 
 #[tokio::test]
@@ -201,11 +221,11 @@ async fn public_operation_with_undeclared_scope_is_rejected_before_gateway_trans
 }
 
 #[tokio::test]
-async fn migration_operation_with_system_scope_is_rejected_before_gateway_transport() {
+async fn sandbox_observability_operation_with_system_scope_is_rejected_before_gateway_transport() {
     let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
     let console = support::spawn_console_default(gateway.addr).await;
 
-    let response = support::post_rpc(console, &rpc_body(migration::ROUTE.operation)).await;
+    let response = support::post_rpc(console, &rpc_body(TRACE_SPEC.name)).await;
 
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(

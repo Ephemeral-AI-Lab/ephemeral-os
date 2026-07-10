@@ -108,11 +108,7 @@ async fn read_request(req: HttpRequest<Incoming>) -> Result<OperationRequest, Re
 fn validate_route(request: &OperationRequest) -> Result<(), String> {
     let is_public = sandbox_operation_catalog::routes::public_routes()
         .any(|route| route_matches(request, route));
-    let is_migration = route_matches(
-        request,
-        &sandbox_operation_catalog::internal::migration::ROUTE,
-    );
-    if is_public || is_migration {
+    if is_public {
         Ok(())
     } else {
         Err(format!(

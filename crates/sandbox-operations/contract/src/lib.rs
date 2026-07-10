@@ -24,7 +24,6 @@ pub use operation::OperationSpec;
 pub use request::OperationRequest;
 pub use response::OperationResponse;
 pub use route::{
-    OperationDispatchArgument, OperationDispatchTarget, OperationExecutionOwner,
-    OperationRouteSpec, OperationScopePolicy, OperationVisibility,
+    OperationExecutionOwner, OperationRouteSpec, OperationScopePolicy, OperationVisibility,
 };
 pub use scope::{OperationScope, OperationScopeKind};

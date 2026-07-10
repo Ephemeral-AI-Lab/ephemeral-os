@@ -4,8 +4,8 @@ use std::collections::HashSet;
 
 use sandbox_operation_catalog::{internal, manager, observability, routes, runtime};
 use sandbox_operation_contract::{
-    catalog_from_value, catalog_to_value, OperationExecutionOwner, OperationRouteSpec,
-    OperationScopeKind, OperationScopePolicy, OperationVisibility,
+    catalog_from_value, catalog_to_value, OperationExecutionOwner, OperationScopeKind,
+    OperationScopePolicy, OperationVisibility,
 };
 
 #[test]
@@ -205,7 +205,7 @@ fn public_route_manifest_is_exact_and_policy_consistent() {
 }
 
 #[test]
-fn internal_and_migration_routes_never_leak_into_public_documents() {
+fn internal_routes_never_leak_into_public_documents() {
     let mut public = HashSet::new();
     for catalog in [
         manager::manager_catalog(),
@@ -226,7 +226,6 @@ fn internal_and_migration_routes_never_leak_into_public_documents() {
         assert!(!public.contains(internal.operation));
     }
     assert!(!public.contains(internal::runtime::FILE_LIST));
-    assert!(!public.contains(internal::migration::GET_OBSERVABILITY));
 }
 
 #[test]
@@ -251,38 +250,6 @@ fn internal_route_sets_are_exact() {
         ]
     );
     assert_eq!(internal::runtime::FILE_LIST, "file_list");
-}
-
-#[test]
-fn migration_resolver_only_rewrites_sandbox_observability_requests() {
-    assert_eq!(
-        internal::migration::ROUTE,
-        OperationRouteSpec {
-            operation: "get_observability",
-            scope_policy: OperationScopePolicy::SandboxRequired,
-            scope_kind: OperationScopeKind::Sandbox,
-            execution_owner: OperationExecutionOwner::Observability,
-            visibility: OperationVisibility::Internal,
-        }
-    );
-
-    for operation in ["snapshot", "trace", "events", "cgroup", "layerstack"] {
-        let target = internal::migration::resolve(operation, OperationScopeKind::Sandbox)
-            .expect("sandbox observability target");
-        assert_eq!(target.operation, internal::migration::GET_OBSERVABILITY);
-        assert_eq!(target.arguments.len(), 1);
-        assert_eq!(target.arguments[0].name, "view");
-        assert_eq!(target.arguments[0].value, operation);
-    }
-
-    assert_eq!(
-        internal::migration::resolve("snapshot", OperationScopeKind::System),
-        None
-    );
-    assert_eq!(
-        internal::migration::resolve("exec_command", OperationScopeKind::Sandbox),
-        None
-    );
 }
 
 fn internal_runtime_route(

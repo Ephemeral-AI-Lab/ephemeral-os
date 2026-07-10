@@ -11,6 +11,9 @@ use crate::observability::DaemonObservability;
 use crate::rpc::{SandboxDaemonServer, ServerConfig};
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability::{ObservabilityPaths, Reader, SampleDelta};
+use sandbox_operation_catalog::observability::{
+    CGROUP_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TRACE_SPEC,
+};
 use sandbox_runtime::workspace_session::FinalizePolicy;
 use sandbox_runtime::{
     NamespaceExecutionId, NetworkProfile, RuntimeNamespaceExecutionSnapshot,
@@ -161,7 +164,7 @@ fn disabled_gate_emits_no_log() -> TestResult {
 }
 
 #[tokio::test]
-async fn cgroup_view_dispatch_returns_series() -> TestResult {
+async fn concrete_cgroup_operation_returns_series() -> TestResult {
     let root = test_root("cgroup-view");
     let server = daemon_server(&root, Some("sandbox-1"))?;
     server
@@ -173,9 +176,9 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
+                CGROUP_SPEC.name,
                 "req-cgroup",
-                json!({ "view": "cgroup", "scope": "sandbox" }),
+                json!({ "scope": "sandbox" }),
             )?,
             false,
         )
@@ -189,16 +192,16 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
 }
 
 #[tokio::test]
-async fn get_observability_wire_op_dispatches_snapshot_and_layerstack() -> TestResult {
-    let root = test_root("snapshot-layerstack-wire-op");
+async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
+    let root = test_root("concrete-observability-operations");
     let server = daemon_server(&root, Some("sandbox-1"))?;
 
     let snapshot = server
         .dispatch_bytes(
             request_bytes(
-                "get_observability",
+                SNAPSHOT_SPEC.name,
                 "req-snapshot",
-                json!({ "view": "snapshot" }),
+                json!({}),
             )?,
             false,
         )
@@ -218,13 +221,34 @@ async fn get_observability_wire_op_dispatches_snapshot_and_layerstack() -> TestR
     assert!(snapshot["stack"]["layers_bytes"].is_u64());
     assert_eq!(snapshot["stack"]["active_leases"], 0);
 
-    let layerstack = server
+    let trace = server
         .dispatch_bytes(
             request_bytes(
-                "get_observability",
-                "req-layerstack",
-                json!({ "view": "layerstack" }),
+                TRACE_SPEC.name,
+                "req-trace",
+                json!({ "trace_id": "last" }),
             )?,
+            false,
+        )
+        .await;
+    let trace = trace.as_json_value();
+    assert_eq!(trace["view"], "trace");
+    assert_eq!(trace["trace"], "last");
+    assert_eq!(trace["spans"], json!([]));
+
+    let events = server
+        .dispatch_bytes(
+            request_bytes(EVENTS_SPEC.name, "req-events", json!({}))?,
+            false,
+        )
+        .await;
+    let events = events.as_json_value();
+    assert_eq!(events["view"], "events");
+    assert_eq!(events["events"], json!([]));
+
+    let layerstack = server
+        .dispatch_bytes(
+            request_bytes(LAYERSTACK_SPEC.name, "req-layerstack", json!({}))?,
             false,
         )
         .await;

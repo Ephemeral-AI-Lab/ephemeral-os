@@ -265,9 +265,7 @@ class TestPhase2:
                 sandbox_id,
                 "mkdir -p delta && for i in 1 2 3 4 5 6; do echo $i > delta/f$i.txt; done",
             )
-            inventory = climod.raw_gateway(
-                sandbox_id, "get_observability", {"view": "layerstack"}
-            )
+            inventory = climod.raw_gateway(sandbox_id, "layerstack", {})
             layers = inventory.get("layers")
             assert layers, f"layerstack inventory must list layers: {inventory}"
             published = [
@@ -280,8 +278,8 @@ class TestPhase2:
 
             view = climod.raw_gateway(
                 sandbox_id,
-                "get_observability",
-                {"view": "layerstack", "layer_id": delta_layer},
+                "layerstack",
+                {"layer_id": delta_layer},
             )
             entries = view.get("entries")
             assert entries is not None and len(entries) == 3, (
@@ -291,8 +289,8 @@ class TestPhase2:
 
             rejected = climod.raw_gateway(
                 sandbox_id,
-                "get_observability",
-                {"view": "layerstack", "layer_id": delta_layer, "limit": 50},
+                "layerstack",
+                {"layer_id": delta_layer, "limit": 50},
             )
             error = helpers.error_text(rejected)
             assert "limit exceeds max" in error, error

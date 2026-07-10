@@ -18,9 +18,6 @@ impl SandboxManagerRouter {
         if request.scope.kind() == OperationScopeKind::System {
             return OperationResponse::unknown_op();
         }
-        if matches_route(&request, &internal::migration::ROUTE) {
-            return self.forward_sandbox_request(request).await;
-        }
         if is_canonical_internal_route(&request) {
             return OperationResponse::fault(
                 error::INVALID_REQUEST,
