@@ -48,7 +48,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | Phase | Title | Status | Started | Gate approved | Approver |
 | --- | --- | --- | --- | --- | --- |
 | 0 | Characterize, freeze inventory, purge generated weight | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 1 | Create contract, narrow protocol in place | gate review | 2026-07-10 | — | — |
+| 1 | Create contract, narrow protocol in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 2 | Merge and refeature the catalogs | blocked | — | — | — |
 | 3 | Extract the shared gateway client | blocked | — | — | — |
 | 4 | Clean the manager application in place | blocked | — | — | — |
