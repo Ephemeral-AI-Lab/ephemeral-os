@@ -1,4 +1,30 @@
-use sandbox_operation_contract::{ArgKind, ArgSpec, OperationFamilySpec, OperationSpec};
+use sandbox_operation_contract::{
+    ArgKind, ArgSpec, OperationExecutionOwner, OperationFamilySpec, OperationSpec,
+};
+
+use crate::routed::{RoutedOperation, Routing};
+
+const RUNTIME_OWNED: Routing = Routing::Sandbox(OperationExecutionOwner::Runtime);
+
+pub const FILE_READ: RoutedOperation = RoutedOperation {
+    spec: &FILE_READ_SPEC,
+    routing: RUNTIME_OWNED,
+};
+
+pub const FILE_WRITE: RoutedOperation = RoutedOperation {
+    spec: &FILE_WRITE_SPEC,
+    routing: RUNTIME_OWNED,
+};
+
+pub const FILE_EDIT: RoutedOperation = RoutedOperation {
+    spec: &FILE_EDIT_SPEC,
+    routing: RUNTIME_OWNED,
+};
+
+pub const FILE_BLAME: RoutedOperation = RoutedOperation {
+    spec: &FILE_BLAME_SPEC,
+    routing: RUNTIME_OWNED,
+};
 
 pub const FILE_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "file",

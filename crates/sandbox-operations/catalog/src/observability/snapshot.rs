@@ -1,4 +1,14 @@
-use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
+use sandbox_operation_contract::{ArgKind, ArgSpec, OperationExecutionOwner, OperationSpec};
+
+use crate::routed::{RoutedOperation, Routing};
+
+pub const SNAPSHOT: RoutedOperation = RoutedOperation {
+    spec: &SNAPSHOT_SPEC,
+    routing: Routing::SystemOrSandbox {
+        system: OperationExecutionOwner::Manager,
+        sandbox: OperationExecutionOwner::Observability,
+    },
+};
 
 const SNAPSHOT_SANDBOX_ID_ARG: ArgSpec = ArgSpec::optional(
     "sandbox_id",

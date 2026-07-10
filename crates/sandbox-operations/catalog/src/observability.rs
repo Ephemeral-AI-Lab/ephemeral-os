@@ -12,10 +12,11 @@ pub use snapshot::SNAPSHOT_SPEC;
 pub use trace::TRACE_SPEC;
 
 use sandbox_operation_contract::{
-    ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
+    ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationRouteSpec,
+    OperationSpec,
 };
 
-use crate::routes;
+use crate::routed::{self, RoutedOperation};
 
 const OBSERVABILITY_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "observability",
@@ -33,20 +34,24 @@ pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
 );
 
 const FAMILIES: &[&OperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
-const SPECS: &[&OperationSpec] = &[
-    &SNAPSHOT_SPEC,
-    &trace::TRACE_SPEC,
-    &events::EVENTS_SPEC,
-    &cgroup::CGROUP_SPEC,
-    &layerstack::LAYERSTACK_SPEC,
+
+const OPERATIONS: &[&RoutedOperation] = &[
+    &snapshot::SNAPSHOT,
+    &trace::TRACE,
+    &events::EVENTS,
+    &cgroup::CGROUP,
+    &layerstack::LAYERSTACK,
 ];
+
+const SPECS: [&OperationSpec; OPERATIONS.len()] = routed::specs(OPERATIONS);
+const ROUTES: [OperationRouteSpec; routed::route_count(OPERATIONS)] =
+    routed::expand_routes(OPERATIONS);
+
+pub(crate) const fn routes() -> &'static [OperationRouteSpec] {
+    &ROUTES
+}
 
 #[must_use]
 pub const fn observability_catalog() -> OperationCatalog {
-    OperationCatalog::new(
-        OperationDomain::Observability,
-        FAMILIES,
-        SPECS,
-        routes::observability_routes(),
-    )
+    OperationCatalog::new(OperationDomain::Observability, FAMILIES, &SPECS, &ROUTES)
 }

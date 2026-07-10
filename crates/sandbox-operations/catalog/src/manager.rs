@@ -1,10 +1,13 @@
 //! Manager operation catalog.
 
 use sandbox_operation_contract::{
-    ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
+    ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationExecutionOwner,
+    OperationFamilySpec, OperationRouteSpec, OperationSpec,
 };
 
-use crate::routes;
+use crate::routed::{self, RoutedOperation, Routing};
+
+const MANAGER_OWNED: Routing = Routing::System(OperationExecutionOwner::Manager);
 
 pub const MANAGEMENT_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "management",
@@ -125,16 +128,50 @@ const EXPORT_CHANGES_ARGS: &[ArgSpec] = &[
     ),
 ];
 
+pub const CREATE_SANDBOX: RoutedOperation = RoutedOperation {
+    spec: &CREATE_SANDBOX_SPEC,
+    routing: MANAGER_OWNED,
+};
+
+pub const DESTROY_SANDBOX: RoutedOperation = RoutedOperation {
+    spec: &DESTROY_SANDBOX_SPEC,
+    routing: MANAGER_OWNED,
+};
+
+pub const LIST_SANDBOXES: RoutedOperation = RoutedOperation {
+    spec: &LIST_SANDBOXES_SPEC,
+    routing: MANAGER_OWNED,
+};
+
+pub const INSPECT_SANDBOX: RoutedOperation = RoutedOperation {
+    spec: &INSPECT_SANDBOX_SPEC,
+    routing: MANAGER_OWNED,
+};
+
+pub const SQUASH_LAYERSTACKS: RoutedOperation = RoutedOperation {
+    spec: &SQUASH_LAYERSTACKS_SPEC,
+    routing: MANAGER_OWNED,
+};
+
+pub const EXPORT_CHANGES: RoutedOperation = RoutedOperation {
+    spec: &EXPORT_CHANGES_SPEC,
+    routing: MANAGER_OWNED,
+};
+
 const FAMILIES: &[&OperationFamilySpec] = &[&MANAGEMENT_FAMILY];
 
-const SPECS: &[&OperationSpec] = &[
-    &CREATE_SANDBOX_SPEC,
-    &DESTROY_SANDBOX_SPEC,
-    &LIST_SANDBOXES_SPEC,
-    &INSPECT_SANDBOX_SPEC,
-    &SQUASH_LAYERSTACKS_SPEC,
-    &EXPORT_CHANGES_SPEC,
+const OPERATIONS: &[&RoutedOperation] = &[
+    &CREATE_SANDBOX,
+    &DESTROY_SANDBOX,
+    &LIST_SANDBOXES,
+    &INSPECT_SANDBOX,
+    &SQUASH_LAYERSTACKS,
+    &EXPORT_CHANGES,
 ];
+
+const SPECS: [&OperationSpec; OPERATIONS.len()] = routed::specs(OPERATIONS);
+const ROUTES: [OperationRouteSpec; routed::route_count(OPERATIONS)] =
+    routed::expand_routes(OPERATIONS);
 
 #[must_use]
 pub const fn operation_families() -> &'static [&'static OperationFamilySpec] {
@@ -143,15 +180,14 @@ pub const fn operation_families() -> &'static [&'static OperationFamilySpec] {
 
 #[must_use]
 pub const fn operation_specs() -> &'static [&'static OperationSpec] {
-    SPECS
+    &SPECS
+}
+
+pub(crate) const fn routes() -> &'static [OperationRouteSpec] {
+    &ROUTES
 }
 
 #[must_use]
 pub const fn manager_catalog() -> OperationCatalog {
-    OperationCatalog::new(
-        OperationDomain::Manager,
-        FAMILIES,
-        SPECS,
-        routes::manager_routes(),
-    )
+    OperationCatalog::new(OperationDomain::Manager, FAMILIES, &SPECS, &ROUTES)
 }

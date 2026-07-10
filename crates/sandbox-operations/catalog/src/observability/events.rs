@@ -1,6 +1,12 @@
-use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
+use sandbox_operation_contract::{ArgKind, ArgSpec, OperationExecutionOwner, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
+use crate::routed::{RoutedOperation, Routing};
+
+pub const EVENTS: RoutedOperation = RoutedOperation {
+    spec: &EVENTS_SPEC,
+    routing: Routing::Sandbox(OperationExecutionOwner::Observability),
+};
 
 pub static EVENTS_SPEC: OperationSpec = OperationSpec {
     name: "events",

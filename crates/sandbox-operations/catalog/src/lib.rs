@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 pub mod internal;
+pub mod routed;
 pub mod routes;
 
 #[cfg(feature = "manager")]

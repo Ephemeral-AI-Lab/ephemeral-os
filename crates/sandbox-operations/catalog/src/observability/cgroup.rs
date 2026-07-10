@@ -1,6 +1,12 @@
-use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
+use sandbox_operation_contract::{ArgKind, ArgSpec, OperationExecutionOwner, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
+use crate::routed::{RoutedOperation, Routing};
+
+pub const CGROUP: RoutedOperation = RoutedOperation {
+    spec: &CGROUP_SPEC,
+    routing: Routing::Sandbox(OperationExecutionOwner::Observability),
+};
 
 pub static CGROUP_SPEC: OperationSpec = OperationSpec {
     name: "cgroup",
