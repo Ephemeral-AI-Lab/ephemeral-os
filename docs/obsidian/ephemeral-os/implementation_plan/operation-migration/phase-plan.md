@@ -54,7 +54,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | approved | 2026-07-11 | 2026-07-11 | Codex |
-| 7 | Update documentation, scripts, law statements | blocked | — | — | — |
+| 7 | Update documentation, scripts, law statements | in progress | 2026-07-11 | — | — |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
 
 ## Standing gate (every phase)
@@ -623,7 +623,7 @@ one commit.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
-| | | | | |
+| 2026-07-11 | Phase 7 started | Dashboard entry criteria and Phase 6 acceptance checklist | Phase 6 is approved and every Phase 6 acceptance item is checked; Phase 7 is unblocked. | None. |
 
 ---
 
