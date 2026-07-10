@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use http::StatusCode;
-use sandbox_protocol::GATEWAY_AUTH_FIELD;
+use sandbox_protocol::{ProtocolLimits, GATEWAY_AUTH_FIELD};
 use serde_json::json;
 
 use crate::support;
@@ -147,6 +147,39 @@ async fn protocol_error_returns_in_body_with_http_200() {
 }
 
 #[tokio::test]
+async fn unknown_operation_is_forwarded_to_the_gateway() {
+    let gateway = support::FakeGateway::spawn(|_| {
+        vec![json!({
+            "error": {
+                "kind": "unknown_op",
+                "message": "unknown operation",
+                "details": {}
+            }
+        })
+        .to_string()]
+    })
+    .await;
+    let console = support::spawn_console_default(gateway.addr).await;
+
+    let response = support::post_rpc(console, &rpc_body("phase0_unknown_operation")).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        support::body_json(response).await,
+        json!({
+            "error": {
+                "kind": "unknown_op",
+                "message": "unknown operation",
+                "details": {}
+            }
+        })
+    );
+    let seen = gateway.requests();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0]["op"], "phase0_unknown_operation");
+}
+
+#[tokio::test]
 async fn sandbox_scope_and_client_request_id_pass_through() {
     let gateway = support::FakeGateway::spawn(|_| vec![json!({"ok": true}).to_string()]).await;
     let console = support::spawn_console_default(gateway.addr).await;
@@ -189,6 +222,34 @@ async fn malformed_body_is_400() {
         0,
         "bad bodies never reach the gateway"
     );
+}
+
+#[tokio::test]
+async fn body_over_protocol_limit_is_rejected_before_gateway_transport() {
+    assert_eq!(ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES, 16 * 1024 * 1024);
+    let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
+    let console = support::spawn_console_default(gateway.addr).await;
+    let body = json!({
+        "op": "file_write",
+        "scope": {"kind": "sandbox", "sandbox_id": "eos-limit"},
+        "args": {"content": "x".repeat(ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES)},
+    })
+    .to_string();
+
+    let response = support::post_rpc_raw(console, &body, None).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        support::body_json(response).await,
+        json!({
+            "error": {
+                "kind": "request_too_large",
+                "message": "request body exceeded the protocol size limit",
+                "details": {}
+            }
+        })
+    );
+    assert_eq!(gateway.request_count(), 0);
 }
 
 #[tokio::test]

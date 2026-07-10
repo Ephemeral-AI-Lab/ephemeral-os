@@ -1,0 +1,7 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running tests/console.rs (target/debug/deps/console-ee5dfb266b38776b)
+
+running 1 test
+test rpc_tests::body_over_protocol_limit_is_rejected_before_gateway_transport ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 35 filtered out; finished in 0.54s

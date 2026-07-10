@@ -1,0 +1,51 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.3, pytest-9.0.2, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test
+configfile: pytest.ini
+plugins: anyio-4.12.1, cov-7.0.0
+collecting ... collected 2 items
+
+manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-04]
+-------------------------------- live log setup --------------------------------
+19:55:13.992 INFO e2e.cli: → sandbox-manager-cli list_sandboxes
+19:55:14.018 INFO e2e.cli: ← sandbox-manager-cli list_sandboxes  (exit=0, 0.03s)
+19:55:14.019 INFO e2e.gateway: gateway already running — reusing
+PASSED                                                                   [ 50%]------------------------------ live log logreport ------------------------------
+19:55:38.283 INFO e2e.timing: ⏱  manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-04] — 24.290s total
+
+runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write
+-------------------------------- live log setup --------------------------------
+19:55:38.284 INFO e2e.cli: → sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root /Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/repo/testbed
+19:55:38.650 INFO e2e.cli: ← sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root /Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/repo/testbed  (exit=0, 0.37s)
+-------------------------------- live log call ---------------------------------
+19:55:38.664 INFO e2e.cli: → sandbox-runtime-cli --sandbox-id eos-1b695d81-8ae2-47fc-8566-8d89c607d7f5 file_write --path read-smoke/session.txt --content session-only --workspace-session-id 00000118c0eba335dd4bff
+19:55:38.698 INFO e2e.cli: ← sandbox-runtime-cli --sandbox-id eos-1b695d81-8ae2-47fc-8566-8d89c607d7f5 file_write --path read-smoke/session.txt --content session-only --workspace-session-id 00000118c0eba335dd4bff  (exit=0, 0.03s)
+19:55:38.698 INFO e2e.cli: → sandbox-runtime-cli --sandbox-id eos-1b695d81-8ae2-47fc-8566-8d89c607d7f5 file_read --path read-smoke/session.txt --workspace-session-id 00000118c0eba335dd4bff
+19:55:38.725 INFO e2e.cli: ← sandbox-runtime-cli --sandbox-id eos-1b695d81-8ae2-47fc-8566-8d89c607d7f5 file_read --path read-smoke/session.txt --workspace-session-id 00000118c0eba335dd4bff  (exit=0, 0.03s)
+PASSED                                                                   [100%]
+------------------------------ live log teardown -------------------------------
+19:55:38.743 INFO e2e.cli: → sandbox-manager-cli destroy_sandbox --sandbox-id eos-1b695d81-8ae2-47fc-8566-8d89c607d7f5
+19:55:39.070 INFO e2e.cli: ← sandbox-manager-cli destroy_sandbox --sandbox-id eos-1b695d81-8ae2-47fc-8566-8d89c607d7f5  (exit=0, 0.33s)
+------------------------------ live log logreport ------------------------------
+19:55:39.071 INFO e2e.timing: ⏱  runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write — 0.787s total
+
+
+------------------------ manager export verdict summary ------------------------
+export verdict summary: /Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/export/test-reports/export-20260710-195513/SUMMARY.md
+--------------------- sandbox-cli operation timing metrics ---------------------
+durations are client-side sandbox-cli wall time; no timing SLO is enforced
+manager.create_sandbox: n=1 p50=366.6ms p95=366.6ms max=366.6ms sub50=0.0% sub100=0.0% sub200=0.0%
+manager.destroy_sandbox: n=1 p50=326.7ms p95=326.7ms max=326.7ms sub50=0.0% sub100=0.0% sub200=0.0%
+manager.list_sandboxes: n=1 p50=25.5ms p95=25.5ms max=25.5ms sub50=100.0% sub100=100.0% sub200=100.0%
+runtime.file_read: n=1 p50=26.2ms p95=26.2ms max=26.2ms sub50=100.0% sub100=100.0% sub200=100.0%
+runtime.file_write: n=1 p50=33.8ms p95=33.8ms max=33.8ms sub50=100.0% sub100=100.0% sub200=100.0%
+operation timing metrics: /Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/docs/obsidian/ephemeral-os/testing/file-operation/operation-timing/latest.md
+============================== slowest durations ===============================
+24.26s call     manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-04]
+0.38s setup    runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write
+0.35s teardown runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write
+0.06s call     runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write
+0.03s setup    manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-04]
+0.00s teardown manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-04]
+============================== 2 passed in 25.12s ==============================

@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running tests/compatibility.rs (target/debug/deps/compatibility-1c7de07963a3bf00)
+
+running 2 tests
+test all_feature_compatibility_catalog_matches_phase_zero_fixture ... ok
+test unknown_operation_errors_and_exit_codes_match_phase_zero_fixture ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.65s

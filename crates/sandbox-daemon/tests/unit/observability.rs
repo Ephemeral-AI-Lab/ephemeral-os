@@ -219,6 +219,55 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
 }
 
 #[tokio::test]
+async fn get_observability_wire_op_dispatches_snapshot_and_layerstack() -> TestResult {
+    let root = test_root("snapshot-layerstack-wire-op");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+
+    let snapshot = server
+        .dispatch_bytes(
+            request_bytes(
+                "get_observability",
+                "req-snapshot",
+                json!({ "view": "snapshot" }),
+            )?,
+            false,
+        )
+        .await;
+
+    assert_eq!(snapshot["sandbox_id"], "sandbox-1");
+    assert_eq!(snapshot["lifecycle_state"], "ready");
+    assert_eq!(snapshot["availability"], "available");
+    assert_eq!(snapshot["errors"], json!([]));
+    assert_eq!(snapshot["resources"], json!({ "latest": null, "history": [] }));
+    assert_eq!(snapshot["workspaces"], json!([]));
+    assert!(snapshot["sampled_at_unix_ms"].is_u64());
+    assert!(snapshot["daemon"]["daemon_pid"].is_u64());
+    assert!(snapshot["daemon"]["runtime_dir"].is_string());
+    assert!(snapshot["stack"]["layer_count"].is_u64());
+    assert!(snapshot["stack"]["layers_bytes"].is_u64());
+    assert_eq!(snapshot["stack"]["active_leases"], 0);
+
+    let layerstack = server
+        .dispatch_bytes(
+            request_bytes(
+                "get_observability",
+                "req-layerstack",
+                json!({ "view": "layerstack" }),
+            )?,
+            false,
+        )
+        .await;
+
+    assert_eq!(layerstack["view"], "layerstack");
+    assert!(layerstack["manifest_version"].is_u64());
+    assert!(layerstack["root_hash"].is_string());
+    assert_eq!(layerstack["active_lease_count"], 0);
+    assert!(layerstack["total_bytes"].is_u64());
+    assert!(layerstack["layers"].is_array());
+    Ok(())
+}
+
+#[tokio::test]
 async fn events_view_dispatch_returns_parsed_events_by_name() -> TestResult {
     let root = test_root("events-view");
     let server = daemon_server(&root, Some("sandbox-1"))?;

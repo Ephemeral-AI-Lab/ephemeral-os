@@ -1,0 +1,4 @@
+    Checking sandbox-cli v0.1.0 (/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/crates/sandbox-cli)
+    Checking sandbox-console v0.1.0 (/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/crates/sandbox-console)
+    Checking sandbox-mcp v0.1.0 (/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/crates/sandbox-mcp)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 18.59s

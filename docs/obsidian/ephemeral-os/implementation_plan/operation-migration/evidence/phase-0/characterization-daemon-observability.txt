@@ -1,0 +1,7 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.14s
+     Running tests/unit.rs (target/debug/deps/unit-502ac5775860668f)
+
+running 1 test
+test observability_tests::get_observability_wire_op_dispatches_snapshot_and_layerstack ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 61 filtered out; finished in 0.09s

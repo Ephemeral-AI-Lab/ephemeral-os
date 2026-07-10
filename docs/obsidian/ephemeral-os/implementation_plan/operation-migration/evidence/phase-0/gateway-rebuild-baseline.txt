@@ -1,0 +1,11 @@
+building host binaries
+using builder: zigbuild
+    Finished `package-fast` profile [optimized] target(s) in 0.21s
+packaged sandbox-daemon-linux-arm64 target=aarch64-unknown-linux-musl profile=package-fast sha256=ddb995ff8bb065a8be9f3febf4f838a52efed9b80547d7fb04bfa451ad842d12
+stopping existing sandbox-gateway pid 27884
+sandbox-gateway starting in background via launcher pid 89576
+pid file: /tmp/eos-gateway.pid
+address: 127.0.0.1:7878
+auth token: <redacted> (also written to /tmp/eos-gateway.token)
+log: /tmp/eos-gateway.log
+all three bin/sandbox-*-cli wrappers read /tmp/eos-gateway.token automatically; or: export SANDBOX_GATEWAY_AUTH_TOKEN=<redacted>
