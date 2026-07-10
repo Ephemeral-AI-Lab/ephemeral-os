@@ -12,6 +12,8 @@ path = "src/main.rs"
 [dependencies]
 anyhow.workspace = true
 ignore.workspace = true
+sandbox-operation-catalog = { workspace = true, features = ["manager", "observability", "runtime"] }
+sandbox-operation-contract.workspace = true
 sha2.workspace = true
 
 [lints]

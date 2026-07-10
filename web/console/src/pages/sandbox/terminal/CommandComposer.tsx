@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
+import type { ExecCommandArgs } from "@/api/gen/operations";
 import { rpc, sandboxScope } from "@/api/rpc";
 import type { CommandOutput } from "@/api/types";
 import type { WorkspaceSnapshot } from "@/api/observability";
@@ -50,11 +51,11 @@ export function CommandComposer({
     const text = cmd.trim();
     if (text === "" || busy) return;
     const workspaceSessionId = target === AUTO_PUBLISH ? null : target;
-    const args: Record<string, unknown> = { cmd: text, yield_time_ms: 0 };
-    if (workspaceSessionId) args["workspace_session_id"] = workspaceSessionId;
+    const args: ExecCommandArgs = { cmd: text, yield_time_ms: 0 };
+    if (workspaceSessionId) args.workspace_session_id = workspaceSessionId;
     const timeout = timeoutSeconds.trim();
     if (timeout !== "" && Number.isFinite(Number(timeout)) && Number(timeout) > 0) {
-      args["timeout_ms"] = Math.round(Number(timeout) * 1000);
+      args.timeout_ms = Math.round(Number(timeout) * 1000);
     }
     setBusy(true);
     try {

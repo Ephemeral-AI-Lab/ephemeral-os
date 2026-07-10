@@ -88,6 +88,10 @@ start-sandbox-docker-gateway
 # bootstrap the whole web console stack (gateway + SPA build + console server)
 start-sandbox-console-stack        # then open http://127.0.0.1:7880
 
+# regenerate the console's typed operation bindings after a catalog change
+# (cargo test fails while web/console/src/api/gen/operations.ts is stale)
+cargo run -p xtask -- gen-console-api
+
 # in another shell, use the gateway clients directly
 sandbox-manager-cli list_sandboxes
 sandbox-runtime-cli --sandbox-id eos-abc exec_command pwd

@@ -1,8 +1,12 @@
-export type Scope = { kind: "system" } | { kind: "sandbox"; sandbox_id: string };
+import type { SandboxOp, SandboxOpArgs, SystemOp, SystemOpArgs } from "@/api/gen/operations";
 
-export const systemScope: Scope = { kind: "system" };
+export type SystemScope = { kind: "system" };
+export type SandboxScope = { kind: "sandbox"; sandbox_id: string };
+export type Scope = SystemScope | SandboxScope;
 
-export function sandboxScope(sandboxId: string): Scope {
+export const systemScope: SystemScope = { kind: "system" };
+
+export function sandboxScope(sandboxId: string): SandboxScope {
   return { kind: "sandbox", sandbox_id: sandboxId };
 }
 
@@ -48,7 +52,34 @@ function protocolError(body: ErrorEnvelope): RpcError {
   });
 }
 
-export async function rpc<T = unknown>(
+/**
+ * Send one public catalog operation. The operation name, argument shape, and
+ * scope pairing are checked against the generated catalog bindings.
+ */
+export function rpc<T = unknown, O extends SandboxOp = SandboxOp>(
+  op: O,
+  scope: SandboxScope,
+  args?: SandboxOpArgs[O],
+): Promise<T>;
+export function rpc<T = unknown, O extends SystemOp = SystemOp>(
+  op: O,
+  scope: SystemScope,
+  args?: SystemOpArgs[O],
+): Promise<T>;
+export function rpc<T = unknown>(
+  op: string,
+  scope: Scope,
+  args: Record<string, unknown> = {},
+): Promise<T> {
+  return rpcUnchecked<T>(op, scope, args);
+}
+
+/**
+ * Send an operation without checking it against the generated public
+ * catalogs. The console server rejects anything outside its allowed routes;
+ * prefer `rpc` unless the operation is deliberately off-catalog.
+ */
+export async function rpcUnchecked<T = unknown>(
   op: string,
   scope: Scope,
   args: Record<string, unknown> = {},
@@ -103,8 +134,21 @@ function parseSseChunk(chunk: string): SseEvent | null {
  * The SSE variant: same request with `Accept: text/event-stream`. Progress
  * lines stream through `onLog`; the returned promise settles with the final
  * `result` event (or rejects on a protocol error inside it, a terminal
- * `error` event, or a transport failure).
+ * `error` event, or a transport failure). Operation names, arguments, and
+ * scope pairing are checked against the generated catalog bindings.
  */
+export function rpcStream<T = unknown, O extends SandboxOp = SandboxOp>(
+  op: O,
+  scope: SandboxScope,
+  args: SandboxOpArgs[O],
+  onLog: (line: string) => void,
+): Promise<T>;
+export function rpcStream<T = unknown, O extends SystemOp = SystemOp>(
+  op: O,
+  scope: SystemScope,
+  args: SystemOpArgs[O],
+  onLog: (line: string) => void,
+): Promise<T>;
 export async function rpcStream<T = unknown>(
   op: string,
   scope: Scope,
