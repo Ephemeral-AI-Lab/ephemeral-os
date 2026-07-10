@@ -276,6 +276,12 @@ pub async fn spawn_console(
         },
         assets_dir,
         rpc_timeout,
+        // Shipped defaults; tests that tune a timeout go through the config.
+        health_probe_timeout: Duration::from_secs(2),
+        proxy_connect_timeout: Duration::from_secs(10),
+        proxy_response_timeout: Duration::from_secs(30),
+        endpoint_resolve_timeout: Duration::from_secs(5),
+        endpoint_cache_ttl: Duration::from_secs(3),
     };
     tokio::spawn(server::serve(listener, AppState::new(config)));
     addr

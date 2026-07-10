@@ -4,14 +4,12 @@ use std::time::Duration;
 use sandbox_protocol::{CliOperationScope, Request};
 use serde_json::{json, Map, Value};
 
-use crate::operation::ManagerServices;
+use crate::operation::{ManagerServices, ObservabilitySnapshotLimits};
 use crate::{
     ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord,
     SandboxState,
 };
 
-const MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS: usize = 8;
-const DEFAULT_DAEMON_SNAPSHOT_TIMEOUT_MS: u64 = 1_500;
 const MAX_NODE_ERROR_BYTES: usize = 4_096;
 const PRIVATE_DAEMON_OBSERVABILITY_OP: &str = "get_observability";
 
@@ -30,6 +28,7 @@ pub(crate) fn observability_snapshot(
         records,
         Arc::clone(&services.daemon_client),
         request_id,
+        services.snapshot_limits,
     ))
 }
 
@@ -55,9 +54,10 @@ fn aggregate_records(
     records: Vec<SandboxRecord>,
     daemon_client: Arc<dyn SandboxDaemonClient>,
     request_id: &str,
+    limits: ObservabilitySnapshotLimits,
 ) -> Vec<Value> {
     let mut nodes = Vec::with_capacity(records.len());
-    for chunk in records.chunks(MAX_CONCURRENT_DAEMON_SNAPSHOT_REQUESTS) {
+    for chunk in records.chunks(limits.max_concurrent_requests) {
         std::thread::scope(|scope| {
             let handles = chunk
                 .iter()
@@ -66,8 +66,9 @@ fn aggregate_records(
                     let panic_record = record.clone();
                     let worker_client = Arc::clone(&daemon_client);
                     let worker_request_id = request_id.to_owned();
-                    let handle = scope
-                        .spawn(move || sandbox_node(record, worker_client, &worker_request_id));
+                    let handle = scope.spawn(move || {
+                        sandbox_node(record, worker_client, &worker_request_id, limits.timeout_ms)
+                    });
                     (panic_record, handle)
                 })
                 .collect::<Vec<_>>();
@@ -90,6 +91,7 @@ fn sandbox_node(
     record: SandboxRecord,
     daemon_client: Arc<dyn SandboxDaemonClient>,
     request_id: &str,
+    timeout_ms: u64,
 ) -> Value {
     if record.state != SandboxState::Ready {
         return unavailable_node(
@@ -102,11 +104,7 @@ fn sandbox_node(
         return unavailable_node(&record, None, "sandbox daemon endpoint is unavailable");
     };
     let request = private_snapshot_request(&record, request_id);
-    match daemon_client.invoke_with_timeout(
-        &endpoint,
-        request,
-        Duration::from_millis(DEFAULT_DAEMON_SNAPSHOT_TIMEOUT_MS),
-    ) {
+    match daemon_client.invoke_with_timeout(&endpoint, request, Duration::from_millis(timeout_ms)) {
         Ok(response) => node_from_daemon_response(&record, &endpoint, response.into_json_value()),
         Err(error) => unavailable_node(&record, Some(&endpoint), error.to_string()),
     }

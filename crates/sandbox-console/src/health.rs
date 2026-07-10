@@ -3,8 +3,6 @@
 //! HTTP 200 (`ok` / `unreachable`); resolution failures use the console
 //! error mapping (404 / 503 / 502).
 
-use std::time::Duration;
-
 use http::{Request, StatusCode};
 use http_body_util::BodyExt as _;
 use hyper::Response;
@@ -17,14 +15,12 @@ use crate::endpoint::{self, HttpEndpoint};
 use crate::response::{self, BoxBody};
 use crate::state::AppState;
 
-const PROBE_TIMEOUT: Duration = Duration::from_secs(2);
-
 pub async fn handle(state: &AppState, sandbox_id: &str) -> Response<BoxBody> {
     let endpoint = match endpoint::resolve(state, sandbox_id).await {
         Ok(endpoint) => endpoint,
         Err(error) => return error.into_response(),
     };
-    match timeout(PROBE_TIMEOUT, probe(&endpoint)).await {
+    match timeout(state.config.health_probe_timeout, probe(&endpoint)).await {
         Ok(Ok(())) => response::json_value(StatusCode::OK, &json!({ "status": "ok" })),
         Ok(Err(detail)) => unreachable_response(&detail),
         Err(_) => unreachable_response("health probe timed out"),

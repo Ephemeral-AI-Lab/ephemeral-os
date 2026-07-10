@@ -12,7 +12,9 @@ mod runtime;
 mod store;
 
 pub use daemon_client::{SandboxDaemonClient, TcpSandboxDaemonClient};
-pub use daemon_install::{LocalSandboxDaemonInstaller, SandboxDaemonInstaller, StartedDaemon};
+pub use daemon_install::{
+    LocalDaemonTimeouts, LocalSandboxDaemonInstaller, SandboxDaemonInstaller, StartedDaemon,
+};
 pub use error::ManagerError;
 pub use export_apply::ExportApplyCaps;
 pub use model::{
@@ -21,7 +23,7 @@ pub use model::{
 };
 pub use operation::{
     cli_operation_catalog, cli_operation_families, cli_operation_specs, dispatch_operation,
-    dispatch_operation_with_progress, ManagerServices,
+    dispatch_operation_with_progress, ManagerServices, ObservabilitySnapshotLimits,
 };
 pub use progress::ProgressSink;
 pub use router::SandboxManagerRouter;

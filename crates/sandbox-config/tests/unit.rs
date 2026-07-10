@@ -46,6 +46,14 @@ mod cli_tests {
     ));
 }
 
+mod console_tests {
+    pub(crate) use crate::configs::console::*;
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/configs/console.rs"
+    ));
+}
+
 mod daemon_tests {
     pub(crate) use crate::configs::daemon::*;
     include!(concat!(

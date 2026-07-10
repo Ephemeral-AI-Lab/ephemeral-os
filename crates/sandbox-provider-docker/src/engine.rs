@@ -26,7 +26,6 @@ use crate::labels;
 
 const HTTP_NOT_FOUND: u16 = 404;
 const HTTP_NOT_MODIFIED: u16 = 304;
-const CONNECT_TIMEOUT_SECS: u64 = 120;
 const LOG_CAPTURE_TAIL: &str = "200";
 const LOG_CAPTURE_CAP_BYTES: usize = 8192;
 
@@ -113,6 +112,7 @@ impl DockerEngine {
         Fut: Future<Output = Result<T, DockerError>>,
     {
         let endpoint = self.config.docker_endpoint.clone();
+        let connect_timeout_s = self.config.connect_timeout_s;
         let worker = std::thread::Builder::new()
             .name("docker-engine".to_owned())
             .spawn(move || {
@@ -123,7 +123,7 @@ impl DockerEngine {
                         DockerError::Connect(format!("failed to build docker runtime: {error}"))
                     })?;
                 runtime.block_on(async move {
-                    let docker = connect(endpoint.as_deref())?;
+                    let docker = connect(endpoint.as_deref(), connect_timeout_s)?;
                     op(docker).await
                 })
             })
@@ -298,6 +298,9 @@ impl DockerEngine {
         daemon_port: u16,
         daemon_http_port: u16,
     ) -> Result<StartedContainer, DockerError> {
+        let publish_attempts = self.config.port_publish_attempts;
+        let publish_retry_delay =
+            std::time::Duration::from_millis(self.config.port_publish_retry_delay_ms);
         self.run_blocking(move |docker| async move {
             docker
                 .start_container(&container, None::<StartContainerOptions<String>>)
@@ -307,6 +310,8 @@ impl DockerEngine {
                 &docker,
                 &container,
                 &[daemon_port, daemon_http_port],
+                publish_attempts,
+                publish_retry_delay,
             )
             .await?;
             let port = published_port(&inspected, daemon_port)?;
@@ -545,13 +550,13 @@ async fn remove_volume(docker: &Docker, volume: &str) -> Result<(), DockerError>
     }
 }
 
-fn connect(endpoint: Option<&str>) -> Result<Docker, DockerError> {
+fn connect(endpoint: Option<&str>, connect_timeout_s: u64) -> Result<Docker, DockerError> {
     let docker = match endpoint {
         Some(value) if value.starts_with("http://") || value.starts_with("tcp://") => {
-            Docker::connect_with_http(value, CONNECT_TIMEOUT_SECS, bollard::API_DEFAULT_VERSION)
+            Docker::connect_with_http(value, connect_timeout_s, bollard::API_DEFAULT_VERSION)
         }
         Some(value) => {
-            Docker::connect_with_unix(value, CONNECT_TIMEOUT_SECS, bollard::API_DEFAULT_VERSION)
+            Docker::connect_with_unix(value, connect_timeout_s, bollard::API_DEFAULT_VERSION)
         }
         None => Docker::connect_with_local_defaults(),
     };
@@ -567,18 +572,18 @@ async fn inspect_until_ports_published(
     docker: &Docker,
     container: &str,
     ports: &[u16],
+    attempts: u32,
+    retry_delay: std::time::Duration,
 ) -> Result<ContainerInspectResponse, DockerError> {
-    const PORT_PUBLISH_ATTEMPTS: u32 = 40;
-    const PORT_PUBLISH_RETRY_DELAY: std::time::Duration = std::time::Duration::from_millis(50);
     let mut inspected = inspect_container(docker, container).await?;
-    for _ in 0..PORT_PUBLISH_ATTEMPTS {
+    for _ in 0..attempts {
         if ports
             .iter()
             .all(|port| published_port(&inspected, *port).is_ok())
         {
             break;
         }
-        tokio::time::sleep(PORT_PUBLISH_RETRY_DELAY).await;
+        tokio::time::sleep(retry_delay).await;
         inspected = inspect_container(docker, container).await?;
     }
     Ok(inspected)

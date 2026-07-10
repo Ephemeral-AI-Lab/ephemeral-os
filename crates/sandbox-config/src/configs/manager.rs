@@ -9,7 +9,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_non_empty, require_u64_at_least, ConfigFieldError,
+    require_absolute, require_f64_gt, require_non_empty, require_u64_at_least,
+    require_usize_at_least, ConfigFieldError,
 };
 
 /// Host-side caps for the `export_changes` apply path (`manager.export`),
@@ -56,6 +57,83 @@ impl ManagerExportConfig {
     }
 }
 
+/// Concurrency and per-daemon deadline for the `observability_snapshot`
+/// fan-out (`manager.observability_snapshot`); the gateway injects these into
+/// the manager services.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct ManagerObservabilitySnapshotConfig {
+    /// Daemon snapshot requests issued concurrently per aggregation wave.
+    pub max_concurrent_requests: usize,
+    /// Per-daemon snapshot request deadline.
+    pub timeout_ms: u64,
+}
+
+impl Default for ManagerObservabilitySnapshotConfig {
+    fn default() -> Self {
+        Self {
+            max_concurrent_requests: 8,
+            timeout_ms: 1_500,
+        }
+    }
+}
+
+impl ManagerObservabilitySnapshotConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates snapshot aggregation policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        require_usize_at_least(
+            self.max_concurrent_requests,
+            1,
+            "manager.observability_snapshot.max_concurrent_requests",
+        )?;
+        require_u64_at_least(
+            self.timeout_ms,
+            1,
+            "manager.observability_snapshot.timeout_ms",
+        )
+    }
+}
+
+/// Ready/stop deadlines for the local-process daemon installer
+/// (`manager.local_daemon`); polls stay hardcoded cadence.
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct ManagerLocalDaemonConfig {
+    pub ready_timeout_s: f64,
+    pub stop_timeout_s: f64,
+}
+
+impl Default for ManagerLocalDaemonConfig {
+    fn default() -> Self {
+        Self {
+            ready_timeout_s: 2.0,
+            stop_timeout_s: 2.0,
+        }
+    }
+}
+
+impl ManagerLocalDaemonConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates local daemon install policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        require_f64_gt(
+            self.ready_timeout_s,
+            0.0,
+            "manager.local_daemon.ready_timeout_s",
+        )?;
+        require_f64_gt(
+            self.stop_timeout_s,
+            0.0,
+            "manager.local_daemon.stop_timeout_s",
+        )
+    }
+}
+
 pub const DEFAULT_CONTAINER_WORKSPACE_ROOT: &str = "/workspace";
 pub const DEFAULT_CONTAINER_DAEMON_BINARY_PATH: &str = "/eos/bin/sandbox-daemon";
 pub const DEFAULT_CONTAINER_DAEMON_CONFIG_PATH: &str = "/eos/config/daemon.yml";
@@ -67,7 +145,7 @@ pub const DEFAULT_GATEWAY_INSTANCE_ID: &str = "eos-gateway";
 /// Root `manager` section. Holds one backend sub-section; only `docker` exists
 /// in v1, and it stays optional so the gateway's default `none` backend needs no
 /// config at all.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ManagerConfig {
     /// Host path of the sandbox registry JSON snapshot. When set, the gateway
@@ -76,6 +154,8 @@ pub struct ManagerConfig {
     /// `None` keeps the registry in process memory only.
     pub registry_path: Option<PathBuf>,
     pub export: ManagerExportConfig,
+    pub observability_snapshot: ManagerObservabilitySnapshotConfig,
+    pub local_daemon: ManagerLocalDaemonConfig,
     pub docker: Option<DockerRuntimeConfig>,
 }
 
@@ -86,6 +166,8 @@ impl ManagerConfig {
     /// Returns an error when a field violates manager policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         self.export.validate()?;
+        self.observability_snapshot.validate()?;
+        self.local_daemon.validate()?;
         if let Some(docker) = &self.docker {
             docker.validate()?;
         }
@@ -129,6 +211,17 @@ pub struct DockerRuntimeConfig {
     pub gateway_instance_id: String,
     /// Readiness deadline for the authenticated daemon check.
     pub readiness_timeout_ms: u64,
+    /// Docker Engine API connect timeout, in seconds.
+    pub connect_timeout_s: u64,
+    /// Grace Docker gives a container between SIGTERM and SIGKILL on stop,
+    /// in seconds.
+    pub stop_timeout_s: u64,
+    /// Cadence of readiness probes under `readiness_timeout_ms`.
+    pub readiness_poll_ms: u64,
+    /// Inspect retries waiting for published host ports after container start.
+    pub port_publish_attempts: u32,
+    /// Delay between port-publish inspect retries.
+    pub port_publish_retry_delay_ms: u64,
     /// Optional per-container memory cap in bytes.
     pub memory_bytes: Option<i64>,
     /// Optional per-container CPU cap in nano-CPUs.
@@ -157,6 +250,11 @@ impl Default for DockerRuntimeConfig {
             daemon_http_port: DEFAULT_DAEMON_HTTP_PORT,
             gateway_instance_id: DEFAULT_GATEWAY_INSTANCE_ID.to_owned(),
             readiness_timeout_ms: DEFAULT_READINESS_TIMEOUT_MS,
+            connect_timeout_s: 120,
+            stop_timeout_s: 5,
+            readiness_poll_ms: 250,
+            port_publish_attempts: 40,
+            port_publish_retry_delay_ms: 50,
             memory_bytes: None,
             nano_cpus: None,
             container_env: BTreeMap::new(),
@@ -204,6 +302,27 @@ impl DockerRuntimeConfig {
             self.readiness_timeout_ms,
             1,
             "manager.docker.readiness_timeout_ms",
+        )?;
+        require_u64_at_least(
+            self.connect_timeout_s,
+            1,
+            "manager.docker.connect_timeout_s",
+        )?;
+        require_u64_at_least(self.stop_timeout_s, 1, "manager.docker.stop_timeout_s")?;
+        require_u64_at_least(
+            self.readiness_poll_ms,
+            1,
+            "manager.docker.readiness_poll_ms",
+        )?;
+        require_u64_at_least(
+            u64::from(self.port_publish_attempts),
+            1,
+            "manager.docker.port_publish_attempts",
+        )?;
+        require_u64_at_least(
+            self.port_publish_retry_delay_ms,
+            1,
+            "manager.docker.port_publish_retry_delay_ms",
         )?;
         for name in self.container_env.keys() {
             require_non_empty(name, "manager.docker.container_env")?;

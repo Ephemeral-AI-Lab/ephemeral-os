@@ -18,8 +18,6 @@ use crate::engine::{DockerEngine, DockerError};
 use crate::readiness::{readiness_request_line, validate_readiness_response};
 
 const ARCHIVE_ROOT: &str = "/";
-const STOP_TIMEOUT_SECS: i64 = 5;
-const READINESS_POLL: Duration = Duration::from_millis(250);
 const READINESS_IO_TIMEOUT: Duration = Duration::from_millis(250);
 
 /// Docker-backed daemon installer.
@@ -91,8 +89,9 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
     }
 
     fn stop_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
+        let stop_timeout_s = i64::try_from(self.engine.config().stop_timeout_s).unwrap_or(i64::MAX);
         self.engine
-            .stop_container(record.id.as_str().to_owned(), STOP_TIMEOUT_SECS)
+            .stop_container(record.id.as_str().to_owned(), stop_timeout_s)
             .map_err(install_error)
     }
 
@@ -102,9 +101,10 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
         endpoint: &SandboxDaemonEndpoint,
     ) -> Result<(), ManagerError> {
         let timeout = Duration::from_millis(self.engine.config().readiness_timeout_ms);
+        let poll_interval = Duration::from_millis(self.engine.config().readiness_poll_ms);
         let sandbox_id = record.id.as_str();
         let mut seen_logs = HashSet::new();
-        poll_until_ready_with_progress(endpoint, sandbox_id, timeout, || {
+        poll_until_ready_with_progress(endpoint, sandbox_id, timeout, poll_interval, || {
             fail_on_daemon_logs(
                 &self.engine.capture_logs(sandbox_id.to_owned()),
                 &mut seen_logs,
@@ -127,9 +127,10 @@ impl SandboxDaemonInstaller for DockerSandboxDaemonInstaller {
         progress: &ProgressSink,
     ) -> Result<(), ManagerError> {
         let timeout = Duration::from_millis(self.engine.config().readiness_timeout_ms);
+        let poll_interval = Duration::from_millis(self.engine.config().readiness_poll_ms);
         let sandbox_id = record.id.as_str();
         let mut seen_logs = HashSet::new();
-        poll_until_ready_with_progress(endpoint, sandbox_id, timeout, || {
+        poll_until_ready_with_progress(endpoint, sandbox_id, timeout, poll_interval, || {
             fail_on_daemon_logs(
                 &self.engine.capture_logs(sandbox_id.to_owned()),
                 &mut seen_logs,
@@ -154,6 +155,7 @@ fn poll_until_ready_with_progress<F>(
     endpoint: &SandboxDaemonEndpoint,
     sandbox_id: &str,
     timeout: Duration,
+    poll_interval: Duration,
     mut on_poll: F,
 ) -> Result<(), String>
 where
@@ -179,7 +181,7 @@ where
                 timeout.as_millis()
             ));
         }
-        std::thread::sleep(READINESS_POLL);
+        std::thread::sleep(poll_interval);
     }
 }
 

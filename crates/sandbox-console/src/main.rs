@@ -28,6 +28,9 @@ struct Cli {
 
     #[arg(long = "rpc-timeout-ms", value_name = "MS")]
     rpc_timeout_ms: Option<u64>,
+
+    #[arg(long = "config-yaml", value_name = "PATH")]
+    config_yaml: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -37,6 +40,7 @@ async fn main() -> ExitCode {
         bind: cli.bind,
         assets_dir: cli.assets_dir,
         rpc_timeout_ms: cli.rpc_timeout_ms,
+        config_yaml: cli.config_yaml,
         gateway: GatewayConfigOverrides {
             gateway_socket_path: cli.gateway_socket_path,
             gateway_auth_token: cli.gateway_auth_token,

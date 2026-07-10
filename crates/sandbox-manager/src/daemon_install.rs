@@ -24,11 +24,26 @@ pub struct StartedDaemon {
     pub daemon_http: Option<SandboxHttpEndpoint>,
 }
 
-const DAEMON_READY_TIMEOUT: Duration = Duration::from_secs(2);
 const DAEMON_READY_POLL: Duration = Duration::from_millis(20);
-const DAEMON_STOP_TIMEOUT: Duration = Duration::from_secs(2);
 const DAEMON_STOP_POLL: Duration = Duration::from_millis(20);
 const DAEMON_TCP_HOST: &str = "127.0.0.1";
+
+/// `manager.local_daemon` ready/stop deadlines for the local-process daemon
+/// installer; polls stay hardcoded cadence.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LocalDaemonTimeouts {
+    pub ready_timeout: Duration,
+    pub stop_timeout: Duration,
+}
+
+impl Default for LocalDaemonTimeouts {
+    fn default() -> Self {
+        Self {
+            ready_timeout: Duration::from_secs(2),
+            stop_timeout: Duration::from_secs(2),
+        }
+    }
+}
 
 pub trait SandboxDaemonInstaller: Send + Sync {
     fn install_daemon(&self, record: &SandboxRecord) -> Result<(), ManagerError>;
@@ -58,6 +73,7 @@ pub struct LocalSandboxDaemonInstaller {
     executable: PathBuf,
     config_yaml_path: PathBuf,
     runtime_root: PathBuf,
+    timeouts: LocalDaemonTimeouts,
 }
 
 impl LocalSandboxDaemonInstaller {
@@ -71,7 +87,14 @@ impl LocalSandboxDaemonInstaller {
             executable: executable.into(),
             config_yaml_path: config_yaml_path.into(),
             runtime_root: runtime_root.into(),
+            timeouts: LocalDaemonTimeouts::default(),
         }
+    }
+
+    #[must_use]
+    pub fn with_timeouts(mut self, timeouts: LocalDaemonTimeouts) -> Self {
+        self.timeouts = timeouts;
+        self
     }
 
     pub(crate) fn launch_spec(
@@ -161,7 +184,7 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
             return Ok(());
         }
         let pid = read_daemon_pid(&spec.pid_path)?;
-        terminate_daemon_process(pid)?;
+        terminate_daemon_process(pid, self.timeouts.stop_timeout)?;
         remove_daemon_file(&spec.pid_path)?;
         remove_daemon_file(&spec.socket_path)?;
         Ok(())
@@ -172,7 +195,7 @@ impl SandboxDaemonInstaller for LocalSandboxDaemonInstaller {
         _record: &SandboxRecord,
         endpoint: &SandboxDaemonEndpoint,
     ) -> Result<(), ManagerError> {
-        let deadline = Instant::now() + DAEMON_READY_TIMEOUT;
+        let deadline = Instant::now() + self.timeouts.ready_timeout;
         loop {
             if TcpStream::connect((endpoint.host.as_str(), endpoint.port)).is_ok() {
                 return Ok(());
@@ -255,16 +278,16 @@ fn read_daemon_pid(pid_path: &Path) -> Result<Pid, ManagerError> {
 }
 
 #[cfg(unix)]
-fn terminate_daemon_process(pid: Pid) -> Result<(), ManagerError> {
+fn terminate_daemon_process(pid: Pid, stop_timeout: Duration) -> Result<(), ManagerError> {
     if !daemon_process_exists(pid)? {
         return Ok(());
     }
     send_signal(pid, Signal::SIGTERM, "terminate")?;
-    if wait_for_daemon_exit(pid)? {
+    if wait_for_daemon_exit(pid, stop_timeout)? {
         return Ok(());
     }
     send_signal(pid, Signal::SIGKILL, "kill")?;
-    if wait_for_daemon_exit(pid)? {
+    if wait_for_daemon_exit(pid, stop_timeout)? {
         return Ok(());
     }
     Err(daemon_install_error(format!(
@@ -283,8 +306,8 @@ fn send_signal(pid: Pid, signal: Signal, action: &str) -> Result<(), ManagerErro
 }
 
 #[cfg(unix)]
-fn wait_for_daemon_exit(pid: Pid) -> Result<bool, ManagerError> {
-    let deadline = Instant::now() + DAEMON_STOP_TIMEOUT;
+fn wait_for_daemon_exit(pid: Pid, stop_timeout: Duration) -> Result<bool, ManagerError> {
+    let deadline = Instant::now() + stop_timeout;
     while Instant::now() < deadline {
         if !daemon_process_exists(pid)? {
             return Ok(true);

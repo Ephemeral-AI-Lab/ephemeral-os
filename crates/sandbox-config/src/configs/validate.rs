@@ -44,6 +44,19 @@ pub fn require_non_empty(value: &str, field: &'static str) -> Result<(), ConfigF
     }
 }
 
+/// Require a `host:port` value that parses as a socket address.
+pub fn require_socket_addr(value: &str, field: &'static str) -> Result<(), ConfigFieldError> {
+    require_non_empty(value, field)?;
+    if value.parse::<std::net::SocketAddr>().is_ok() {
+        Ok(())
+    } else {
+        Err(ConfigFieldError::new(
+            field,
+            format!("`{value}` must be a host:port socket address"),
+        ))
+    }
+}
+
 /// Require that no list item is blank.
 pub fn require_non_empty_items(
     values: &[String],

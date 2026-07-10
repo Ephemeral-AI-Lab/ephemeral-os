@@ -19,9 +19,6 @@ use crate::endpoint::{self, HttpEndpoint};
 use crate::response::{self, BoxBody};
 use crate::state::AppState;
 
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
-
 const HOP_BY_HOP: [&str; 7] = [
     "connection",
     "keep-alive",
@@ -43,7 +40,14 @@ pub async fn handle(state: &Arc<AppState>, req: Request<Incoming>) -> Response<B
         Ok(endpoint) => endpoint,
         Err(error) => return error.into_response(),
     };
-    forward_to_endpoint(&endpoint, &route.forward_target, req).await
+    forward_to_endpoint(
+        &endpoint,
+        &route.forward_target,
+        req,
+        state.config.proxy_connect_timeout,
+        state.config.proxy_response_timeout,
+    )
+    .await
 }
 
 /// A parsed `/s/<id>/...` route: the sandbox id plus the daemon-side
@@ -101,9 +105,11 @@ pub async fn forward_to_endpoint(
     endpoint: &HttpEndpoint,
     target: &str,
     req: Request<Incoming>,
+    connect_timeout: Duration,
+    response_timeout: Duration,
 ) -> Response<BoxBody> {
     let stream = match timeout(
-        CONNECT_TIMEOUT,
+        connect_timeout,
         TcpStream::connect((endpoint.host.as_str(), endpoint.port)),
     )
     .await
@@ -122,9 +128,9 @@ pub async fn forward_to_endpoint(
     });
 
     if is_upgrade(req.headers()) {
-        tunnel(&mut sender, target, req).await
+        tunnel(&mut sender, target, req, response_timeout).await
     } else {
-        forward_plain(&mut sender, target, req).await
+        forward_plain(&mut sender, target, req, response_timeout).await
     }
 }
 
@@ -132,6 +138,7 @@ async fn forward_plain(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
     target: &str,
     req: Request<Incoming>,
+    response_timeout: Duration,
 ) -> Response<BoxBody> {
     let (parts, body) = req.into_parts();
     let peer = parts.extensions.get::<SocketAddr>().copied();
@@ -143,7 +150,7 @@ async fn forward_plain(
         body.boxed(),
         false,
     );
-    match send(sender, outbound).await {
+    match send(sender, outbound, response_timeout).await {
         Ok(upstream) => relay_response(upstream),
         Err(response) => response,
     }
@@ -153,6 +160,7 @@ async fn tunnel(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
     target: &str,
     mut req: Request<Incoming>,
+    response_timeout: Duration,
 ) -> Response<BoxBody> {
     let peer = req.extensions().get::<SocketAddr>().copied();
     let outbound = build_request(
@@ -163,7 +171,7 @@ async fn tunnel(
         response::empty(),
         true,
     );
-    let mut upstream = match send(sender, outbound).await {
+    let mut upstream = match send(sender, outbound, response_timeout).await {
         Ok(upstream) => upstream,
         Err(response) => return response,
     };
@@ -186,8 +194,9 @@ async fn tunnel(
 async fn send(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
     request: Request<BoxBody>,
+    response_timeout: Duration,
 ) -> Result<Response<Incoming>, Response<BoxBody>> {
-    match timeout(RESPONSE_TIMEOUT, sender.send_request(request)).await {
+    match timeout(response_timeout, sender.send_request(request)).await {
         Ok(Ok(response)) => Ok(response),
         Ok(Err(_)) => Err(unreachable_response("daemon_http request failed")),
         Err(_) => Err(timeout_response()),

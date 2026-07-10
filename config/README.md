@@ -1,15 +1,22 @@
 # Sandbox Config
 
 `prd.yml` is the single baseline config for daemon runtime behavior and sandbox
-test harness defaults. Rust config value objects live in `sandbox-config` even
-when a surface, such as the gateway CLI, is not currently backed by a top-level
-YAML section.
+test harness defaults. Top-level sections: `daemon`, `runtime`, `runner`,
+`observability`, `manager`, plus the optional host-side `gateway` and `console`
+sections (absent sections load their Rust defaults). Rust config value objects
+live in `sandbox-config` even when a surface is not currently exercised through
+a YAML section.
 
 The daemon loads the runtime config from:
 
 ```text
 sandbox-daemon serve --config-yaml <remote-config path>
 ```
+
+The gateway reads the same document's `manager` and `gateway` sections via
+`--config-yaml`; the console reads the `console` section via `--config-yaml`
+or `SANDBOX_CONSOLE_CONFIG_YAML`. CLI flags and env overrides outrank YAML on
+both binaries.
 
 Tests may load one local override in addition to `prd.yml`:
 

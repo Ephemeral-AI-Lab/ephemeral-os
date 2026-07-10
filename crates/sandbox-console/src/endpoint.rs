@@ -15,8 +15,6 @@ use serde_json::{json, Value};
 use crate::response::{self, BoxBody};
 use crate::state::AppState;
 
-const RESOLVE_TIMEOUT: Duration = Duration::from_secs(5);
-pub const ENDPOINT_CACHE_TTL: Duration = Duration::from_secs(3);
 const SANDBOX_NOT_FOUND_MESSAGE: &str = "sandbox not found";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,16 +52,25 @@ impl ResolveError {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct EndpointCache {
     entries: Mutex<HashMap<String, (Instant, HttpEndpoint)>>,
+    ttl: Duration,
 }
 
 impl EndpointCache {
+    #[must_use]
+    pub fn new(ttl: Duration) -> Self {
+        Self {
+            entries: Mutex::new(HashMap::new()),
+            ttl,
+        }
+    }
+
     fn get(&self, sandbox_id: &str) -> Option<HttpEndpoint> {
         let entries = self.entries.lock().ok()?;
         let (stored_at, endpoint) = entries.get(sandbox_id)?;
-        if stored_at.elapsed() > ENDPOINT_CACHE_TTL {
+        if stored_at.elapsed() > self.ttl {
             return None;
         }
         Some(endpoint.clone())
@@ -92,7 +99,11 @@ pub async fn resolve(state: &AppState, sandbox_id: &str) -> Result<HttpEndpoint,
         CliOperationScope::system(),
         json!({ "sandbox_id": sandbox_id }),
     );
-    let sent = tokio::time::timeout(RESOLVE_TIMEOUT, state.gateway.send(&request)).await;
+    let sent = tokio::time::timeout(
+        state.config.endpoint_resolve_timeout,
+        state.gateway.send(&request),
+    )
+    .await;
     let response = match sent {
         Ok(Ok(response)) => response,
         Ok(Err(error)) => return Err(ResolveError::Gateway(error.to_string())),

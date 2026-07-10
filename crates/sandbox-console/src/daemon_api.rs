@@ -17,7 +17,14 @@ pub async fn handle(
         Ok(endpoint) => endpoint,
         Err(error) => return error.into_response(),
     };
-    proxy::forward_to_endpoint(&endpoint, "/files/list", req).await
+    proxy::forward_to_endpoint(
+        &endpoint,
+        "/files/list",
+        req,
+        state.config.proxy_connect_timeout,
+        state.config.proxy_response_timeout,
+    )
+    .await
 }
 
 pub struct Route {

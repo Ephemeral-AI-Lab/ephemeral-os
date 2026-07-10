@@ -1,17 +1,19 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use sandbox_config::configs::manager::ManagerConfig;
+use sandbox_config::ConfigDocument;
 use sandbox_gateway::{
-    GatewayConfig, SandboxGatewayServer, DEFAULT_GATEWAY_PID, DEFAULT_GATEWAY_SOCKET,
-    DEFAULT_MAX_CONCURRENT_CONNECTIONS, SANDBOX_GATEWAY_AUTH_TOKEN_ENV, SANDBOX_GATEWAY_SOCKET_ENV,
+    resolve_gateway_config, GatewayCliOverrides, GatewayConfig, SandboxGatewayServer,
+    SANDBOX_GATEWAY_AUTH_TOKEN_ENV, SANDBOX_GATEWAY_SOCKET_ENV,
 };
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ExportApplyCaps, ManagerError, ManagerServices,
-    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxManagerRouter, SandboxRecord,
-    SandboxRuntime, SandboxStore, StartedDaemon, TcpSandboxDaemonClient,
+    ObservabilitySnapshotLimits, SandboxDaemonEndpoint, SandboxDaemonInstaller,
+    SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxStore, StartedDaemon,
+    TcpSandboxDaemonClient,
 };
 use sandbox_provider_docker::{DockerSandboxDaemonInstaller, DockerSandboxRuntime};
 use tokio_util::sync::CancellationToken;
@@ -56,12 +58,8 @@ struct ServeCommand {
     #[arg(long = "pid-file", value_name = "PATH")]
     pid_file: Option<PathBuf>,
 
-    #[arg(
-        long = "max-concurrent-connections",
-        value_name = "COUNT",
-        default_value_t = DEFAULT_MAX_CONCURRENT_CONNECTIONS
-    )]
-    max_concurrent_connections: usize,
+    #[arg(long = "max-concurrent-connections", value_name = "COUNT")]
+    max_concurrent_connections: Option<usize>,
 }
 
 #[tokio::main]
@@ -86,15 +84,22 @@ async fn serve(command: ServeCommand) -> Result<(), Box<dyn std::error::Error>> 
     let shutdown = CancellationToken::new();
     install_ctrl_c_shutdown(shutdown.clone());
     let auth_token = resolve_gateway_auth_token(command.auth_token)?;
-    let services = build_manager_services(command.backend, command.config_yaml.as_deref())?;
-    let config = GatewayConfig::new(
-        resolve_bind_addr(command.gateway_socket),
-        command
-            .pid_file
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_GATEWAY_PID)),
-        command.max_concurrent_connections,
-        Some(auth_token),
+    let document = command
+        .config_yaml
+        .as_deref()
+        .map(sandbox_config::load_path)
+        .transpose()?;
+    let services = build_manager_services(command.backend, document.as_ref())?;
+    let mut config = resolve_gateway_config(
+        GatewayCliOverrides {
+            bind_addr: command.gateway_socket,
+            pid_path: command.pid_file,
+            max_concurrent_connections: command.max_concurrent_connections,
+        },
+        std::env::var(SANDBOX_GATEWAY_SOCKET_ENV).ok(),
+        load_gateway_section(document.as_ref())?,
     );
+    config.auth_token = Some(auth_token);
     let manager = SandboxManagerRouter::new(services);
     SandboxGatewayServer::with_shutdown(config, manager, shutdown)
         .serve()
@@ -102,27 +107,47 @@ async fn serve(command: ServeCommand) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
+fn load_gateway_section(
+    document: Option<&ConfigDocument>,
+) -> Result<GatewayConfig, Box<dyn std::error::Error>> {
+    let Some(document) = document else {
+        return Ok(GatewayConfig::default());
+    };
+    let section = match document.section::<GatewayConfig>("gateway") {
+        Ok(section) => section,
+        Err(sandbox_config::ConfigError::MissingSection { .. }) => GatewayConfig::default(),
+        Err(error) => return Err(error.into()),
+    };
+    section.validate()?;
+    Ok(section)
+}
+
 fn build_manager_services(
     backend: Backend,
-    config_yaml: Option<&Path>,
+    document: Option<&ConfigDocument>,
 ) -> Result<Arc<ManagerServices>, Box<dyn std::error::Error>> {
     match backend {
         Backend::None => Ok(default_manager_services()),
-        Backend::Docker => build_docker_services(config_yaml),
+        Backend::Docker => build_docker_services(document),
     }
 }
 
 fn build_docker_services(
-    config_yaml: Option<&Path>,
+    document: Option<&ConfigDocument>,
 ) -> Result<Arc<ManagerServices>, Box<dyn std::error::Error>> {
-    let path = config_yaml.ok_or("--config-yaml is required when --backend docker")?;
-    let document = sandbox_config::load_path(path)?;
+    let document = document.ok_or("--config-yaml is required when --backend docker")?;
     let manager_config: ManagerConfig = document.section("manager")?;
     manager_config.validate()?;
     let export_caps = ExportApplyCaps {
         max_stream_bytes: manager_config.export.max_stream_bytes,
         max_decompressed_bytes: manager_config.export.max_decompressed_bytes,
         max_apply_entries: manager_config.export.max_apply_entries,
+    };
+    let snapshot_limits = ObservabilitySnapshotLimits {
+        max_concurrent_requests: manager_config
+            .observability_snapshot
+            .max_concurrent_requests,
+        timeout_ms: manager_config.observability_snapshot.timeout_ms,
     };
     let docker_config = manager_config
         .docker
@@ -152,14 +177,8 @@ fn build_docker_services(
         Arc::new(TcpSandboxDaemonClient::new()),
     );
     services.export_caps = export_caps;
+    services.snapshot_limits = snapshot_limits;
     Ok(Arc::new(services))
-}
-
-fn resolve_bind_addr(cli_socket: Option<String>) -> String {
-    cli_socket
-        .or_else(|| std::env::var(SANDBOX_GATEWAY_SOCKET_ENV).ok())
-        .filter(|addr| !addr.trim().is_empty())
-        .unwrap_or_else(|| DEFAULT_GATEWAY_SOCKET.to_owned())
 }
 
 fn resolve_gateway_auth_token(

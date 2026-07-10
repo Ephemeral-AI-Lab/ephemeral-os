@@ -22,7 +22,7 @@ impl AppState {
         );
         Self {
             gateway,
-            endpoints: EndpointCache::default(),
+            endpoints: EndpointCache::new(config.endpoint_cache_ttl),
             config,
         }
     }

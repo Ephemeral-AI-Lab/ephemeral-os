@@ -6,6 +6,8 @@ mod support;
 mod assets_tests;
 #[path = "console/catalog.rs"]
 mod catalog_tests;
+#[path = "console/config.rs"]
+mod config_tests;
 #[path = "console/daemon_api.rs"]
 mod daemon_api_tests;
 #[path = "console/health.rs"]
