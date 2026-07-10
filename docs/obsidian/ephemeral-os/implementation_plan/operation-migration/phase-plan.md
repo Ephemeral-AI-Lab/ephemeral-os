@@ -448,8 +448,8 @@ repointing are one commit.
 
 ### Change list
 
-- [ ] Rename `operation_adapter` to `operations/registry`.
-- [ ] Replace protocol request/response imports with contract types
+- [x] Rename `operation_adapter` to `operations/registry`.
+- [x] Replace protocol request/response imports with contract types
   (should already hold from Phase 1; verify and finish stragglers).
 - [ ] Split the public registry from the exact canonical internal set
   (`create_workspace_session`, `destroy_workspace_session`,
@@ -483,6 +483,8 @@ repointing are one commit.
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
 | 2026-07-10 | Phase 5 started | Dashboard entry criteria and Phase 4 acceptance checklist | Phase 4 is approved and every Phase 4 acceptance item is checked; Phase 5 is unblocked. | None. |
+| 2026-07-10 | Runtime registry rename | `test ! -e crates/sandbox-runtime/operation/src/operation_adapter`; `test -d crates/sandbox-runtime/operation/src/operations/registry`; `rg -n 'operation_adapter' crates/sandbox-runtime/operation`; `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-runtime --all-features` | The old tree is absent, the new registry tree exists, the source search returned no matches (exit 1), workspace check passed, and all runtime tests passed. | None. |
+| 2026-07-10 | Contract envelope verification | `rg -n 'sandbox_protocol|sandbox-protocol' crates/sandbox-runtime/operation/src crates/sandbox-runtime/operation/Cargo.toml`; contract import scan under `crates/sandbox-runtime/operation/src/{operations,layerstack/service/impls}` | The forbidden protocol scan returned no matches (exit 1); dispatch, registry, squash, and export bindings import `OperationRequest` and `OperationResponse` from `sandbox_operation_contract`. | None. |
 
 ---
 
