@@ -386,7 +386,7 @@ repointing are one commit.
 - [x] Verify the `SandboxDaemonClient` port stays in manager and its
   concrete TCP implementation stays in gateway; same for
   `SandboxDaemonInstaller` / `StartedDaemon`.
-- [ ] Split the live E2E raw-gateway helper from a trusted direct-daemon
+- [x] Split the live E2E raw-gateway helper from a trusted direct-daemon
   lifecycle helper: allowlist the latter to `create_workspace_session` and
   `destroy_workspace_session`, resolve its endpoint through
   `inspect_sandbox` and its token through Docker control-plane metadata
@@ -431,6 +431,7 @@ repointing are one commit.
 | 2026-07-10 | Manager registry rename | `test ! -e crates/sandbox-manager/src/operation`; `test -d crates/sandbox-manager/src/operations/registry`; `rg 'cli_definition' crates/sandbox-manager`; `cargo test -p sandbox-manager --all-features` | Old tree is absent, new registry tree exists, source search returned no matches (exit 1), and all 59 manager tests passed. | None. |
 | 2026-07-10 | Manager port and adapter ownership | `rg -n 'trait SandboxDaemonClient|trait SandboxDaemonInstaller|struct StartedDaemon|TcpSandboxDaemonClient|LocalSandboxDaemonInstaller|ProtocolLimits|sandbox_protocol|TcpStream|TcpListener|std::process::Command|tokio::net' crates/sandbox-manager/src crates/sandbox-gateway/src --glob '*.rs'`; `cargo test -p sandbox-gateway --all-features` | The two ports and neutral DTO remain in manager; TCP/protocol and local-process implementations appear only in gateway; all 18 gateway tests passed. | None. |
 | 2026-07-10 | Manager dependency boundary | `cargo metadata --format-version 1 --no-deps \| jq -r '.packages[] \| select(.name == "sandbox-manager") \| .dependencies[] \| select(.path != null) \| .name' \| sort`; `cargo tree -p sandbox-manager -e normal \| rg 'sandbox-(protocol|operation-client|gateway|daemon|provider-docker)'` | Path dependencies are exactly `sandbox-operation-catalog`, `sandbox-operation-contract`, and `sandbox-runtime-layerstack`; forbidden application/adapter/client/protocol edges produced no matches (exit 1). | None. |
+| 2026-07-10 | Trusted E2E lifecycle transport | `cd e2e && PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider --confcutdir=core core/test_direct_daemon.py -q`; `rg '\b(internal_runtime\|internal_runtime_result)\b' e2e --glob '*.py'`; lifecycle call-site scan with `rg -n -C 3 '"(create\|destroy)_workspace_session"' e2e --glob '*.py'`; `python3 -m pytest --collect-only -q` over the changed live suites; post-commit `cargo check --workspace --all-targets --all-features` and `cargo test -p sandbox-manager --all-features` | Direct-helper security suite passed 8/8; old helper search returned no matches (exit 1); every real lifecycle call uses the exact two-operation direct helper, while WS-05 remains the intentional public-rejection probe; all 240 selected live tests collected; workspace check passed and all 59 manager tests passed. `file_list` now uses `POST /files/list`. | None. |
 
 ---
 
