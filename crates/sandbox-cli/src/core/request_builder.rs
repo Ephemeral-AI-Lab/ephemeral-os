@@ -1,7 +1,7 @@
 use sandbox_protocol::{
-    catalog_from_value, catalog_to_value, ArgKind, CliOperationCatalog,
-    CliOperationCatalogDocument, CliOperationExecutionSpace, CliOperationScope,
-    CliOperationSpecDocument, Request,
+    catalog_from_value, catalog_to_value, error_kind, error_response_with_details, ArgKind,
+    CliOperationCatalog, CliOperationCatalogDocument, CliOperationExecutionSpace,
+    CliOperationScope, CliOperationSpecDocument, Request,
 };
 use serde_json::{Map, Number, Value};
 
@@ -14,14 +14,31 @@ pub struct BuildRequestInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BuildRequestValueInput {
+    pub execution_space: CliOperationExecutionSpace,
+    pub operation: String,
+    pub arguments: Value,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RequestBuildError {
     message: String,
 }
 
 impl RequestBuildError {
     #[must_use]
+    pub const fn kind(&self) -> &'static str {
+        error_kind::INVALID_REQUEST
+    }
+
+    #[must_use]
     pub fn message(&self) -> &str {
         &self.message
+    }
+
+    #[must_use]
+    pub fn to_error_envelope(&self) -> Value {
+        error_response_with_details(self.kind(), self.message.clone(), Value::Object(Map::new()))
     }
 }
 
@@ -66,21 +83,69 @@ pub fn build_request_from_catalog_with_id(
     catalog: &CliOperationCatalogDocument,
     request_id: impl Into<String>,
 ) -> Result<Request, RequestBuildError> {
-    if input.execution_space != catalog.operation_execution_space {
-        return Err(build_error(format!(
-            "loaded catalog is for {}, not {}",
-            sandbox_protocol::operation_execution_space_name(catalog.operation_execution_space),
-            sandbox_protocol::operation_execution_space_name(input.execution_space)
-        )));
-    }
-    if input.operation == "help" {
-        return Err(build_error(
-            "help is reserved and cannot be used as an operation name",
-        ));
-    }
-    let spec = find_cli_operation_spec(catalog, &input.operation)?;
+    let spec = operation_spec(input.execution_space, &input.operation, catalog)?;
     let args = build_args(spec, &input.operation_argv)?;
-    match input.execution_space {
+    build_scoped_request(
+        input.execution_space,
+        spec,
+        args,
+        input.sandbox_id,
+        request_id,
+    )
+}
+
+/// Build a wire request from an object of typed argument values, minting a
+/// fresh request id.
+///
+/// # Errors
+/// Returns an error for a non-object input, unknown operation or argument,
+/// invalid scalar type, missing required value, or invalid sandbox selector.
+pub fn build_request_from_values(
+    input: BuildRequestValueInput,
+    catalog: &CliOperationCatalogDocument,
+) -> Result<Request, RequestBuildError> {
+    build_request_from_values_with_id(input, catalog, next_request_id())
+}
+
+/// Build a wire request from an object of typed argument values with an
+/// explicit request id.
+///
+/// Runtime `sandbox_id` is a transport selector rather than an operation
+/// argument. Observability selectors are catalog arguments and are removed by
+/// the shared observability routing step.
+///
+/// # Errors
+/// Returns an error for a non-object input, unknown operation or argument,
+/// invalid scalar type, missing required value, or invalid sandbox selector.
+pub fn build_request_from_values_with_id(
+    input: BuildRequestValueInput,
+    catalog: &CliOperationCatalogDocument,
+    request_id: impl Into<String>,
+) -> Result<Request, RequestBuildError> {
+    let spec = operation_spec(input.execution_space, &input.operation, catalog)?;
+    let Value::Object(mut values) = input.arguments else {
+        return Err(build_error(format!(
+            "arguments for {} must be an object",
+            input.operation
+        )));
+    };
+    let sandbox_id = if input.execution_space == CliOperationExecutionSpace::Runtime {
+        Some(take_runtime_sandbox_id(&mut values)?)
+    } else {
+        None
+    };
+    let args = build_args_from_values(spec, values)?;
+    build_scoped_request(input.execution_space, spec, args, sandbox_id, request_id)
+}
+
+fn build_scoped_request(
+    execution_space: CliOperationExecutionSpace,
+    spec: &CliOperationSpecDocument,
+    args: Value,
+    sandbox_id: Option<String>,
+    request_id: impl Into<String>,
+) -> Result<Request, RequestBuildError> {
+    match execution_space {
         CliOperationExecutionSpace::Manager => Ok(Request::new(
             &spec.name,
             request_id,
@@ -90,13 +155,33 @@ pub fn build_request_from_catalog_with_id(
         CliOperationExecutionSpace::Runtime => Ok(Request::new(
             &spec.name,
             request_id,
-            CliOperationScope::sandbox(resolve_runtime_sandbox_id(input.sandbox_id)?),
+            CliOperationScope::sandbox(resolve_runtime_sandbox_id(sandbox_id)?),
             args,
         )),
         CliOperationExecutionSpace::Observability => {
             build_observability_request(&spec.name, args, request_id)
         }
     }
+}
+
+fn operation_spec<'a>(
+    execution_space: CliOperationExecutionSpace,
+    operation: &str,
+    catalog: &'a CliOperationCatalogDocument,
+) -> Result<&'a CliOperationSpecDocument, RequestBuildError> {
+    if execution_space != catalog.operation_execution_space {
+        return Err(build_error(format!(
+            "loaded catalog is for {}, not {}",
+            sandbox_protocol::operation_execution_space_name(catalog.operation_execution_space),
+            sandbox_protocol::operation_execution_space_name(execution_space)
+        )));
+    }
+    if operation == "help" {
+        return Err(build_error(
+            "help is reserved and cannot be used as an operation name",
+        ));
+    }
+    find_cli_operation_spec(catalog, operation)
 }
 
 /// Build the wire request for the read-only `observability` space.
@@ -197,22 +282,71 @@ fn build_args(
         index = index.saturating_add(1);
     }
 
+    finish_args(spec, values, true)
+}
+
+fn build_args_from_values(
+    spec: &CliOperationSpecDocument,
+    mut supplied: Map<String, Value>,
+) -> Result<Value, RequestBuildError> {
+    let mut unknown = supplied
+        .keys()
+        .filter(|name| !spec.args.iter().any(|arg| arg.name == name.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    unknown.sort_unstable();
+    if let Some(name) = unknown.first() {
+        return Err(build_error(format!(
+            "unknown argument for {}: {name}",
+            spec.name
+        )));
+    }
+
+    let mut values = Map::new();
+    for arg in &spec.args {
+        if let Some(value) = supplied.remove(&arg.name) {
+            values.insert(arg.name.clone(), validate_arg_value(arg, value, &arg.name)?);
+        }
+    }
+    finish_args(spec, values, false)
+}
+
+fn finish_args(
+    spec: &CliOperationSpecDocument,
+    mut values: Map<String, Value>,
+    cli_names: bool,
+) -> Result<Value, RequestBuildError> {
     for arg in &spec.args {
         if values.contains_key(&arg.name) {
             continue;
         }
-        if let Some(default) = &arg.default {
-            values.insert(arg.name.clone(), parse_arg_value(arg, default)?);
+        let name = if cli_names {
+            cli_arg_name(arg)
+        } else {
+            &arg.name
+        };
+        if let Some(default) = catalog_arg_default(arg)? {
+            values.insert(arg.name.clone(), default);
         } else if arg.required {
-            return Err(build_error(format!(
-                "{} is required for {}",
-                cli_arg_name(arg),
-                spec.name
-            )));
+            return Err(build_error(format!("{name} is required for {}", spec.name)));
         }
     }
 
     Ok(Value::Object(values))
+}
+
+/// Parse an argument's catalog default into the same native JSON value used by
+/// CLI and MCP request construction.
+///
+/// # Errors
+/// Returns an error when a declared default does not match its catalog kind.
+pub fn catalog_arg_default(
+    arg: &sandbox_protocol::ArgSpecDocument,
+) -> Result<Option<Value>, RequestBuildError> {
+    arg.default
+        .as_deref()
+        .map(|default| parse_arg_value(arg, default, &arg.name))
+        .transpose()
 }
 
 fn insert_arg_value(
@@ -226,33 +360,67 @@ fn insert_arg_value(
             cli_arg_name(arg)
         )));
     }
-    values.insert(arg.name.clone(), parse_arg_value(arg, value)?);
+    values.insert(
+        arg.name.clone(),
+        parse_arg_value(arg, value, cli_arg_name(arg))?,
+    );
     Ok(())
 }
 
 fn parse_arg_value(
     arg: &sandbox_protocol::ArgSpecDocument,
     value: &str,
+    name: &str,
 ) -> Result<Value, RequestBuildError> {
-    match arg.kind {
+    let value = match arg.kind {
         ArgKind::String | ArgKind::Path => Ok(Value::String(value.to_owned())),
         ArgKind::Integer => value.parse::<u64>().map_or_else(
-            |_| {
-                Err(build_error(format!(
-                    "{} must be an unsigned integer",
-                    cli_arg_name(arg)
-                )))
-            },
+            |_| Err(build_error(format!("{name} must be an unsigned integer"))),
             |number| Ok(Value::Number(Number::from(number))),
         ),
         ArgKind::Float => {
-            let parsed = value.parse::<f64>().map_err(|_| {
-                build_error(format!("{} must be a finite number", cli_arg_name(arg)))
-            })?;
+            let parsed = value
+                .parse::<f64>()
+                .map_err(|_| build_error(format!("{name} must be a finite number")))?;
             Number::from_f64(parsed)
                 .map(Value::Number)
-                .ok_or_else(|| build_error(format!("{} must be finite", cli_arg_name(arg))))
+                .ok_or_else(|| build_error(format!("{name} must be finite")))
         }
+        ArgKind::JsonArray => serde_json::from_str::<Value>(value)
+            .map_err(|_| build_error(format!("{name} must be a JSON array"))),
+    }?;
+    validate_arg_value(arg, value, name)
+}
+
+fn validate_arg_value(
+    arg: &sandbox_protocol::ArgSpecDocument,
+    value: Value,
+    name: &str,
+) -> Result<Value, RequestBuildError> {
+    let valid = match arg.kind {
+        ArgKind::String | ArgKind::Path => value.is_string(),
+        ArgKind::Integer => value.as_u64().is_some(),
+        ArgKind::Float => value.as_f64().is_some_and(f64::is_finite),
+        ArgKind::JsonArray => value.is_array(),
+    };
+    if valid {
+        return Ok(value);
+    }
+    let expected = match arg.kind {
+        ArgKind::String | ArgKind::Path => "a string",
+        ArgKind::Integer => "an unsigned integer",
+        ArgKind::Float => "a finite number",
+        ArgKind::JsonArray => "a JSON array",
+    };
+    Err(build_error(format!("{name} must be {expected}")))
+}
+
+fn take_runtime_sandbox_id(values: &mut Map<String, Value>) -> Result<String, RequestBuildError> {
+    match values.remove("sandbox_id") {
+        Some(Value::String(sandbox_id)) if !sandbox_id.trim().is_empty() => Ok(sandbox_id),
+        Some(Value::String(_)) => Err(build_error("sandbox_id must be non-empty")),
+        Some(_) => Err(build_error("sandbox_id must be a string")),
+        None => Err(build_error("sandbox_id is required for runtime operations")),
     }
 }
 

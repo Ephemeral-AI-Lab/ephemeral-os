@@ -10,6 +10,7 @@ members = [
     "crates/sandbox-observability-operations",
     "crates/sandbox-runtime-operations",
     "crates/sandbox-cli",
+    "crates/sandbox-mcp",
     "crates/sandbox-console",
     "crates/sandbox-gateway",
     "crates/sandbox-protocol",
@@ -68,6 +69,7 @@ hyper = { version = "1", features = ["http1", "server", "client"] }
 hyper-util = { version = "0.1", features = ["tokio"] }
 http = "1"
 http-body-util = "0.1"
+rmcp = { version = "=0.11.0", features = ["transport-io"] }
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-config = { path = "crates/sandbox-config" }
@@ -82,6 +84,7 @@ sandbox-observability = { path = "crates/sandbox-observability" }
 sandbox-observability-operations = { path = "crates/sandbox-observability-operations" }
 sandbox-runtime-operations = { path = "crates/sandbox-runtime-operations" }
 sandbox-cli = { path = "crates/sandbox-cli" }
+sandbox-mcp = { path = "crates/sandbox-mcp" }
 sandbox-console = { path = "crates/sandbox-console" }
 sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }

@@ -4,6 +4,7 @@ pub enum ArgKind {
     Integer,
     Float,
     Path,
+    JsonArray,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

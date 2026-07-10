@@ -1,0 +1,20 @@
+[package]
+name = "sandbox-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+clap.workspace = true
+rmcp.workspace = true
+sandbox-cli.workspace = true
+sandbox-manager-operations.workspace = true
+sandbox-observability-operations.workspace = true
+sandbox-protocol.workspace = true
+sandbox-runtime-operations.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[lints]
+workspace = true

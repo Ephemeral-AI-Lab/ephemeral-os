@@ -241,6 +241,21 @@ fn catalog_from_value_rejects_unknown_execution_space() {
 }
 
 #[test]
+fn catalog_decodes_json_array_arguments() {
+    let mut value = json!({
+        "operation_execution_space": "runtime",
+        "families": [family_value("file", "File")],
+        "operations": [operation_value("file_edit", "file", "Edit a file.", [])]
+    });
+    value["operations"][0]["args"][0]["name"] = json!("edits");
+    value["operations"][0]["args"][0]["kind"] = json!("json_array");
+
+    let catalog = catalog_from_value(&value).expect("json array kind decodes");
+
+    assert_eq!(catalog.operations[0].args[0].kind, ArgKind::JsonArray);
+}
+
+#[test]
 fn catalog_from_value_rejects_missing_execution_space() {
     let value = json!({
         "families": [],

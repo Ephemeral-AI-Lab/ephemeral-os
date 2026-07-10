@@ -314,3 +314,39 @@ Phase 3 (`runtime.command`, `runtime.file`, `runtime.namespace_execution`):
 - Ordering: `test_validation.py` Lane B cases run last within the family
   (they deliberately leave no gateway running; the finalizer's baseline
   restore covers them).
+
+## Decision log — phase 0 landed reality (2026-07-10)
+
+Drift between this spec and what landed, per the plan's cross-phase rule:
+
+1. **Sessions ride `exec_command`.** `create_workspace_session` is not a
+   public runtime-CLI operation anymore; `exec_command` without a session id
+   creates an automatic session with finalize policy publish_then_destroy,
+   and the mount mask applies inside it. Every in-sandbox probe is therefore
+   a one-shot `exec_command` transcript; there are no explicit session
+   helpers.
+2. **A1-F4 budget is `1e-9` s, not `0.001`.** A 1 ms budget races the
+   ns-holder on fast hosts (observed passing at 1 ms on Apple Silicon); a
+   sub-poll-resolution budget expires before the first readiness read,
+   deterministically. The failure surfaces as kind `operation_failed`,
+   message "workspace setup failed at ns_holder did not signal ns-up" —
+   asserted by kind/substring as this spec prescribes.
+3. **A1-F5 relocates the two scratch roots only.** `layer_stack_root`
+   relocation panics daemon boot today: the manager pins the shared-base
+   mount target to `CONTAINER_LAYER_STACK_ROOT` (`create_sandbox.rs`), so
+   the daemon's workspace-base init cannot find the base under a relocated
+   root (`services.rs:82`). Recorded as a consolidation finding; the family
+   pins present-day behavior.
+4. **A1-F6 disabled arm answers empty, not unavailable.** With
+   `observability.enabled: false` the daemon's observer is a no-op and the
+   per-sandbox events view returns an empty set (this spec's "empty or
+   unavailable per the view contract" — the landed contract is *empty*).
+5. **A3-F1/F2 nonce rides `NO_PROXY`.** The runner builds command
+   environments from an allowlist (`HOST_KEYS` in `shell_exec/request.rs`),
+   so an arbitrary `E2E_CONFIG_PROBE` variable never reaches a command. The
+   probe nonce is appended to `NO_PROXY` — an allowlisted variable the
+   baseline already sets — proving the same gateway→Docker→daemon→command
+   path without violating the env-sanitization contract.
+6. **A3-F4 pins flag precedence.** The CLI rejects `--image ""`
+   (`image must be non-empty`), so the landed test pins the spec's alternate
+   contract: an explicit `--image` outranks `manager.docker.default_image`.

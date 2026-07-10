@@ -162,7 +162,7 @@ pub fn render_request_error<WErr>(error: &RequestBuildError, stderr: &mut WErr) 
 where
     WErr: Write,
 {
-    render_error("invalid_request", error.message(), stderr)
+    write_json_line(stderr, &error.to_error_envelope())
 }
 
 fn write_json_line<W>(writer: &mut W, value: &Value) -> io::Result<()>

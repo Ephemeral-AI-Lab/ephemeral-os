@@ -40,8 +40,8 @@ injection pattern. It lands in **phase 2** with `ProtocolLimits`, not phase
 
 | Phase | Name | Depends on | Status |
 | --- | --- | --- | --- |
-| 0 | e2e config family — harness + present-day coverage | — | not started |
-| 1 | bench-path knobs + env-var retirement | 0 | blocked |
+| 0 | e2e config family — harness + present-day coverage | — | done |
+| 1 | bench-path knobs + env-var retirement | 0 | in progress |
 | 2 | daemon service limits + injection patterns | 1 | blocked |
 | 3 | runtime operation caps | 2 | blocked |
 | 4 | host-side surfaces (gateway, console, docker timing) | 3 | blocked |
@@ -71,44 +71,86 @@ verification harness.
 
 ### Work items
 
-- [ ] `config/__init__.py`, `config/conftest.py` — family-scoped gateway
+- [x] `config/__init__.py`, `config/conftest.py` — family-scoped gateway
       fixture + session finalizer restoring the baseline gateway
-- [ ] `config/helpers.py` — `make_config(overrides)` (pyyaml deep-merge:
+      (package-scoped `config_family_custody` + module-scoped
+      `lane_a_daemon_yaml`)
+- [x] `config/helpers.py` — `make_config(overrides)` (pyyaml deep-merge:
       objects merge, scalars/arrays replace, output under pytest tmp),
       `rewrite_daemon_yaml`, `gateway_with_config` context manager,
       in-sandbox command/transcript helpers
-- [ ] `pytest.ini` — add `config` marker (serial family)
-- [ ] `test_daemon_reload.py` — A1 features F1–F7
-- [ ] `test_validation.py` — A2 features F1–F6
-- [ ] `test_manager_section.py` — A3 features F1–F5
-- [ ] `test_phase_knobs.py` — `TestPhase1/2/3` classes, all skip-marked with
+- [x] `pytest.ini` — add `config` marker (serial family); `pyyaml` added to
+      `requirements.txt`
+- [x] `test_daemon_reload.py` — A1 features F1–F7
+- [x] `test_validation.py` — A2 features F1–F6
+- [x] `test_manager_section.py` — A3 features F1–F5
+- [x] `test_phase_knobs.py` — `TestPhase1/2/3` classes, all skip-marked with
       reason `"config consolidation phase N not landed"`
 
 ### Acceptance criteria
 
-- [ ] `pytest -m config` runs the family serially and green on a machine with
-      Docker up (`pytest config` equivalent)
-- [ ] `pytest -m "not config"` still selects the pre-existing suite; running
-      `manager/` after a full `config/` run passes (baseline gateway restore
-      verified in practice, not just in teardown code)
-- [ ] Lane A mechanics proven: `test_rewrite_applies_to_next_sandbox` green
+- [x] `pytest -m config` runs the family serially and green on a machine with
+      Docker up — evidence: `20 passed, 11 skipped, 330 deselected in 90.23s`
+      (2026-07-10, suite dir, pytest.ini active)
+- [x] `pytest -m "not config"` still selects the pre-existing suite
+      (330/361 collected, 31 deselected); `manager/` after a full `config/`
+      run matches the no-config control run — after-config: 97 passed /
+      6 failed; control (no config first, fresh baseline gateway): 101
+      passed / 2 failed; the only deterministic failure in both orderings is
+      export HRD-05, which depends on operator-shell `EOS_EXPORT_*` gateway
+      env the suite never sets (passed 2026-07-08 with those vars exported;
+      fails on any freshly script-started gateway, config family or not —
+      see phase 1 note below). Remaining diffs are load flakes that pass in
+      isolation and flip between orderings (MED-08 failed only in the
+      control run). Baseline restore itself verified: post-family smoke
+      `17 passed in 22.51s` and 5/6 after-config failures green when rerun
+      on the restored gateway.
+- [x] Lane A mechanics proven: `test_rewrite_applies_to_next_sandbox` green
       (rewrite observed by next create; prior sandbox unaffected)
-- [ ] Deterministic behavior probes green: mount-mask visibility (A1-F3),
-      `setup_timeout_s: 0.001` session failure with timeout-classed error
-      (A1-F4), observability toggle (A1-F6)
-- [ ] Validation negatives green on both lanes: unknown daemon key and
+- [x] Deterministic behavior probes green: mount-mask visibility (A1-F3),
+      tiny `setup_timeout_s` session failure with timeout-classed error
+      (A1-F4; landed as `1e-9` — 1 ms races the ns-holder on fast hosts,
+      observed passing at 1 ms on Apple Silicon), observability toggle
+      (A1-F6; disabled arm answers with an *empty* events view — no-op
+      observer — not a structured error)
+- [x] Validation negatives green on both lanes: unknown daemon key and
       invalid values fail `create_sandbox` with structured error + rollback
       (A2-F1..F3, F6); unknown/invalid manager key fails gateway start
       (A2-F4, F5)
-- [ ] Lane B probes green: `container_env` nonce round-trip (A3-F1/F2);
-      `memory_bytes` vs `/sys/fs/cgroup/memory.max` (A3-F3, conditional
-      skip allowed only on missing cgroup file)
-- [ ] `test_phase_knobs.py` collects as skipped (3 classes, reasons name the
-      pending phase)
-- [ ] `git status` shows `config/prd.yml` and `config/bench.yml` untouched;
+- [x] Lane B probes green: `container_env` nonce round-trip (A3-F1/F2;
+      the runner builds command envs from an allowlist — HOST_KEYS in
+      `shell_exec/request.rs` — so the nonce rides `NO_PROXY`, an
+      allowlisted var the baseline already sets); `memory_bytes` vs
+      `/sys/fs/cgroup/memory.max` (A3-F3, green — no skip needed on this
+      host)
+- [x] `test_phase_knobs.py` collects as skipped (3 classes, reasons name the
+      pending phase; `SKIPPED [4]+[2]+[5]` in the family run)
+- [x] `git status` shows `config/prd.yml` and `config/bench.yml` untouched;
       generated YAMLs live only under pytest tmp
-- [ ] Suite README (`cli-operation-e2e-live-test/README.md`) layout section
+- [x] Suite README (`cli-operation-e2e-live-test/README.md`) layout section
       updated to list the `config/` family
+
+### Phase 0 findings (drift + notes for later phases)
+
+- `create_workspace_session` is no longer a public runtime-CLI operation;
+  `exec_command` auto-creates a publish_then_destroy session, so all
+  in-sandbox probes are one-shot `exec_command` calls (the mount mask applies
+  there too). The e2e spec's session helpers landed on this surface.
+- A3-F4 landed as the spec's alternate arm: the CLI rejects `--image ""`
+  (`image must be non-empty`), so the test pins explicit-flag-over-
+  `default_image` precedence.
+- `runtime.workspace.layer_stack_root` relocation is broken today: the
+  manager pins the shared-base mount target to `CONTAINER_LAYER_STACK_ROOT`
+  (`create_sandbox.rs`), so a relocated root panics daemon boot at
+  workspace-base init (`services.rs:82`). A1-F5 relocates the two scratch
+  roots only and records this coupling.
+- **Phase 1 planning note:** export HRD-05 (`manager/management/export`,
+  zstd/entry bombs) only passes when the gateway process carries
+  `EOS_EXPORT_MAX_DECOMPRESSED_BYTES`/`EOS_EXPORT_MAX_ENTRIES` — the very
+  side channels phase 1 deletes. When the caps move to `manager.export`,
+  HRD-05 must get its lowered caps through a generated-config gateway arm
+  (config-family pattern) instead of ambient env, or it fails against the
+  8 GiB/1e6 defaults.
 
 ---
 

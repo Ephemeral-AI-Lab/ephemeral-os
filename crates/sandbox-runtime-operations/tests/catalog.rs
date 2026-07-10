@@ -1,4 +1,4 @@
-use sandbox_protocol::{catalog_to_value, CliOperationExecutionSpace};
+use sandbox_protocol::{catalog_to_value, ArgKind, CliOperationExecutionSpace};
 
 #[test]
 fn runtime_catalog_is_the_exact_public_runtime_surface() {
@@ -36,6 +36,25 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
         .operations
         .iter()
         .all(|operation| operation.cli.is_some()));
+    let edits = catalog
+        .operations
+        .iter()
+        .find(|operation| operation.name == "file_edit")
+        .and_then(|operation| operation.args.iter().find(|arg| arg.name == "edits"))
+        .expect("file_edit edits argument");
+    assert_eq!(edits.kind, ArgKind::JsonArray);
+    let encoded = catalog_to_value(catalog);
+    let encoded_edits = encoded["operations"]
+        .as_array()
+        .and_then(|operations| {
+            operations
+                .iter()
+                .find(|operation| operation["name"] == "file_edit")
+        })
+        .and_then(|operation| operation["args"].as_array())
+        .and_then(|args| args.iter().find(|arg| arg["name"] == "edits"))
+        .expect("encoded edits argument");
+    assert_eq!(encoded_edits["kind"], "json_array");
 }
 
 #[test]

@@ -203,7 +203,7 @@ const FILE_EDIT_ARGS: &[ArgSpec] = &[
     ),
     ArgSpec::required(
         "edits",
-        ArgKind::String,
+        ArgKind::JsonArray,
         "JSON array of { old_string, new_string, replace_all? } edits, applied in order.",
         Some(ArgCliSpec {
             flag: Some("--edits"),

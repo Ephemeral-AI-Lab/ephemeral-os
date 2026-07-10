@@ -161,6 +161,7 @@ pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
         ArgKind::Integer => "integer",
         ArgKind::Float => "float",
         ArgKind::Path => "path",
+        ArgKind::JsonArray => "json_array",
     }
 }
 
@@ -353,6 +354,7 @@ fn arg_kind_from_name(value: &str) -> Result<ArgKind, CatalogDecodeError> {
         "integer" => Ok(ArgKind::Integer),
         "float" => Ok(ArgKind::Float),
         "path" => Ok(ArgKind::Path),
+        "json_array" => Ok(ArgKind::JsonArray),
         other => Err(decode_error(format!("unknown arg kind: {other}"))),
     }
 }
