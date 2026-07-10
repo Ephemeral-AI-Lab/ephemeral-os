@@ -51,7 +51,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 1 | Create contract, narrow protocol in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 2 | Merge and refeature the catalogs | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 3 | Extract the shared gateway client | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 4 | Clean the manager application in place | in progress | 2026-07-10 | — | — |
+| 4 | Clean the manager application in place | gate review | 2026-07-10 | — | — |
 | 5 | Clean the runtime application in place | blocked | — | — | — |
 | 6 | Extract observability application, remove multiplexing | blocked | — | — | — |
 | 7 | Update documentation, scripts, law statements | blocked | — | — | — |
@@ -411,18 +411,18 @@ repointing are one commit.
 - [x] Manager workspace dependencies are exactly: contract, catalog,
   `sandbox-runtime-layerstack`. *Evidence: `cargo metadata`.*
 - [x] `rg 'cli_definition' crates/sandbox-manager` returns nothing.
-- [ ] Every system-scoped public route with `execution_owner = Manager` has
+- [x] Every system-scoped public route with `execution_owner = Manager` has
   exactly one handler. *Evidence: bijection test in
   `cargo test -p sandbox-manager`.*
-- [ ] Every canonical internal route is unreachable from public dispatch;
+- [x] Every canonical internal route is unreachable from public dispatch;
   `export_changes` still succeeds through manager-owned internal forwarding;
   and workspace-session lifecycle smoke succeeds through the trusted direct
   daemon helper. *Evidence: parameterized manager rejection test + export
   E2E/integration run + `cd e2e && python3 -m pytest
   runtime/workspace_session/test_workspace_session.py -m smoke`.*
-- [ ] `rg '"export_layerstack"|"read_export_chunk"|"squash_layerstack"' crates/sandbox-manager/src`
+- [x] `rg '"export_layerstack"|"read_export_chunk"|"squash_layerstack"' crates/sandbox-manager/src`
   returns nothing (identifiers come from the catalog).
-- [ ] Standing gate passed.
+- [x] Standing gate passed.
 
 ### Progress log
 
@@ -435,6 +435,10 @@ repointing are one commit.
 | 2026-07-10 | Scoped manager routing and handler projection | `cargo test -p sandbox-manager --test manager_router manager_public_routes_and_handler_keys_are_bijective`; `cargo test -p sandbox-manager --test manager_router manager_router_rejects_every_canonical_internal_route_before_forwarding`; `cargo test -p sandbox-manager --test manager_router manager_router_forwards_the_exact_observability_migration_route` | Each focused test passed 1/1. Dispatch keys are `(scope kind, operation)`; every canonical runtime-internal route is rejected before daemon forwarding; the sole declared observability migration route is still forwarded. | None. |
 | 2026-07-10 | Catalog-owned manager declarations | `rg -n 'sandbox-operation-catalog|features =.*manager|features =.*observability' crates/sandbox-manager/Cargo.toml`; catalog-import scan under `crates/sandbox-manager/src`; `rg -n 'internal::migration::ROUTE|internal::runtime::ROUTES' crates/sandbox-manager/src/router/dispatch.rs`; `rg '"export_layerstack"|"read_export_chunk"|"squash_layerstack"' crates/sandbox-manager/src` | Cargo enables exactly the catalog `manager` and `observability` domain features; manager public specs, observability snapshot, canonical internal routes, and forwarding identifiers are imported from the catalog. The forbidden literal scan returned no matches (exit 1). | None. |
 | 2026-07-10 | Scoped-routing checkpoint | Post-commit `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-manager --all-features` | Workspace check passed; all 64 manager tests passed (14 core, 31 export, 12 router, 7 store). | None. |
+| 2026-07-10 | Public manager handler gate | `cargo test -p sandbox-manager --test manager_router manager_public_routes_and_handler_keys_are_bijective` | `1 passed; 0 failed`; the test proves both directions between system-scoped public Manager routes and exact handler keys. | None. |
+| 2026-07-10 | Internal visibility, export, and live lifecycle gate | `cargo test -p sandbox-manager --test manager_router manager_router_rejects_every_canonical_internal_route_before_forwarding`; `cargo test -p sandbox-manager --test manager_export`; `bin/start-sandbox-docker-gateway --rebuild-binary`; `cd e2e && python3 -m pytest runtime/workspace_session/test_workspace_session.py -m smoke` | Internal rejection passed 1/1 with no daemon calls; export integration passed 31/31; the daemon binary was rebuilt and the gateway restarted; live workspace-session smoke passed 3/3 with 3 deselected. | None. |
+| 2026-07-10 | Internal forwarding literal gate | `rg '"export_layerstack"|"read_export_chunk"|"squash_layerstack"' crates/sandbox-manager/src` | No matches (exit 1); identifiers come from the catalog. | None. |
+| 2026-07-10 | Phase 4 standing gate | `cargo check --workspace --all-targets --all-features`; `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check` | Workspace check passed; every workspace test and doctest passed; clippy finished with warnings denied; formatting check passed. | None. |
 
 ---
 
