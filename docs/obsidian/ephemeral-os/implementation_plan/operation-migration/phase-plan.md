@@ -50,7 +50,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 0 | Characterize, freeze inventory, purge generated weight | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 1 | Create contract, narrow protocol in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 2 | Merge and refeature the catalogs | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 3 | Extract the shared gateway client | blocked | — | — | — |
+| 3 | Extract the shared gateway client | in progress | 2026-07-10 | — | — |
 | 4 | Clean the manager application in place | blocked | — | — | — |
 | 5 | Clean the runtime application in place | blocked | — | — | — |
 | 6 | Extract observability application, remove multiplexing | blocked | — | — | — |
