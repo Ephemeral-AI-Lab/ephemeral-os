@@ -350,3 +350,25 @@ Drift between this spec and what landed, per the plan's cross-phase rule:
 6. **A3-F4 pins flag precedence.** The CLI rejects `--image ""`
    (`image must be non-empty`), so the landed test pins the spec's alternate
    contract: an explicit `--image` outranks `manager.docker.default_image`.
+
+## Decision log — phase 1 landed reality (2026-07-10)
+
+1. **P1-F4 landed as chunk-shape invariance.** The daemon HTTP export stream
+   was removed concurrently (spec.md decision 11), so the transport-shape
+   knob is `runtime.layerstack.export_chunk_bytes` — the `read_export_chunk`
+   page size. The landed test compares the *exported tree* (entry set, modes,
+   content hashes) across a 4 KiB-chunk arm and the default arm, not raw
+   archive bytes: publish stamps wall-clock mtimes into the layer store, so
+   cross-sandbox archives can never be byte-identical. Any paging fault
+   (lost, duplicated, reordered chunk) corrupts the zstd frame or the tree
+   and fails the comparison.
+2. **P1-F2's generous arm uses a fresh sandbox.** The capped arm proves the
+   structured `export stream cap exceeded` error (now raised against the
+   daemon-declared `spool_bytes` before any page is fetched); the baseline
+   arm then creates a new sandbox with the same payload and succeeds, instead
+   of re-exporting a recovered sandbox across the gateway swap.
+3. **Export HRD-05 joined the config lane.** Its lowered bomb caps ride
+   `manager.export` in a generated gateway YAML (config-family custody
+   pattern with baseline restore), so the case carries the `config` marker
+   and runs serially with this family; it no longer reads ambient operator
+   env.

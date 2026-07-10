@@ -20,10 +20,6 @@ use super::{ForwardError, ForwardTarget};
 use crate::http::response::{self, BoxBody};
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
-#[cfg(not(test))]
-const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
-#[cfg(test)]
-const RESPONSE_TIMEOUT: Duration = Duration::from_millis(100);
 
 const HOP_BY_HOP: [&str; 7] = [
     "connection",
@@ -36,11 +32,13 @@ const HOP_BY_HOP: [&str; 7] = [
 ];
 
 /// Forward one request to `target`, returning the upstream response (body
-/// streamed) or a connect/timeout failure.
+/// streamed) or a connect/timeout failure. The caller injects the upstream
+/// `response_timeout` (`ServerConfig::forward_response_timeout`).
 pub(crate) async fn run(
     target: &ForwardTarget,
     route: &ForwardRoute,
     req: Request<Incoming>,
+    response_timeout: Duration,
 ) -> Result<Response<BoxBody>, ForwardError> {
     let stream = match timeout(
         CONNECT_TIMEOUT,
@@ -62,9 +60,9 @@ pub(crate) async fn run(
     });
 
     if is_upgrade(req.headers()) {
-        tunnel(&mut sender, route, req).await
+        tunnel(&mut sender, route, req, response_timeout).await
     } else {
-        forward_plain(&mut sender, route, req).await
+        forward_plain(&mut sender, route, req, response_timeout).await
     }
 }
 
@@ -72,10 +70,11 @@ async fn forward_plain(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
     route: &ForwardRoute,
     req: Request<Incoming>,
+    response_timeout: Duration,
 ) -> Result<Response<BoxBody>, ForwardError> {
     let (parts, body) = req.into_parts();
     let outbound = build_request(&parts.method, route, &parts.headers, body.boxed(), false);
-    let upstream = send(sender, outbound).await?;
+    let upstream = send(sender, outbound, response_timeout).await?;
     Ok(relay_response(upstream))
 }
 
@@ -83,9 +82,10 @@ async fn tunnel(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
     route: &ForwardRoute,
     mut req: Request<Incoming>,
+    response_timeout: Duration,
 ) -> Result<Response<BoxBody>, ForwardError> {
     let outbound = build_request(req.method(), route, req.headers(), response::empty(), true);
-    let mut upstream = send(sender, outbound).await?;
+    let mut upstream = send(sender, outbound, response_timeout).await?;
     if upstream.status() != StatusCode::SWITCHING_PROTOCOLS {
         return Ok(relay_response(upstream));
     }
@@ -105,8 +105,9 @@ async fn tunnel(
 async fn send(
     sender: &mut hyper::client::conn::http1::SendRequest<BoxBody>,
     request: Request<BoxBody>,
+    response_timeout: Duration,
 ) -> Result<Response<Incoming>, ForwardError> {
-    match timeout(RESPONSE_TIMEOUT, sender.send_request(request)).await {
+    match timeout(response_timeout, sender.send_request(request)).await {
         Ok(Ok(response)) => Ok(response),
         Ok(Err(_)) => Err(ForwardError::Connect),
         Err(_) => Err(ForwardError::Timeout),

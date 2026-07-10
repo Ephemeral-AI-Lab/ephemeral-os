@@ -18,6 +18,21 @@ from core import cli as climod
 pytestmark = pytest.mark.config
 
 
+def _tree_digest(root):
+    """{relpath: (kind, mode[, sha256])} for every entry under root —
+    everything the export transport must carry except mtimes, which publish
+    stamps with wall time."""
+    digest = {}
+    for path in sorted(root.rglob("*")):
+        rel = str(path.relative_to(root))
+        mode = path.stat().st_mode & 0o7777
+        if path.is_dir():
+            digest[rel] = ("dir", mode)
+        else:
+            digest[rel] = ("file", mode, hashlib.sha256(path.read_bytes()).hexdigest())
+    return digest
+
+
 class TestPhase1:
     """runtime.layerstack, manager.export, daemon.http.export (phase 1).
 
@@ -52,24 +67,26 @@ class TestPhase1:
                 assert helpers.exec_output(sandbox_id, "cat sweep-b.txt").strip() == "two"
 
     def test_export_chunk_shape_invariance(self, lane_a_daemon_yaml, tmp_path):
-        """P1-F4 (adapted) — runtime.layerstack.export_chunk_bytes: 4096
-        exports bytes identical to the 2 MiB default arm (checksums).
+        """P1-F4 (adapted) — runtime.layerstack.export_chunk_bytes: 4096 pages
+        a multi-chunk spool whose exported content is identical to the 2 MiB
+        default arm.
 
-        Spec drift: the spec named daemon.http.export frame shape, but the
-        export stream surface was removed in favor of read_export_chunk RPC
-        paging while phase 1 landed, so the transport-shape knob is the
-        chunk cap. The narrow arm pages a multi-chunk spool; both arms write
-        the same delta with pinned modes and mtimes, so the daemon's
-        deterministic spool emit must produce identical archives.
+        Spec drift, twofold: (1) the spec named daemon.http.export frame
+        shape, but the export stream surface was removed in favor of
+        read_export_chunk RPC paging while phase 1 landed, so the
+        transport-shape knob is the chunk cap; (2) raw archive checksums are
+        not comparable across sandboxes — publish stamps wall-clock mtimes
+        into the layer store — so the invariance contract is the exported
+        tree (entry set, modes, content bytes), which any paging fault
+        (lost, duplicated, reordered chunk) would corrupt.
         """
         seed_command = (
             "mkdir -p chunks"
             " && i=0; while [ $i -lt 400 ]; do echo $i | sha256sum; i=$((i+1)); done"
             " > chunks/blob.txt"
             " && chmod 755 chunks && chmod 644 chunks/blob.txt"
-            " && touch -t 202601010101.01 chunks/blob.txt chunks"
         )
-        checksums = {}
+        trees = {}
         arms = (
             ("narrow", {"runtime": {"layerstack": {"export_chunk_bytes": 4096}}}),
             ("default", {}),
@@ -78,7 +95,21 @@ class TestPhase1:
             helpers.rewrite_daemon_yaml(lane_a_daemon_yaml, overrides)
             with helpers.sandbox() as sandbox_id:
                 helpers.exec_output(sandbox_id, seed_command)
-                dest = tmp_path / f"chunks-{arm}.tar.zst"
+                archive = tmp_path / f"chunks-{arm}.tar.zst"
+                result = climod.manager(
+                    "export_changes",
+                    "--sandbox-id",
+                    sandbox_id,
+                    "--dest",
+                    str(archive),
+                    "--format",
+                    "tar-zst",
+                )
+                assert not climod.is_error(result), f"{arm} archive export failed: {result}"
+                assert archive.stat().st_size > 4096, (
+                    "spool must span several narrow chunks to exercise paging"
+                )
+                dest = tmp_path / f"tree-{arm}"
                 result = climod.manager(
                     "export_changes",
                     "--sandbox-id",
@@ -86,15 +117,13 @@ class TestPhase1:
                     "--dest",
                     str(dest),
                     "--format",
-                    "tar-zst",
+                    "dir",
                 )
-                assert not climod.is_error(result), f"{arm} arm export failed: {result}"
-                assert dest.stat().st_size > 4096, (
-                    "payload must span several narrow chunks to exercise paging"
-                )
-                checksums[arm] = hashlib.sha256(dest.read_bytes()).hexdigest()
-        assert checksums["narrow"] == checksums["default"], (
-            f"chunk shape must not change exported bytes: {checksums}"
+                assert not climod.is_error(result), f"{arm} dir export failed: {result}"
+                trees[arm] = _tree_digest(dest)
+        assert trees["narrow"].get("chunks/blob.txt"), "delta must carry the payload"
+        assert trees["narrow"] == trees["default"], (
+            f"chunk shape must not change exported content: {trees}"
         )
 
     @pytest.mark.slow

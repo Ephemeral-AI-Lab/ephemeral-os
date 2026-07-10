@@ -41,8 +41,8 @@ injection pattern. It lands in **phase 2** with `ProtocolLimits`, not phase
 | Phase | Name | Depends on | Status |
 | --- | --- | --- | --- |
 | 0 | e2e config family — harness + present-day coverage | — | done |
-| 1 | bench-path knobs + env-var retirement | 0 | in progress |
-| 2 | daemon service limits + injection patterns | 1 | blocked |
+| 1 | bench-path knobs + env-var retirement | 0 | done |
+| 2 | daemon service limits + injection patterns | 1 | in progress |
 | 3 | runtime operation caps | 2 | blocked |
 | 4 | host-side surfaces (gateway, console, docker timing) | 3 | blocked |
 
@@ -224,25 +224,43 @@ here, per the spec's own no-dead-schema policy:
 
 ### Acceptance criteria
 
-- [ ] `grep -rn "EOS_REMOUNT_SWEEP_WIDTH\|EOS_EXPORT_MAX_DECOMPRESSED_BYTES\|EOS_EXPORT_MAX_ENTRIES" crates/ config/ cli-operation-e2e-live-test/` → empty
-- [ ] `grep -rn "env_cap\|std::env::var" crates/sandbox-manager/src/export_apply.rs crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs` → empty
-- [ ] `cargo test -p sandbox-config` passes with new schema tests covering:
+- [x] `grep -rn "EOS_REMOUNT_SWEEP_WIDTH\|EOS_EXPORT_MAX_DECOMPRESSED_BYTES\|EOS_EXPORT_MAX_ENTRIES" crates/ config/ cli-operation-e2e-live-test/` → empty (2026-07-10)
+- [x] `grep -rn "env_cap\|std::env::var" crates/sandbox-manager/src/export_apply.rs crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs` → empty (2026-07-10)
+- [x] `cargo test -p sandbox-config` passes with new schema tests covering:
       field defaults equal today's constants; unknown key under each new
       subsection rejected; each validation bound rejected at its edge
-      (width 0, zstd 0 and 23, frame_bytes 4095)
-- [ ] A YAML without any of the new keys deserializes to today's behavior
-      (defaults test asserts exact values: 4, 2 MiB, 3, 2 GiB, 8 GiB, 1e6,
-      1 MiB, 4)
-- [ ] `pytest -m config` fully green including unskipped `TestPhase1`:
+      (width 0, zstd 0 and 23; the frame_bytes 4095 edge is void with the
+      dropped `daemon.http.export` — its replacement pin is
+      `config_daemon_rejects_unknown_http_subsection`) — evidence: 44 passed
+      (`config_layerstack_*`, `config_manager_export_*`,
+      `config_validation_rejects_*`)
+- [x] A YAML without any of the new keys deserializes to today's behavior —
+      defaults tests assert exact values 4, 2 MiB, 3 (layerstack) and 2 GiB,
+      8 GiB, 1e6 (manager.export); the 1 MiB / 4 frame values are void per
+      the drift note
+- [x] `pytest -m config` fully green including unskipped `TestPhase1`:
       P1-F1 sweep-width 1 vs 4 squash invariance, P1-F2 stream cap error,
-      P1-F3 entry cap error, P1-F4 frame-shape checksum invariance
-- [ ] Bench config round-trip: generated bench arm YAML (width substituted)
-      loads through `sandbox-config` (schema test or bench dry-run) and
-      `bench.yml` contains no `EOS_` string (`grep EOS_ config/bench.yml` →
-      empty)
-- [ ] Squash + export e2e regressions green: existing
-      `manager/management/squash` and `export` suites pass unchanged
-- [ ] Global definition of done checked
+      P1-F3 entry cap error, P1-F4 chunk-shape invariance (adapted) —
+      evidence: `25 passed, 7 skipped, 331 deselected in 121.99s`
+      (2026-07-10, includes the config-marked export HRD-05; the 7 skips are
+      the TestPhase2/3 placeholders)
+- [x] Bench config round-trip: generated bench arm YAML (width substituted)
+      loads through `sandbox-config`
+      (`bench_template_round_trips_after_width_substitution` green) and
+      `bench.yml` contains no `EOS_` string (`grep -c EOS_ config/bench.yml`
+      → 0)
+- [x] Squash + export e2e regressions green: existing
+      `manager/management/squash` and `export` suites pass unchanged —
+      evidence: `pytest manager/management/squash manager/management/export
+      -m "not bench and not runnable and not config"` → `86 passed,
+      16 deselected in 231.55s` (2026-07-10; the config-marked HRD-05 ran
+      green inside the `-m config` lane, bench stays explicit-only per its
+      module docstring)
+- [x] Global definition of done checked — build green, whole-workspace
+      `cargo test` 108 suites ok / 0 failures, `cargo clippy --all-targets`
+      0 warnings, `cargo fmt --check` clean, no inline comments added to
+      production code, `git diff config/prd.yml` empty, leaf-crate
+      `sandbox-config` grep empty, committed to `main` (2026-07-10)
 
 ---
 

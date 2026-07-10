@@ -47,6 +47,7 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         sandbox_id: config.sandbox_id,
         cgroup_root: cgroup_root.clone(),
         observability: observability_config,
+        forward_response_timeout: sandbox_daemon::ServerConfig::DEFAULT_FORWARD_RESPONSE_TIMEOUT,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(

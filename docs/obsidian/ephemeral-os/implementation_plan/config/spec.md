@@ -418,3 +418,15 @@ correct by construction for published container ports.
     the squash/export benchmarks already tune through side channels; the
     patterns it establishes (env retirement, bench template substitution)
     and phase 2's injection patterns make phases 3-4 mechanical.
+11. **Phase-1 landed drift (2026-07-10).** A concurrent refactor removed the
+    daemon HTTP export spool stream (manager pages every export through
+    `read_export_chunk` RPC; `sandbox-protocol/src/export_stream.rs` and the
+    token/TTL machinery are gone). Consequences: `daemon.http.export`
+    (`frame_bytes`, `channel_frames`) is dropped — no consumer — and a schema
+    test pins `daemon.http` as an unknown key; phase 2's `token_ttl_s` target
+    no longer exists and that work item is void; the transport-shape knob end
+    to end is `runtime.layerstack.export_chunk_bytes` (the RPC page size),
+    which is what P1-F4 exercises; `manager.export.max_stream_bytes` is
+    additionally enforced against the daemon-declared `spool_bytes` before
+    the first page. The maximal `prd.yml` shape above still shows the
+    pre-drift `daemon.http` subsection — read it minus decision 11.

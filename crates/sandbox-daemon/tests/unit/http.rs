@@ -503,6 +503,7 @@ fn server_config(root: &Path) -> ServerConfig {
         sandbox_id: Some("sandbox-http-test".to_owned()),
         cgroup_root: None,
         observability: ObservabilityConfig::default(),
+        forward_response_timeout: Duration::from_millis(100),
     }
 }
 
