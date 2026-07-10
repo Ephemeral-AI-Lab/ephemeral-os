@@ -30,7 +30,7 @@ vice versa.
 ## Conventions
 
 - Standing correctness rule: any test whose operations publish content
-  (sessionless write/edit, one-shot exec capture, or session capture) must
+  (sessionless write/edit, implicit-session exec capture, or explicit-session capture) must
   assert `file_blame` ownership of the touched lines in addition to content
   and layerstack checks.
 - Session lifecycle (create/destroy) goes through the shared fixtures in the
@@ -58,7 +58,6 @@ the Test Runner Instructions section of the test-case doc.
 
 Every live run also writes the latest per-operation timing summary to
 `<repo>/docs/obsidian/ephemeral-os/testing/file-operation/operation-timing/`.
-These are
-client-side `sandbox-cli` wall-time metrics grouped by operation, including
-count/min/p50/p95/max plus sub-50ms, sub-100ms, and sub-200ms percentages; they
-are not pass/fail assertions.
+These are client-side domain-CLI wall-time metrics grouped by operation,
+including count/min/p50/p95/max plus sub-50ms, sub-100ms, and sub-200ms
+percentages; they are not pass/fail assertions.

@@ -29,15 +29,15 @@ Fold the log into a flat, cross-trace stream of point-in-time events (lease, err
 **Usage**
 
 ```
-sandbox-cli observability events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]
+sandbox-observability-cli events --sandbox-id ID [--name NAME] [--since-ms MS] [--last-n N]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli observability events --sandbox-id eos-abc
-sandbox-cli observability events --sandbox-id eos-abc --name lease.acquired
-sandbox-cli observability events --sandbox-id eos-abc --last-n 20
+sandbox-observability-cli events --sandbox-id eos-abc
+sandbox-observability-cli events --sandbox-id eos-abc --name lease.acquired
+sandbox-observability-cli events --sandbox-id eos-abc --last-n 20
 ```
 
 ## Expected output

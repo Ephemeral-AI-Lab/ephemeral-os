@@ -25,13 +25,13 @@ Inspect one sandbox record, including lifecycle state, workspace root, and confi
 **Usage**
 
 ```
-sandbox-cli manager inspect_sandbox --sandbox-id ID
+sandbox-manager-cli inspect_sandbox --sandbox-id ID
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli manager inspect_sandbox --sandbox-id sbox-1
+sandbox-manager-cli inspect_sandbox --sandbox-id sbox-1
 ```
 
 ## Expected output

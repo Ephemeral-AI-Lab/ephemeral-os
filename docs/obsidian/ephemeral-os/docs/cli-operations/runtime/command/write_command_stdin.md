@@ -27,13 +27,13 @@ Append text to the stdin stream of a running command session and return a bounde
 **Usage**
 
 ```
-sandbox-cli runtime write_command_stdin --command-session-id ID TEXT
+sandbox-runtime-cli --sandbox-id ID write_command_stdin --command-session-id ID [--yield-time-ms N] TEXT
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli runtime write_command_stdin --command-session-id cmd-1 hello
+sandbox-runtime-cli --sandbox-id ID write_command_stdin --command-session-id cmd-1 hello
 ```
 
 ## Expected output

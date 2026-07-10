@@ -167,8 +167,10 @@ upperdir work together when `/eos/workspace` is backed by the Docker volume.
 ## Verification Checklist
 
 - `create_sandbox` still builds the layerstack base successfully.
-- `runtime exec_command` succeeds in a real Docker sandbox.
-- `create_workspace_session` succeeds in a real Docker sandbox.
+- `sandbox-runtime-cli --sandbox-id ID exec_command` succeeds in a real Docker
+  sandbox.
+- The trusted internal test helper can create a workspace session directly
+  through the authenticated daemon RPC surface.
 - A command can read unchanged files from the lower layer.
 - A command can write a new file into the overlay upper layer.
 - Destroying the sandbox removes the container and its per-sandbox volume.

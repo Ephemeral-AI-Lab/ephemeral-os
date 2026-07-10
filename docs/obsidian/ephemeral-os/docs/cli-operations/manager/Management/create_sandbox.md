@@ -22,22 +22,25 @@ Create a host-side sandbox record, create the runtime sandbox, and start its dae
 |---|---|---|---|---|---|
 | `image` | `--image` | string | yes | — | Container image used to create the sandbox. |
 | `workspace_root` | `--workspace-bind-root` | path | yes | — | Absolute host workspace directory bind-mounted into this sandbox. |
+| `count` | `--count` | integer | no | `1` | Number of sandboxes to create (minimum 1). Values greater than 1 share a read-only workspace base. |
 
 **Usage**
 
 ```
-sandbox-cli manager create_sandbox --image IMAGE --workspace-bind-root PATH
+sandbox-manager-cli create_sandbox --image IMAGE --workspace-bind-root PATH [--count N]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed
+sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed
+sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed --count 5
 ```
 
 ## Expected output
 
-Success — the new sandbox record (`state` is `ready` once the daemon is up):
+Success with the default `--count 1` — the new sandbox record (`state` is
+`ready` once the daemon is up):
 
 ```json
 {
@@ -49,6 +52,8 @@ Success — the new sandbox record (`state` is `ready` once the daemon is up):
 ```
 
 `id` is assigned by the runtime provider. `state` is one of `creating | ready | stopping | stopped | failed`.
+For `--count N` where `N > 1`, the response is `{ "sandboxes": [...] }` with
+one ready record per created sandbox; a partial batch is rolled back on error.
 
 Error — invalid/empty image (record and runtime sandbox are rolled back):
 

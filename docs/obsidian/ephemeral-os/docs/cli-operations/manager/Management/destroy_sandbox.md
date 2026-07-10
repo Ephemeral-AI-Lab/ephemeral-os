@@ -25,13 +25,13 @@ Stop the sandbox daemon, destroy the runtime sandbox, and remove the host-side s
 **Usage**
 
 ```
-sandbox-cli manager destroy_sandbox --sandbox-id ID
+sandbox-manager-cli destroy_sandbox --sandbox-id ID
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli manager destroy_sandbox --sandbox-id sbox-1
+sandbox-manager-cli destroy_sandbox --sandbox-id sbox-1
 ```
 
 ## Expected output

@@ -1,3 +1,5 @@
+//! CLI-owned argv projection and request input construction.
+
 use sandbox_operation_client::{
     build_request_from_values, build_request_from_values_with_id, BuildRequestValueInput,
     RequestBuildError,

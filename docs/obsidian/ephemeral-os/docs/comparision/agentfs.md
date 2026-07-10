@@ -39,12 +39,12 @@ EphemeralOS answers "how do I run the agent safely and merge what it did."
 | Axis | **AgentFS (Turso)** | **EphemeralOS** |
 |---|---|---|
 | **Primary job** | Storage + audit + reproducibility for agent file state | Isolated execution + multi-agent collaboration sandbox |
-| **Form factor** | Embeddable SDK (TS/Python/Rust) + CLI + single `.db` file; in-process, even browser/WASM | Client/server: `sandbox-cli`/gateway → manager → in-container daemon → runtime, over newline-delimited JSON-RPC |
+| **Form factor** | Embeddable SDK (TS/Python/Rust) + CLI + single `.db` file; in-process, even browser/WASM | Client/server: manager/runtime/observability CLIs → gateway → manager or in-container daemon application, over authenticated newline-delimited JSON |
 | **CoW backend** | Userspace overlay (FUSE on Linux, NFS on macOS) with a **SQLite/Turso writable delta**; copy-up whole file into the DB on first write | **Kernel overlayfs**: content-addressed layerstack (CAS lowerdirs on disk) + overlay upperdir on a disk-backed Docker volume |
 | **Unit of change** | Rows in a SQLite delta (files, KV state, tool calls all in one DB) | Filesystem **layers** (immutable, content-hashed) + per-workspace upperdir diff |
 | **What's isolated** | The **filesystem** ("system-wide, cannot be bypassed"); plus mount/user ns + `sandbox-exec` in the experimental sandbox | The **whole execution env**: mount/pid/user namespaces per command, optional network namespace, privileged Linux container as the boundary |
 | **Network isolation** | Not addressed | First-class: `shared` (host netns) vs `isolated` (own netns) per workspace |
-| **Session model** | `AgentFS.open({id})` → `.agentfs/<id>.db`; ephemeral in-memory if no id; `agentfs run --session <ID>`; sessions keyed to git-branch names | `create`/`destroy_workspace_session` (caller-owned, overlay persists) + one-shot ephemeral workspace; plus command sessions for long-running commands (stdin/stdout streaming) |
+| **Session model** | `AgentFS.open({id})` → `.agentfs/<id>.db`; ephemeral in-memory if no id; `agentfs run --session <ID>`; sessions keyed to git-branch names | Automatic `publish_then_destroy` workspace sessions plus internal `no_op` sessions; command sessions support long-running stdin/stdout streaming |
 | **Multi-agent model** | **Isolation-first**: each agent gets its *own* delta DB (branch-per-agent). No shared mutable base | **Shared-base-first**: agents publish to a *shared* layerstack; designed for convergence on a mainline |
 | **Merge / concurrency** | None documented — snapshot & copy, not merge; no OCC | `publish_changes` with **OCC reject**: `invalid_base_revision`, `source_conflict` (expected vs actual fingerprint), `protected_path`. Squash planned |
 | **Auditability** | **Headline feature**: every file op + tool call in a queryable SQL timeline (`agentfs timeline`) | Observability snapshots/traces, service graph, per-layer attribution — operation-level, not a SQL-queryable file-op log |
@@ -80,7 +80,7 @@ AgentFS doesn't try to merge agents because that's not its job; it gives you
   multi-language SDKs. Its audit trail beats EphemeralOS's observability at the
   storage layer.
 - **EphemeralOS wins:** real execution isolation (namespaces + network
-  profiles), shared-base multi-agent convergence with OCC publish, one-shot vs
+  profiles), shared-base multi-agent convergence with OCC publish, implicit vs
   session semantics, interactive command sessions, and overlayfs-native
   performance for actual command workloads.
 

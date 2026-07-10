@@ -25,6 +25,12 @@ python3 -m pytest               # the whole suite
 The gateway is started automatically on the first test that needs it and reused
 afterward — you do **not** start it by hand.
 
+The harness routes logical `manager`, `runtime`, and `observability` calls to
+the matching root wrapper and preserved binary. Semantic routes come from
+`sandbox-operation-catalog`; `sandbox-cli` owns each binary's projection and
+argv parsing; `sandbox-operation-client` owns shared discovery, request
+construction, and gateway transport.
+
 ## 3. What to run
 
 | Command | Runs |
@@ -73,17 +79,18 @@ workspace root. `repo/testbed` is the default.
 Enabled by default in `pytest.ini` — no extra flags needed:
 
 - **Live logs** (`log_cli = true`): each test streams its operations as they
-  happen. The `e2e.cli` logger prints every `sandbox-cli` call and its result
-  with elapsed time (`→ …` / `← … (exit=0, 0.03s)`); `e2e.gateway` logs
+  happen. The `e2e.cli` logger prints every domain CLI call and its result with
+  elapsed time (`→ …` / `← … (exit=0, 0.03s)`); `e2e.gateway` logs
   bring-up; `e2e.timing` prints a per-test total.
 - **Per-test timing** (`--durations=0`): a `slowest durations` table at the end
   with a `setup / call / teardown` breakdown per test, plus the live
   `⏱ <test> — N.NNNs total` line during the run.
-- **Per-operation timing artifacts**: every run that calls `sandbox-cli` writes
-  `latest.md` and `latest.json` under `E2E_OP_METRICS_DIR`. The summary groups
-  client-side CLI wall time by operation and includes count/min/p50/p95/max plus
-  the measured percentage of calls under 50 ms, 100 ms, and 200 ms. This is
-  measurement only; the suite does not enforce a timing SLO.
+- **Per-operation timing artifacts**: every run that calls one of the three
+  domain CLI binaries writes `latest.md` and `latest.json` under
+  `E2E_OP_METRICS_DIR`. The summary groups client-side CLI wall time by
+  operation and includes count/min/p50/p95/max plus the measured percentage of
+  calls under 50 ms, 100 ms, and 200 ms. This is measurement only; the suite
+  does not enforce a timing SLO.
 
 Useful overrides:
 
@@ -100,10 +107,12 @@ E2E_PROGRESS=1 python3 -m pytest manager # stream daemon-side op progress live
 `log_cli` streams our logging records live; raw stdout/stderr of subprocesses
 (like the gateway build) is still captured unless you add `-s`.
 
-`E2E_PROGRESS=1` adds sandbox-cli's global `--progress` flag so long-running
-operations (notably `create_sandbox`, which copies + hashes the workspace base)
-stream their progress lines live through the `e2e.cli` logger (prefixed `‖`).
-The final JSON is still parsed normally, so assertions are unaffected.
+`E2E_PROGRESS=1` adds the manager CLI's global `--progress` flag so
+long-running manager operations (notably `create_sandbox`, which copies and
+hashes the workspace base) stream their progress lines live through the
+`e2e.cli` logger (prefixed `‖`). The runtime and observability binaries do not
+accept that flag. Final JSON is still parsed normally, so assertions are
+unaffected.
 
 ## 6. Gateway & cleanup
 

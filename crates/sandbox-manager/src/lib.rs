@@ -1,3 +1,7 @@
+//! Manager application services, handlers, ports, and public routing.
+//!
+//! Semantic declarations come from `sandbox-operation-catalog`; concrete
+//! transport, provider, and daemon-process mechanics belong to composition.
 #![forbid(unsafe_code)]
 
 mod daemon_client;

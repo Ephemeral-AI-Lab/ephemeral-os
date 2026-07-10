@@ -1,3 +1,8 @@
+//! JSON-line wire encoding, framing, authentication fields, limits, malformed
+//! input errors, and the private daemon-readiness handshake.
+//!
+//! Semantic operation vocabulary and application envelopes live in
+//! `sandbox-operation-contract`, not this transport package.
 #![forbid(unsafe_code)]
 
 pub mod auth;

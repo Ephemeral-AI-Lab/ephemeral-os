@@ -1,3 +1,4 @@
+//! Fixed-domain MCP projection over the shared operation client and semantic catalog.
 #![forbid(unsafe_code)]
 
 pub mod catalog;

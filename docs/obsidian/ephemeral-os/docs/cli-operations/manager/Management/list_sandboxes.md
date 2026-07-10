@@ -23,13 +23,13 @@ This operation takes no arguments.
 **Usage**
 
 ```
-sandbox-cli manager list_sandboxes
+sandbox-manager-cli list_sandboxes
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli manager list_sandboxes
+sandbox-manager-cli list_sandboxes
 ```
 
 ## Expected output

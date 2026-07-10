@@ -28,14 +28,14 @@ Show the active manifest as a per-layer inventory: disk bytes, how many workspac
 **Usage**
 
 ```
-sandbox-cli observability layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]
+sandbox-observability-cli layerstack --sandbox-id ID [--workspace-id WS] [--window-ms MS]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli observability layerstack --sandbox-id eos-abc
-sandbox-cli observability layerstack --sandbox-id eos-abc --workspace-id ws-7
+sandbox-observability-cli layerstack --sandbox-id eos-abc
+sandbox-observability-cli layerstack --sandbox-id eos-abc --workspace-id ws-7
 ```
 
 ## Expected output

@@ -18,7 +18,8 @@ This spec covers two things:
 ## 1. What changed at the runtime surface
 
 Workspace lifecycle is daemon-internal and is exercised through the test
-harness's authenticated internal gateway path. `exec_command` remains public.
+harness's trusted authenticated direct-daemon helper. `exec_command` remains
+public.
 Responses and semantics changed:
 
 | Operation | Change | Kind |
@@ -45,7 +46,7 @@ Verified against the current tree (grep for `exec_command`,
 
 | File | Verdict | Required update |
 | --- | --- | --- |
-| `runtime/file/helpers.py` | compatible | Route lifecycle setup/teardown through the authenticated internal gateway helper and assert `finalize_policy == "no_op"`. |
+| `runtime/file/helpers.py` | compatible | Route lifecycle setup/teardown through the trusted authenticated direct-daemon helper and assert `finalize_policy == "no_op"`. |
 | `runtime/file/**/test_*.py` (smoke, correctness, file_exec, blame, concurrent) | compatible | none — they assert by field lookup. Optional hardening: sessionless `file_exec` tests may assert the implicit exec response's `workspace_session_id` is present and no longer resolvable after terminal status (see EX-03). |
 | `runtime/command/test_exec_command_layer_depth_benchmark.py` | compatible | none — it never drains more than 512 completed commands per daemon. Add a comment noting the retention cap so future depth extensions know drains of old command ids expire. |
 | `runtime/test_squash_remount.py` | compatible | `_publish` uses a bare exec to publish a layer — that is exactly the implicit `publish_then_destroy` path and keeps working. No change. |
@@ -64,10 +65,11 @@ WS-04/EX-06 below pin the behavior at the e2e level.
 
 Layout per the suite README: `runtime/workspace_session/{__init__.py,
 helpers.py, test_workspace_session.py, test_exec_finalize.py}` plus this spec.
-Helpers use the public runtime CLI for catalog operations and the authenticated
-internal gateway helper for workspace lifecycle, and return parsed JSON;
-every case writes `test-reports/<RUN_ID>/<CASE_ID>/verdict.json` with
-`correctness` / `teardown` axes (timing axis only where noted).
+Helpers route public operations to the matching manager, runtime, or
+observability binary and use the authenticated internal daemon helper only for
+workspace-session lifecycle. They return parsed JSON; every case writes
+`test-reports/<RUN_ID>/<CASE_ID>/verdict.json` with `correctness` / `teardown`
+axes (timing axis only where noted).
 
 Policy availability constraint: the public CLI cannot create any explicit
 workspace session. The internal test setup creates `no_op` sessions, so
@@ -140,8 +142,10 @@ E2E_RETENTION=1 python3 -m pytest runtime/workspace_session -k EX_08
 ```
 
 Smoke tier must stay under ~60 s wall; medium under ~5 min; EX-08 and FP-04
-are opt-in. All cases go through `sandbox-cli` structured JSON only — no log
-scraping, per the suite charter.
+are opt-in. Public calls go through the three purpose-built CLI binaries;
+internal workspace-session lifecycle uses only the trusted authenticated
+daemon helper's two allowlisted routes. Every assertion consumes structured
+JSON — no log scraping, per the suite charter.
 
 ## Current Proof
 

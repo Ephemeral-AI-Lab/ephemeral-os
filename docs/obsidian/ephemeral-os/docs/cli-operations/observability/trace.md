@@ -27,14 +27,14 @@ Fold the log into a span waterfall for one trace: spans nested by parent, offset
 **Usage**
 
 ```
-sandbox-cli observability trace --sandbox-id ID [--trace-id TRACE|last]
+sandbox-observability-cli trace --sandbox-id ID [--trace-id TRACE|last]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli observability trace --sandbox-id eos-abc --trace-id req-7f3
-sandbox-cli observability trace --sandbox-id eos-abc --trace-id last
+sandbox-observability-cli trace --sandbox-id eos-abc --trace-id req-7f3
+sandbox-observability-cli trace --sandbox-id eos-abc --trace-id last
 ```
 
 ## Expected output

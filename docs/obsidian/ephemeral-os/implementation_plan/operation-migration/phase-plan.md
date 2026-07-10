@@ -586,7 +586,7 @@ one commit.
 
 ### Change list
 
-- [ ] Update root `README.md` (component table, boundary law, pieces list),
+- [x] Update root `README.md` (component table, boundary law, pieces list),
   `CLAUDE.md`, `AGENTS.md`, `docs/README/sandbox-runtime.md`,
   `docs/daemon-http/README.md`, console README, E2E README/RUNNING, package
   docs, and
@@ -624,6 +624,9 @@ one commit.
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
 | 2026-07-11 | Phase 7 started | Dashboard entry criteria and Phase 6 acceptance checklist | Phase 6 is approved and every Phase 6 acceptance item is checked; Phase 7 is unblocked. | None. |
+| 2026-07-11 | Current ownership surfaces | `cargo test -p sandbox-cli --all-features` | Compatibility 2/2, help 3/3, manager 14/14, observability 10/10, projection integrity 2/2, request builder 6/6, and runtime 10/10 passed; doc-tests passed. | None. |
+| 2026-07-11 | Current paths and namespace law | `! git diff --name-only -z --diff-filter=ACMRT \| xargs -0 rg -n 'sandbox-manager-operations\|sandbox-runtime-operations\|sandbox-observability-operations\|sandbox_cli::core\|cli-operation-e2e-live-test\|crates/sandbox-operations/(manager\|runtime\|observability)\|crates/sandbox-manager/src/operation/'`; `git status --short crates/sandbox-cli/src`; `for namespace in sandbox-operations sandbox-observability sandbox-runtime; do test ! -e "crates/$namespace/Cargo.toml"; done`; `git diff --check`; `cargo fmt --all -- --check` | Stale scan returned no match; status showed the three retired `src/core` files deleted and `src/{input,output}.rs` added; all namespace-root assertions, diff check, and format check passed. | None. |
+| 2026-07-11 | Touched E2E source documentation | `python3 -m py_compile e2e/runtime/daemon_http/test_daemon_http.py e2e/runtime/file/concurrent/test_concurrent_sessionless.py e2e/runtime/test_squash_remount.py` | All touched Python modules compiled successfully. | None. |
 
 ---
 

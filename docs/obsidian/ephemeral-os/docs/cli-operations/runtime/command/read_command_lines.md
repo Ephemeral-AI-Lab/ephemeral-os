@@ -27,13 +27,13 @@ Read rendered command output for a command session using stable line offsets. Of
 **Usage**
 
 ```
-sandbox-cli runtime read_command_lines --command-session-id ID [--start-offset N] [--limit N]
+sandbox-runtime-cli --sandbox-id ID read_command_lines --command-session-id ID [--start-offset N] [--limit N]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli runtime read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100
+sandbox-runtime-cli --sandbox-id ID read_command_lines --command-session-id cmd-1 --start-offset 0 --limit 100
 ```
 
 ## Expected output

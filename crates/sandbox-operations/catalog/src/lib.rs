@@ -1,3 +1,8 @@
+//! The single semantic operation catalog and route manifest.
+//!
+//! Domain features select manager, runtime, and observability declarations;
+//! presentation metadata and business handlers remain with their adapters and
+//! applications.
 #![forbid(unsafe_code)]
 
 pub mod internal;

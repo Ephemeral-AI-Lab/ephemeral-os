@@ -37,7 +37,7 @@ CubeSandbox is cool infrastructure. EphemeralOS is cool reconciliation.
 | Axis | **CubeSandbox** | **EphemeralOS** |
 |---|---|---|
 | **Primary job** | Fast, hardware-isolated sandbox service for AI agents | Fast CLI/runtime substrate for external agents and humans |
-| **Adoption strategy** | E2B-compatible API/SDK surface; swap endpoint/env vars | Native `sandbox-cli` and newline-delimited JSON protocol |
+| **Adoption strategy** | E2B-compatible API/SDK surface; swap endpoint/env vars | Purpose-built manager/runtime/observability CLIs and authenticated gateway RPC |
 | **Isolation unit** | KVM MicroVM with its own guest kernel | Namespace-isolated command/workspace inside a privileged Docker sandbox |
 | **Runtime focus** | Boot, pause/resume, snapshot, clone, rollback | Exec, PTY/stdin/stdout, workspace sessions, LayerStack publish |
 | **State model** | MicroVM/template snapshots and CubeCoW clone/rollback | Overlay upperdir diff + immutable content-hashed layers |

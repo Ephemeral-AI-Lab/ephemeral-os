@@ -1,7 +1,7 @@
 //! Agent CLI: drive exactly one sandbox (commands and files).
 //!
-//! A thin protocol client over [`crate::core`]. It links only the runtime
-//! spec catalog — never a manager/runtime engine — and stamps sandbox scope. A
+//! A thin gateway client that links only the runtime semantic catalog — never
+//! a manager/runtime engine — and stamps sandbox scope. A
 //! `--sandbox-id` is required on every operation; there is no env or config
 //! fallback.
 #![forbid(unsafe_code)]
@@ -14,11 +14,11 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 
-use crate::core::output::{
+use crate::input::{resolve_runtime_sandbox_id, BuildRequestInput};
+use crate::output::{
     discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
 };
-use crate::core::request_builder::{resolve_runtime_sandbox_id, BuildRequestInput};
 use crate::projection::document::catalog_document;
 use sandbox_operation_client::{GatewayClient, GatewayConfigOverrides, RequestBuildError};
 use sandbox_operation_contract::OperationDomain;

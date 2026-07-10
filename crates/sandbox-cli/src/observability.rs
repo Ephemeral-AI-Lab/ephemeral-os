@@ -9,11 +9,11 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 
-use crate::core::output::{
+use crate::input::BuildRequestInput;
+use crate::output::{
     discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
 };
-use crate::core::request_builder::BuildRequestInput;
 use crate::projection::document::catalog_document;
 use sandbox_operation_client::{GatewayClient, GatewayConfigOverrides, RequestBuildError};
 use sandbox_operation_contract::OperationDomain;

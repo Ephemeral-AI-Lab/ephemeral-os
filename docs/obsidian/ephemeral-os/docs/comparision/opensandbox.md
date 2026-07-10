@@ -38,7 +38,7 @@ OpenSandbox is broad. EphemeralOS is narrow. The narrowness is the point.
 | Axis                   | **OpenSandbox**                                                                                         | **EphemeralOS**                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | **Primary job**        | General-purpose sandbox platform for AI applications                                                    | Fast command/workspace runtime for external agents over a shared base    |
-| **Interface**          | Multi-language SDKs, CLI, MCP, OpenAPI-style specs                                                      | `sandbox-cli` + newline-delimited JSON protocol                          |
+| **Interface**          | Multi-language SDKs, CLI, MCP, OpenAPI-style specs                                                      | Manager/runtime/observability CLIs + authenticated gateway RPC           |
 | **Main user**          | Application/platform developer integrating sandbox lifecycle into a product                             | Agent or human operator controlling execution from the host              |
 | **Agent location**     | Not prescribed; SDK controls sandboxes from outside, examples may run tools inside                      | Agent stays outside; sandbox runs commands and services                  |
 | **Runtime backend**    | Docker and Kubernetes                                                                                   | Docker-backed sandbox today                                              |

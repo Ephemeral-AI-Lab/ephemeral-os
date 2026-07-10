@@ -1,3 +1,4 @@
+//! Authenticated gateway transport and the concrete manager composition root.
 #![forbid(unsafe_code)]
 
 mod daemon_client;

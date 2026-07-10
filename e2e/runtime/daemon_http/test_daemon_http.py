@@ -1,7 +1,7 @@
 """Live Docker E2E for the daemon HTTP surface (`daemon_http`).
 
-Drives real sandboxes through ``sandbox-cli manager`` and real in-sandbox HTTP
-servers through ``sandbox-cli runtime exec_command``, then calls the published
+Drives real sandboxes through ``sandbox-manager-cli`` and real in-sandbox HTTP
+servers through ``sandbox-runtime-cli exec_command``, then calls the published
 ``daemon_http`` loopback port from the host:
 
   * ``/health`` returns the fixed status document.

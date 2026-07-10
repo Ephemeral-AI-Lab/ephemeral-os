@@ -39,8 +39,8 @@ Primary implementation areas:
 crates/sandbox-daemon/src/rpc/
 crates/sandbox-daemon/src/http/
 crates/sandbox-daemon/src/serve.rs
-crates/sandbox-runtime/operation/src/operation_adapter/
-crates/sandbox-manager/src/operation/management/service/impls/export_changes.rs
+crates/sandbox-runtime/operation/src/operations/registry/
+crates/sandbox-manager/src/operations/management/service/impls/export_changes.rs
 crates/sandbox-protocol/src/
 crates/sandbox-console/src/
 crates/sandbox-config/src/configs/manager.rs
@@ -50,11 +50,11 @@ crates/sandbox-provider-docker/src/installer.rs
 crates/sandbox-provider-docker/src/launch.rs
 crates/sandbox-provider-docker/src/runtime.rs
 crates/sandbox-provider-docker/src/labels.rs
-cli-operation-e2e-live-test/runtime/daemon_http/test_daemon_http.py
+e2e/runtime/daemon_http/test_daemon_http.py
 ```
 
-If the implementation keeps `crates/sandbox-daemon/src/server/` instead of
-renaming it to `rpc/`, review that explicitly against the spec.
+Review daemon RPC dispatch under `crates/sandbox-daemon/src/rpc/` against the
+separate HTTP listener under `crates/sandbox-daemon/src/http/`.
 
 ## Fixed Intent
 

@@ -28,14 +28,14 @@ Fold the sample log for one scope into a time series with deltas: cgroup counter
 **Usage**
 
 ```
-sandbox-cli observability cgroup --sandbox-id ID [--scope SCOPE] [--window-ms MS]
+sandbox-observability-cli cgroup --sandbox-id ID [--scope SCOPE] [--window-ms MS]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli observability cgroup --sandbox-id eos-abc
-sandbox-cli observability cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000
+sandbox-observability-cli cgroup --sandbox-id eos-abc
+sandbox-observability-cli cgroup --sandbox-id eos-abc --scope ws-1 --window-ms 60000
 ```
 
 ## Expected output

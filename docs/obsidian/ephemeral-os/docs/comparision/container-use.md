@@ -40,7 +40,7 @@ it as "one base, continuously reconciled."
 | Axis | **container-use (Dagger)** | **EphemeralOS** |
 |---|---|---|
 | **Primary job** | Run parallel coding agents in isolated, reviewable environments | Isolated execution + multi-agent collaboration on a shared base |
-| **Interface** | **MCP server** (agent-facing) + CLI (`container-use` / `cu`, human-facing) | Newline-delimited **JSON-RPC** + `sandbox-cli`/gateway → manager → daemon → runtime |
+| **Interface** | **MCP server** (agent-facing) + CLI (`container-use` / `cu`, human-facing) | Manager/runtime/observability CLIs + authenticated gateway RPC → manager or daemon applications |
 | **Isolation unit** | One fresh **Dagger container** per agent environment | Namespace-isolated command (mount/pid/user, optional netns) over an overlay |
 | **Change primitive** | **Git commits on a per-agent branch** (`container-use/<env>`) | Content-hashed **overlayfs layers** + per-workspace upperdir diff |
 | **Multi-agent model** | **Branch-per-agent**: isolate, then merge | **Shared-base**: publish to one layerstack, converge continuously |
@@ -96,7 +96,7 @@ has to justify itself on the shared-base convergence model, not on ergonomics.
 - **EphemeralOS wins:** continuous shared-base visibility (no merge step to see a
   peer's published work); OCC at the filesystem layer with per-path conflict
   detection (no git required); overlay layers cheaper than container-per-agent;
-  first-class network profiles; one-shot vs session semantics; programmatic RPC
+  first-class network profiles; implicit vs explicit session semantics; programmatic RPC
   built for automation rather than human-gated review.
 
 ### Compose or compete

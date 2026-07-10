@@ -1,3 +1,7 @@
+//! Runtime application handlers and orchestration over runtime primitives.
+//!
+//! This crate consumes runtime declarations from the semantic catalog and has
+//! no wire-protocol or presentation dependency.
 #![forbid(unsafe_code)]
 
 pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;

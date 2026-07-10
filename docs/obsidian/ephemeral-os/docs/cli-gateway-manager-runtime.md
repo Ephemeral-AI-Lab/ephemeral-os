@@ -9,7 +9,9 @@ status: ready
 
 # CLI Gateway Manager Runtime
 
-This note shows the normal operator path: start the gateway, send manager commands through `bin/sandbox-cli`, create a Docker-backed sandbox, then forward runtime commands to the sandbox daemon.
+This note shows the normal operator path: start the gateway, send manager
+commands through `bin/sandbox-manager-cli`, create a Docker-backed sandbox,
+then forward commands through `bin/sandbox-runtime-cli` to the sandbox daemon.
 
 The gateway is the public entry point. The manager owns sandbox records and lifecycle. The Docker runtime creates containers, the installer places and starts `sandbox-daemon`, and the daemon runs `sandbox-runtime` operations inside the sandbox.
 
@@ -22,7 +24,8 @@ flowchart LR
     subgraph UserTools["User Tools"]
         User([User])
         Start["bin/start-sandbox-docker-gateway"]
-        CLI["bin/sandbox-cli"]
+        ManagerCLI["bin/sandbox-manager-cli"]
+        RuntimeCLI["bin/sandbox-runtime-cli"]
     end
 
     subgraph GatewayLayer["Gateway Layer"]
@@ -46,10 +49,12 @@ flowchart LR
     end
 
     User --> Start
-    User --> CLI
+    User --> ManagerCLI
+    User --> RuntimeCLI
     Start -. starts .-> GatewayServe
     GatewayServe --> GatewayDispatch
-    CLI --> GatewayDispatch
+    ManagerCLI --> GatewayDispatch
+    RuntimeCLI --> GatewayDispatch
 
     GatewayDispatch --> Router
     Router <--> Services
@@ -62,14 +67,26 @@ flowchart LR
     Daemon --> RuntimeOps
 ```
 
-The system is split into layers so each command has a clear owner. User tools are the shell entry points. The gateway layer handles listening, authentication, and request dispatch. The manager layer owns sandbox records and decides whether a request is a manager operation or a sandbox-scoped runtime operation.
+The system is split into layers so each command has a clear owner. The
+operation contract owns the application envelope and semantic vocabulary; the
+single catalog owns manager, runtime, and observability declarations and route
+metadata. Each CLI owns only its presentation projection and uses the shared
+operation client. `sandbox-protocol` owns JSON-line wire encoding, framing,
+authentication fields, limits, and the private readiness handshake. The
+gateway handles listening and authentication, while the manager owns sandbox
+records and decides whether to handle a request or forward it to a sandbox.
 
 Docker runtime setup only matters during sandbox lifecycle operations such as `create_sandbox` and `destroy_sandbox`. Once a sandbox is ready, normal runtime commands go through the manager to that sandbox's daemon endpoint.
 
 Implementation paths:
 
 - `bin/start-sandbox-docker-gateway`
-- `bin/sandbox-cli`
+- `bin/sandbox-manager-cli`
+- `bin/sandbox-runtime-cli`
+- `crates/sandbox-operations/contract/`
+- `crates/sandbox-operations/catalog/`
+- `crates/sandbox-operations/client/`
+- `crates/sandbox-cli/src/{input.rs,output.rs,projection/}`
 - `crates/sandbox-gateway/src/gateway/main.rs`
 - `crates/sandbox-gateway/src/gateway/server.rs`
 - `crates/sandbox-manager/src/router/dispatch.rs`
@@ -95,7 +112,10 @@ flowchart LR
 
 `bin/start-sandbox-docker-gateway` packages the Docker daemon binary if needed, builds the gateway binary, stops the old pid-file-owned gateway if one is running, writes the gateway auth token, and starts `sandbox-gateway serve` in the background.
 
-The helper uses Docker backend config from `config/prd.yml` by default. It writes the token to the token file used by `bin/sandbox-cli`, so users normally do not need to copy the token by hand. The default gateway address is local, so the gateway is meant to be the local control point for CLI requests.
+The helper uses Docker backend config from `config/prd.yml` by default. It
+writes the token to the file discovered by the shared operation client, so the
+three CLI binaries normally need no manual token copy. The default gateway
+address is local, so the gateway is the local control point for CLI requests.
 
 If startup fails, check the gateway log printed by the helper first. The common operator checks are: Docker is available, the configured daemon binary exists, the config path is correct, and the old gateway process was stopped cleanly.
 
@@ -104,14 +124,14 @@ Implementation paths:
 - `bin/start-sandbox-docker-gateway`
 - `crates/sandbox-gateway/src/gateway/main.rs`
 - `crates/sandbox-gateway/src/gateway/server.rs`
-- `crates/sandbox-config/src/configs/cli.rs`
+- `crates/sandbox-operations/client/src/config.rs`
 
 ## CLI Request Path
 
 ```mermaid
 flowchart LR
     User([User])
-    CLI["bin/sandbox-cli manager ..."]
+    CLI["bin/sandbox-manager-cli ..."]
     Gateway["Gateway"]
     Router["SandboxManagerRouter"]
     Response["manager response"]
@@ -121,21 +141,31 @@ flowchart LR
 
 Use `manager` commands for sandbox lifecycle work such as listing, creating, inspecting, and destroying sandboxes. These requests are system-scoped and return directly from the manager.
 
-`bin/sandbox-cli manager ...` is the operator interface for manager-owned operations. The CLI prepares a request, connects to the gateway address, includes the gateway auth token, and waits for one response. The gateway validates and dispatches the request to `SandboxManagerRouter`.
+`bin/sandbox-manager-cli ...` is the operator interface for manager-owned
+operations. The CLI joins its presentation projection with the manager domain
+of the semantic catalog, prepares an operation-contract request, and uses the
+shared client to send authenticated gateway RPC. The gateway decodes the wire
+request and dispatches it to `SandboxManagerRouter`.
 
-The manager handles these requests without entering a sandbox daemon. That is why `list_sandboxes`, `create_sandbox`, `inspect_sandbox`, and `destroy_sandbox` do not need `--sandbox-id` in the same way runtime commands do.
+The manager handles these requests without entering a sandbox daemon. Manager
+commands therefore have no mandatory global runtime-style sandbox selector:
+`list_sandboxes` and `create_sandbox` need none, while `inspect_sandbox` and
+`destroy_sandbox` accept their operation-specific `--sandbox-id` flag.
 
 Implementation paths:
 
-- `bin/sandbox-cli`
-- `crates/sandbox-gateway/src/cli/client.rs`
-- `crates/sandbox-gateway/src/cli/output.rs`
+- `bin/sandbox-manager-cli`
+- `crates/sandbox-cli/src/manager.rs`
+- `crates/sandbox-cli/src/{input.rs,output.rs}`
+- `crates/sandbox-cli/src/projection/manager.rs`
+- `crates/sandbox-operations/catalog/src/manager.rs`
+- `crates/sandbox-operations/client/src/client.rs`
 - `crates/sandbox-gateway/src/gateway/server.rs`
 - `crates/sandbox-manager/src/router/dispatch.rs`
-- `crates/sandbox-manager/src/operation/impls/management/list_sandboxes.rs`
-- `crates/sandbox-manager/src/operation/impls/management/create_sandbox.rs`
-- `crates/sandbox-manager/src/operation/impls/management/inspect_sandbox.rs`
-- `crates/sandbox-manager/src/operation/impls/management/destroy_sandbox.rs`
+- `crates/sandbox-manager/src/operations/management/service/impls/list_sandboxes.rs`
+- `crates/sandbox-manager/src/operations/management/service/impls/create_sandbox.rs`
+- `crates/sandbox-manager/src/operations/management/service/impls/inspect_sandbox.rs`
+- `crates/sandbox-manager/src/operations/management/service/impls/destroy_sandbox.rs`
 
 ## Sandbox Creation And Runtime Setup
 
@@ -170,19 +200,19 @@ Readiness matters because the manager should not report a sandbox as usable just
 
 Implementation paths:
 
-- `crates/sandbox-manager/src/operation/impls/management/create_sandbox.rs`
+- `crates/sandbox-manager/src/operations/management/service/impls/create_sandbox.rs`
 - `crates/sandbox-provider-docker/src/runtime.rs`
 - `crates/sandbox-provider-docker/src/installer.rs`
 - `crates/sandbox-provider-docker/src/readiness.rs`
 - `crates/sandbox-daemon/src/serve.rs`
-- `crates/sandbox-daemon/src/server/dispatch.rs`
+- `crates/sandbox-daemon/src/rpc/dispatch.rs`
 
 ## Runtime Command Forwarding
 
 ```mermaid
 flowchart LR
     User([User])
-    CLI["bin/sandbox-cli runtime --sandbox-id ID ..."]
+    CLI["bin/sandbox-runtime-cli --sandbox-id ID ..."]
     Gateway["Gateway"]
     Manager["Manager"]
     Endpoint["sandbox daemon endpoint"]
@@ -202,23 +232,26 @@ The daemon is the boundary where the request becomes an in-sandbox runtime opera
 
 Implementation paths:
 
-- `bin/sandbox-cli`
-- `crates/sandbox-gateway/src/cli/client.rs`
+- `bin/sandbox-runtime-cli`
+- `crates/sandbox-cli/src/runtime.rs`
+- `crates/sandbox-cli/src/projection/runtime.rs`
+- `crates/sandbox-operations/catalog/src/runtime.rs`
+- `crates/sandbox-operations/client/src/client.rs`
 - `crates/sandbox-gateway/src/gateway/server.rs`
 - `crates/sandbox-manager/src/router/dispatch.rs`
 - `crates/sandbox-manager/src/router/forward.rs`
-- `crates/sandbox-manager/src/daemon_client.rs`
-- `crates/sandbox-daemon/src/server/dispatch.rs`
+- `crates/sandbox-gateway/src/daemon_client.rs`
+- `crates/sandbox-daemon/src/rpc/dispatch.rs`
 - `crates/sandbox-runtime/operation/src/services.rs`
-- `crates/sandbox-runtime/operation/src/operation_adapter/command_operations.rs`
+- `crates/sandbox-runtime/operation/src/operations/registry/command_operations.rs`
 
 ## Minimal Commands
 
 ```sh
 bin/start-sandbox-docker-gateway --rebuild-binary
-bin/sandbox-cli manager list_sandboxes
-bin/sandbox-cli manager create_sandbox --image ubuntu:24.04 --workspace-bind-root "$PWD"
-bin/sandbox-cli runtime --sandbox-id ID exec_command "pwd"
+bin/sandbox-manager-cli list_sandboxes
+bin/sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root "$PWD"
+bin/sandbox-runtime-cli --sandbox-id ID exec_command "pwd"
 ```
 
 Replace `ID` with the sandbox id returned by `create_sandbox` or shown by `list_sandboxes`.

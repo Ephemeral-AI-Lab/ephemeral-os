@@ -7,4 +7,5 @@ rules.
 
 - Rebuild the Docker sandbox gateway binary with
   `bin/start-sandbox-docker-gateway --rebuild-binary`.
-- Use `sandbox-cli` for manual sandbox operations.
+- Use `sandbox-manager-cli`, `sandbox-runtime-cli`, and
+  `sandbox-observability-cli` for manual sandbox operations.

@@ -1,6 +1,6 @@
 #![cfg(all(feature = "manager", feature = "runtime", feature = "observability"))]
 
-use sandbox_cli::core::request_builder::{build_request_from_catalog_with_id, BuildRequestInput};
+use sandbox_cli::input::{build_request_from_catalog_with_id, BuildRequestInput};
 use sandbox_cli::projection::document::{catalog_document, CatalogDocument};
 use sandbox_operation_client::{build_request_from_values_with_id, BuildRequestValueInput};
 use sandbox_operation_contract::{OperationDomain, OperationScope, OperationSpecDocument};

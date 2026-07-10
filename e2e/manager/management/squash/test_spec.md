@@ -52,7 +52,7 @@ This suite mirrors all catalog IDs under `manager/management/squash/` and writes
 | HRD-06 | hard | E10 crash matrix |
 | HRD-07 | hard | EBUSY park convergence |
 | HRD-08 | hard | admission-gate storm |
-| HRD-09 | hard | one-shot finalize/timeout hook firing mid-switch |
+| HRD-09 | hard | implicit-session finalize/timeout hook firing mid-switch |
 | HRD-10 | hard | dense-pinning adversarial floor |
 | HRD-11 | hard | deep chain: 200-layer churn collapses to 3 lowerdirs live |
 | HRD-12 | hard | E9: over-cap chains fail closed at the mount syscall |
@@ -65,6 +65,12 @@ This suite mirrors all catalog IDs under `manager/management/squash/` and writes
 | HRD-19 | hard | mid-sweep daemon kill at k=6 |
 | HRD-20 | hard | soak marathon: 20 randomized iterations |
 
+SMK-05 treats `crates/sandbox-operations/catalog/src/manager.rs` as the
+semantic declaration owner, `crates/sandbox-cli/src/projection/manager.rs` as
+the CLI presentation owner, and
+`crates/sandbox-manager/src/operations/registry/management_operations.rs` as
+the handler binding.
+
 Allowed skips, matching section 5.3:
 
 | Case | Allowed reason |
@@ -75,13 +81,14 @@ Allowed skips, matching section 5.3:
 
 ## Measurement Kit
 
-Each case creates one live Docker sandbox, drives `sandbox-manager-cli
-squash_layerstacks` through structured JSON, records S0-S3 disk snapshots where
-applicable, captures `T_squash`, `T_quiesce`, `T_remount`, and `T_e2e` timers,
-checks correctness/space/time axes, and writes teardown evidence for an empty
-lease registry, no `.remount-*` residue, empty `staging/`, and strict unmount
-cleanup. The suite writes `SUMMARY.md`, `timing-distribution.json`, and the
-HRD-20 `soak-baseline.json` under `test-reports/<RUN_ID>/`.
+Each case creates one live Docker sandbox, drives
+`sandbox-manager-cli squash_layerstacks` through structured JSON, records
+S0-S3 disk snapshots where applicable, captures `T_squash`, `T_quiesce`,
+`T_remount`, and `T_e2e` timers, checks correctness/space/time axes, and writes
+teardown evidence for an empty lease registry, no `.remount-*` residue, empty
+`staging/`, and strict unmount cleanup. The suite writes `SUMMARY.md`,
+`timing-distribution.json`, and the HRD-20 `soak-baseline.json` under
+`test-reports/<RUN_ID>/`.
 
 ## Current Proof
 
@@ -99,17 +106,17 @@ failure leg, both as catalog section 5.3 permits.
 Speed note: the post-rebuild baseline full run was
 `squash-20260703-030503` at `50 passed in 246.54s`; the optimized harness
 finishes at `128.64s` by using structured `file_write` for small publishes,
-concurrent synthetic layer publishing, and one-shot command log artifact
+concurrent synthetic layer publishing, and implicit-session command log artifact
 writes.
 
 ## Extra HTTP Service Cases
 
 `HTTP-01` and `HTTP-02` are additional medium-tier probes outside the original
 50-case source catalog. Both start the service and client through
-`sandbox-cli runtime exec_command`. `T_http_disconnect` is the largest observed
-silent gap on a persistent `/ticks` HTTP stream that emits numbered lines every
-1ms. The cases enforce the same correctness, space, time, and teardown verdict
-axes.
+`sandbox-runtime-cli --sandbox-id <id> exec_command`. `T_http_disconnect` is
+the largest observed silent gap on a persistent `/ticks` HTTP stream that emits
+numbered lines every 1ms. The cases enforce the same correctness, space, time,
+and teardown verdict axes.
 
 ## Extra Load Cases
 

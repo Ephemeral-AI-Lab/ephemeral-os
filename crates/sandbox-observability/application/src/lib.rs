@@ -1,3 +1,8 @@
+//! Structured observability queries over adapter-neutral input ports.
+//!
+//! This application consumes observability declarations from the semantic
+//! catalog; the daemon adapter supplies sandbox-scoped runtime data. Aggregate
+//! snapshots remain manager-owned.
 #![forbid(unsafe_code)]
 
 pub mod ports;

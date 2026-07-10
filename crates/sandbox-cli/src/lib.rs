@@ -1,8 +1,9 @@
-//! Shared sandbox CLI client core and feature-gated executable adapters.
+//! CLI-owned projection, input, output, help, and feature-gated executables.
 #![forbid(unsafe_code)]
 
-pub mod core;
 pub mod help;
+pub mod input;
+pub mod output;
 pub mod projection;
 
 #[cfg(feature = "manager")]

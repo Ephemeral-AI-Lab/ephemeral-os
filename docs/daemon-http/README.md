@@ -24,7 +24,10 @@ daemon HTTP routes for file read/write/edit/blame, observability, management,
 runtime command execution, or export streaming.
 
 `POST /files/list` is the sole operation endpoint that remains on daemon HTTP.
-It is intentionally absent from the runtime CLI and MCP tool catalogs.
+It is intentionally absent from the public runtime catalog and every CLI/MCP
+projection. Its canonical identifier lives in
+`crates/sandbox-operations/catalog/src/internal/runtime.rs` and its handler is
+kept in the runtime application's separate HTTP-only registry.
 
 ## Endpoint Discovery
 
@@ -173,13 +176,13 @@ Transport errors are handled as follows:
 | Condition | Response |
 | --- | --- |
 | non-`POST` method on the exact `/files/list` path | `405 Method Not Allowed` with `use POST` |
-| malformed JSON, non-object JSON, or an oversized body | `400` with the protocol JSON error envelope |
+| malformed JSON, non-object JSON, or an oversized body | `400` with the standard operation error envelope |
 | runtime validation or list failure | `200` with the normal operation JSON error envelope |
 | `/files/list/...` or any other `/files/*` path | `404` |
 
-Returning operation failures in a `200` response preserves the daemon
-operation responder contract; malformed HTTP transport input still receives a
-`400` or `405`.
+Returning operation failures in a `200` response preserves the operation
+response contract; malformed HTTP transport input still receives a `400` or
+`405`.
 
 ## Removed Operation Routes
 
@@ -224,9 +227,12 @@ crates/sandbox-daemon/src/http/
 ```
 
 There is no HTTP export module and no generic files or observability route
-dispatcher. Runtime request-to-service parsing remains in
-`crates/sandbox-runtime/operation`; public operation definitions remain in the
-management, runtime, and observability catalogs used by CLI and MCP.
+dispatcher. The daemon constructs the contract-owned `OperationRequest` for
+`file_list`; runtime request-to-service dispatch remains in
+`crates/sandbox-runtime/operation`. Public manager, runtime, and observability
+definitions and routes live in the feature-gated domain modules under
+`crates/sandbox-operations/catalog/src/`; CLI presentation metadata lives only
+in `crates/sandbox-cli/src/projection/`.
 
 ## Contract Checks
 
@@ -240,6 +246,10 @@ Changes to daemon HTTP must directly prove:
    and size validation;
 5. `404` for read/write/edit/blame, observability, export, and arbitrary
    unlisted routes.
+
+The maintained live proof is
+`e2e/runtime/daemon_http/test_daemon_http.py`; run it according to
+[`e2e/RUNNING.md`](../../e2e/RUNNING.md).
 
 ## Related Contracts
 

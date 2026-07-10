@@ -28,14 +28,14 @@ When `--sandbox-id` is omitted, the manager fans out private daemon snapshot req
 **Usage**
 
 ```
-sandbox-cli observability snapshot [--sandbox-id ID]
+sandbox-observability-cli snapshot [--sandbox-id ID]
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli observability snapshot
-sandbox-cli observability snapshot --sandbox-id eos-abc
+sandbox-observability-cli snapshot
+sandbox-observability-cli snapshot --sandbox-id eos-abc
 ```
 
 ## Expected output

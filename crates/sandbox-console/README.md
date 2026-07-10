@@ -3,10 +3,14 @@
 The web console's HTTP server: one same-origin surface the browser talks to
 for the operations plane, app preview, daemon health, and the SPA assets.
 It is a **client peer** of the three `sandbox-cli` binaries, built on
-`sandbox_operation_client::GatewayClient`.
+`sandbox_operation_client::GatewayClient`. Semantic operation declarations and
+routes come from the three enabled domains of `sandbox-operation-catalog`; the
+console owns only its HTTP/JSON projection.
 
-Boundary law: never define operation vocabulary, never contact the daemon
-RPC endpoint directly, never expose the gateway auth token to the browser.
+Boundary law: validate `/api/rpc` against public catalog routes only, never
+define operation vocabulary, never contact the daemon RPC endpoint directly,
+never expose the gateway auth token to the browser, and never depend on
+protocol, applications, CLI, or MCP.
 
 ## Routes
 

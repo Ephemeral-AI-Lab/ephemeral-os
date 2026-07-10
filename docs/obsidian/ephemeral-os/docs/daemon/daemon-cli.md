@@ -1,8 +1,9 @@
 # Daemon CLI
 
-`sandbox-daemon` is a private runtime binary. Public operator commands should
-go through `sandbox-cli`; these subcommands are for the gateway, manager, and
-namespace runtime process chain.
+`sandbox-daemon` is a private runtime binary. Public operator commands use
+`sandbox-manager-cli`, `sandbox-runtime-cli`, or `sandbox-observability-cli`;
+these subcommands are for the gateway, manager, and namespace runtime process
+chain.
 
 ## Top-Level
 

@@ -1,7 +1,8 @@
 """Live Docker e2e for LayerStack squash + live workspace remount.
 
-CLI-driven through ``sandbox-cli``; on-disk / mount state is observed with
-``docker exec`` (the outside-observation channel proven in Phase 0 X0.10).
+CLI-driven through the purpose-built sandbox CLI binaries; on-disk / mount
+state is observed with ``docker exec`` (the outside-observation channel proven
+in Phase 0 X0.10).
 Every test creates and destroys its own sandbox with the real
 ``--workspace-bind-root`` flag, so teardown is part of the assertion.
 
@@ -73,7 +74,7 @@ def squash_sandbox():
 
 
 def _publish(sandbox_id, name):
-    """Publish one layer by writing a file through a one-shot exec."""
+    """Publish one layer through an automatic publish-then-destroy session."""
     result = runtime(
         sandbox_id, "exec_command", f"echo {name} > /workspace/{name}.txt"
     )

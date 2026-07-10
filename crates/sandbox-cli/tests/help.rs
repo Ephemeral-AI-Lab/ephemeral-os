@@ -13,7 +13,7 @@ fn runtime_catalog() -> sandbox_cli::projection::document::CatalogDocument {
 
 #[test]
 fn catalog_help_preserves_family_and_operation_order() {
-    let help = render_catalog_help(&runtime_catalog(), "sandbox-cli runtime");
+    let help = render_catalog_help(&runtime_catalog(), "sandbox-runtime-cli --sandbox-id ID");
 
     assert!(help.contains("Sandbox Runtime Help"));
     assert!(
@@ -25,13 +25,17 @@ fn catalog_help_preserves_family_and_operation_order() {
                 .find("read_command_lines")
                 .expect("read command lines operation")
     );
-    assert!(help.contains("sandbox-cli runtime OPERATION"));
+    assert!(help.contains("sandbox-runtime-cli --sandbox-id ID OPERATION"));
 }
 
 #[test]
 fn operation_help_joins_semantics_and_cli_projection() {
-    let help = render_operation_help(&runtime_catalog(), "exec_command", "sandbox-cli runtime")
-        .expect("operation renders");
+    let help = render_operation_help(
+        &runtime_catalog(),
+        "exec_command",
+        "sandbox-runtime-cli --sandbox-id ID",
+    )
+    .expect("operation renders");
 
     assert!(help.contains("Family\n  Command"));
     assert!(help.contains("Description\n  Start a shell command"));
@@ -42,8 +46,12 @@ fn operation_help_joins_semantics_and_cli_projection() {
 
 #[test]
 fn unknown_operation_help_preserves_search_suggestions() {
-    let error = render_operation_help(&runtime_catalog(), "exec", "sandbox-cli runtime")
-        .expect_err("unknown operation rejected");
+    let error = render_operation_help(
+        &runtime_catalog(),
+        "exec",
+        "sandbox-runtime-cli --sandbox-id ID",
+    )
+    .expect_err("unknown operation rejected");
 
     assert_eq!(error.operation(), "exec");
     assert_eq!(error.suggestions()[0].name, "exec_command");

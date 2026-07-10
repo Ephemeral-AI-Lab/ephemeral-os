@@ -79,5 +79,15 @@ introduce new violations; justify any `unsafe` with a `// SAFETY:` block.
   via `dep.workspace = true`. Don't pin versions inside member crates.
 - The YAML parser is fenced behind `crates/sandbox-config/src/yaml.rs`; callers
   use `ConfigDocument` and typed section schemas, never the parser directly.
-- Daemon protocol vocabulary belongs to `sandbox-protocol`; dispatch to
-  `sandbox-daemon`; runtime operation specs to `sandbox-runtime/operation`.
+- Adapter-neutral operation and application-envelope vocabulary belongs to
+  `sandbox-operation-contract`; public declarations, routes, and canonical
+  internal identifiers belong to the feature-gated domain modules in
+  `sandbox-operation-catalog`; CLI-only paths, flags, usage, and help belong to
+  `sandbox-cli::projection`.
+- `sandbox-protocol` owns only wire codec, framing, authentication fields,
+  limits, and readiness. Applications (`sandbox-manager`, `sandbox-runtime`,
+  `sandbox-observability-application`) never depend on protocol, the shared
+  client, product adapters, composition roots, or each other's implementations.
+- `crates/sandbox-operations/`, `crates/sandbox-observability/`, and
+  `crates/sandbox-runtime/` are the only namespace directories. They are
+  grouping only and never gain a root `Cargo.toml`, facade, or re-export layer.

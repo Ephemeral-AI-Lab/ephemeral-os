@@ -1,3 +1,5 @@
+//! CLI response, error, help, progress, and transport rendering.
+
 use std::io::{self, Write};
 use std::time::Instant;
 
@@ -8,8 +10,8 @@ use serde_json::{json, Value};
 
 use sandbox_operation_contract::error_response_with_details;
 
-use super::request_builder::{build_request_from_catalog, BuildRequestInput};
 use crate::help::{render_catalog_help, render_operation_help};
+use crate::input::{build_request_from_catalog, BuildRequestInput};
 use crate::projection::document::CatalogDocument;
 
 pub const EXIT_SUCCESS: u8 = 0;

@@ -28,7 +28,7 @@ See also [[cli-gateway-manager-runtime]] for the generic operator path.
 
 ```mermaid
 flowchart TB
-    CLI["bin/sandbox-cli manager create_sandbox<br/>--image --workspace-root"]
+    CLI["bin/sandbox-manager-cli create_sandbox<br/>--image --workspace-bind-root"]
     Gateway["sandbox-gateway (auth + dispatch)"]
     Router["SandboxManagerRouter"]
 
@@ -40,7 +40,7 @@ flowchart TB
 
     subgraph Container["Sandbox Container (guest side)"]
         Serve["sandbox-daemon serve"]
-        Services["SandboxRuntimeServices::from_config"]
+        Services["SandboxRuntimeOperations::from_config"]
         Ensure["layerstack::ensure_workspace_base"]
         Build["build_base_layer (walk + copy + hash)"]
         Unmount["unmount /workspace bind"]
@@ -53,8 +53,8 @@ flowchart TB
     Build --> Unmount --> Ready
 ```
 
-1. **CLI → Gateway → Manager.** `bin/sandbox-cli` sends the request to the
-   gateway, which authenticates and dispatches to `SandboxManagerRouter`.
+1. **CLI → Gateway → Manager.** `bin/sandbox-manager-cli` sends the request to
+   the gateway, which authenticates and dispatches to `SandboxManagerRouter`.
 2. **Provider creates a stopped container.**
    `DockerSandboxRuntime::create_sandbox` builds a `ContainerSpec` and creates
    the container **stopped**, so the daemon and config can be installed before
@@ -69,7 +69,7 @@ flowchart TB
    static `sandbox-daemon` binary and `config/prd.yml`, starts the container,
    and waits for readiness.
 5. **Daemon boots and assembles services.** `sandbox-daemon serve` builds
-   `SandboxRuntimeServices::from_config`, which calls
+   `SandboxRuntimeOperations::from_config`, which calls
    `layerstack::ensure_workspace_base(layer_stack_root, workspace_root)` **once**
    per sandbox during startup.
 6. **Base layer is built** (next section), then the daemon unmounts the original
@@ -80,7 +80,7 @@ flowchart TB
 
 Implementation paths:
 
-- `crates/sandbox-manager/src/operation/impls/management/create_sandbox.rs`
+- `crates/sandbox-manager/src/operations/management/service/impls/create_sandbox.rs`
 - `crates/sandbox-provider-docker/src/runtime.rs`
 - `crates/sandbox-provider-docker/src/installer.rs`
 - `crates/sandbox-daemon/src/serve.rs`

@@ -16,11 +16,11 @@ Start a command in a workspace.
 
 ## Manual
 
-Start a shell command in a workspace session. With `workspace_session_id`, run inside that existing caller-owned (persistent) session, which the caller created and destroys. Without it, `exec_command` creates a one-shot exec-owned (ephemeral) shared-network workspace and destroys it when the command reaches terminal state. If the command is still running after the initial wait, the response includes a `command_session_id` usable with [[read_command_lines]] or [[write_command_stdin]]; a still-running command stays terminable through `write_command_stdin` (Ctrl-C or Ctrl-D).
+Start a shell command in a workspace session. With `workspace_session_id`, run inside that existing internally managed session. Without it, `exec_command` creates an automatic session with finalize policy `publish_then_destroy`: after its last command reaches terminal state, the runtime captures and publishes the session's changes to the layerstack, then destroys the session. File operations and remounts neither extend nor trigger the session lifecycle. If the command is still running after the initial wait, the response includes a `command_session_id` usable with [[read_command_lines]] or [[write_command_stdin]]; a still-running command stays terminable through `write_command_stdin` (Ctrl-C or Ctrl-D).
 
 | Argument | Flag / Position | Kind | Required | Default | Description |
 |---|---|---|---|---|---|
-| `workspace_session_id` | `--workspace-session-id` | string | no | one-shot workspace | Existing workspace session id to run inside. Omit to run in a one-shot workspace. |
+| `workspace_session_id` | `--workspace-session-id` | string | no | automatic session | Existing internally managed workspace session id to run inside. Omit to create a session with finalize policy `publish_then_destroy`. |
 | `cmd` | `COMMAND` (positional) | string | yes | — | Shell command text. |
 | `timeout_ms` | `--timeout-ms` | integer | no | — | Command timeout in milliseconds. |
 | `yield_time_ms` | `--yield-time-ms` | integer | no | — | Initial output wait in milliseconds. |
@@ -28,15 +28,15 @@ Start a shell command in a workspace session. With `workspace_session_id`, run i
 **Usage**
 
 ```
-sandbox-cli runtime exec_command [--workspace-session-id ID] COMMAND
+sandbox-runtime-cli --sandbox-id ID exec_command [--workspace-session-id ID] [--timeout-ms N] [--yield-time-ms N] COMMAND
 ```
 
 **Examples**
 
 ```sh
-sandbox-cli runtime exec_command pwd
-sandbox-cli runtime exec_command --workspace-session-id ws-1 pwd
-sandbox-cli runtime exec_command --workspace-session-id ws-1 --yield-time-ms 0 "sleep 30"
+sandbox-runtime-cli --sandbox-id ID exec_command pwd
+sandbox-runtime-cli --sandbox-id ID exec_command --workspace-session-id ws-1 pwd
+sandbox-runtime-cli --sandbox-id ID exec_command --workspace-session-id ws-1 --yield-time-ms 0 "sleep 30"
 ```
 
 ## Expected output

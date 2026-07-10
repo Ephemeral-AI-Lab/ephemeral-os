@@ -78,7 +78,7 @@ def _assert_no_operation_failed(results):
 
 def test_two_concurrent_sessionless_writes_to_same_path_serialize(sandbox):
     """Two concurrent sessionless `file_write` requests to the same path with
-    different multi-line contents (parallel `sandbox-cli runtime file_write`
+    different multi-line contents (parallel `sandbox-runtime-cli file_write`
     invocations).
     Expected: both return `type = create`/`update` with no `operation_failed`;
     the writes serialize under the `amend_path` exclusive writer lock, so a
@@ -608,7 +608,7 @@ def test_complex_sustained_hot_path_churn_with_layerstack_poller(sandbox):
     """[complex] Sustained hot-path churn: 5 concurrent workers each issue 10
     sequential sessionless `file_write` requests with unique contents to one
     path (50 writes) while a poller repeatedly calls
-    `sandbox-cli observability layerstack --sandbox-id ID`.
+    `sandbox-observability-cli layerstack --sandbox-id ID`.
     Expected: all 50 writes return ok; the poller's `manifest_version` samples
     are strictly non-decreasing and finish at baseline + 50; the final
     `file_read` and `file_blame` owner match exactly one of the 50 request

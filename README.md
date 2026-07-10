@@ -1,74 +1,98 @@
 # EphemeralOS Sandbox
 
-EphemeralOS is centered on a protocol boundary, host-side sandbox manager,
-human-facing gateway CLI, in-sandbox daemon, and separated runtime packages.
+EphemeralOS separates adapter-neutral operation semantics, product adapters,
+wire transport, host-side management, in-sandbox applications, and runtime
+primitives.
 
 ```text
 operator or agent
    | sandbox-manager-cli / sandbox-runtime-cli / sandbox-observability-cli
    | sandbox-mcp --set management|runtime|observability
-   | or authenticated newline-delimited JSON protocol
+   | sandbox-console
    v
-sandbox-gateway / sandbox-protocol
+sandbox-operation-catalog + adapter-owned projection
+   |
+   v
+sandbox-operation-client
+   | authenticated newline-delimited JSON via sandbox-protocol
+   v
+sandbox-gateway
    v
 sandbox-manager
-   | forwards sandbox-scoped runtime requests
+   | handles system routes and forwards sandbox routes
    v
 sandbox-daemon
-   | dispatch_operation
+   | decodes wire requests and composes applications
    v
-sandbox-runtime
-   | command operations and workspace session orchestration
+sandbox-runtime / sandbox-observability-application
+   | command, file, workspace, layerstack, and observability behavior
    v
 sandbox-runtime-workspace / sandbox-runtime-layerstack /
 sandbox-runtime-namespace-execution / sandbox-runtime-namespace-process /
-sandbox-runtime-overlay
-   |
-   v
-sandbox-config
+sandbox-runtime-overlay / sandbox-observability
 ```
 
 | Component | Kind | Job | Must never |
 |---|---|---|---|
-| `sandbox-gateway` | bin+lib | own the public gateway listener | own manager or runtime behavior or any CLI client code |
-| `sandbox-cli` | lib + 3 bins | provide feature-free `sandbox_cli::core` plus separately feature-gated management, runtime, and observability executables | provide a combined executable/set or let one binary enumerate another authority |
-| `sandbox-mcp` | bin | project exactly one selected management, runtime, or observability catalog as a stdio MCP server | define a second operation registry, expose a combined set, or accept caller-supplied authority |
-| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and the allowed per-sandbox `daemon_http` surface (`/api/sandboxes/:id/health`, exact `/api/sandboxes/:id/files/list`, `/s/:id` preview proxy) as a client peer over `sandbox_cli::core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
-| `sandbox-manager-operations` | lib | manager CLI operation specs and catalog (spec-only) | contain dispatch or service code |
-| `sandbox-runtime-operations` | lib | runtime CLI operation specs and catalog (spec-only) | contain dispatch or service code |
-| `sandbox-observability-operations` | lib | observability CLI operation specs and catalog (spec-only) | contain dispatch or service code |
-| `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, and manager operations | implement runtime command/workspace semantics |
-| `sandbox-protocol` | lib | own request/response DTOs, framing, catalog, and help metadata | depend on manager, daemon, or runtime implementation crates |
-| `sandbox-daemon` | bin+lib | bind authenticated RPC plus the exact HTTP allowlist (`GET /health`, `/forward/...`, and `POST /files/list`) and dispatch runtime requests | expose management/runtime/observability operation routes over HTTP or know about Docker fleets |
-| `sandbox-runtime` | lib | command operation surface plus internal workspace session orchestration | own low-level runtime primitives |
+| `sandbox-operation-contract` | lib | own adapter-neutral operation, argument, scope, route, request, response, and application-error types | depend on any workspace package or own wire/presentation behavior |
+| `sandbox-operation-catalog` | lib | own every public operation declaration, canonical internal identifier, and route-manifest entry in feature-gated manager/runtime/observability modules | depend on anything except the contract, own CLI metadata, or contain handlers |
+| `sandbox-operation-client` | lib | own gateway discovery, wire transport, and value-based request construction shared by CLI, MCP, and console | depend on the catalog, applications, adapters, or `sandbox-config` |
+| `sandbox-gateway` | bin+lib | compose the public gateway listener, manager application, Docker provider, daemon wire client, and local daemon installer | own application behavior, depend on CLI/MCP/console or the shared client, or compose runtime applications directly |
+| `sandbox-cli` | lib + 3 bins | own CLI paths, flags, positionals, help, output, and separately feature-gated manager/runtime/observability executables | depend on protocol/applications/other adapters, provide a combined executable, or let one binary enumerate another authority |
+| `sandbox-mcp` | bin | project exactly one selected domain from the merged catalog as a stdio MCP server and send through the shared client | define a second catalog, expose a combined set, or depend on protocol/applications/CLI/console |
+| `sandbox-console` | bin | serve the SPA, validate public `/api/rpc` routes, send through the shared client, and proxy the allowed per-sandbox daemon HTTP surface | define operation vocabulary, depend on protocol/applications/CLI/MCP, contact daemon RPC directly, or expose gateway credentials to the browser |
+| `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, system-scoped operation handlers, routing, and application ports | depend on protocol/client/adapters/composition roots or implement runtime command/workspace semantics |
+| `sandbox-protocol` | lib | own wire codec, framing, authentication fields, limits, and the daemon readiness handshake | own operation declarations/help or depend on catalog/applications/client/adapters |
+| `sandbox-daemon` | bin+lib | compose authenticated RPC, the exact HTTP allowlist, runtime dispatch, observability dispatch, sampling, and lifecycle | depend on product adapters/client/manager or expose operation routes over HTTP beyond `file_list` |
+| `sandbox-observability-application` | lib | own structured observability query selection and response construction through an application-owned input port | depend on protocol/client/adapters/daemon or the concrete runtime application |
+| `sandbox-observability` | lib | own tracing, events, sampling, collection, and reading primitives | depend on any workspace package |
+| `sandbox-runtime` | lib | own public runtime handlers plus canonical internal workspace-session/layerstack dispatch and orchestration | depend on protocol/client/adapters/composition roots or own low-level runtime primitives |
 | `sandbox-runtime-workspace` | lib | workspace runtime lifecycle, namespace handles, capture, and destroy | own command process state |
 | `sandbox-runtime-layerstack` | lib | content hashes, manifest/layer types, storage, leases | own command execution |
 | `sandbox-runtime-namespace-execution` | lib | namespace execution engine, PTY I/O, and transcript read/write windowing | own workspace lifecycle |
 | `sandbox-runtime-namespace-process` | lib | namespace holder/runner bodies and setns execution | own operation dispatch |
 | `sandbox-runtime-overlay` | lib | low-level overlay mount and unmount primitives | own workspace lifecycle |
-| `sandbox-config` | lib | sandbox YAML loading, merging, and typed gateway/manager/CLI/daemon/runtime config schemas | own runtime behavior |
-| `sandbox-provider-docker` | lib | implement the Docker-backed `SandboxRuntime` and `SandboxDaemonInstaller` behind the manager provider traits using the Docker Engine API (bollard) | own generic lifecycle/rollback or depend on `sandbox-daemon` |
+| `sandbox-config` | lib | own sandbox YAML loading, merging, validation, and typed console/gateway/manager/daemon/observability/runner/runtime schemas | depend on any workspace package or own runtime behavior |
+| `sandbox-provider-docker` | lib | implement manager ports with Docker and use protocol only for daemon readiness | own generic lifecycle/rollback, application handlers, client behavior, or depend on `sandbox-daemon` |
 
-**Boundary law:** daemon transport vocabulary lives in
-`crates/sandbox-protocol`; daemon request dispatch lives in
-`crates/sandbox-daemon`; runtime operation dispatch lives in
-`crates/sandbox-runtime/operation`; CLI operation specs (spec-only) live in
-`crates/sandbox-operations/manager`, `crates/sandbox-operations/runtime`, and
-`crates/sandbox-operations/observability`;
-CAS fixtures live with `sandbox-runtime-layerstack`.
+**Boundary law:** semantic and application-envelope vocabulary lives in
+`crates/sandbox-operations/contract`; every public declaration, route, and
+canonical internal identifier lives in `crates/sandbox-operations/catalog`;
+shared gateway client behavior lives in `crates/sandbox-operations/client`;
+CLI metadata lives only in `crates/sandbox-cli/src/projection`; and wire-only
+codec, framing, authentication, limits, and readiness live in
+`crates/sandbox-protocol`. Applications (`sandbox-manager`, `sandbox-runtime`,
+and `sandbox-observability-application`) never depend on protocol, the client,
+product adapters, composition roots, or each other's implementations. The
+contract, config, observability primitives, layerstack, and overlay packages
+have no workspace dependencies; the catalog depends only on the contract,
+protocol depends only on the contract, and the client depends only on contract
+and protocol. CAS fixtures live with `sandbox-runtime-layerstack`.
+
+Exactly three organizational namespace directories exist under `crates/`:
+`sandbox-operations/`, `sandbox-observability/`, and `sandbox-runtime/`. They
+are grouping directories only: none has a root `Cargo.toml`, Rust facade,
+package identity, or re-export layer. The operation ownership migration
+[specification](docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md#target-dependency-law)
+contains the exhaustive allowed-edge table.
 
 ## The pieces
 
 - `crates/sandbox-runtime/layerstack/tests/fixtures/` - runtime-owned CAS
   fixtures.
-- `crates/` - the workspace: `sandbox-daemon`, `sandbox-protocol`,
-  `sandbox-manager`, `sandbox-gateway`, `sandbox-cli`, `sandbox-mcp`,
-  `sandbox-console`,
-  `sandbox-operations/manager`, `sandbox-operations/runtime`,
-  `sandbox-operations/observability`, `sandbox-runtime/operation`,
-  `sandbox-runtime/workspace`, `sandbox-runtime/namespace-execution`,
-  `sandbox-runtime/namespace-process`, `sandbox-runtime/layerstack`,
-  `sandbox-runtime/overlay`, and `sandbox-config`.
+- `crates/sandbox-operations/` - grouping-only namespace for `contract/`,
+  `catalog/`, and `client/`.
+- `crates/sandbox-observability/` - grouping-only namespace for the
+  `primitives/` package (`sandbox-observability`) and `application/`.
+- `crates/sandbox-runtime/` - grouping-only namespace for `operation/`
+  (`sandbox-runtime`), `workspace/`, `layerstack/`, `namespace-execution/`,
+  `namespace-process/`, and `overlay/`.
+- `crates/` - also contains the flat packages `sandbox-cli`, `sandbox-config`,
+  `sandbox-console`, `sandbox-daemon`, `sandbox-gateway`, `sandbox-manager`,
+  `sandbox-mcp`, `sandbox-protocol`, and `sandbox-provider-docker`.
+- `e2e/` - maintained live operation E2E suite for CLI, MCP, console,
+  gateway, manager, daemon, runtime, and observability behavior.
+- `web/console/` - tracked SPA source; build output is staged under `dist/`.
 - `config/prd.yml` - the single daemon config baseline (see `config/README.md`).
 - `dist/` - packaged static `sandbox-daemon` binaries uploaded into sandbox
   containers.
@@ -140,17 +164,17 @@ above. Do not register a combined server; none exists.
 
 The server accepts exactly one fixed `--set management|runtime|observability`
 and exposes only `initialize`, `notifications/initialized`, `ping`,
-`tools/list`, and `tools/call`. Tool definitions come from the same three
-canonical operation catalogs used by the CLI binaries.
+`tools/list`, and `tools/call`. Tool definitions come from the selected domain
+of the same merged semantic catalog used by the CLI binaries.
 
 ## Web console transport
 
 The web console does not invoke MCP servers or CLI executables. Browser
 management, command, file read/write/edit/blame, and observability requests go
 to the console server's `POST /api/rpc`; the server keeps gateway credentials
-private and sends authenticated gateway RPC through `sandbox_cli::core`.
-Only file listing, health, and application forwarding use the limited daemon
-HTTP surface below.
+private and sends authenticated gateway RPC through
+`sandbox-operation-client`. Only file listing, health, and application
+forwarding use the limited daemon HTTP surface below.
 
 ## Daemon HTTP allowlist
 
@@ -174,6 +198,10 @@ forwarding details.
 
 ## Contract owners
 
-The shared daemon JSON-line RPC protocol is owned by `crates/sandbox-protocol`.
+The adapter-neutral operation envelope is owned by
+`crates/sandbox-operations/contract`; semantic declarations and routes are
+owned by `crates/sandbox-operations/catalog`; the daemon JSON-line wire codec,
+framing, authentication, limits, and readiness handshake are owned by
+`crates/sandbox-protocol`.
 LayerStack manifest schema and CAS fixtures are owned by
 `crates/sandbox-runtime/layerstack`.

@@ -7,8 +7,9 @@ Test plan for the `management` family. Two parts per operation:
 
 ## Conventions
 
-- **CLI-driven**: every action goes through `sandbox-cli manager <op>`; results
-  are verified from the operation's **JSON** (`json.loads`), never from logs.
+- **CLI-driven**: every public management action goes through
+  `sandbox-manager-cli <op>`; results are verified from the operation's
+  **JSON** (`json.loads`), never from logs.
 - **Lifecycle via fixtures**: the `sandbox` fixture in `conftest.py`
   creates-and-teardown a ready sandbox so cleanup runs even on failure.
 - **Cleanup is guaranteed**: per-test fixtures destroy what they create, and a
@@ -34,7 +35,7 @@ Test plan for the `management` family. Two parts per operation:
 | `inspect_sandbox`        | `test_inspect_sandbox.py`          | active   |
 | `list_sandboxes`         | `test_list_sandboxes.py`           | active   |
 | `destroy_sandbox`        | `test_destroy_sandbox.py`          | active   |
-| `snapshot`               | `test_snapshot.py`                | deferred |
+| `snapshot`               | `observability/test_observability.py` | delegated |
 | (cross-operation)        | `test_management.py` (existing)    | active   |
 
 `test_management.py` stays as a single end-to-end lifecycle/integration test
@@ -181,29 +182,31 @@ fails the record is left `failed`.
 
 ---
 
-## 5. snapshot — DEFERRED
+## 5. snapshot — OBSERVABILITY FAMILY
 
-`--sandbox-id` (opt), `--resource-window-ms` (opt) → `{sandboxes: [node, …]}`.
+`--sandbox-id` (opt) → `{sandboxes: [node, …]}`.
 `availability` ∈ `available | partial | unavailable`; unreachable/non-ready
 sandboxes become `unavailable` nodes (with `errors`) instead of failing the call.
 
-This is the **manager-side observability aggregate**. Per the project decision,
-observability is verified **through runtime** later, so these tests are deferred
-(mirroring `observability/`).
+Without `--sandbox-id`, this is the system-scoped aggregate owned by the
+manager application. With `--sandbox-id`, the same public operation name is a
+sandbox-scoped route owned by the observability application in the daemon.
+Both forms are exposed through `sandbox-observability-cli` and their live route
+coverage lives under `observability/`, so the management family does not
+duplicate it.
 
-### (a) Features (planned)
+### (a) Features
 - **F1** — no id aggregates all ready sandboxes; one node each.
 - **F2** — `--sandbox-id` returns a single node for that sandbox.
 - **F3** — node shape: `lifecycle_state`, `availability`, `daemon`,
   `resources{latest, history}`, `workspaces[]`.
 - **F4** — a non-ready/unreachable sandbox yields an `unavailable` node with
   `errors[]`, and the overall call still succeeds.
-- **F5** — `--resource-window-ms` bounds the returned resource history.
-
-### (b) Test files (planned)
-- `test_snapshot.py` — skipped placeholder (`@pytest.mark.skip`)
-  until the observability phase; then it lands here and/or under
-  `observability/` per the runtime-verified plan.
+### (b) Test files
+- `observability/test_observability.py` proves the aggregate includes the ready
+  test sandbox and the selected-sandbox route returns that sandbox through the
+  public observability binary. Extend it for exhaustive aggregate membership,
+  detailed shape, and unavailable-node coverage.
 
 ---
 
