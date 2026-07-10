@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "implementation_plan/mcp_cli_surface/operation-contract.md",
+                "file": "implementation_plan/config/implementation-plan.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "operation-contract"
+              "title": "implementation-plan"
             }
           }
         ]
@@ -186,6 +186,7 @@
   "active": "d5fccc8ee65959ed",
   "lastOpenFiles": [
     "implementation_plan/config/goal-prompt.md",
+    "implementation_plan/mcp_cli_surface/operation-contract.md",
     "implementation_plan/config/implementation-plan.md",
     "implementation_plan/mcp_cli_surface/mcp.md",
     "implementation_plan/mcp_cli_surface/implementation-spec.md",
@@ -193,7 +194,6 @@
     "implementation_plan/mcp_cli_surface/phase-plan.md",
     "implementation_plan/config/cli-e2e-test-spec.md",
     "implementation_plan/cli_migration/operation.md",
-    "implementation_plan/mcp_cli_surface/operation-contract.md",
     "implementation_plan/mcp_cli_surface/http.md",
     "implementation_plan/cli_migration/spec.md",
     "implementation_plan/mcp_cli_surface/cli.md",
