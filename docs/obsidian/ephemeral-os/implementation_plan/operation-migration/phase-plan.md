@@ -52,7 +52,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 2 | Merge and refeature the catalogs | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 3 | Extract the shared gateway client | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 5 | Clean the runtime application in place | gate review | 2026-07-10 | — | — |
+| 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | blocked | — | — | — |
 | 7 | Update documentation, scripts, law statements | blocked | — | — | — |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
@@ -493,6 +493,7 @@ repointing are one commit.
 | 2026-07-10 | Runtime handler coverage and registry separation | `cargo test -p sandbox-runtime` | Exited 0. The file-operation group passed 38/38; `operation_registry` passed 3/3, including both public/internal bijections and partition uniqueness/disjointness; every remaining runtime test and doc-test group passed. | None. |
 | 2026-07-10 | Canonical runtime literal ownership | `rg -n '"create_workspace_session"\|"destroy_workspace_session"\|"squash_layerstack"\|"export_layerstack"\|"read_export_chunk"\|"file_list"' crates/*/src crates/*/*/src` | Exited 0 with exactly six matches, all in `crates/sandbox-operations/catalog/src/internal/runtime.rs` (lines 6–11), one per operation name. | None. |
 | 2026-07-10 | Phase 5 standing gate | `cargo check --workspace --all-targets --all-features`; `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check` | All exited 0. Workspace check finished cleanly; every workspace and doc-test group passed (largest group 94/94, with one intentional benchmark ignored); clippy finished with warnings denied; formatting was clean. | None. |
+| 2026-07-10 | Phase 5 approved | Phase 5 acceptance checklist; post-commit `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-runtime --test operation_registry --all-features` | All five acceptance items are checked; post-commit workspace check passed and the focused registry suite passed 3/3. Phase 6 is unblocked. | None. |
 
 ---
 
