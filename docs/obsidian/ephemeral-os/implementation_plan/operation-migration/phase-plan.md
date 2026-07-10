@@ -47,8 +47,8 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 
 | Phase | Title | Status | Started | Gate approved | Approver |
 | --- | --- | --- | --- | --- | --- |
-| 0 | Characterize, freeze inventory, purge generated weight | gate review | 2026-07-10 | — | — |
-| 1 | Create contract, narrow protocol in place | blocked | — | — | — |
+| 0 | Characterize, freeze inventory, purge generated weight | approved | 2026-07-10 | 2026-07-10 | Codex |
+| 1 | Create contract, narrow protocol in place | ready | — | — | — |
 | 2 | Merge and refeature the catalogs | blocked | — | — | — |
 | 3 | Extract the shared gateway client | blocked | — | — | — |
 | 4 | Clean the manager application in place | blocked | — | — | — |
@@ -628,5 +628,5 @@ the spec section changed in the same commit.
 
 | Date | Phase | Deviation | Spec section amended | Approved by |
 | --- | --- | --- | --- | --- |
-| 2026-07-10 | 0 | The original design enumerated forwarding internals but omitted the dispatchable `create_workspace_session` and `destroy_workspace_session` lifecycle routes. Classify them as canonical runtime-internal routes and replace live E2E public-gateway access with an allowlisted trusted direct-daemon harness. | Target tree; route taxonomy; Visibility enforcement chokepoints; Phase 5 — Clean the runtime application in place | Pending Phase 0 gate approval |
+| 2026-07-10 | 0 | The original design enumerated forwarding internals but omitted the dispatchable `create_workspace_session` and `destroy_workspace_session` lifecycle routes. Classify them as canonical runtime-internal routes and replace live E2E public-gateway access with an allowlisted trusted direct-daemon harness. | Target tree; route taxonomy; Visibility enforcement chokepoints; Phase 5 — Clean the runtime application in place | Codex, 2026-07-10 |
 | | | | | |
