@@ -124,8 +124,10 @@ if [ "$show_help" -eq 0 ]; then
                 "$repo_root/crates/sandbox-daemon/src" \
                 "$repo_root/crates/sandbox-config/Cargo.toml" \
                 "$repo_root/crates/sandbox-config/src" \
-                "$repo_root/crates/sandbox-observability/Cargo.toml" \
-                "$repo_root/crates/sandbox-observability/src" \
+                "$repo_root/crates/sandbox-operations/contract" \
+                "$repo_root/crates/sandbox-operations/catalog" \
+                "$repo_root/crates/sandbox-observability/primitives" \
+                "$repo_root/crates/sandbox-observability/application" \
                 "$repo_root/crates/sandbox-protocol/Cargo.toml" \
                 "$repo_root/crates/sandbox-protocol/src" \
                 "$repo_root/crates/sandbox-runtime" \

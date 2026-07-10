@@ -1622,6 +1622,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sandbox-observability-application"
+version = "0.1.0"
+dependencies = [
+ "sandbox-observability",
+ "sandbox-operation-catalog",
+ "sandbox-operation-contract",
+ "sandbox-runtime-layerstack",
+]
+
+[[package]]
 name = "sandbox-operation-catalog"
 version = "0.1.0"
 dependencies = [

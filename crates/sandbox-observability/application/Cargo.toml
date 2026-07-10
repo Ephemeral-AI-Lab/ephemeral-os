@@ -1,0 +1,15 @@
+[package]
+name = "sandbox-observability-application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+sandbox-operation-contract.workspace = true
+sandbox-operation-catalog = { workspace = true, features = ["observability"] }
+sandbox-observability.workspace = true
+sandbox-runtime-layerstack.workspace = true
+
+[lints]
+workspace = true
