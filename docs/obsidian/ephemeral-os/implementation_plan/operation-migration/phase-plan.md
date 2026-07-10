@@ -54,7 +54,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | approved | 2026-07-11 | 2026-07-11 | Codex |
-| 7 | Update documentation, scripts, law statements | gate review | 2026-07-11 | — | — |
+| 7 | Update documentation, scripts, law statements | approved | 2026-07-11 | 2026-07-11 | Codex |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
 
 ## Standing gate (every phase)
@@ -641,6 +641,7 @@ one commit.
 | 2026-07-11 | Acceptance: rebuilt gateway and source assertions | `bin/start-sandbox-docker-gateway --rebuild-binary`; `cd e2e && E2E_REBUILD_BINARY=0 python3 -m pytest manager/management/squash/test_squash_smoke.py -k SMK-05 -q -s` | The rebuild proof above produced arm64 daemon SHA-256 `47986ca25a0a582cc47439f20af02b0560680089eaf82cfeeaa43d0e782577e2`. The final source-assertion rerun passed `1 passed, 9 deselected in 2.94s`; its append-only report is `squash-20260711-033351`. | None. |
 | 2026-07-11 | Phase 7 standing gate | `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check` | All workspace unit, integration, policy, and doc tests passed (the experiment-only OCC benchmark remained intentionally ignored); clippy finished with warnings denied in 1m27s; formatting returned no diff. | None. |
 | 2026-07-11 | Phase 7 gate review | Phase 7 change checklist, acceptance checklist, progress evidence, and deviation register | Every change and acceptance item is checked from command evidence. Dashboard status advanced to `gate review`; no specification deviation was required. | None. |
+| 2026-07-11 | Phase 7 approved | `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-cli --all-features && cargo test -p sandbox-console --all-features && cargo test -p sandbox-operation-contract --all-features && cargo test -p sandbox-operation-catalog --all-features`; independent audit repeated the exact acceptance scan, expanded 54-file classification scan, boundary-law inspection, gateway freshness/hash check, and source-assertion review | The committed gate-review state remained green: workspace check passed; CLI passed 47/47, console 39/39, contract 12/12, and catalog 10/10; the independent audit found no blocker and recommended approval. Dashboard status advanced to `approved`; Phase 8 is unblocked. | None. |
 
 ---
 
