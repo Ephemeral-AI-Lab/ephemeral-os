@@ -7,7 +7,7 @@ tags:
   - http
   - implementation-plan
   - progress-tracking
-status: active
+status: complete
 updated: 2026-07-10
 aliases:
   - MCP CLI HTTP migration tracker
@@ -38,9 +38,9 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 4. Replace export HTTP streaming | complete | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | complete | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | complete | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
-| 7. Release verification and cutover | in progress | 1–6 | end-to-end proof, documentation, and release-ready boundary |
+| 7. Release verification and cutover | complete | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 6 are complete. Phase 7 is in progress.
+Phases 0 through 7 are complete. The cutover is release-verified.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -723,7 +723,7 @@ README.md
 
 ## Phase 7 — Release verification and cutover
 
-**Status:** in progress
+**Status:** complete
 
 **Depends on:** Phases 1 through 6
 
@@ -732,19 +732,19 @@ compatibility path silently preserves the old surface.
 
 ### Scope and tasks
 
-- [ ] Update root README, daemon HTTP documentation, CLI guidance, and MCP
+- [x] Update root README, daemon HTTP documentation, CLI guidance, and MCP
   registration example to match the landed behavior.
-- [ ] Capture CLI help snapshots for all three binaries and MCP `tools/list`
+- [x] Capture CLI help snapshots for all three binaries and MCP `tools/list`
   snapshots for all three fixed sets.
-- [ ] Verify one tool/operation per set against a real or controlled gateway,
+- [x] Verify one tool/operation per set against a real or controlled gateway,
   including management, runtime, aggregate observability snapshot, and scoped
   observability view.
-- [ ] Run full daemon HTTP allowlist evidence against a real sandbox where
+- [x] Run full daemon HTTP allowlist evidence against a real sandbox where
   feasible, including shared/isolated forwarding and list behaviour.
-- [ ] Run export end-to-end evidence covering chunk paging and a failure case.
-- [ ] Rebuild the Docker sandbox gateway binary using the required command.
-- [ ] Run focused crate tests followed by workspace test evidence.
-- [ ] Remove temporary compatibility wrappers unless a release policy
+- [x] Run export end-to-end evidence covering chunk paging and a failure case.
+- [x] Rebuild the Docker sandbox gateway binary using the required command.
+- [x] Run focused crate tests followed by workspace test evidence.
+- [x] Remove temporary compatibility wrappers unless a release policy
   explicitly approves one documented, time-bounded manager-observability
   delegation wrapper.
 
@@ -772,36 +772,101 @@ closest focused proof in the evidence block; do not silently omit it.
 
 ### Release acceptance criteria
 
-- [ ] CLI help and MCP `tools/list` show exactly their authorized set; no
+- [x] CLI help and MCP `tools/list` show exactly their authorized set; no
   principal can enumerate a different set through that surface.
-- [ ] Public management uses `squash_layerstacks`; `checkpoint_squash` is not
+- [x] Public management uses `squash_layerstacks`; `checkpoint_squash` is not
   accepted as a current public operation.
-- [ ] Neither CLI nor MCP exposes workspace create/destroy lifecycle or
+- [x] Neither CLI nor MCP exposes workspace create/destroy lifecycle or
   `file_list`.
-- [ ] Direct daemon HTTP succeeds only for health, forward, and
+- [x] Direct daemon HTTP succeeds only for health, forward, and
   `POST /files/list`; removed operation routes are proven `404`.
-- [ ] `export_changes` works via authenticated chunk RPC and its docs/results
+- [x] `export_changes` works via authenticated chunk RPC and its docs/results
   correctly describe a published-layer delta rather than a full workspace.
-- [ ] The console does not create an alternate direct daemon operation API.
-- [ ] The Docker gateway binary was rebuilt with
+- [x] The console does not create an alternate direct daemon operation API.
+- [x] The Docker gateway binary was rebuilt with
   `bin/start-sandbox-docker-gateway --rebuild-binary` after the final source
   change.
-- [ ] Focused and workspace test evidence is attached; no unapproved waiver
+- [x] Focused and workspace test evidence is attached; no unapproved waiver
   remains.
 
-### Evidence to record
+### Evidence
 
-```text
-Release commit/PR:
-CLI help snapshots:
-MCP tools/list snapshots:
-Daemon HTTP allowlist evidence:
-Export paging evidence:
-Docker gateway rebuild output:
-Focused test commands/results:
-Workspace test command/result:
-Approved waivers and expiry date:
-```
+- Release commits: `f2e509d12` started the phase; shared-worktree commit
+  `57d66f919` added the root guidance, all six fixtures, and their exact
+  comparisons; `ecfc9c033` published the binding contracts and corrected the
+  console transport documentation; `b9fd8bf53` added live observability and
+  HTTP-boundary coverage; and `89d031f53` corrected the live-E2E cutover
+  guide. Work landed directly on `main`; no PR was used. The unrelated config
+  and squash changes present in the shared worktree were preserved.
+- CLI help fixtures:
+  `crates/sandbox-cli/tests/fixtures/{manager-help,runtime-help,observability-help}.txt`.
+  `cargo test -p sandbox-cli --all-features help_lists_exact` passed all three
+  exact comparisons. The full `cargo test -p sandbox-cli --all-features`
+  run passed 42 integration tests (14 manager, 10 runtime, 10 observability,
+  and 8 request-builder tests).
+- MCP fixtures:
+  `crates/sandbox-mcp/tests/fixtures/{management-tools-list,runtime-tools-list,observability-tools-list}.json`.
+  `cargo test -p sandbox-mcp lifecycle_and_tools_list_match_all_three_catalogs`
+  passed across all three
+  fixed sets; the full seven-test MCP suite also proved method restriction,
+  hidden/unknown-call rejection before dispatch, every scope, fake-gateway
+  routing, native edit arrays, and preservation of gateway `kind`, `message`,
+  and `details`.
+- Catalog and name proof: `cargo test -p sandbox-manager-operations -p
+  sandbox-runtime-operations -p sandbox-observability-operations` passed the
+  exact 2 management, 2 runtime, and 3 observability catalog tests. Final
+  searches found `checkpoint_squash` and the old manager-observability form
+  only in rejection assertions. No combined set/binary, public lifecycle or
+  `file_list`, duplicate MCP registry, legacy CLI crate, old
+  `cli_definition` directory, or compatibility wrapper remains.
+- Rebuilt-gateway live proof:
+  `E2E_REBUILD_BINARY=0
+  E2E_OP_METRICS_DIR=/tmp/eos-mcp-cli-cutover-metrics python3 -m pytest -q
+  manager/management/test_management.py::test_sandbox_lifecycle
+  runtime/workspace_session/test_exec_finalize.py::test_EX_02_implicit_exec_publishes_then_destroys
+  observability/test_observability.py runtime/daemon_http/test_daemon_http.py`
+  passed 9/9 in 11.53 seconds. It exercised public management, runtime
+  automatic publish-then-destroy, aggregate and scoped observability, real
+  health, shared/isolated forwarding, root/published/live-session file lists,
+  invalid forwarding, and `404` for file read/write/edit/blame, all five
+  observability routes, GET/POST `/export/*`, and other non-allowlisted paths.
+- Export proof: `cargo test -p sandbox-manager` passed 62 tests, including
+  authenticated multi-page RPC completion, malformed/missing/truncated chunk
+  failure, byte/completeness caps, spool cleanup, destination atomicity, and
+  archive/directory published-delta semantics. `cargo test -p sandbox-runtime
+  --test layerstack_export export_spools_and_pages_to_eof -- --exact` and the
+  automatic-publish regression each passed. Against the rebuilt gateway,
+  `E2E_REBUILD_BINARY=0
+  E2E_OP_METRICS_DIR=/tmp/eos-mcp-cli-cutover-export-metrics python3 -m pytest
+  -q 'manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-5M]'
+  'manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-06]'`
+  passed 2/2 in 6.11 seconds: the incompressible 5 MiB delta crossed three
+  authenticated RPC chunks, while the rejected destination left no forward,
+  spool, or partial output. The run summary recorded 3/3 passing verdicts
+  including preconditions.
+- Console proof: `cargo test -p sandbox-console` passed 29 tests, including
+  authenticated `/api/rpc` file/observability calls, exact list-only daemon
+  proxying, health/forwarding, and server-only gateway credentials. The
+  browser does not launch MCP or CLI clients and receives no gateway token.
+- Daemon proof: `cargo test -p sandbox-daemon` passed 60 tests, including the
+  exact HTTP allowlist, listener status/error vocabulary, list state and
+  validation, forwarding body/path/query/upgrade semantics, and real stalled
+  upstream `504`. The final caller search found removed routes/tokens only in
+  negative tests; `crates/sandbox-daemon/src/http/export.rs`, obsolete protocol
+  exports, legacy CLI crates, and old adapter directories are absent.
+- Required rebuild: `bin/start-sandbox-docker-gateway --rebuild-binary`
+  exited 0 after final source commit `7994fca50`, packaged the ARM64 daemon
+  with SHA-256
+  `f898a4049010b3a16b873a2457c2822243a6145b11ce36cecf3232c9dbc83c64`, and
+  restarted the gateway on `127.0.0.1:7878`.
+- Final gates: `cargo clippy -p sandbox-cli -p sandbox-mcp --all-targets
+  --all-features -- -D warnings`, `cargo fmt --all -- --check`, and
+  `git diff --check` passed. The required post-rebuild `cargo test --workspace`
+  exited 0 with every unit, integration, policy, and doc-test target green;
+  notable cutover counts were 7 MCP, 31 manager-export, 29 console, and 60
+  daemon tests.
+- Approved waivers and expiry: none. No compatibility wrapper existed to
+  retain or remove.
 
 ## Progress update protocol
 
@@ -819,6 +884,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 7 | Completed release verification and cutover across the three CLI/MCP sets, console RPC boundary, RPC export paging, daemon HTTP allowlist, rebuilt Docker gateway, and full workspace. | commits `57d66f919`, `ecfc9c033`, `b9fd8bf53`, `89d031f53`; six exact fixtures; 11 rebuilt-gateway live tests; focused suites; mandatory rebuild; full workspace pass; no waivers |
 | 2026-07-10 | 7 | Started release verification and cutover after confirming all Phase 1–6 gates and preserving unrelated worktree changes. | fixture capture, cross-surface acceptance proof, required gateway rebuild, and workspace suite pending |
 | 2026-07-10 | 6 | Completed the exact daemon HTTP allowlist, removed HTTP export/token claims, retained RPC spool paging and forwarding semantics, and updated the public route documentation. | commit `2ee1b4240`; 60 daemon tests, 89 supporting regression tests, clippy/format/search checks, listener-level status/route proofs, and two independent audits |
 | 2026-07-10 | 6 | Started the daemon HTTP allowlist enforcement after confirming the Phase 4 and Phase 5 gates and re-reading the binding route, forwarding, file-list, export-removal, and caller-search contracts. | implementation and direct acceptance proof pending |
