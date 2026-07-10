@@ -10,6 +10,9 @@ fn server_defaults() -> DaemonServerConfig {
         socket_path: PathBuf::from("/eos/runtime/default.sock"),
         pid_path: PathBuf::from("/eos/runtime/default.pid"),
         max_worker_threads: 2,
+        max_concurrent_connections: 256,
+        max_request_bytes: 16 * 1024 * 1024,
+        request_read_timeout_s: 30.0,
     }
 }
 

@@ -91,8 +91,8 @@ web/console/
 | `xtask/src/main.rs` | packaging verb: build SPA, stage assets for the console | 0 |
 | `.gitignore` | `web/console/node_modules`, SPA build output | 0 |
 | `bin/` | optional `start-sandbox-console` launcher script | 0 |
-| `crates/sandbox-runtime-operations/src/file.rs` | add `FILE_LIST_SPEC` + args | 7 |
-| `crates/sandbox-runtime-operations/src/lib.rs` | export + register in family/catalog arrays | 7 |
+| `crates/sandbox-operations/runtime/src/file.rs` | add `FILE_LIST_SPEC` + args | 7 |
+| `crates/sandbox-operations/runtime/src/lib.rs` | export + register in family/catalog arrays | 7 |
 | `crates/sandbox-runtime/operation/src/file/service/impls/` | new `list.rs` beside read/write/edit/blame, plus `mod.rs` and the service trait | 7 |
 | `crates/sandbox-runtime/operation/src/cli_definition/file_operations.rs` | `FILE_LIST` `OperationEntry` + `dispatch_file_list` in `OPERATIONS` | 7 |
 | `crates/sandbox-runtime/layerstack` | as-built addition: public `LayerStack::list_dir` (merged one-level listing) — the snapshot scope needs a merged-view walk only this crate can do | 7 |

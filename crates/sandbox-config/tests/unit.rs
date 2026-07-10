@@ -70,6 +70,14 @@ mod manager_tests {
     ));
 }
 
+mod observability_tests {
+    pub(crate) use crate::configs::observability::*;
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/unit/configs/observability.rs"
+    ));
+}
+
 mod runner_tests {
     pub(crate) use crate::configs::runner::*;
     pub(crate) use std::path::PathBuf;

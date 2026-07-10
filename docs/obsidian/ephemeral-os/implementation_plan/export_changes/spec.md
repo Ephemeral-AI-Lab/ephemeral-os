@@ -575,7 +575,7 @@ crates/sandbox-runtime/operation/
 └── tests/layerstack_export.rs (new ~180)   daemon-op dispatch: spool + paging to eof, empty
                                             delta, singleflight, spool replacement
 
-crates/sandbox-manager-operations/
+crates/sandbox-operations/manager/
 └── src/lib.rs                              (+55)       EXPORT_CHANGES_SPEC + args + CLI under
                                                         the existing "management" family; joins
                                                         SPECS (spec-only crate — dispatch stays

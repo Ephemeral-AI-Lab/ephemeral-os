@@ -5,10 +5,10 @@ members = [
     "crates/sandbox-config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
-    "crates/sandbox-manager-operations",
+    "crates/sandbox-operations/manager",
     "crates/sandbox-observability",
-    "crates/sandbox-observability-operations",
-    "crates/sandbox-runtime-operations",
+    "crates/sandbox-operations/observability",
+    "crates/sandbox-operations/runtime",
     "crates/sandbox-cli",
     "crates/sandbox-mcp",
     "crates/sandbox-console",
@@ -79,10 +79,10 @@ sandbox-runtime-namespace-execution = { path = "crates/sandbox-runtime/namespace
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
-sandbox-manager-operations = { path = "crates/sandbox-manager-operations" }
+sandbox-manager-operations = { path = "crates/sandbox-operations/manager" }
 sandbox-observability = { path = "crates/sandbox-observability" }
-sandbox-observability-operations = { path = "crates/sandbox-observability-operations" }
-sandbox-runtime-operations = { path = "crates/sandbox-runtime-operations" }
+sandbox-observability-operations = { path = "crates/sandbox-operations/observability" }
+sandbox-runtime-operations = { path = "crates/sandbox-operations/runtime" }
 sandbox-cli = { path = "crates/sandbox-cli" }
 sandbox-mcp = { path = "crates/sandbox-mcp" }
 sandbox-console = { path = "crates/sandbox-console" }

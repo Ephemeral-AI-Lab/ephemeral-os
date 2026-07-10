@@ -1107,7 +1107,7 @@ def _scenario_catalog(case, rec, sandbox_factory):
     assert help_result.returncode == 0, help_result.stderr
     # The manager CLI spec catalog is now a spec-only crate; the dispatch table
     # in management_operations.rs imports the spec by name.
-    spec_source = (REPO_ROOT / "crates/sandbox-manager-operations/src/lib.rs").read_text()
+    spec_source = (REPO_ROOT / "crates/sandbox-operations/manager/src/lib.rs").read_text()
     dispatch_source = (REPO_ROOT / "crates/sandbox-manager/src/operation/cli_definition/management_operations.rs").read_text()
     runtime_source = (REPO_ROOT / "crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs").read_text()
     assert 'name: "squash_layerstacks"' in spec_source

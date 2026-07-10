@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::observability::DaemonObservability;
+use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability::Observer;
-pub(crate) use sandbox_protocol::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::{SandboxRuntimeConfig, SandboxRuntimeOperations};
 use serde_json::{json, Value};
 use tokio_util::sync::CancellationToken;
@@ -37,16 +37,16 @@ pub struct ServerConfig {
     /// Observability emit gate + rotation policy (`observability` config
     /// section); the emit gate maps into the leaf `ObserverConfig`.
     pub observability: ObservabilityConfig,
-    /// Upstream response deadline for the `/forward` reverse proxy. A plain
-    /// Rust value today (tests inject a short one); config consolidation
-    /// phase 2 maps `daemon.http.forward` onto it.
-    pub forward_response_timeout: Duration,
+    /// Request read limits (`daemon.server`), threaded down both listeners'
+    /// read paths and the HTTP API body cap.
+    pub limits: ProtocolLimits,
+    /// RPC connection-permit count (`daemon.server.max_concurrent_connections`).
+    pub max_concurrent_connections: usize,
+    /// `/forward` reverse-proxy deadlines (`daemon.http.forward`).
+    pub forward: DaemonHttpForwardConfig,
 }
 
 impl ServerConfig {
-    /// Production `/forward` response deadline.
-    pub const DEFAULT_FORWARD_RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
-
     /// The HTTP listener bind `(host, port)`, present only when both the host and
     /// port are configured.
     #[must_use]

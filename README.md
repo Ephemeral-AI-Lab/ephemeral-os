@@ -53,8 +53,8 @@ sandbox-config
 `crates/sandbox-protocol`; daemon request dispatch lives in
 `crates/sandbox-daemon`; runtime operation dispatch lives in
 `crates/sandbox-runtime/operation`; CLI operation specs (spec-only) live in
-`crates/sandbox-manager-operations`, `crates/sandbox-runtime-operations`, and
-`crates/sandbox-observability-operations`;
+`crates/sandbox-operations/manager`, `crates/sandbox-operations/runtime`, and
+`crates/sandbox-operations/observability`;
 CAS fixtures live with `sandbox-runtime-layerstack`.
 
 ## The pieces
@@ -64,8 +64,8 @@ CAS fixtures live with `sandbox-runtime-layerstack`.
 - `crates/` - the workspace: `sandbox-daemon`, `sandbox-protocol`,
   `sandbox-manager`, `sandbox-gateway`, `sandbox-cli`, `sandbox-mcp`,
   `sandbox-console`,
-  `sandbox-manager-operations`, `sandbox-runtime-operations`,
-  `sandbox-observability-operations`, `sandbox-runtime/operation`,
+  `sandbox-operations/manager`, `sandbox-operations/runtime`,
+  `sandbox-operations/observability`, `sandbox-runtime/operation`,
   `sandbox-runtime/workspace`, `sandbox-runtime/namespace-execution`,
   `sandbox-runtime/namespace-process`, `sandbox-runtime/layerstack`,
   `sandbox-runtime/overlay`, and `sandbox-config`.

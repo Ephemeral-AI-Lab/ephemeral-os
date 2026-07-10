@@ -315,12 +315,12 @@ no set feature. They must not import the `manager`, `runtime`, or
 
 | Concern | Canonical source / target change |
 | --- | --- |
-| management operation specifications | `crates/sandbox-manager-operations/src/lib.rs`; rename `CHECKPOINT_SQUASH_SPEC` public name/usage to `squash_layerstacks` |
-| runtime command/file specifications | `crates/sandbox-runtime-operations/src/{command.rs,file.rs}`; retain public command/read/write/edit/blame specs |
-| runtime public catalog | `crates/sandbox-runtime-operations/src/lib.rs`; remove the workspace-session family/spec exports; keep `FILE_LIST_SPEC` only as non-CLI HTTP implementation metadata |
+| management operation specifications | `crates/sandbox-operations/manager/src/lib.rs`; rename `CHECKPOINT_SQUASH_SPEC` public name/usage to `squash_layerstacks` |
+| runtime command/file specifications | `crates/sandbox-operations/runtime/src/{command.rs,file.rs}`; retain public command/read/write/edit/blame specs |
+| runtime public catalog | `crates/sandbox-operations/runtime/src/lib.rs`; remove the workspace-session family/spec exports; keep `FILE_LIST_SPEC` only as non-CLI HTTP implementation metadata |
 | workspace lifecycle dispatch | `crates/sandbox-runtime/operation/src/operation_adapter/workspace_session_operations.rs`; retain dispatch as non-public `OperationEntry { cli: None, ... }` |
 | daemon file-list dispatch | `crates/sandbox-runtime/operation/src/operation_adapter/file_operations.rs`; retain non-CLI `FILE_LIST` entry |
-| observability specification | `crates/sandbox-observability-operations/src/cli_definition/`; make it canonical for `snapshot` too and change usage examples to `sandbox-observability-cli` |
+| observability specification | `crates/sandbox-operations/observability/src/cli_definition/`; make it canonical for `snapshot` too and change usage examples to `sandbox-observability-cli` |
 | manager dispatch registration | `crates/sandbox-manager/src/operation/cli_definition/management_operations.rs`; import canonical observability snapshot spec for aggregate dispatch and public renamed squash spec |
 
 ## Required tests and acceptance checks

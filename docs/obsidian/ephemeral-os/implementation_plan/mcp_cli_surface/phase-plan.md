@@ -109,7 +109,7 @@ public operation sets before changing clients or HTTP callers.
 
 - [x] Rename the public manager operation specification from
   `checkpoint_squash` to `squash_layerstacks` in
-  `crates/sandbox-manager-operations/src/lib.rs`.
+  `crates/sandbox-operations/manager/src/lib.rs`.
 - [x] Update manager dispatch registration in
   `crates/sandbox-manager/src/operation/cli_definition/management_operations.rs`
   to use the renamed public specification while retaining the internal
@@ -136,10 +136,10 @@ public operation sets before changing clients or HTTP callers.
 ### Files expected to change
 
 ```text
-crates/sandbox-manager-operations/src/lib.rs
+crates/sandbox-operations/manager/src/lib.rs
 crates/sandbox-manager/src/operation/cli_definition/management_operations.rs
-crates/sandbox-runtime-operations/src/{lib.rs,workspace_session.rs}
-crates/sandbox-observability-operations/src/cli_definition/{mod.rs,snapshot.rs,*.rs}
+crates/sandbox-operations/runtime/src/{lib.rs,workspace_session.rs}
+crates/sandbox-operations/observability/src/cli_definition/{mod.rs,snapshot.rs,*.rs}
 crates/sandbox-runtime/operation/src/{operation.rs,operation_adapter/**}
 relevant catalog/operation tests
 ```

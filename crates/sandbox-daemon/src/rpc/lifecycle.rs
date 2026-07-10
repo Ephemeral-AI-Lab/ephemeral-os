@@ -9,8 +9,6 @@ use tokio_util::task::TaskTracker;
 use super::SandboxDaemonServer;
 use crate::rpc::error::SandboxDaemonError;
 
-const MAX_CONCURRENT_CONNECTIONS: usize = 256;
-
 impl SandboxDaemonServer {
     /// Bind the `AF_UNIX` (and optional TCP) listeners, write the pid file, install
     /// the Ctrl-C handler, and serve until the shutdown token fires.
@@ -25,7 +23,9 @@ impl SandboxDaemonServer {
     pub async fn serve(self) -> Result<(), SandboxDaemonError> {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
-        let connection_permits = Arc::new(Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
+        let connection_permits = Arc::new(Semaphore::new(
+            server.config.max_concurrent_connections,
+        ));
         let connection_tasks = TaskTracker::new();
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;

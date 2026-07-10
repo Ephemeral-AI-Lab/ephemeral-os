@@ -146,6 +146,7 @@ fn rotation_moves_oversized_log_to_rotated_sibling() -> TestResult {
     config.observability = ObservabilityConfig {
         enabled: true,
         max_file_bytes: 8,
+        ..ObservabilityConfig::default()
     };
     let server = daemon_server_from(&root, config.clone())?;
     let observability = server.observability.as_ref().expect("observability");
@@ -180,6 +181,7 @@ fn disabled_gate_emits_no_log() -> TestResult {
     config.observability = ObservabilityConfig {
         enabled: false,
         max_file_bytes: 8 * 1024 * 1024,
+        ..ObservabilityConfig::default()
     };
     let observability = DaemonObservability::from_config(&config).expect("constructed");
     observability.emit_resource_samples(&config, &empty_snapshot());

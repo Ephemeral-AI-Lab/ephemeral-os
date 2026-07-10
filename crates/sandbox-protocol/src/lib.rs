@@ -31,7 +31,7 @@ pub use help::{
     render_catalog_help, render_operation_help, search_operation_help, CliOperationSearchResult,
     HelpRenderError,
 };
-pub use limits::{MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+pub use limits::ProtocolLimits;
 pub use request::{decode_request_value, Request};
 pub use response::{error_response_with_details, response_line, Response};
 pub use scope::CliOperationScope;

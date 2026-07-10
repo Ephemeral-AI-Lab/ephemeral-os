@@ -5,7 +5,7 @@ use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
 use sandbox_observability::record::names;
 use sandbox_observability::{SpanStatus, TraceContext};
-use sandbox_protocol::{error_kind, CliOperationScope, Request, MAX_REQUEST_BYTES};
+use sandbox_protocol::{error_kind, CliOperationScope, Request};
 use serde_json::{json, Map, Value};
 
 use super::response::{self, BoxBody};
@@ -52,7 +52,7 @@ async fn handle_file_list(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> 
 }
 
 async fn read_args(req: HttpRequest<Incoming>) -> Result<Map<String, Value>, Response<BoxBody>> {
-    let body = http_body_util::Limited::new(req.into_body(), MAX_REQUEST_BYTES);
+    let body = http_body_util::Limited::new(req.into_body(), state.config.limits.max_request_bytes);
     let bytes = match body.collect().await {
         Ok(collected) => collected.to_bytes(),
         Err(_) => {

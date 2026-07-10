@@ -978,7 +978,7 @@ Findings:
   delete/merge: delete the `--progress` example and the "after manager-to-daemon progress forwarding is wired" dependency; add one top-level `faulty_sessions: [{session_id, phase, upperdir_bytes, lease_errors}]` array (omitted when empty) to the stdout result.
   replacement: the existing one-line stdout result contract; observability records for the detail trail.
   why correctness still holds: destroying a live session and discarding upperdir bytes is user-visible data loss; the result line is the only surface guaranteed to exist, so this is the minimal fix that makes the spec's own "must not be observability-only" rule satisfiable. Everything else about progress is reporting-only.
-- [revise] §"Output contract" `layers` field: the full stack dump duplicates the existing daemon view `sandbox-cli observability layerstack --sandbox-id ID` — "Show the active manifest as a per-layer inventory: disk bytes, how many workspaces lease each layer" (`crates/sandbox-observability-operations/src/cli_definition/layerstack.rs:5-12`).
+- [revise] §"Output contract" `layers` field: the full stack dump duplicates the existing daemon view `sandbox-cli observability layerstack --sandbox-id ID` — "Show the active manifest as a per-layer inventory: disk bytes, how many workspaces lease each layer" (`crates/sandbox-operations/observability/src/cli_definition/layerstack.rs:5-12`).
   delete/merge: delete `layers`; keep `manifest_version` + `squashed_blocks`.
   replacement: `observability layerstack` view.
   why correctness still holds: nothing breaks — reporting convenience only.

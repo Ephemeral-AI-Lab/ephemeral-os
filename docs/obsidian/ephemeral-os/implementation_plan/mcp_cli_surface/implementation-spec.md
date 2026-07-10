@@ -214,13 +214,13 @@ against this budget; exceed it only for a demonstrated protocol requirement.
 | `crates/sandbox-cli/src/{lib.rs,manager.rs,runtime.rs,observability.rs,bin/*.rs}` | relocate manager/runtime clients, extract observability, and add thin binary targets | move 400; +120 to +165 |
 | `crates/sandbox-cli/tests/{manager.rs,runtime.rs,observability.rs}` | relocate existing smoke tests and split observability coverage | move 248; +120 |
 | `crates/sandbox-{cli-core,manager-cli,runtime-cli}/` | delete after the relocation to `sandbox-cli` | move -1,342 |
-| `crates/sandbox-manager-operations/src/lib.rs` | remove the duplicate public `snapshot` spec | -24 |
-| `crates/sandbox-runtime-operations/src/{lib.rs,workspace_session.rs}` | remove workspace-session lifecycle from the public runtime catalog | -70 to -95 |
+| `crates/sandbox-operations/manager/src/lib.rs` | remove the duplicate public `snapshot` spec | -24 |
+| `crates/sandbox-operations/runtime/src/{lib.rs,workspace_session.rs}` | remove workspace-session lifecycle from the public runtime catalog | -70 to -95 |
 | `crates/sandbox-runtime/operation/src/{operation.rs,cli_definition/workspace_session_operations.rs}` | retain lifecycle dispatch but mark it non-public; rename `cli_definition` to `operation_adapter` | +8 / -18 |
-| `crates/sandbox-observability-operations/src/cli_definition/{mod.rs,snapshot.rs}` | own canonical snapshot spec/catalog | +20 / -8 |
+| `crates/sandbox-operations/observability/src/cli_definition/{mod.rs,snapshot.rs}` | own canonical snapshot spec/catalog | +20 / -8 |
 | `crates/sandbox-manager/Cargo.toml` | depend on observability-operation spec | +1 |
 | `crates/sandbox-manager/src/operation/{cli_definition/management_operations.rs,management/service/impls/checkpoint_squash.rs}` | import canonical snapshot spec and rename public squash dispatch to `squash_layerstacks` | +8 / -8 |
-| `crates/sandbox-observability-operations/src/cli_definition/*.rs` | new CLI program names/examples | +10 / -10 |
+| `crates/sandbox-operations/observability/src/cli_definition/*.rs` | new CLI program names/examples | +10 / -10 |
 | `crates/sandbox-console/{Cargo.toml,src,tests}` | switch imports from `sandbox-cli-core` to `sandbox-cli::core` without enabling a set feature | +6 / -6 |
 | `crates/sandbox-mcp/Cargo.toml` | new adapter manifest and MCP stdio dependency | +25 |
 | `crates/sandbox-mcp/src/{main.rs,lib.rs}` | one set-configured MCP adapter, schemas, tool dispatch | +300 to +360 |

@@ -81,7 +81,7 @@ the behavioral contract for before/after equivalence.
 - The three **static registries** live next to their implementations:
   - manager: `crates/sandbox-manager/src/operation/cli_definition/management_operations.rs`
   - runtime: `crates/sandbox-runtime/operation/src/cli_definition/{command,workspace_session,file}_operations.rs`
-  - observability: `crates/sandbox-observability-operations/src/cli_definition/` (already **spec-only** — the pattern to copy)
+  - observability: `crates/sandbox-operations/observability/src/cli_definition/` (already **spec-only** — the pattern to copy)
 - The CLI links all three catalogs at compile time
   (`request_builder.rs:38-48`).
 - `sandbox-protocol/src/help.rs:51,78-80` hardcodes the program name
@@ -188,12 +188,12 @@ on `main`, additive edits, never revert concurrent work.
 
 ### Phase 1 — Extract spec-only catalog crates
 
-- [ ] New crate `crates/sandbox-manager-operations`: move the spec consts
+- [ ] New crate `crates/sandbox-operations/manager`: move the spec consts
       and catalog assembly out of
       `sandbox-manager/src/operation/cli_definition/` +
       `operation/specs.rs`. Dispatch tables (`ManagerOperationEntry`,
       fn pointers) stay in `sandbox-manager` and import the specs.
-- [ ] New crate `crates/sandbox-runtime-operations`: same split for
+- [ ] New crate `crates/sandbox-operations/runtime`: same split for
       `sandbox-runtime/operation/src/cli_definition/`. `OperationEntry`
       registrations stay in `sandbox-runtime`; only `CliOperationSpec` /
       `ArgSpec` / family consts move.
@@ -315,8 +315,8 @@ on `main`, additive edits, never revert concurrent work.
 
 | Action | Path |
 |---|---|
-| add | `crates/sandbox-manager-operations/` (specs from `sandbox-manager/src/operation/cli_definition/`) |
-| add | `crates/sandbox-runtime-operations/` (specs from `sandbox-runtime/operation/src/cli_definition/`) |
+| add | `crates/sandbox-operations/manager/` (specs from `sandbox-manager/src/operation/cli_definition/`) |
+| add | `crates/sandbox-operations/runtime/` (specs from `sandbox-runtime/operation/src/cli_definition/`) |
 | add | `crates/sandbox-cli-core/` (from `sandbox-gateway/src/cli/{client,config,request_builder,output}.rs`) |
 | add | `crates/sandbox-manager-cli/`, `crates/sandbox-runtime-cli/` |
 | add | `bin/sandbox-manager-cli`, `bin/sandbox-runtime-cli` |

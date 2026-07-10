@@ -4,7 +4,9 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
-use super::{error_response, SandboxDaemonServer, MAX_REQUEST_BYTES, REQUEST_READ_TIMEOUT_S};
+use sandbox_protocol::ProtocolLimits;
+
+use super::{error_response, SandboxDaemonServer};
 use crate::rpc::error::SandboxDaemonError;
 
 impl SandboxDaemonServer {
@@ -22,7 +24,7 @@ impl SandboxDaemonServer {
         S: AsyncRead + AsyncWrite + Unpin,
     {
         let (mut reader, mut writer) = tokio::io::split(stream);
-        let bytes = read_request_line(&mut reader).await;
+        let bytes = read_request_line(&mut reader, self.config.limits).await;
         let response = match bytes {
             Ok(bytes) => self.dispatch_bytes(bytes, is_tcp).await,
             Err(err) => self.read_error_response(err, is_tcp),
@@ -39,10 +41,10 @@ impl SandboxDaemonServer {
 
     fn read_error_response(&self, err: SandboxDaemonError, _is_tcp: bool) -> serde_json::Value {
         match err {
-            err @ SandboxDaemonError::RequestTooLarge { .. } => error_response(
+            err @ SandboxDaemonError::RequestTooLarge { limit } => error_response(
                 err.response_kind(),
-                format!("daemon request exceeds {MAX_REQUEST_BYTES} byte limit"),
-                serde_json::json!({"limit": MAX_REQUEST_BYTES}),
+                format!("daemon request exceeds {limit} byte limit"),
+                serde_json::json!({"limit": limit}),
             ),
             err => error_response(err.response_kind(), err.to_string(), serde_json::json!({})),
         }
@@ -53,35 +55,39 @@ fn encode_response(response: &serde_json::Value) -> Vec<u8> {
     sandbox_protocol::response_line(response)
 }
 
-async fn read_request_line<R>(reader: &mut R) -> Result<Vec<u8>, SandboxDaemonError>
-where
-    R: AsyncRead + Unpin,
-{
-    read_request_line_with_timeout(reader, REQUEST_READ_TIMEOUT_S).await
-}
-
-pub(crate) async fn read_request_line_with_timeout<R>(
+async fn read_request_line<R>(
     reader: &mut R,
-    timeout_s: f64,
+    limits: ProtocolLimits,
 ) -> Result<Vec<u8>, SandboxDaemonError>
 where
     R: AsyncRead + Unpin,
 {
+    read_request_line_with_limits(reader, limits).await
+}
+
+pub(crate) async fn read_request_line_with_limits<R>(
+    reader: &mut R,
+    limits: ProtocolLimits,
+) -> Result<Vec<u8>, SandboxDaemonError>
+where
+    R: AsyncRead + Unpin,
+{
+    let max_request_bytes = limits.max_request_bytes;
     let mut buf = Vec::new();
     let read = async {
-        let limit = u64::try_from(MAX_REQUEST_BYTES)
+        let limit = u64::try_from(max_request_bytes)
             .unwrap_or(u64::MAX)
             .saturating_add(1);
         let mut limited = BufReader::new(reader.take(limit));
         limited.read_until(b'\n', &mut buf).await?;
-        if buf.len() > MAX_REQUEST_BYTES {
+        if buf.len() > max_request_bytes {
             return Err(SandboxDaemonError::RequestTooLarge {
-                limit: MAX_REQUEST_BYTES,
+                limit: max_request_bytes,
             });
         }
         Ok::<(), SandboxDaemonError>(())
     };
-    timeout(Duration::from_secs_f64(timeout_s), read)
+    timeout(Duration::from_secs_f64(limits.request_read_timeout_s), read)
         .await
         .map_err(|_| {
             SandboxDaemonError::Io(std::io::Error::new(
