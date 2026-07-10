@@ -27,8 +27,9 @@ import time
 from pathlib import Path
 
 from core import cleanup
-from core.cli import internal_runtime_result, route_cli
+from core.cli import route_cli
 from core.config import IMAGE, REPO_ROOT
+from core.direct_daemon import direct_daemon_result
 
 SUITE_DIR = Path(__file__).resolve().parent
 RUN_ID = os.environ.get("EXPORT_RUN_ID", dt.datetime.now().strftime("export-%Y%m%d-%H%M%S"))
@@ -327,7 +328,7 @@ def _wait_command(rec, sandbox_id, command_session_id, *, timeout_s=60):
 
 
 def create_session(rec, sandbox_id):
-    result = internal_runtime_result(
+    result = direct_daemon_result(
         sandbox_id,
         "create_workspace_session",
         recorder=rec,
@@ -337,7 +338,7 @@ def create_session(rec, sandbox_id):
 
 
 def destroy_session(rec, sandbox_id, session_id):
-    result = internal_runtime_result(
+    result = direct_daemon_result(
         sandbox_id,
         "destroy_workspace_session",
         {"workspace_session_id": session_id, "grace_s": 1},

@@ -9,8 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from core.cli import internal_runtime, is_error, observability, runtime
+from core.cli import is_error, observability, runtime
 from core.config import IMAGE
+from core.direct_daemon import direct_daemon
 from manager.management import helpers as mgmt
 
 
@@ -122,7 +123,7 @@ def create_workspace_session(sandbox_id, *, network_profile=None):
     args = {}
     if network_profile is not None:
         args["network_profile"] = network_profile
-    result = internal_runtime(sandbox_id, "create_workspace_session", args)
+    result = direct_daemon(sandbox_id, "create_workspace_session", args)
     assert_ok(result)
     assert result["finalize_policy"] == "no_op", result
     return result["workspace_session_id"]
@@ -132,7 +133,7 @@ def destroy_workspace_session(sandbox_id, workspace_session_id, *, grace_s=None)
     args = {"workspace_session_id": workspace_session_id}
     if grace_s is not None:
         args["grace_s"] = grace_s
-    return internal_runtime(sandbox_id, "destroy_workspace_session", args)
+    return direct_daemon(sandbox_id, "destroy_workspace_session", args)
 
 
 @pytest.fixture

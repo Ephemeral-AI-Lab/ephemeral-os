@@ -14,8 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from core.cli import cli, internal_runtime, is_error, manager, observability, runtime
+from core.cli import cli, is_error, manager, observability, runtime
 from core.config import REPO_ROOT, SANDBOX_RUNTIME_CLI
+from core.direct_daemon import direct_daemon
 
 
 SUITE_DIR = Path(__file__).resolve().parent
@@ -239,7 +240,7 @@ def create_session(sandbox_id, *, network_profile=None):
     args = {}
     if network_profile is not None:
         args["network_profile"] = network_profile
-    result = internal_runtime(sandbox_id, "create_workspace_session", args)
+    result = direct_daemon(sandbox_id, "create_workspace_session", args)
     assert_ok(result)
     assert result["workspace_session_id"], result
     assert result["finalize_policy"] == "no_op", result
@@ -292,7 +293,7 @@ def destroy_session(sandbox_id, workspace_session_id, *, grace_s=None, timeout=1
     args = {"workspace_session_id": workspace_session_id}
     if grace_s is not None:
         args["grace_s"] = grace_s
-    return internal_runtime(
+    return direct_daemon(
         sandbox_id,
         "destroy_workspace_session",
         args,

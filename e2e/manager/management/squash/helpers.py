@@ -16,8 +16,9 @@ import time
 from pathlib import Path
 
 from core import cleanup
-from core.cli import internal_runtime_result, route_cli
+from core.cli import route_cli
 from core.config import IMAGE, REPO_ROOT
+from core.direct_daemon import direct_daemon_result
 
 from . import measure
 
@@ -849,7 +850,7 @@ def _wait_command_output(rec, sandbox_id, command_session_id, needle, *, timeout
 
 
 def _create_session(rec, sandbox_id):
-    result = internal_runtime_result(
+    result = direct_daemon_result(
         sandbox_id,
         "create_workspace_session",
         recorder=rec,
@@ -859,7 +860,7 @@ def _create_session(rec, sandbox_id):
 
 
 def _destroy_session(rec, sandbox_id, session_id):
-    result = internal_runtime_result(
+    result = direct_daemon_result(
         sandbox_id,
         "destroy_workspace_session",
         {"workspace_session_id": session_id, "grace_s": 1},
@@ -877,7 +878,7 @@ def _destroy_session(rec, sandbox_id, session_id):
         if active:
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
-                result = internal_runtime_result(
+                result = direct_daemon_result(
                     sandbox_id,
                     "destroy_workspace_session",
                     {"workspace_session_id": session_id, "grace_s": 1},
@@ -1747,7 +1748,7 @@ def _overcap_creation_boundary(case, rec, sandbox_factory, *, failure_attempts, 
     failure_records = []
     for attempt in range(failure_attempts):
         started = time.monotonic()
-        failed = internal_runtime_result(
+        failed = direct_daemon_result(
             sandbox_id,
             "create_workspace_session",
             timeout=30,

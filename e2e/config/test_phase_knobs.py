@@ -9,11 +9,13 @@ sandbox-cli charter.
 """
 
 import hashlib
+import json
 
 import pytest
 
 from config import helpers
 from core import cli as climod
+from core.daemon_http import daemon_http_endpoint, http_post
 
 pytestmark = pytest.mark.config
 
@@ -244,9 +246,8 @@ class TestPhase2:
         """P2-F2 — observability.views.layer_delta_default_limit: 3 caps the
         layer-delta view at 3 entries for a layer carrying more, with the
         truncation flag set; an explicit limit above layer_delta_max_limit is
-        rejected. The layer_id/limit args ride the authenticated internal
-        gateway call — the CLI catalog exposes only the inventory shape."""
-        from core.cli import internal_runtime
+        rejected. The layer_id/limit args ride the authenticated raw gateway
+        call — the CLI catalog exposes only the inventory shape."""
 
         helpers.rewrite_daemon_yaml(
             lane_a_daemon_yaml,
@@ -264,7 +265,7 @@ class TestPhase2:
                 sandbox_id,
                 "mkdir -p delta && for i in 1 2 3 4 5 6; do echo $i > delta/f$i.txt; done",
             )
-            inventory = internal_runtime(
+            inventory = climod.raw_gateway(
                 sandbox_id, "get_observability", {"view": "layerstack"}
             )
             layers = inventory.get("layers")
@@ -277,7 +278,7 @@ class TestPhase2:
             assert published, f"the exec must have published a delta layer: {layers}"
             delta_layer = published[0]
 
-            view = internal_runtime(
+            view = climod.raw_gateway(
                 sandbox_id,
                 "get_observability",
                 {"view": "layerstack", "layer_id": delta_layer},
@@ -288,7 +289,7 @@ class TestPhase2:
             )
             assert view.get("truncated") is True, view
 
-            rejected = internal_runtime(
+            rejected = climod.raw_gateway(
                 sandbox_id,
                 "get_observability",
                 {"view": "layerstack", "layer_id": delta_layer, "limit": 50},
@@ -303,9 +304,8 @@ class TestPhase3:
 
     def test_file_list_truncates_at_cap(self, lane_a_daemon_yaml):
         """P3-F1 — runtime.file.max_list_entries: 5 lists exactly 5 of 10
-        entries with the truncation flag set. `file_list` is daemon-internal
-        (`cli: None`), so the probe rides the authenticated internal call."""
-        from core.cli import internal_runtime
+        entries with the truncation flag set through the documented
+        ``POST /files/list`` HTTP surface."""
 
         helpers.rewrite_daemon_yaml(
             lane_a_daemon_yaml, {"runtime": {"file": {"max_list_entries": 5}}}
@@ -316,7 +316,14 @@ class TestPhase3:
                 "mkdir -p listing"
                 " && for i in 0 1 2 3 4 5 6 7 8 9; do echo $i > listing/f$i.txt; done",
             )
-            listing = internal_runtime(sandbox_id, "file_list", {"path": "listing"})
+            host, port = daemon_http_endpoint(sandbox_id)
+            status, body, content_type = http_post(
+                f"http://{host}:{port}/files/list",
+                {"path": "listing"},
+            )
+            assert status == 200, body
+            assert "application/json" in content_type, content_type
+            listing = json.loads(body)
             entries = listing.get("entries")
             assert entries is not None and len(entries) == 5, (
                 f"max_list_entries 5 must cap the listing: {listing}"
@@ -330,15 +337,16 @@ class TestPhase3:
         Spec drift: the CLI materializes the catalog's `--limit` default
         (2000) client-side — the argument surface is contract, per the spec's
         non-goals — so the service default governs the raw operation surface
-        and the probe rides the authenticated internal call."""
-        from core.cli import internal_runtime
+        and the probe rides the authenticated raw gateway call."""
 
         helpers.rewrite_daemon_yaml(
             lane_a_daemon_yaml, {"runtime": {"file": {"read_lines_default": 10}}}
         )
         with helpers.sandbox() as sandbox_id:
             helpers.exec_output(sandbox_id, "seq 1 100 > lines.txt")
-            result = internal_runtime(sandbox_id, "file_read", {"path": "lines.txt"})
+            result = climod.raw_gateway(
+                sandbox_id, "file_read", {"path": "lines.txt"}
+            )
             assert not climod.is_error(result), result
             lines = [line for line in result.get("content", "").split("\n") if line]
             assert len(lines) == 10, f"default window must be 10 lines: {result}"

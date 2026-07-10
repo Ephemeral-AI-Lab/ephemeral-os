@@ -22,12 +22,11 @@ import platform
 import re
 import subprocess
 import textwrap
-import time
-import urllib.error
-import urllib.request
 
-from core.cli import internal_runtime, is_error, runtime
+from core.cli import is_error, runtime
 from core.config import IMAGE
+from core.daemon_http import daemon_http_endpoint, http_get, http_post, http_request
+from core.direct_daemon import direct_daemon
 from manager.management import helpers as mgmt
 
 
@@ -110,7 +109,7 @@ def test_daemon_http_health(tmp_path):
         sandbox_id = created.get("id")
         assert sandbox_id, f"create_sandbox failed: {created}"
 
-        host, port = daemon_http_endpoint(created, sandbox_id)
+        host, port = daemon_http_endpoint(sandbox_id)
         status, body, content_type = http_get(f"http://{host}:{port}/health")
 
         assert status == 200, body
@@ -133,7 +132,7 @@ def test_forward_shared_arbitrary_port(tmp_path):
         created = mgmt.create_sandbox(image=IMAGE, workspace_root=str(workspace))
         sandbox_id = created.get("id")
         assert sandbox_id, f"create_sandbox failed: {created}"
-        host, daemon_port = daemon_http_endpoint(created, sandbox_id)
+        host, daemon_port = daemon_http_endpoint(sandbox_id)
 
         # No workspace session: exec_command runs in a one-shot shared-network
         # workspace, so the server is reachable on the daemon's 127.0.0.1.
@@ -175,9 +174,9 @@ def test_forward_isolated_arbitrary_port(tmp_path):
         created = mgmt.create_sandbox(image=IMAGE, workspace_root=str(workspace))
         sandbox_id = created.get("id")
         assert sandbox_id, f"create_sandbox failed: {created}"
-        host, daemon_port = daemon_http_endpoint(created, sandbox_id)
+        host, daemon_port = daemon_http_endpoint(sandbox_id)
 
-        session = internal_runtime(
+        session = direct_daemon(
             sandbox_id,
             "create_workspace_session",
             {"network_profile": "isolated"},
@@ -214,7 +213,7 @@ def test_forward_isolated_arbitrary_port(tmp_path):
         if sandbox_id:
             stop_command(sandbox_id, command_id)
             if workspace_id:
-                internal_runtime(
+                direct_daemon(
                     sandbox_id,
                     "destroy_workspace_session",
                     {"workspace_session_id": workspace_id, "grace_s": 1},
@@ -230,7 +229,7 @@ def test_forward_rejects_invalid_routes(tmp_path):
         created = mgmt.create_sandbox(image=IMAGE, workspace_root=str(workspace))
         sandbox_id = created.get("id")
         assert sandbox_id, f"create_sandbox failed: {created}"
-        host, port = daemon_http_endpoint(created, sandbox_id)
+        host, port = daemon_http_endpoint(sandbox_id)
         base = f"http://{host}:{port}"
 
         cases = {
@@ -257,7 +256,7 @@ def test_file_list_and_removed_operation_routes(tmp_path):
         created = mgmt.create_sandbox(image=IMAGE, workspace_root=str(workspace))
         sandbox_id = created.get("id")
         assert sandbox_id, f"create_sandbox failed: {created}"
-        host, port = daemon_http_endpoint(created, sandbox_id)
+        host, port = daemon_http_endpoint(sandbox_id)
         base = f"http://{host}:{port}"
 
         status, body, content_type = http_post(base + "/files/list", {})
@@ -267,7 +266,7 @@ def test_file_list_and_removed_operation_routes(tmp_path):
         assert not is_error(root), root
         assert "published.txt" in entry_names(root), root
 
-        session = internal_runtime(sandbox_id, "create_workspace_session", {})
+        session = direct_daemon(sandbox_id, "create_workspace_session", {})
         assert not is_error(session), session
         workspace_id = session["workspace_session_id"]
         written = runtime(
@@ -318,59 +317,12 @@ def test_file_list_and_removed_operation_routes(tmp_path):
     finally:
         if sandbox_id:
             if workspace_id:
-                internal_runtime(
+                direct_daemon(
                     sandbox_id,
                     "destroy_workspace_session",
                     {"workspace_session_id": workspace_id, "grace_s": 1},
                 )
             mgmt.destroy_sandbox(sandbox_id)
-
-
-def daemon_http_endpoint(created, sandbox_id):
-    endpoint = created.get("daemon_http")
-    if not endpoint:
-        inspected = mgmt.inspect_sandbox(sandbox_id)
-        endpoint = inspected.get("daemon_http")
-    assert endpoint, f"record is missing daemon_http endpoint: {created}"
-    return endpoint["host"], int(endpoint["port"])
-
-
-def http_get(url, attempts=20):
-    return http_request(url, attempts=attempts)
-
-
-def http_post(url, document, attempts=20):
-    return http_request(
-        url,
-        method="POST",
-        body=json.dumps(document).encode("utf-8"),
-        attempts=attempts,
-    )
-
-
-def http_request(url, method="GET", body=None, attempts=20):
-    last_error = None
-    for _ in range(attempts):
-        try:
-            request = urllib.request.Request(
-                url,
-                data=body,
-                headers={"Content-Type": "application/json"} if body is not None else {},
-                method=method,
-            )
-            with urllib.request.urlopen(request, timeout=10) as response:
-                return (
-                    response.status,
-                    response.read().decode("utf-8", "replace"),
-                    response.headers.get_content_type(),
-                )
-        except urllib.error.HTTPError as error:
-            content_type = error.headers.get_content_type() if error.headers else ""
-            return error.code, error.read().decode("utf-8", "replace"), content_type
-        except urllib.error.URLError as error:
-            last_error = error
-            time.sleep(0.25)
-    raise AssertionError(f"{method} {url} never connected: {last_error}")
 
 
 def entry_names(document):

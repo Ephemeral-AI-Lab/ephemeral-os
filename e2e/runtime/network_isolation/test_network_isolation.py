@@ -3,8 +3,9 @@ import subprocess
 import textwrap
 import time
 
-from core.cli import internal_runtime, is_error, runtime
+from core.cli import is_error, runtime
 from core.config import IMAGE
+from core.direct_daemon import direct_daemon
 from manager.management import helpers as mgmt
 
 
@@ -97,7 +98,7 @@ def test_isolated_workspace_sessions_cannot_reach_each_other_on_same_port(tmp_pa
         assert sandbox_id, f"create_sandbox failed: {created}"
 
         for _ in range(3):
-            result = internal_runtime(
+            result = direct_daemon(
                 sandbox_id,
                 "create_workspace_session",
                 {"network_profile": "isolated"},
@@ -150,7 +151,7 @@ def test_isolated_workspace_sessions_cannot_reach_each_other_on_same_port(tmp_pa
         if sandbox_id:
             stop_commands(sandbox_id, command_ids)
             for workspace_id in workspace_ids:
-                internal_runtime(
+                direct_daemon(
                     sandbox_id,
                     "destroy_workspace_session",
                     {"workspace_session_id": workspace_id, "grace_s": 1},

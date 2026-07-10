@@ -48,23 +48,6 @@ class CliError(Exception):
     """The CLI produced output that was not a JSON line."""
 
 
-class InternalGatewayResult:
-    """Raw-result shape for daemon-internal E2E gateway calls."""
-
-    def __init__(self, operation, args, response, elapsed_ms):
-        self.args = [operation, args]
-        self.json = response
-        self.elapsed_ms = elapsed_ms
-        self.returncode = 1 if is_error(response) else 0
-        encoded = json.dumps(response, sort_keys=True)
-        self.stdout = encoded if self.returncode == 0 else ""
-        self.stderr = encoded if self.returncode != 0 else ""
-
-    @property
-    def ok(self):
-        return self.returncode == 0
-
-
 def route_cli(args):
     """Map space-prefixed ``args`` to ``(binary, argv, supports_progress)``.
 
@@ -259,29 +242,12 @@ def runtime(sandbox_id, operation, *args, **kwargs):
     return cli("runtime", "--sandbox-id", sandbox_id, operation, *args, **kwargs)
 
 
-def internal_runtime(sandbox_id, operation, args=None, *, timeout=180):
-    """Call a daemon-internal runtime operation through the authenticated gateway."""
-    return internal_runtime_result(
-        sandbox_id,
-        operation,
-        args,
-        timeout=timeout,
-    ).json
-
-
-def internal_runtime_result(
-    sandbox_id,
-    operation,
-    args=None,
-    *,
-    timeout=180,
-    recorder=None,
-):
-    """Return a raw-result-shaped internal gateway response for report suites."""
+def raw_gateway(sandbox_id, operation, args=None, *, timeout=180):
+    """Call a raw operation through the authenticated sandbox gateway."""
     request_args = dict(args or {})
     request = {
         "op": operation,
-        "request_id": f"e2e-internal-{uuid.uuid4()}",
+        "request_id": f"e2e-raw-gateway-{uuid.uuid4()}",
         "scope": {"kind": "sandbox", "sandbox_id": sandbox_id},
         "args": request_args,
         "_stream_logs": False,
@@ -290,7 +256,6 @@ def internal_runtime_result(
     if token is not None:
         request["_sandbox_gateway_auth_token"] = token
 
-    started = time.monotonic()
     host, port = _gateway_endpoint()
     with socket.create_connection((host, port), timeout=timeout) as stream:
         stream.settimeout(timeout)
@@ -298,27 +263,12 @@ def internal_runtime_result(
         stream.shutdown(socket.SHUT_WR)
         with stream.makefile("rb") as reader:
             response_line = reader.readline()
-    elapsed_ms = round((time.monotonic() - started) * 1000.0, 3)
     if not response_line.endswith(b"\n"):
-        raise CliError("internal gateway response was not newline terminated")
+        raise CliError("raw gateway response was not newline terminated")
     try:
-        response = json.loads(response_line)
+        return json.loads(response_line)
     except json.JSONDecodeError as exc:
-        raise CliError(f"non-JSON internal gateway output: {response_line!r}") from exc
-
-    result = InternalGatewayResult(operation, request_args, response, elapsed_ms)
-    if recorder is not None:
-        recorder.add_command(
-            {
-                "cmd": ["internal-runtime", operation, json.dumps(request_args, sort_keys=True)],
-                "exit_code": result.returncode,
-                "elapsed_ms": elapsed_ms,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "parsed_json": response,
-            }
-        )
-    return result
+        raise CliError(f"non-JSON raw gateway output: {response_line!r}") from exc
 
 
 def _gateway_endpoint():
