@@ -33,15 +33,15 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | --- | --- | --- | --- |
 | 0. Contract baseline | complete | none | public surface, architecture, and migration constraints documented |
 | 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
-| 2. Consolidate the CLI package | in progress | 1 | one package, three separately grantable binaries |
+| 2. Consolidate the CLI package | complete | 1 | one package, three separately grantable binaries |
 | 3. Add the MCP adapter | not started | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | not started | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | not started | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 and 1 are complete. Phase 2 is in progress; no later phase has
-started.
+Phases 0 through 2 are complete. Phase 3 is the next eligible phase; no later
+phase has started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -205,7 +205,7 @@ relevant catalog/operation tests
 
 ## Phase 2 — Consolidate the CLI package
 
-**Status:** in progress
+**Status:** complete
 
 **Depends on:** Phase 1
 
@@ -214,24 +214,24 @@ three executable and authority boundaries.
 
 ### Scope and tasks
 
-- [ ] Add `crates/sandbox-cli` as a workspace package and replace workspace
+- [x] Add `crates/sandbox-cli` as a workspace package and replace workspace
   references to `sandbox-cli-core`, `sandbox-manager-cli`, and
   `sandbox-runtime-cli`.
-- [ ] Move shared gateway/configuration, output, help, and request-building
+- [x] Move shared gateway/configuration, output, help, and request-building
   code into `crates/sandbox-cli/src/core/`.
-- [ ] Move manager client flow to `src/manager.rs` and runtime client flow to
+- [x] Move manager client flow to `src/manager.rs` and runtime client flow to
   `src/runtime.rs`; retain their current global flag/scoping behaviour.
-- [ ] Extract current manager observability flow into
+- [x] Extract current manager observability flow into
   `src/observability.rs`; it must not remain a manager subcommand.
-- [ ] Add three thin binary entrypoints in `src/bin/`, each calling only its
+- [x] Add three thin binary entrypoints in `src/bin/`, each calling only its
   own adapter module’s `run_cli`.
-- [ ] Add optional Cargo features `manager`, `runtime`, and `observability`.
+- [x] Add optional Cargo features `manager`, `runtime`, and `observability`.
   Each binary has only its matching `required-features` dependency set.
-- [ ] Preserve `sandbox-cli::core` as the only shared import for console/MCP;
+- [x] Preserve `sandbox-cli::core` as the only shared import for console/MCP;
   do not force them to enable a CLI-set feature.
-- [ ] Move/split manager/runtime smoke tests and add observability CLI smoke
+- [x] Move/split manager/runtime smoke tests and add observability CLI smoke
   coverage.
-- [ ] Delete old CLI package directories only after consumers compile against
+- [x] Delete old CLI package directories only after consumers compile against
   `sandbox-cli`.
 
 ### Files expected to change
@@ -249,34 +249,80 @@ deleted: crates/sandbox-runtime-cli/
 
 ### Acceptance criteria
 
-- [ ] `cargo build -p sandbox-cli --features manager` builds only the manager
+- [x] `cargo build -p sandbox-cli --features manager` builds only the manager
   executable path; equivalent builds work for `runtime` and `observability`.
-- [ ] `sandbox-manager-cli help` lists only management operations and has no
+- [x] `sandbox-manager-cli help` lists only management operations and has no
   `observability` subcommand.
-- [ ] `sandbox-runtime-cli --sandbox-id ID help` lists exactly the Phase 1
+- [x] `sandbox-runtime-cli --sandbox-id ID help` lists exactly the Phase 1
   runtime catalog and rejects a missing/empty sandbox id before gateway I/O.
-- [ ] `sandbox-observability-cli help` lists exactly the five observability
+- [x] `sandbox-observability-cli help` lists exactly the five observability
   operations; `snapshot` permits an omitted sandbox id while other views do
   not.
-- [ ] All three binaries preserve JSON-line output/error/exit-code behaviour:
+- [x] All three binaries preserve JSON-line output/error/exit-code behaviour:
   success `0` stdout, operation failure `1` stderr, usage/config failure `2`
   stderr.
-- [ ] The console compiles using `sandbox-cli::core` without enabling any
+- [x] The console compiles using `sandbox-cli::core` without enabling any
   CLI-set feature.
-- [ ] Old CLI crates are absent from workspace members and reverse dependency
+- [x] Old CLI crates are absent from workspace members and reverse dependency
   checks; there is no duplicate client/request-builder implementation.
-- [ ] `cargo test -p sandbox-cli --all-features` and affected console tests
+- [x] `cargo test -p sandbox-cli --all-features` and affected console tests
   pass.
 
 ### Evidence to record
 
-```text
-Commit/PR:
-Commands:
-Binary help snapshots:
-Old-package dependency audit:
-Known deviations/waivers:
-```
+- Commits: `73e5fa612` (package consolidation, consumer migration, wrappers,
+  and relocated smoke coverage), `2fa2943fc` (runtime adapter documentation),
+  and `7aab1e035` (canonical defaults, complete help/protocol/progress proof,
+  and feature-isolated launcher builds). PR: not applicable; this repository's
+  `CLAUDE.md` requires direct work on `main`.
+- Feature-boundary proof: three clean
+  `cargo build -p sandbox-cli --features <manager|runtime|observability>
+  --message-format=json` runs each emitted exactly one matching executable:
+  `sandbox-manager-cli`, `sandbox-runtime-cli`, and
+  `sandbox-observability-cli`. `cargo tree` assertions showed no operation
+  catalog for the core-only build and exactly the matching catalog for each
+  feature. `cargo metadata` assertions passed for `default = []`, all three
+  exact feature dependency lists, each binary's single matching
+  `required-features` value, and the console's empty `sandbox-cli` feature
+  list. `cargo test -p sandbox-cli --no-default-features` also passed.
+- Binary help snapshots: `bin/sandbox-manager-cli help` returned exactly
+  `create_sandbox`, `destroy_sandbox`, `list_sandboxes`, `inspect_sandbox`,
+  `squash_layerstacks`, and `export_changes`; it has no observability
+  subcommand. `bin/sandbox-runtime-cli --sandbox-id ID help` returned exactly
+  `exec_command`, `write_command_stdin`, `read_command_lines`, `file_read`,
+  `file_write`, `file_edit`, and `file_blame`. `bin/sandbox-observability-cli
+  help` returned exactly `snapshot`, `trace`, `events`, `cgroup`, and
+  `layerstack`. All three commands exited `0`.
+- CLI behavior proof: `cargo test -p sandbox-cli --all-features` passed all 34
+  integration tests (manager 14, runtime 10, observability 10). The tests
+  derive requiredness, defaults, and examples from the catalogs; reject
+  cross-set/internal operations; prove system, sandbox, aggregate snapshot,
+  and scoped observability routing against fake gateways; and cover success
+  stdout/exit `0`, unchanged operation-error stderr/exit `1`, malformed
+  protocol stderr/exit `1`, and usage/config stderr/exit `2`. They also prove
+  progress streaming and the compatible create-operation `--progress` form,
+  with final JSON kept on stdout.
+- Consumer/catalog proof:
+  `cargo test -p sandbox-manager-operations -p sandbox-runtime-operations -p
+  sandbox-observability-operations` passed all 7 catalog tests, and
+  `cargo test -p sandbox-console` passed all 26 console tests. The console
+  source and metadata use only `sandbox-cli::core`, with no CLI-set feature.
+  `python3 -m compileall -q cli-operation-e2e-live-test` passed for the
+  migrated three-binary E2E caller routing.
+- Old-package dependency audit: filesystem and full Cargo-metadata assertions
+  found no `sandbox-cli-core`, `sandbox-manager-cli`, or
+  `sandbox-runtime-cli` package/directory/dependency. Repository symbol
+  searches found the sole `GatewayClient` and catalog request builder at
+  `crates/sandbox-cli/src/core/{client.rs,request_builder.rs}`.
+- Launcher/quality proof: `sh -n` passed for all three wrappers and
+  `bin/start-sandbox-docker-gateway`; the launcher's three isolated feature
+  builds and `bin/start-sandbox-docker-gateway --help` exited `0`.
+  `cargo clippy -p sandbox-cli --all-features --all-targets -- -D warnings`,
+  `cargo fmt --all -- --check`, and `git diff --check` passed.
+- Known deviations/waivers: none. The mandatory Docker gateway binary rebuild
+  remains reserved for Phase 7. Scope note: `73e5fa612` was committed
+  concurrently by its author with separately authored configuration E2E
+  coverage named in that commit; it was preserved rather than rewritten.
 
 ## Phase 3 — Add the MCP adapter
 
@@ -620,6 +666,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 2 | Completed one core-only CLI package with three feature-isolated binaries, exact set help/routing, migrated consumers/tests, and removal of all legacy CLI packages. | commits `73e5fa612`, `2fa2943fc`, `7aab1e035`; 67 focused tests, three isolated artifact/tree checks, wrapper/launcher, lint, formatting, and dependency-audit proof |
 | 2026-07-10 | 2 | Started CLI package consolidation after confirming the Phase 1 catalog/visibility gate and re-reading the binding CLI, operation, and implementation contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 1 | Completed exact public catalogs, visibility boundaries, canonical snapshot ownership, runtime adapter rename, and caller cleanup without starting Phase 2. | commits `4bda5df70`, `0217248e5`; 201 focused Rust tests, fake-gateway, formatting, compile, and boundary-search proof |
 | 2026-07-10 | 1 | Started the catalog and visibility boundary after confirming Phase 0 complete and reading all companion contracts. | implementation and direct acceptance proof pending |
