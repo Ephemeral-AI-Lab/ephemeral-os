@@ -83,7 +83,8 @@ Hidden-surface cross-check:
 
 ```bash
 rg -n 'internal_runtime\(|"create_workspace_session"|"destroy_workspace_session"' \
-  cli-operation-e2e-live-test crates/sandbox-mcp/tests crates/sandbox-cli/tests
+  --glob '!**/test-reports/**' \
+  e2e crates/sandbox-mcp/tests crates/sandbox-cli/tests
 ```
 
 Result excerpt: the live suite invokes both workspace-session operations

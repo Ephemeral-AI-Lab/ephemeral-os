@@ -47,7 +47,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 
 | Phase | Title | Status | Started | Gate approved | Approver |
 | --- | --- | --- | --- | --- | --- |
-| 0 | Characterize, freeze inventory, purge generated weight | in progress | 2026-07-10 | — | — |
+| 0 | Characterize, freeze inventory, purge generated weight | gate review | 2026-07-10 | — | — |
 | 1 | Create contract, narrow protocol in place | blocked | — | — | — |
 | 2 | Merge and refeature the catalogs | blocked | — | — | — |
 | 3 | Extract the shared gateway client | blocked | — | — | — |
@@ -111,20 +111,20 @@ atomic change.
 
 ### Acceptance criteria
 
-- [ ] Every current operation appears in the route audit table with exactly
+- [x] Every current operation appears in the route audit table with exactly
   one class. *Evidence: the table, cross-checked against `rg` for dispatch
   sites.*
-- [ ] Every behavior that must remain stable has an executable
+- [x] Every behavior that must remain stable has an executable
   characterization test or recorded fixture. *Evidence: fixture list +
   passing run.*
-- [ ] Baseline LOC and metadata snapshots are committed as evidence files.
-- [ ] No tracked generated content remains:
+- [x] Baseline LOC and metadata snapshots are committed as evidence files.
+- [x] No tracked generated content remains:
   `git ls-files | rg 'test-reports/|\.tsbuildinfo$'` returns nothing.
-- [ ] `git ls-files 'e2e/**' | wc -l` reports 87 maintained files (± files
+- [x] `git ls-files 'e2e/**' | wc -l` reports 87 maintained files (± files
   added by the resolver test); `cli-operation-e2e-live-test/` is absent.
-- [ ] The root-marker resolver has a test; E2E smoke passes from `e2e/`.
+- [x] The root-marker resolver has a test; E2E smoke passes from `e2e/`.
   *Evidence: pytest output.*
-- [ ] Standing gate passed.
+- [x] Standing gate passed.
 
 ### Progress log
 
@@ -138,6 +138,9 @@ atomic change.
 | 2026-07-10 | Atomic generated-weight purge and E2E relocation | `git clean -fdX -- cli-operation-e2e-live-test`; `git rm -r` the four inventoried report trees; `git rm web/console/*.tsbuildinfo`; `git mv cli-operation-e2e-live-test e2e`; `git ls-files \| rg 'test-reports/\|\.tsbuildinfo$'`; `[ ! -e cli-operation-e2e-live-test ]` | Deleted 7,977 tracked report files and 2 tracked TypeScript build-info files; generated-content search has no matches; old root is absent. Moved all 87 maintained files and added the resolver plus its test. | None. |
 | 2026-07-10 | Root-marker resolver and relocated smoke | `(cd e2e && python3 -m pytest -q core/test_root.py)`; `(cd e2e && E2E_REBUILD_BINARY=0 python3 -m pytest -q -m smoke)`; see `evidence/phase-0/relocation-tests.txt` | Resolver 2/2 passed; relocated smoke 19/19 passed with 346 deselected in 23.22s. | None. |
 | 2026-07-10 | Route-audit correction: workspace-session lifecycle ownership | `rg -n 'create_workspace_session\|destroy_workspace_session' crates/sandbox-runtime/operation/src/operation_adapter crates/sandbox-runtime/operation/src/operation.rs crates/sandbox-operations/runtime/tests/catalog.rs` | Both hidden operations are dispatchable daemon-owned runtime routes; classified `SandboxRequired` / `Sandbox` / `Internal` / `Runtime` and added to the normative internal set. | Spec route taxonomy, visibility chokepoints, target tree, and Phase 5 text amended in the same commit; Phase 2, Phase 4, and Phase 5 execution steps updated. |
+| 2026-07-10 | Current route-table cross-check | Declaration/literal, handler-registration, dispatch-chain, and hidden-surface `rg` commands in `evidence/phase-0/route-cross-check-current.txt` | Exit 0; current sources still account for 26 names / 27 expanded keys with exactly 19 public, 6 canonical internal, 1 handshake, and 1 HTTP-only class. | None. |
+| 2026-07-10 | Phase 0 artifact invariants | `git ls-files \| rg 'test-reports/\|\.tsbuildinfo$'`; `git ls-files 'e2e/**' \| wc -l`; `[ ! -e cli-operation-e2e-live-test ]`; see `evidence/phase-0/artifact-invariants.txt` | Generated-content search returned no output (expected `rg` exit 1); E2E count is 89 = 87 maintained + resolver + resolver test; old root absence check exited 0. | None. |
+| 2026-07-10 | Phase 0 standing gate | `cargo check --workspace --all-targets --all-features`; `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check`; see `evidence/phase-0/standing-cargo-{check,test,clippy,fmt}.txt` | All exited 0. Full test summary: 113 result groups, 735 passed, 0 failed, 1 ignored; clippy finished with warnings denied; fmt check was clean. | None. |
 | | | | | |
 
 ---

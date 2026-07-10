@@ -285,4 +285,6 @@ deviations. After relocation, the root-resolver tests passed 2/2 and the
 broader smoke tier passed 19/19 from `e2e/`; normalized output is in
 `relocation-tests.txt` (SHA-256
 `63e84581b0cf7778e6927fca6208c93124937b797f1c3f3a75baf200c4cb0b5e`).
-The Phase 0 standing gate remains to run.
+The post-relocation standing gate passed with 735 tests passing, no failures,
+one ignored test, clean clippy with warnings denied, and clean rustfmt; raw
+outputs are the four `standing-cargo-*.txt` evidence files.

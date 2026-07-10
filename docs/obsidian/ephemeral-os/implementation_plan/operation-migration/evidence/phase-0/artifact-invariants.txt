@@ -1,0 +1,10 @@
+$ git ls-files | rg 'test-reports/|\.tsbuildinfo$'
+<no output>
+RESULT exit=1 as expected for no matches
+$ git ls-files 'e2e/**' | wc -l
+      89
+RESULT 89 = 87 maintained files + root resolver + resolver test
+$ [ ! -e cli-operation-e2e-live-test ]
+RESULT exit=0; old root absent
+$ git show --stat --oneline ea633793a
+ 8072 files changed, 441 insertions(+), 4275543 deletions(-)
