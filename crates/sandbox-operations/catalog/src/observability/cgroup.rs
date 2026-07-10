@@ -2,7 +2,7 @@ use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
 
-pub(super) const CGROUP_SPEC: OperationSpec = OperationSpec {
+pub static CGROUP_SPEC: OperationSpec = OperationSpec {
     name: "cgroup",
     family: "observability",
     summary: "Resource series for a scope (cpu/mem/io + disk).",

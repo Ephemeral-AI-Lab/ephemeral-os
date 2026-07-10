@@ -2,7 +2,7 @@ use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
 
-pub(super) const LAYERSTACK_SPEC: OperationSpec = OperationSpec {
+pub static LAYERSTACK_SPEC: OperationSpec = OperationSpec {
     name: "layerstack",
     family: "observability",
     summary: "Per-layer leasing/booking inventory, and stack series.",

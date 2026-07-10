@@ -2,7 +2,7 @@ use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
 
-pub(super) const TRACE_SPEC: OperationSpec = OperationSpec {
+pub static TRACE_SPEC: OperationSpec = OperationSpec {
     name: "trace",
     family: "observability",
     summary: "Render one flow as a span waterfall.",

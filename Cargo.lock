@@ -1550,6 +1550,7 @@ dependencies = [
  "hyper-util",
  "sandbox-config",
  "sandbox-observability",
+ "sandbox-observability-application",
  "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-protocol",
@@ -1629,6 +1630,7 @@ dependencies = [
  "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-runtime-layerstack",
+ "serde_json",
 ]
 
 [[package]]

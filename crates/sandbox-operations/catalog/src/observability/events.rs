@@ -2,7 +2,7 @@ use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
 
-pub(super) const EVENTS_SPEC: OperationSpec = OperationSpec {
+pub static EVENTS_SPEC: OperationSpec = OperationSpec {
     name: "events",
     family: "observability",
     summary: "List domain-fact events across traces.",

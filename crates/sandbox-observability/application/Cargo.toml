@@ -10,6 +10,7 @@ sandbox-operation-contract.workspace = true
 sandbox-operation-catalog = { workspace = true, features = ["observability"] }
 sandbox-observability.workspace = true
 sandbox-runtime-layerstack.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

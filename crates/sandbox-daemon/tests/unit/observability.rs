@@ -76,67 +76,36 @@ fn collect_writes_sandbox_and_stack_samples_from_live_runtime() -> TestResult {
 }
 
 #[test]
-fn cgroup_series_computes_read_time_counter_deltas() -> TestResult {
-    let root = test_root("cgroup-deltas");
-    let sandbox_cgroup = root.join("cgroup-root");
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.cgroup_root = Some(sandbox_cgroup.clone());
-    let observability = DaemonObservability::from_config(&config).expect("observability");
-
-    write_cgroup_fixture(&sandbox_cgroup, 1_000, 2_000, "max")?;
-    observability.emit_resource_samples(&config, &empty_snapshot());
-    write_cgroup_fixture(&sandbox_cgroup, 1_600, 2_000, "max")?;
-    observability.emit_resource_samples(&config, &empty_snapshot());
-
-    let series = observability.cgroup_series("sandbox", BIG_WINDOW_MS as u64);
-    let entries = series.as_array().expect("series array");
-    assert_eq!(entries.len(), 2);
-    assert_eq!(
-        entries[1]["deltas"]["cpu_usec"], 600,
-        "cpu_usec is delta'd at read time"
-    );
-    assert!(
-        entries[1]["deltas"].get("mem_cur").is_none(),
-        "mem_cur is a gauge, no delta"
-    );
-    Ok(())
-}
-
-#[test]
-fn snapshot_value_renders_live_workspaces_and_latest_resources() -> TestResult {
-    let root = test_root("snapshot-value");
-    let upperdir = root.join("upperdir");
-    std::fs::create_dir_all(&upperdir)?;
-    std::fs::write(upperdir.join("a.txt"), b"abc")?;
-    let config = server_config(&root, Some("sandbox-1"));
-    let observability = DaemonObservability::from_config(&config).expect("observability");
-    let snapshot = RuntimeObservabilitySnapshot {
-        workspaces: vec![workspace_snapshot("workspace-1", Some(upperdir))],
+fn adapter_maps_concrete_runtime_snapshot_into_neutral_input() {
+    let snapshot = crate::observability::adapter::map_snapshot(RuntimeObservabilitySnapshot {
+        workspaces: vec![workspace_snapshot("workspace-1", None)],
         active_namespace_executions: vec![RuntimeNamespaceExecutionSnapshot {
             namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
         }],
-        partial_errors: vec!["partial workspace projection failed".to_owned()],
-    };
+        partial_errors: vec!["partial projection".to_owned()],
+    });
 
-    observability.emit_resource_samples(&config, &snapshot);
-    let value = observability.snapshot_value(snapshot);
-
-    assert_eq!(value["sandbox_id"], "sandbox-1");
-    assert_eq!(value["lifecycle_state"], "ready");
-    assert_eq!(value["availability"], "partial");
-    assert_eq!(value["errors"][0], "partial workspace projection failed");
-    assert_eq!(value["workspaces"][0]["workspace_id"], "workspace-1");
+    assert_eq!(snapshot.partial_errors, ["partial projection"]);
+    assert_eq!(snapshot.workspaces[0].workspace_id, "workspace-1");
+    assert_eq!(snapshot.workspaces[0].network_profile, "shared");
+    assert_eq!(snapshot.workspaces[0].finalize_policy, "no_op");
+    assert_eq!(snapshot.workspaces[0].namespace_fd_count, Some(3));
+    assert_eq!(snapshot.workspaces[0].base_root_hash.as_deref(), Some("root"));
+    assert_eq!(snapshot.workspaces[0].layer_count, Some(1));
     assert_eq!(
-        value["workspaces"][0]["active_namespace_executions"][0]["namespace_execution_id"],
+        snapshot.active_namespace_executions[0].namespace_execution_id,
         "namespace_execution_1"
     );
     assert_eq!(
-        value["workspaces"][0]["resources"]["latest"]["metrics"]["disk_bytes"],
-        3
+        snapshot.active_namespace_executions[0].workspace_session_id,
+        "workspace-1"
     );
-    Ok(())
+    assert_eq!(
+        snapshot.active_namespace_executions[0].operation_name,
+        "exec_command"
+    );
 }
 
 #[test]
@@ -271,142 +240,6 @@ async fn get_observability_wire_op_dispatches_snapshot_and_layerstack() -> TestR
 }
 
 #[tokio::test]
-async fn events_view_dispatch_returns_parsed_events_by_name() -> TestResult {
-    let root = test_root("events-view");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    write_log_lines(
-        &server.config,
-        &[
-            r#"{"ts":1719500000009,"kind":"event","trace":"req-7f3","parent":"d-2","name":"lease.acquired","attrs":{"revision":"r5"}}"#,
-            r#"{"ts":1719500004320,"kind":"event","trace":"req-7f3","parent":"d-8","name":"lease.released","attrs":{"revision":"r5"}}"#,
-        ],
-    )?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes(
-                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
-                "req-events",
-                json!({ "view": "events", "name": "lease.released" }),
-            )?,
-            false,
-        )
-        .await;
-    let response = response.as_json_value();
-
-    assert_eq!(response["view"], "events");
-    let events = response["events"].as_array().expect("events array");
-    assert_eq!(events.len(), 1, "only the matching name is returned");
-    assert_eq!(events[0]["name"], "lease.released");
-    assert_eq!(events[0]["attrs"]["revision"], "r5");
-    Ok(())
-}
-
-#[tokio::test]
-async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
-    let root = test_root("trace-view");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    write_log_lines(
-        &server.config,
-        &[
-            r#"{"ts":1719500001050,"kind":"span","trace":"req-7f3","span":"d-1","parent":"d-0","name":"command.exec","dur_ms":1048.0,"status":"completed","attrs":{"finalize_policy":"publish_then_destroy","session_created":true}}"#,
-            r#"{"ts":1719500001051,"kind":"span","trace":"req-7f3","span":"d-0","name":"daemon.dispatch","dur_ms":1051.0,"status":"completed","attrs":{"op":"exec_command"}}"#,
-            r#"{"ts":1719500000042,"kind":"span","trace":"req-7f3","span":"d-2","parent":"d-1","name":"workspace_session.create","dur_ms":39.0,"status":"completed","attrs":{}}"#,
-            r#"{"ts":1719500000009,"kind":"event","trace":"req-7f3","parent":"d-2","name":"lease.acquired","attrs":{"revision":"r5"}}"#,
-        ],
-    )?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes(
-                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
-                "req-trace",
-                json!({ "view": "trace", "trace_id": "req-7f3" }),
-            )?,
-            false,
-        )
-        .await;
-    let response = response.as_json_value();
-
-    assert_eq!(response["view"], "trace");
-    assert_eq!(response["trace"], "req-7f3");
-    let spans = response["spans"].as_array().expect("spans array");
-    assert_eq!(spans.len(), 1, "single daemon.dispatch root");
-    assert_eq!(spans[0]["span"]["name"], "daemon.dispatch");
-    let command = &spans[0]["children"][0];
-    assert_eq!(command["span"]["name"], "command.exec");
-    let create = &command["children"][0];
-    assert_eq!(create["span"]["name"], "workspace_session.create");
-    assert_eq!(create["events"][0]["event"]["name"], "lease.acquired");
-    Ok(())
-}
-
-#[tokio::test]
-async fn events_view_dispatch_last_n_keeps_newest_matched() -> TestResult {
-    let root = test_root("events-last-n");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    write_log_lines(
-        &server.config,
-        &[
-            r#"{"ts":1000,"kind":"event","trace":"req-1","parent":"d-1","name":"lease.acquired","attrs":{}}"#,
-            r#"{"ts":2000,"kind":"event","trace":"req-1","parent":"d-2","name":"lease.released","attrs":{}}"#,
-            r#"{"ts":3000,"kind":"event","trace":"req-2","parent":"d-3","name":"lease.acquired","attrs":{}}"#,
-        ],
-    )?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes(
-                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
-                "req-last-n",
-                json!({ "view": "events", "last_n": 2 }),
-            )?,
-            false,
-        )
-        .await;
-    let response = response.as_json_value();
-
-    let events = response["events"].as_array().expect("events array");
-    assert_eq!(events.len(), 2, "last_n caps the fold to the newest N");
-    // The fold is oldest-first; last_n drops the oldest, keeping ts 2000 and 3000.
-    assert_eq!(events[0]["ts"], 2000);
-    assert_eq!(events[1]["ts"], 3000);
-    Ok(())
-}
-
-#[tokio::test]
-async fn trace_view_dispatch_last_resolves_most_recent_root() -> TestResult {
-    let root = test_root("trace-last");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    write_log_lines(
-        &server.config,
-        &[
-            r#"{"ts":1000,"kind":"span","trace":"req-old","span":"d-0","name":"daemon.dispatch","dur_ms":100.0,"status":"completed","attrs":{}}"#,
-            r#"{"ts":2000,"kind":"span","trace":"req-new","span":"d-1","name":"daemon.dispatch","dur_ms":100.0,"status":"completed","attrs":{}}"#,
-        ],
-    )?;
-
-    let response = server
-        .dispatch_bytes(
-            request_bytes(
-                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
-                "req-trace-last",
-                json!({ "view": "trace", "trace_id": "last" }),
-            )?,
-            false,
-        )
-        .await;
-    let response = response.as_json_value();
-
-    // "last" resolves to the root span with the latest start, not a trace named "last".
-    assert_eq!(response["trace"], "req-new");
-    let spans = response["spans"].as_array().expect("spans array");
-    assert_eq!(spans.len(), 1);
-    assert_eq!(spans[0]["span"]["trace"], "req-new");
-    Ok(())
-}
-
-#[tokio::test]
 async fn observability_emit_does_not_change_operation_responses() -> TestResult {
     let root = test_root("emit-isolated");
     let server = daemon_server(&root, Some("sandbox-1"))?;
@@ -443,15 +276,6 @@ fn latest_sample(config: &ServerConfig, scope: &str) -> Option<SampleDelta> {
     )
     .samples(scope, BIG_WINDOW_MS)
     .pop()
-}
-
-fn write_log_lines(config: &ServerConfig, lines: &[&str]) -> TestResult {
-    let paths = ObservabilityPaths::from_socket_path(&config.socket_path)?;
-    if let Some(parent) = paths.log_path().parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(paths.log_path(), format!("{}\n", lines.join("\n")))?;
-    Ok(())
 }
 
 fn empty_snapshot() -> RuntimeObservabilitySnapshot {

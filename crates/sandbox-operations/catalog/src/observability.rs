@@ -5,7 +5,11 @@ mod layerstack;
 mod snapshot;
 mod trace;
 
+pub use cgroup::CGROUP_SPEC;
+pub use events::EVENTS_SPEC;
+pub use layerstack::LAYERSTACK_SPEC;
 pub use snapshot::SNAPSHOT_SPEC;
+pub use trace::TRACE_SPEC;
 
 use sandbox_operation_contract::{
     ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,

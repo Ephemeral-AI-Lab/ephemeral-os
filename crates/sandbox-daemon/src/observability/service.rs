@@ -1,28 +1,22 @@
-//! Daemon observability: emit periodic `obs.sample` lines through the leaf
-//! `Observer`, rotate the one log when it grows past the configured cap, and
-//! reshape live runtime state + the latest samples into the `snapshot`/`cgroup`
-//! views. No storage engine, no write-time deltas — deltas are read-time.
+//! Daemon observability sampling, rotation, and lifecycle. `collect()` emits a
+//! compact append-only log through the leaf `sandbox-observability` crate.
 
+use std::path::Path;
 use std::sync::{Mutex, PoisonError};
 
 use sandbox_config::configs::observability::ViewsConfig;
 use sandbox_observability::collect::cgroup::CgroupSample;
 use sandbox_observability::collect::disk;
 use sandbox_observability::{
-    record, sample_layerstack, Event, ObservabilityPaths, Observer, ObserverConfig, RawFilter,
-    Reader, SampleDelta, Sink, SpanNode, WalkBudget,
+    record, sample_layerstack, ObservabilityPaths, Observer, ObserverConfig, Reader, Sink,
+    WalkBudget,
 };
 use sandbox_runtime::{
-    RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
-    SandboxRuntimeOperations,
+    RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, SandboxRuntimeOperations,
 };
 use serde_json::{json, Map, Value};
 
 use crate::rpc::ServerConfig;
-
-/// The window used to fetch the single newest sample of a scope, independent of
-/// the bounded trend window.
-const LATEST_SAMPLE_WINDOW_MS: i64 = i64::MAX / 4;
 
 /// Metric keys the daemon emits as monotonic counters; the `Reader` Δs exactly
 /// these at read time.
@@ -136,151 +130,20 @@ impl DaemonObservability {
         let _ = std::fs::rename(self.paths.log_path(), self.paths.rotated_log_path());
     }
 
-    fn reader(&self) -> Reader {
+    pub(super) fn reader(&self) -> Reader {
         Reader::new(
             self.paths.log_path().to_path_buf(),
             self.paths.rotated_log_path().to_path_buf(),
         )
     }
 
-    /// The live `snapshot` view: entity state from the runtime registry joined
-    /// with the latest `Sample` per scope. The log is read only for "resources
-    /// (latest)"; entity state never comes from it.
-    pub(crate) fn snapshot_value(&self, snapshot: RuntimeObservabilitySnapshot) -> Value {
-        let reader = self.reader();
-        let RuntimeObservabilitySnapshot {
-            workspaces,
-            active_namespace_executions,
-            partial_errors,
-        } = snapshot;
-        let availability = if partial_errors.is_empty() {
-            "available"
-        } else {
-            "partial"
-        };
-        json!({
-            "sandbox_id": self.sandbox_id,
-            "lifecycle_state": "ready",
-            "availability": availability,
-            "sampled_at_unix_ms": super::unix_ms(),
-            "errors": partial_errors,
-            "daemon": {
-                "daemon_pid": std::process::id(),
-                "runtime_dir": self.paths.daemon_runtime_dir().to_string_lossy(),
-            },
-            "resources": resource_bundle(&reader, "sandbox"),
-            "workspaces": workspaces
-                .iter()
-                .map(|workspace| workspace_value(&reader, workspace, &active_namespace_executions))
-                .collect::<Vec<_>>(),
-        })
+    pub(super) fn sandbox_id(&self) -> &str {
+        &self.sandbox_id
     }
 
-    /// The `cgroup` view: the per-scope sample series with read-time deltas.
-    pub(crate) fn cgroup_series(&self, scope: &str, window_ms: u64) -> Value {
-        let series = self
-            .reader()
-            .samples(scope, window_to_i64(window_ms))
-            .iter()
-            .map(sample_delta_value)
-            .collect::<Vec<_>>();
-        Value::Array(series)
+    pub(super) fn runtime_dir(&self) -> &Path {
+        self.paths.daemon_runtime_dir()
     }
-
-    /// Stack samples within `window_ms`, for the layerstack `--window-ms` trend.
-    pub(crate) fn stack_trend(&self, window_ms: u64) -> Vec<Value> {
-        self.reader()
-            .samples("stack", window_to_i64(window_ms))
-            .iter()
-            .map(|delta| {
-                let mut value = delta.metrics.clone();
-                value.insert("ts".to_owned(), json!(delta.ts));
-                Value::Object(value)
-            })
-            .collect()
-    }
-
-    /// The newest workspace upper-bytes reading, for the per-session layerstack
-    /// view.
-    pub(crate) fn latest_upper_bytes(&self, scope: &str) -> Option<u64> {
-        latest_sample(&self.reader(), scope)?
-            .metrics
-            .get("disk_bytes")?
-            .as_u64()
-    }
-
-    /// The `events` view: parsed `Event` records kept by the same filter shape.
-    pub(crate) fn events(&self, filter: RawFilter) -> Vec<Event> {
-        self.reader().events(filter)
-    }
-
-    /// The `trace` view: one flow folded into a span forest from the log.
-    pub(crate) fn trace(&self, id: &str) -> Vec<SpanNode> {
-        self.reader().trace(id)
-    }
-
-    /// Resolve the `trace --trace-id last` sentinel: the id of the most recent
-    /// root trace in the log, or `None` when no root span has been recorded.
-    pub(crate) fn latest_root_trace(&self) -> Option<String> {
-        self.reader().latest_root_trace()
-    }
-}
-
-fn window_to_i64(window_ms: u64) -> i64 {
-    i64::try_from(window_ms).unwrap_or(i64::MAX)
-}
-
-fn latest_sample(reader: &Reader, scope: &str) -> Option<SampleDelta> {
-    reader.samples(scope, LATEST_SAMPLE_WINDOW_MS).pop()
-}
-
-fn resource_bundle(reader: &Reader, scope: &str) -> Value {
-    let latest = latest_sample(reader, scope)
-        .map(|delta| sample_delta_value(&delta))
-        .unwrap_or(Value::Null);
-    json!({ "latest": latest, "history": [] })
-}
-
-fn sample_delta_value(delta: &SampleDelta) -> Value {
-    json!({
-        "ts": delta.ts,
-        "sample_delta_ms": delta.sample_delta_ms,
-        "metrics": delta.metrics,
-        "deltas": delta.deltas,
-    })
-}
-
-fn workspace_value(
-    reader: &Reader,
-    workspace: &RuntimeWorkspaceSnapshot,
-    executions: &[RuntimeNamespaceExecutionSnapshot],
-) -> Value {
-    let scope = workspace.workspace_id.0.as_str();
-    json!({
-        "workspace_id": scope,
-        "lifecycle_state": "active",
-        "network_profile": workspace.network.as_str(),
-        "finalize_policy": workspace.finalize_policy.as_str(),
-        "layers": {
-            "base_root_hash": workspace.base_root_hash,
-            "layer_count": workspace.layer_count,
-        },
-        "namespace_fd_count": workspace.namespace_fd_count,
-        "resources": resource_bundle(reader, scope),
-        "active_namespace_executions": executions
-            .iter()
-            .filter(|execution| execution.workspace_session_id.0 == scope)
-            .map(namespace_execution_value)
-            .collect::<Vec<_>>(),
-    })
-}
-
-fn namespace_execution_value(execution: &RuntimeNamespaceExecutionSnapshot) -> Value {
-    json!({
-        "namespace_execution_id": execution.namespace_execution_id.0,
-        "operation": execution.operation_name,
-        "lifecycle_state": "running",
-    })
 }
 
 fn sandbox_cgroup_sample(config: &ServerConfig) -> CgroupSample {
