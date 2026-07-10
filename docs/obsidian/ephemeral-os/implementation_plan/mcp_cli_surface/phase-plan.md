@@ -35,13 +35,12 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
 | 2. Consolidate the CLI package | complete | 1 | one package, three separately grantable binaries |
 | 3. Add the MCP adapter | complete | 1, 2 | one set-configured stdio server with three registrations |
-| 4. Replace export HTTP streaming | in progress | 1 | `export_changes` uses authenticated RPC chunk paging only |
+| 4. Replace export HTTP streaming | complete | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | not started | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 3 are complete. Phase 4 is in progress; no later phase has
-started.
+Phases 0 through 4 are complete. Phase 5 has not started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -456,7 +455,7 @@ crates/sandbox-cli/src/core/request_builder.rs
 
 ## Phase 4 — Replace export HTTP streaming with gateway RPC chunks
 
-**Status:** in progress
+**Status:** complete
 
 **Depends on:** Phase 1
 
@@ -465,16 +464,16 @@ before removing the endpoint itself.
 
 ### Scope and tasks
 
-- [ ] Make `export_changes` always start the internal daemon export operation
+- [x] Make `export_changes` always start the internal daemon export operation
   and read all bytes via authenticated gateway `read_export_chunk` paging.
-- [ ] Retain byte limits, expected-total/completeness checks, cleanup, and
+- [x] Retain byte limits, expected-total/completeness checks, cleanup, and
   atomic destination application semantics.
-- [ ] Remove manager HTTP export client logic: daemon HTTP URL construction,
+- [x] Remove manager HTTP export client logic: daemon HTTP URL construction,
   stream token/header selection, response-head parsing, bounded HTTP socket
   reader, and HTTP stream error path.
-- [ ] Keep public operation name/output contract unchanged: `export_changes`
+- [x] Keep public operation name/output contract unchanged: `export_changes`
   is a published delta, not a full workspace export.
-- [ ] Add export tests for normal paging, final chunk, missing/truncated chunk,
+- [x] Add export tests for normal paging, final chunk, missing/truncated chunk,
   archive result, directory result, and atomic failure behaviour.
 
 ### Files expected to change
@@ -488,27 +487,59 @@ related manager operation/export tests
 
 ### Acceptance criteria
 
-- [ ] `export_changes` succeeds with no usable `daemon_http` export endpoint
+- [x] `export_changes` succeeds with no usable `daemon_http` export endpoint
   and without any HTTP export request.
-- [ ] Directory export still applies newest-wins/whiteout/opaque published
+- [x] Directory export still applies newest-wins/whiteout/opaque published
   delta semantics to the supplied destination.
-- [ ] Archive export still emits the documented delta result and byte/file
+- [x] Archive export still emits the documented delta result and byte/file
   metadata.
-- [ ] A missing, malformed, or truncated RPC chunk fails before destination
+- [x] A missing, malformed, or truncated RPC chunk fails before destination
   replacement/application can leave partial visible output.
-- [ ] No code in `sandbox-manager` references `/export/`, export stream token
+- [x] No code in `sandbox-manager` references `/export/`, export stream token
   headers, or daemon HTTP export client helpers.
-- [ ] Focused manager export tests pass.
+- [x] Focused manager export tests pass.
 
 ### Evidence to record
 
-```text
-Commit/PR:
-Commands:
-Normal/chunk-failure test evidence:
-Search proving HTTP export client removal:
-Known deviations/waivers:
-```
+- Commit/PR: implementation commit `0644fd64b` on the repository's direct
+  `main` workflow; no PR was created.
+- Commands/results:
+  - `cargo test -p sandbox-manager --test manager_export` — 30 passed.
+  - `cargo +1.85.0 test -p sandbox-manager --test manager_export` — 30
+    passed on the repository MSRV.
+  - `cargo test -p sandbox-manager` — all package test targets passed.
+  - `cargo test -p sandbox-runtime --test layerstack_export
+    export_spools_and_pages_to_eof -- --exact` — passed; the assertion proves
+    exact byte reassembly, final-page spool unlink, post-EOF rejection, and
+    lease release.
+  - `cargo +1.85.0 clippy -p sandbox-manager --all-targets -- -D warnings`,
+    `cargo fmt -p sandbox-manager -- --check`, and `git diff --check` — passed.
+- Normal/chunk-failure evidence: the fake daemon proves exact multi-page
+  offsets and final EOF, successful export with a dead `daemon_http` endpoint
+  and ignored legacy stream token, directory newest-wins/whiteout/opaque
+  application, raw and decompressed archive results, and documented metadata.
+  Table-driven failures cover missing fields, invalid base64, offset/length/
+  total mismatch, missing or malformed EOF, empty non-final pages, daemon
+  chunk faults, early EOF, overrun, absent EOF, missing/malformed/oversized
+  `spool_bytes`, and complete invalid archives. Chunk/start failures occur
+  before destination preparation; invalid archives preserve seeded directory
+  and archive outputs and leave no temporary sibling.
+- HTTP-client removal proof: both
+  `rg -n '(/export/|EXPORT_STREAM_|x-eos-export-token|SpoolStreamReader|open_spool_stream|stream_delivery|read_stream_head|parse_stream_head)' crates/sandbox-manager/src`
+  and the narrower `daemon_http|SandboxHttpEndpoint|TcpStream|EXPORT_STREAM_`
+  search in `export_changes.rs` returned no matches. Positive search finds
+  only `export_layerstack` and `read_export_chunk` composition in the manager
+  implementation and tests.
+- Cleanup/atomicity note: normal final-page reads delete the runtime registry
+  entry and spool; failures before EOF retain the sealed spool until the
+  existing daemon boot reap, as required by the binding contract. Directory
+  mode validates the complete archive before mutation; archive mode retains
+  sibling-temp plus atomic-rename replacement.
+- Independent contract/security review: pass with no blocking findings.
+- Known deviations/waivers: none. Daemon HTTP export route/protocol deletion
+  remains intentionally gated on Phase 6, and the Docker gateway rebuild
+  remains reserved for Phase 7. Concurrent configuration, runtime, daemon,
+  and Obsidian workspace edits were preserved and excluded from this commit.
 
 ## Phase 5 — Move console operation callers to gateway RPC
 
@@ -724,6 +755,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 4 | Completed authenticated RPC-only export paging with strict start/page completeness checks, pre-mutation failure handling, and removal of the manager HTTP export client. | commit `0644fd64b`; 30 focused manager export tests on default and Rust 1.85 toolchains, full manager suite, runtime EOF cleanup proof, lint/format/search checks, and independent review |
 | 2026-07-10 | 4 | Started the manager export transport migration after confirming the Phase 1 gate and re-reading the binding export, RPC, CLI, MCP, and daemon HTTP contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 3 | Completed the fixed-set catalog-driven MCP adapter, shared value request construction, structured error/result boundary, and real stdio/fake-gateway coverage for all three registrations. | commits `7bee540ca`, `e15839cda`; 75 focused tests, Rust 1.85 check, exact fixture/routing assertions, lint, formatting, and dependency-boundary proof |
 | 2026-07-10 | 3 | Started the fixed-set MCP adapter after confirming the Phase 1 and 2 gates and re-reading all binding MCP, CLI, HTTP, operation, and implementation contracts. | implementation and direct acceptance proof pending |
