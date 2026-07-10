@@ -1,10 +1,10 @@
 use sandbox_operation_contract::OperationRequest;
-use sandbox_protocol::{ProtocolLimits, GATEWAY_AUTH_FIELD};
+use sandbox_protocol::GATEWAY_AUTH_FIELD;
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
-const MAX_RESPONSE_BYTES: usize = ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES;
+use crate::MAX_REQUEST_BYTES;
 
 #[derive(Debug)]
 pub struct GatewayClient {
@@ -41,17 +41,10 @@ impl GatewayClient {
     where
         F: FnMut(&str),
     {
+        let request_line = request_line(request, self.auth_token.as_deref(), stream_logs)?;
         let mut stream = TcpStream::connect(self.addr.as_str())
             .await
             .map_err(GatewayClientError::Transport)?;
-        let mut request_value = serde_json::to_value(request).map_err(GatewayClientError::Json)?;
-        if let (Some(token), Value::Object(map)) = (&self.auth_token, &mut request_value) {
-            map.insert(GATEWAY_AUTH_FIELD.to_owned(), Value::String(token.clone()));
-        }
-        if let Value::Object(map) = &mut request_value {
-            map.insert("_stream_logs".to_owned(), Value::Bool(stream_logs));
-        }
-        let request_line = json_line(&request_value);
         stream
             .write_all(&request_line)
             .await
@@ -90,11 +83,36 @@ impl std::fmt::Display for GatewayClientError {
 
 impl std::error::Error for GatewayClientError {}
 
+fn request_line(
+    request: &OperationRequest,
+    auth_token: Option<&str>,
+    stream_logs: bool,
+) -> Result<Vec<u8>, GatewayClientError> {
+    let mut request_value = serde_json::to_value(request).map_err(GatewayClientError::Json)?;
+    if let Value::Object(map) = &mut request_value {
+        if let Some(token) = auth_token {
+            map.insert(
+                GATEWAY_AUTH_FIELD.to_owned(),
+                Value::String(token.to_owned()),
+            );
+        }
+        map.insert("_stream_logs".to_owned(), Value::Bool(stream_logs));
+    }
+    let mut line = serde_json::to_vec(&request_value).map_err(GatewayClientError::Json)?;
+    line.push(b'\n');
+    if line.len() > MAX_REQUEST_BYTES {
+        return Err(GatewayClientError::Protocol(format!(
+            "gateway request exceeded {MAX_REQUEST_BYTES} bytes"
+        )));
+    }
+    Ok(line)
+}
+
 async fn read_response_line<S>(stream: S) -> Result<Value, GatewayClientError>
 where
     S: AsyncRead + Unpin,
 {
-    let limit = u64::try_from(MAX_RESPONSE_BYTES)
+    let limit = u64::try_from(MAX_REQUEST_BYTES)
         .unwrap_or(u64::MAX)
         .saturating_add(1);
     let mut reader = BufReader::new(stream.take(limit));
@@ -103,21 +121,7 @@ where
         .read_until(b'\n', &mut line)
         .await
         .map_err(GatewayClientError::Transport)?;
-    if line.is_empty() {
-        return Err(GatewayClientError::Protocol(
-            "gateway returned an empty response".to_owned(),
-        ));
-    }
-    if line.len() > MAX_RESPONSE_BYTES {
-        return Err(GatewayClientError::Protocol(format!(
-            "gateway response exceeded {MAX_RESPONSE_BYTES} bytes"
-        )));
-    }
-    if !line.ends_with(b"\n") {
-        return Err(GatewayClientError::Protocol(
-            "gateway response was not newline terminated".to_owned(),
-        ));
-    }
+    validate_response_line(&line)?;
     serde_json::from_slice::<Value>(&line).map_err(GatewayClientError::Json)
 }
 
@@ -138,22 +142,32 @@ where
                 "gateway closed before returning a final response".to_owned(),
             ));
         }
-        if line.len() > MAX_RESPONSE_BYTES {
-            return Err(GatewayClientError::Protocol(format!(
-                "gateway response exceeded {MAX_RESPONSE_BYTES} bytes"
-            )));
-        }
-        if !line.ends_with(b"\n") {
-            return Err(GatewayClientError::Protocol(
-                "gateway response was not newline terminated".to_owned(),
-            ));
-        }
+        validate_response_line(&line)?;
         if let Some(log) = parse_cli_log_line(&line)? {
             on_log(&log);
             continue;
         }
         return serde_json::from_slice::<Value>(&line).map_err(GatewayClientError::Json);
     }
+}
+
+fn validate_response_line(line: &[u8]) -> Result<(), GatewayClientError> {
+    if line.is_empty() {
+        return Err(GatewayClientError::Protocol(
+            "gateway returned an empty response".to_owned(),
+        ));
+    }
+    if line.len() > MAX_REQUEST_BYTES {
+        return Err(GatewayClientError::Protocol(format!(
+            "gateway response exceeded {MAX_REQUEST_BYTES} bytes"
+        )));
+    }
+    if !line.ends_with(b"\n") {
+        return Err(GatewayClientError::Protocol(
+            "gateway response was not newline terminated".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 fn parse_cli_log_line(line: &[u8]) -> Result<Option<String>, GatewayClientError> {
@@ -169,10 +183,4 @@ fn parse_cli_log_line(line: &[u8]) -> Result<Option<String>, GatewayClientError>
     serde_json::from_slice(&line[prefix.len()..line.len() - 2])
         .map(Some)
         .map_err(GatewayClientError::Json)
-}
-
-fn json_line(value: &Value) -> Vec<u8> {
-    let mut line = serde_json::to_vec(value).unwrap_or_default();
-    line.push(b'\n');
-    line
 }

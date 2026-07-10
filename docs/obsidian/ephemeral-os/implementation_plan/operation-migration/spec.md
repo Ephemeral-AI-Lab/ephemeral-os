@@ -432,6 +432,7 @@ flowchart TD
     MCP --> Catalog
     Console["sandbox-console"] --> Client
     Console --> Catalog
+    Console --> Config
 
     Gateway["sandbox-gateway"] --> Protocol
     Gateway --> ManagerApp
@@ -463,7 +464,7 @@ directly.
 | `sandbox-operation-client` | contract; protocol | catalog; applications; CLI/MCP/console; sandbox-config |
 | `sandbox-cli` | client; contract; catalog (own-domain features only, forwarded per binary feature) | protocol; applications; MCP/console; sandbox-config |
 | `sandbox-mcp` | client; contract; catalog (all domain features) | protocol; applications; CLI/console |
-| `sandbox-console` | client; contract; catalog (all domain features) | protocol; applications; CLI/MCP; direct daemon RPC |
+| `sandbox-console` | client; contract; catalog (all domain features); sandbox-config (console YAML loading and validation only) | protocol; applications; CLI/MCP; direct daemon RPC |
 | `sandbox-gateway` | contract; catalog; protocol; manager application; provider-docker; sandbox-config | CLI/MCP/console; client; runtime/observability applications |
 | `sandbox-daemon` | contract; catalog; protocol; runtime application; observability application; `sandbox-observability`; `sandbox-runtime-namespace-process`; sandbox-config; dev: layerstack, workspace | CLI/MCP/console; client; manager application |
 | `sandbox-provider-docker` | manager application ports/models; protocol (readiness helper only); sandbox-config; `sandbox-runtime-layerstack` | CLI/MCP/console; client; daemon; application handler internals |

@@ -1,25 +1,13 @@
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
-use sandbox_cli::core::{GatewayConfig, GatewayConfigOverrides};
-use sandbox_operation_contract::OperationDomain;
+use sandbox_operation_client::{ConfigError, GatewayConfig, GatewayConfigOverrides};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum OperationSet {
     Management,
     Runtime,
     Observability,
-}
-
-impl OperationSet {
-    #[must_use]
-    pub const fn execution_space(self) -> OperationDomain {
-        match self {
-            Self::Management => OperationDomain::Manager,
-            Self::Runtime => OperationDomain::Runtime,
-            Self::Observability => OperationDomain::Observability,
-        }
-    }
 }
 
 #[derive(Debug, Parser)]
@@ -36,11 +24,11 @@ pub struct Cli {
 }
 
 impl Cli {
-    /// Resolve explicit gateway overrides through the shared CLI config path.
+    /// Resolve explicit gateway overrides through the shared client config path.
     ///
     /// # Errors
     /// Returns an error for an empty gateway address or authentication token.
-    pub fn discover_gateway(&self) -> Result<GatewayConfig, sandbox_cli::core::ConfigError> {
+    pub fn discover_gateway(&self) -> Result<GatewayConfig, ConfigError> {
         GatewayConfig::discover(GatewayConfigOverrides {
             gateway_socket_path: self.gateway_socket_path.clone(),
             gateway_auth_token: self.gateway_auth_token.clone(),

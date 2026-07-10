@@ -7,6 +7,7 @@ use rmcp::model::{
 };
 use rmcp::service::{RequestContext, RoleServer};
 use rmcp::{ErrorData, ServerHandler};
+use sandbox_operation_client::{GatewayClient, RequestBuildError};
 
 use crate::schema::{tool_definitions, ToolDefinition};
 use crate::tools::ToolDispatcher;
@@ -25,8 +26,8 @@ impl SandboxMcpServer {
     pub fn new(
         set: crate::config::OperationSet,
         catalog: sandbox_operation_contract::OperationCatalogDocument,
-        client: sandbox_cli::core::client::GatewayClient,
-    ) -> Result<Self, sandbox_cli::core::request_builder::RequestBuildError> {
+        client: GatewayClient,
+    ) -> Result<Self, RequestBuildError> {
         let tools = tool_definitions(set, &catalog)?
             .into_iter()
             .map(mcp_tool)

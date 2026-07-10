@@ -1,4 +1,4 @@
-//! Config discovery for the human-facing sandbox CLI clients.
+//! Gateway client discovery from explicit overrides and environment variables.
 
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -33,7 +33,7 @@ impl std::fmt::Display for ConfigError {
 impl std::error::Error for ConfigError {}
 
 impl GatewayConfig {
-    /// Discover the CLI client config from explicit overrides and environment.
+    /// Discover gateway client configuration from overrides and environment.
     ///
     /// # Errors
     /// Returns an error when a configured socket path or auth token is invalid.
@@ -41,7 +41,7 @@ impl GatewayConfig {
         Self::discover_with(overrides, |key| std::env::var_os(key))
     }
 
-    /// Discover the CLI client config using an injected environment reader.
+    /// Discover gateway client configuration using an injected environment reader.
     ///
     /// # Errors
     /// Returns an error when a configured socket path or auth token is invalid.

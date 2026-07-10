@@ -1,7 +1,5 @@
 //! Typed schemas for sections of `eos-sandbox/config/prd.yml`.
 
-pub mod cli;
-
 pub mod console;
 
 pub mod daemon;

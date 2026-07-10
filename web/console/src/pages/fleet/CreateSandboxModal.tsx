@@ -95,7 +95,7 @@ export function CreateSandboxModal({
                 htmlFor={`create-${arg.name}`}
                 className="mb-1 block text-xs font-medium text-ink-mid"
               >
-                <span className="font-mono">{arg.cli?.flag ?? arg.name}</span>
+                <span className="font-mono">{arg.name}</span>
                 {arg.required ? <span className="text-danger"> *</span> : null}
               </label>
               <Input

@@ -1,12 +1,12 @@
 //! Console configuration: loopback bind address, gateway endpoint and auth
-//! token (via the shared CLI discovery), the SPA asset directory, and the
-//! server timeouts from the optional `console` YAML section.
+//! token (via the shared operation client discovery), the SPA asset directory,
+//! and the server timeouts from the optional `console` YAML section.
 
 use std::path::PathBuf;
 use std::time::Duration;
 
-use sandbox_cli::core::{GatewayConfig, GatewayConfigOverrides};
 use sandbox_config::configs::console::ConsoleConfig as ConsoleSection;
+use sandbox_operation_client::{GatewayConfig, GatewayConfigOverrides};
 
 pub const SANDBOX_CONSOLE_BIND_ENV: &str = "SANDBOX_CONSOLE_BIND";
 pub const SANDBOX_CONSOLE_ASSETS_ENV: &str = "SANDBOX_CONSOLE_ASSETS";

@@ -1,4 +1,4 @@
-use sandbox_cli::core::request_builder::{catalog_arg_default, RequestBuildError};
+use sandbox_operation_client::{catalog_arg_default, RequestBuildError};
 use sandbox_operation_contract::{
     ArgKind, ArgSpecDocument, OperationCatalogDocument, OperationSpecDocument,
 };

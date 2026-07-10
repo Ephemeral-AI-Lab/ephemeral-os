@@ -1,6 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 
 export type ArgKind = "string" | "integer" | "float" | "path" | "json_array";
+export type OperationDomain = "manager" | "runtime" | "observability";
+export type OperationScopePolicy = "system" | "sandbox_required" | "system_or_sandbox";
+export type OperationScopeKind = "system" | "sandbox";
+export type OperationExecutionOwner = "manager" | "runtime" | "observability";
+export type OperationVisibility = "public" | "internal";
 
 export interface ArgSpecDoc {
   name: string;
@@ -8,7 +13,6 @@ export interface ArgSpecDoc {
   required: boolean;
   help: string;
   default: string | null;
-  cli: { flag: string | null; positional: string | null } | null;
 }
 
 export interface OperationSpecDoc {
@@ -17,12 +21,22 @@ export interface OperationSpecDoc {
   summary: string;
   description: string;
   args: ArgSpecDoc[];
+  related: string[];
+}
+
+export interface OperationRouteDoc {
+  operation: string;
+  scope_policy: OperationScopePolicy;
+  scope_kind: OperationScopeKind;
+  execution_owner: OperationExecutionOwner;
+  visibility: OperationVisibility;
 }
 
 export interface CatalogDoc {
-  operation_execution_space: string;
-  families: { id: string; title: string; summary: string }[];
+  operation_execution_space: OperationDomain;
+  families: { id: string; title: string; summary: string; description: string }[];
   operations: OperationSpecDoc[];
+  routes: OperationRouteDoc[];
 }
 
 export interface Catalogs {

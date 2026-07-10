@@ -1502,13 +1502,11 @@ name = "sandbox-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
- "sandbox-config",
  "sandbox-operation-catalog",
+ "sandbox-operation-client",
  "sandbox-operation-contract",
- "sandbox-protocol",
  "serde_json",
  "tokio",
- "uuid",
 ]
 
 [[package]]
@@ -1531,11 +1529,10 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
- "sandbox-cli",
  "sandbox-config",
  "sandbox-operation-catalog",
+ "sandbox-operation-client",
  "sandbox-operation-contract",
- "sandbox-protocol",
  "serde_json",
  "tokio",
  "uuid",
@@ -1608,10 +1605,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "rmcp",
- "sandbox-cli",
  "sandbox-operation-catalog",
+ "sandbox-operation-client",
  "sandbox-operation-contract",
- "sandbox-protocol",
  "serde_json",
  "tokio",
 ]
@@ -1630,6 +1626,17 @@ name = "sandbox-operation-catalog"
 version = "0.1.0"
 dependencies = [
  "sandbox-operation-contract",
+]
+
+[[package]]
+name = "sandbox-operation-client"
+version = "0.1.0"
+dependencies = [
+ "sandbox-operation-contract",
+ "sandbox-protocol",
+ "serde_json",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

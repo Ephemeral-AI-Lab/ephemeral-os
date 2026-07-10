@@ -1,4 +1,5 @@
 use http::StatusCode;
+use sandbox_operation_catalog::internal::migration;
 use serde_json::Value;
 
 use crate::support;
@@ -81,6 +82,21 @@ async fn catalog_returns_all_three_execution_spaces() {
         .find(|arg| arg["name"] == "edits")
         .expect("file_edit edits argument");
     assert_eq!(edits["kind"], "json_array");
+
+    for catalog in ["management", "runtime", "observability"] {
+        assert!(body[catalog]["routes"].is_array());
+        assert!(body[catalog]["operations"]
+            .as_array()
+            .expect("catalog operations")
+            .iter()
+            .flat_map(|operation| { operation["args"].as_array().expect("operation arguments") })
+            .all(|arg| arg.get("cli").is_none()));
+        assert!(body[catalog]["routes"]
+            .as_array()
+            .expect("catalog routes")
+            .iter()
+            .all(|route| route["operation"] != migration::ROUTE.operation));
+    }
 
     assert_eq!(gateway.request_count(), 0, "catalog never hits the gateway");
 }

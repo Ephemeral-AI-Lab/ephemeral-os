@@ -8,7 +8,10 @@ use std::time::{Duration, Instant};
 
 use sandbox_mcp::catalog::selected_catalog;
 use sandbox_mcp::config::OperationSet;
-use sandbox_operation_contract::{ArgKind, OperationSpecDocument};
+use sandbox_operation_client::{build_request_from_values_with_id, BuildRequestValueInput};
+use sandbox_operation_contract::{
+    ArgKind, OperationScopePolicy, OperationSpecDocument, OperationVisibility,
+};
 use serde_json::{json, Map, Value};
 
 const GATEWAY_AUTH_TOKEN: &str = "mcp-test-token";
@@ -436,6 +439,105 @@ fn assert_common_wire_fields(request: &Value) {
     assert_eq!(request_id.matches('-').count(), 4, "{request_id}");
 }
 
+fn assert_matches_shared_value_builder(
+    set: OperationSet,
+    operation: &str,
+    arguments: Value,
+    received: &Value,
+) {
+    let catalog = selected_catalog(set).expect("selected operation catalog");
+    let spec = catalog
+        .operations
+        .iter()
+        .find(|spec| spec.name == operation)
+        .expect("operation spec");
+    let route = catalog
+        .routes
+        .iter()
+        .find(|route| {
+            route.operation == operation && route.visibility == OperationVisibility::Public
+        })
+        .expect("public operation route");
+    let scope_selector = if route.scope_policy == OperationScopePolicy::System {
+        None
+    } else {
+        arguments
+            .get("sandbox_id")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+    };
+    let request_id = received["request_id"]
+        .as_str()
+        .expect("received request id");
+    let mut expected = build_request_from_values_with_id(
+        BuildRequestValueInput {
+            spec,
+            scope_policy: route.scope_policy,
+            scope_selector,
+            arguments,
+        },
+        request_id,
+    )
+    .expect("shared value request");
+    if let Some(target) =
+        sandbox_operation_catalog::internal::migration::resolve(&expected.op, expected.scope.kind())
+    {
+        expected.op = target.operation.to_owned();
+        let expected_arguments = expected.args.as_object_mut().expect("request arguments");
+        for argument in target.arguments {
+            expected_arguments.insert(
+                argument.name.to_owned(),
+                Value::String(argument.value.to_owned()),
+            );
+        }
+    }
+    let mut expected = serde_json::to_value(expected).expect("serialize expected request");
+    let expected = expected.as_object_mut().expect("expected request object");
+    expected.insert(
+        GATEWAY_AUTH_FIELD.to_owned(),
+        Value::String(GATEWAY_AUTH_TOKEN.to_owned()),
+    );
+    expected.insert("_stream_logs".to_owned(), Value::Bool(false));
+    assert_eq!(received, &Value::Object(expected.clone()));
+}
+
+#[test]
+fn mcp_requests_match_the_shared_builder_and_catalog_migration() {
+    let cases = [
+        (
+            OperationSet::Management,
+            "create_sandbox",
+            json!({"image": "ubuntu:24.04", "workspace_root": "/workspace"}),
+        ),
+        (
+            OperationSet::Management,
+            "destroy_sandbox",
+            json!({"sandbox_id": "sbox-destroy"}),
+        ),
+        (
+            OperationSet::Runtime,
+            "exec_command",
+            json!({"sandbox_id": "sbox-runtime", "cmd": "pwd"}),
+        ),
+        (
+            OperationSet::Observability,
+            "trace",
+            json!({"sandbox_id": "sbox-observe"}),
+        ),
+    ];
+
+    for (set, operation, arguments) in cases {
+        let (response, request) = call_through_gateway(
+            set_name(set),
+            operation,
+            arguments.clone(),
+            json!({"fixture": "ok"}),
+        );
+        assert_eq!(result(&response)["isError"], false);
+        assert_matches_shared_value_builder(set, operation, arguments, &request);
+    }
+}
+
 #[test]
 fn tools_call_routes_every_scope_and_preserves_native_edit_arrays() {
     let success = json!({"fixture": "ok"});
@@ -534,7 +636,7 @@ fn invalid_and_hidden_calls_fail_before_gateway_dispatch() {
         (
             "exec_command",
             json!({"cmd": "pwd"}),
-            "sandbox_id is required",
+            "sandbox_id is required for runtime operations",
         ),
         (
             "exec_command",
@@ -544,12 +646,12 @@ fn invalid_and_hidden_calls_fail_before_gateway_dispatch() {
         (
             "exec_command",
             json!({"sandbox_id": "sbox", "cmd": "pwd", "scope": "system"}),
-            "unknown argument",
+            "unknown argument for exec_command: scope",
         ),
         (
             "exec_command",
             json!({"sandbox_id": "sbox", "cmd": "pwd", "set": "management"}),
-            "unknown argument",
+            "unknown argument for exec_command: set",
         ),
         (
             "read_command_lines",
@@ -559,39 +661,60 @@ fn invalid_and_hidden_calls_fail_before_gateway_dispatch() {
         (
             "file_list",
             json!({"sandbox_id": "sbox"}),
-            "unknown operation",
+            "unknown operation: file_list",
         ),
         (
             "create_workspace_session",
             json!({"sandbox_id": "sbox"}),
-            "unknown operation",
+            "unknown operation: create_workspace_session",
         ),
         (
             "destroy_workspace_session",
             json!({"sandbox_id": "sbox"}),
-            "unknown operation",
+            "unknown operation: destroy_workspace_session",
         ),
         (
             "create_sandbox",
             json!({"sandbox_id": "sbox"}),
-            "unknown operation",
+            "unknown operation: create_sandbox",
         ),
         (
             "get_observability",
             json!({"sandbox_id": "sbox"}),
-            "unknown operation",
+            "unknown operation: get_observability",
         ),
     ];
     for (tool, arguments, message) in cases {
         let response = process.call_tool(tool, arguments);
         let error = assert_tool_error(&response, "invalid_request");
-        assert!(
-            error["error"]["message"]
-                .as_str()
-                .expect("validation message")
-                .contains(message),
-            "{tool}: {error}"
-        );
+        assert_eq!(error["error"]["message"], message, "{tool}: {error}");
+        assert_eq!(error["error"]["details"], json!({}));
+    }
+
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock),
+        "validation unexpectedly dispatched to the gateway"
+    );
+}
+
+#[test]
+fn observability_selector_errors_remain_exact_and_local() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind unused gateway");
+    listener.set_nonblocking(true).expect("nonblocking gateway");
+    let addr = listener
+        .local_addr()
+        .expect("unused gateway address")
+        .to_string();
+    let mut process = McpProcess::start_initialized("observability", &addr);
+
+    for (arguments, message) in [
+        (json!({}), "sandbox_id is required for trace"),
+        (json!({"sandbox_id": 7}), "sandbox_id must be a string"),
+        (json!({"sandbox_id": " "}), "--sandbox-id must be non-empty"),
+    ] {
+        let response = process.call_tool("trace", arguments);
+        let error = assert_tool_error(&response, "invalid_request");
+        assert_eq!(error["error"]["message"], message, "{error}");
         assert_eq!(error["error"]["details"], json!({}));
     }
 

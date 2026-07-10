@@ -1,13 +1,14 @@
 use std::io::{self, Write};
 use std::time::Instant;
 
+use sandbox_operation_client::{
+    GatewayClient, GatewayConfig, GatewayConfigOverrides, RequestBuildError,
+};
 use serde_json::{json, Value};
 
-use sandbox_config::configs::cli::{GatewayConfig, GatewayConfigOverrides};
 use sandbox_operation_contract::error_response_with_details;
 
-use super::client::GatewayClient;
-use super::request_builder::{build_request_from_catalog, BuildRequestInput, RequestBuildError};
+use super::request_builder::{build_request_from_catalog, BuildRequestInput};
 use crate::help::{render_catalog_help, render_operation_help};
 use crate::projection::document::CatalogDocument;
 

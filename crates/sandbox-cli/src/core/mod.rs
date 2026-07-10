@@ -1,16 +1,7 @@
-//! Shared client core for the sandbox CLI binaries.
+//! Shared presentation core for the sandbox CLI binaries.
 //!
-//! Owns the gateway client transport, CLI config discovery, catalog-driven
-//! request building, and response/error/help rendering. It is space- and
-//! operation-agnostic: it works against any semantic catalog plus CLI projection and
-//! never links a concrete operation catalog or a manager/runtime engine.
+//! Owns catalog-driven argv parsing and response, error, and help rendering.
 #![forbid(unsafe_code)]
 
-pub mod client;
 pub mod output;
 pub mod request_builder;
-
-pub use sandbox_config::configs::cli::{
-    ConfigError, GatewayConfig, GatewayConfigOverrides, DEFAULT_GATEWAY_SOCKET,
-    SANDBOX_GATEWAY_SOCKET_ENV,
-};

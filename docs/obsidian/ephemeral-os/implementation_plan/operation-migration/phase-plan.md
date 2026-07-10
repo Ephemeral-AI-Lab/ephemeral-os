@@ -313,29 +313,29 @@ repointing are one commit.
 
 ### Change list
 
-- [ ] Create `sandbox-operation-client` at
+- [x] Create `sandbox-operation-client` at
   `crates/sandbox-operations/client/`: gateway transport (from
   `sandbox-cli/src/core/client.rs`), discovery config (from
   `sandbox-config/src/configs/cli.rs`, env-and-overrides only), and the
   value-based request builder (from the value half of
   `request_builder.rs`); callers supply resolved semantic specs; the client
   exposes the request-size bound it enforces.
-- [ ] Keep argv parsing, help, output, progress, and exit-code behavior in
+- [x] Keep argv parsing, help, output, progress, and exit-code behavior in
   `sandbox-cli`; CLI owns catalog-to-flag lookup.
-- [ ] Replace the observability mapping table with independent CLI and MCP
+- [x] Replace the observability mapping table with independent CLI and MCP
   calls to the catalog's `internal::migration` resolver; the client stays
   independent of catalog and applications.
-- [ ] Console: preserve `/api/rpc` as a fully scoped request API; validate
+- [x] Console: preserve `/api/rpc` as a fully scoped request API; validate
   the `OperationRequest` against the public route manifest (plus the
   migration declaration, transitionally); send via the client; take the
   body bound from the client.
-- [ ] Repoint MCP and console dependencies to the client; remove their
+- [x] Repoint MCP and console dependencies to the client; remove their
   `sandbox-cli` dependency; drop `sandbox-cli`'s `sandbox-config`
   dependency; remove `configs/cli.rs` module declarations and move its
   tests to the client crate.
-- [ ] Remove all direct `sandbox-protocol` dependencies/imports from CLI,
+- [x] Remove all direct `sandbox-protocol` dependencies/imports from CLI,
   MCP, and console.
-- [ ] Split request-builder tests by their new owners.
+- [x] Split request-builder tests by their new owners.
 
 ### Acceptance criteria
 
@@ -360,7 +360,12 @@ repointing are one commit.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
-| | | | | |
+| 2026-07-10 | Console configuration dependency-law correction | `rg -n 'sandbox_config::|load_console_section|config_yaml' crates/sandbox-console/src/config.rs crates/sandbox-console/src/main.rs`; `sed -n '410,470p' docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md` | Console YAML loading, validation, and precedence remain owned by `sandbox-config`; the normative diagram and table now permit only that existing edge while gateway discovery moves to the client. | The original normative row accidentally omitted the preserved console-to-`sandbox-config` edge despite the target tree and move map specifying a dependency swap only. |
+| 2026-07-10 | Shared client ownership cutover | `wc -l crates/sandbox-operations/client/src/*.rs`; `rg -n 'struct GatewayClient|struct BuildRequestValueInput|struct GatewayConfig' crates --glob '*.rs'`; `test ! -e crates/sandbox-cli/src/core/client.rs && test ! -e crates/sandbox-config/src/configs/cli.rs` | The new client has 554 production lines across transport, discovery, and value-based request construction; the old CLI transport and config discovery owners are deleted, with no compatibility source path retained. | None. |
+| 2026-07-10 | Focused behavior and owner-split tests | `cargo test -p sandbox-operation-client`; `cargo test -p sandbox-cli --all-features`; `cargo test -p sandbox-mcp --locked`; `cargo test -p sandbox-console --locked`; `cargo test -p sandbox-config`; `npm --prefix web/console run build` | Client 14/14, CLI 46/46, MCP 9/9, console 39/39, and config 72/72 passed; the production web build transformed 1,963 modules successfully. | None. |
+| 2026-07-10 | Product and client dependency boundaries | `cargo metadata --format-version 1 --no-deps | jq -r '.packages[] | select(.name == "sandbox-cli" or .name == "sandbox-mcp" or .name == "sandbox-console" or .name == "sandbox-operation-client") | .name as $p | .dependencies[] | select(.path != null) | [$p, .name] | @tsv' | sort`; `rg 'sandbox_protocol' crates/sandbox-cli/src crates/sandbox-mcp/src crates/sandbox-console/src`; `rg 'sandbox_operation_catalog|get_observability' crates/sandbox-operations/client/src` | Workspace edges are exactly CLI→catalog/client/contract, MCP→catalog/client/contract, console→config/catalog/client/contract, and client→contract/protocol; both forbidden-source greps return no matches. | None. |
+| 2026-07-10 | Per-binary feature closure after client extraction | `cargo tree -p sandbox-cli --no-default-features --features manager -f '{p} {f}' | rg 'sandbox-operation-catalog'`; repeated with `runtime` and `observability` | The catalog line contains respectively only `manager`, only `runtime`, and only `observability`. | None. |
+| 2026-07-10 | Focused quality check | `cargo check -p sandbox-operation-client -p sandbox-cli -p sandbox-mcp -p sandbox-console --all-targets --all-features`; `cargo clippy -p sandbox-operation-client -p sandbox-cli -p sandbox-mcp -p sandbox-console --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check`; `git diff --check` | Check and clippy completed successfully, format exited 0, and the diff has no whitespace errors. | None. |
 
 ---
 
@@ -652,4 +657,4 @@ the spec section changed in the same commit.
 | Date | Phase | Deviation | Spec section amended | Approved by |
 | --- | --- | --- | --- | --- |
 | 2026-07-10 | 0 | The original design enumerated forwarding internals but omitted the dispatchable `create_workspace_session` and `destroy_workspace_session` lifecycle routes. Classify them as canonical runtime-internal routes and replace live E2E public-gateway access with an allowlisted trusted direct-daemon harness. | Target tree; route taxonomy; Visibility enforcement chokepoints; Phase 5 — Clean the runtime application in place | Codex, 2026-07-10 |
-| | | | | |
+| 2026-07-10 | 3 | The normative dependency table omitted console's existing `sandbox-config` edge even though console YAML loading/validation must remain unchanged and the target tree and move map call for a dependency swap only. Permit that edge solely for console YAML loading and validation; gateway discovery remains client-owned. | Dependency law | Codex, 2026-07-10 |

@@ -1,10 +1,13 @@
 use std::time::Duration;
 
 use http::StatusCode;
-use sandbox_protocol::{ProtocolLimits, GATEWAY_AUTH_FIELD};
+use sandbox_operation_catalog::internal::{migration, runtime::EXPORT_LAYERSTACK};
+use sandbox_operation_client::MAX_REQUEST_BYTES;
 use serde_json::json;
 
 use crate::support;
+
+const GATEWAY_AUTH_FIELD: &str = "_sandbox_gateway_auth_token";
 
 fn rpc_body(op: &str) -> serde_json::Value {
     json!({
@@ -104,7 +107,7 @@ async fn scoped_observability_call_uses_authenticated_gateway_rpc() {
     .await;
     let console = support::spawn_console_default(gateway.addr).await;
     let body = json!({
-        "op": "get_observability",
+        "op": migration::ROUTE.operation,
         "scope": {"kind": "sandbox", "sandbox_id": "eos-observe"},
         "args": {"view": "cgroup", "scope": "sandbox", "window_ms": 30000},
     });
@@ -147,36 +150,69 @@ async fn protocol_error_returns_in_body_with_http_200() {
 }
 
 #[tokio::test]
-async fn unknown_operation_is_forwarded_to_the_gateway() {
-    let gateway = support::FakeGateway::spawn(|_| {
-        vec![json!({
-            "error": {
-                "kind": "unknown_op",
-                "message": "unknown operation",
-                "details": {}
-            }
-        })
-        .to_string()]
-    })
-    .await;
+async fn unknown_operation_is_rejected_before_gateway_transport() {
+    let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
     let console = support::spawn_console_default(gateway.addr).await;
 
     let response = support::post_rpc(console, &rpc_body("phase0_unknown_operation")).await;
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = support::body_json(response).await;
+    assert_eq!(body["error"]["kind"], "invalid_request");
+    assert_eq!(body["error"]["details"], json!({}));
+    assert!(body["error"]["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("phase0_unknown_operation")));
+    assert_eq!(gateway.request_count(), 0);
+}
+
+#[tokio::test]
+async fn internal_operation_is_rejected_before_gateway_transport() {
+    let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
+    let console = support::spawn_console_default(gateway.addr).await;
+    let body = json!({
+        "op": EXPORT_LAYERSTACK,
+        "scope": {"kind": "sandbox", "sandbox_id": "eos-internal"},
+        "args": {},
+    });
+
+    let response = support::post_rpc(console, &body).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    let body = support::body_json(response).await;
+    assert_eq!(body["error"]["kind"], "invalid_request");
+    assert_eq!(body["error"]["details"], json!({}));
+    assert_eq!(gateway.request_count(), 0);
+}
+
+#[tokio::test]
+async fn public_operation_with_undeclared_scope_is_rejected_before_gateway_transport() {
+    let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
+    let console = support::spawn_console_default(gateway.addr).await;
+
+    let response = support::post_rpc(console, &rpc_body("file_read")).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
     assert_eq!(
-        support::body_json(response).await,
-        json!({
-            "error": {
-                "kind": "unknown_op",
-                "message": "unknown operation",
-                "details": {}
-            }
-        })
+        support::body_json(response).await["error"]["kind"],
+        "invalid_request"
     );
-    let seen = gateway.requests();
-    assert_eq!(seen.len(), 1);
-    assert_eq!(seen[0]["op"], "phase0_unknown_operation");
+    assert_eq!(gateway.request_count(), 0);
+}
+
+#[tokio::test]
+async fn migration_operation_with_system_scope_is_rejected_before_gateway_transport() {
+    let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
+    let console = support::spawn_console_default(gateway.addr).await;
+
+    let response = support::post_rpc(console, &rpc_body(migration::ROUTE.operation)).await;
+
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    assert_eq!(
+        support::body_json(response).await["error"]["kind"],
+        "invalid_request"
+    );
+    assert_eq!(gateway.request_count(), 0);
 }
 
 #[tokio::test]
@@ -225,14 +261,14 @@ async fn malformed_body_is_400() {
 }
 
 #[tokio::test]
-async fn body_over_protocol_limit_is_rejected_before_gateway_transport() {
-    assert_eq!(ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES, 16 * 1024 * 1024);
+async fn body_over_client_limit_is_rejected_before_gateway_transport() {
+    assert_eq!(MAX_REQUEST_BYTES, 16 * 1024 * 1024);
     let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
     let console = support::spawn_console_default(gateway.addr).await;
     let body = json!({
         "op": "file_write",
         "scope": {"kind": "sandbox", "sandbox_id": "eos-limit"},
-        "args": {"content": "x".repeat(ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES)},
+        "args": {"content": "x".repeat(MAX_REQUEST_BYTES)},
     })
     .to_string();
 

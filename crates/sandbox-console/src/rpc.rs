@@ -1,9 +1,9 @@
-//! `/api/rpc`: pass protocol requests through the gateway 1:1. The console
-//! injects `request_id` and the auth token, never adding vocabulary. Protocol
-//! errors return in the body with HTTP 200; transport failures map to
-//! 400/502/504. With `Accept: text/event-stream` the request streams
-//! `_stream_logs` progress as SSE `log` events followed by one `result`
-//! event.
+//! `/api/rpc`: validate public protocol requests and pass them through the
+//! gateway 1:1. The console injects `request_id` and the auth token, never
+//! adding vocabulary. Protocol errors return in the body with HTTP 200;
+//! transport failures map to 400/502/504. With `Accept: text/event-stream`
+//! the request streams `_stream_logs` progress as SSE `log` events followed
+//! by one `result` event.
 
 use std::sync::Arc;
 
@@ -12,8 +12,10 @@ use http::header::{HeaderValue, ACCEPT, CACHE_CONTROL, CONTENT_TYPE};
 use http::{HeaderMap, Request as HttpRequest, Response, StatusCode};
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
-use sandbox_operation_contract::{error_response_with_details, OperationRequest, OperationScope};
-use sandbox_protocol::ProtocolLimits;
+use sandbox_operation_client::MAX_REQUEST_BYTES;
+use sandbox_operation_contract::{
+    error_response_with_details, OperationRequest, OperationRouteSpec, OperationScope,
+};
 use serde_json::{json, Value};
 
 use crate::response::{self, BoxBody};
@@ -78,8 +80,7 @@ fn stream(state: Arc<AppState>, request: OperationRequest) -> Response<BoxBody> 
 }
 
 async fn read_request(req: HttpRequest<Incoming>) -> Result<OperationRequest, Response<BoxBody>> {
-    let body =
-        http_body_util::Limited::new(req.into_body(), ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES);
+    let body = http_body_util::Limited::new(req.into_body(), MAX_REQUEST_BYTES);
     let bytes = match body.collect().await {
         Ok(collected) => collected.to_bytes(),
         Err(_) => {
@@ -97,8 +98,32 @@ async fn read_request(req: HttpRequest<Incoming>) -> Result<OperationRequest, Re
             &format!("request body is not valid json: {error}"),
         )
     })?;
-    request_from_value(value)
-        .map_err(|message| transport_error(StatusCode::BAD_REQUEST, "invalid_request", &message))
+    let request = request_from_value(value)
+        .map_err(|message| transport_error(StatusCode::BAD_REQUEST, "invalid_request", &message))?;
+    validate_route(&request)
+        .map_err(|message| transport_error(StatusCode::BAD_REQUEST, "invalid_request", &message))?;
+    Ok(request)
+}
+
+fn validate_route(request: &OperationRequest) -> Result<(), String> {
+    let is_public = sandbox_operation_catalog::routes::public_routes()
+        .any(|route| route_matches(request, route));
+    let is_migration = route_matches(
+        request,
+        &sandbox_operation_catalog::internal::migration::ROUTE,
+    );
+    if is_public || is_migration {
+        Ok(())
+    } else {
+        Err(format!(
+            "operation is not available through the console: {}",
+            request.op
+        ))
+    }
+}
+
+fn route_matches(request: &OperationRequest, route: &OperationRouteSpec) -> bool {
+    route.operation == request.op.as_str() && route.scope_kind == request.scope.kind()
 }
 
 fn request_from_value(value: Value) -> Result<OperationRequest, String> {

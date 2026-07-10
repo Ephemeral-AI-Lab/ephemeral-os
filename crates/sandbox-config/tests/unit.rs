@@ -38,14 +38,6 @@ pub fn load_test_override(path: impl AsRef<Path>) -> Result<ConfigDocument, Conf
 #[path = "unit/lib.rs"]
 mod lib_tests;
 
-mod cli_tests {
-    pub(crate) use crate::configs::cli::*;
-    include!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/unit/configs/cli.rs"
-    ));
-}
-
 mod console_tests {
     pub(crate) use crate::configs::console::*;
     include!(concat!(

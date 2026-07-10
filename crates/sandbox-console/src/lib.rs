@@ -1,8 +1,8 @@
 //! Web console HTTP server for the EphemeralOS sandbox.
 //!
 //! A client peer of the three `sandbox-cli` binaries, built on
-//! `sandbox_cli::core::GatewayClient`. It serves the SPA assets and bridges
-//! the browser to the gateway JSON-line protocol (`/api/rpc`, `/api/catalog`)
+//! `sandbox_operation_client::GatewayClient`. It serves the SPA assets and
+//! bridges the browser to the gateway JSON-line protocol (`/api/rpc`, `/api/catalog`)
 //! and to each sandbox's `daemon_http` surface (`/api/sandboxes/:id/health`,
 //! the exact read-only `/api/sandboxes/:id/files/list`, and the `/s/:id/...`
 //! preview proxy). It defines no operation vocabulary, never contacts the

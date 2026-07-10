@@ -1,6 +1,10 @@
-use sandbox_cli::core::client::{GatewayClient, GatewayClientError};
-use sandbox_cli::core::request_builder::{build_request_from_values, BuildRequestValueInput};
-use sandbox_operation_contract::{error_response_with_details, OperationCatalogDocument};
+use sandbox_operation_client::{
+    build_request_from_values, BuildRequestValueInput, GatewayClient, GatewayClientError,
+};
+use sandbox_operation_contract::{
+    error_response_with_details, OperationCatalogDocument, OperationRequest, OperationScopeKind,
+    OperationScopePolicy, OperationVisibility,
+};
 use serde_json::{json, Map, Value};
 
 use crate::config::OperationSet;
@@ -33,16 +37,9 @@ impl ToolDispatcher {
     }
 
     pub async fn call(&self, name: String, arguments: Option<Map<String, Value>>) -> ToolOutcome {
-        let request = match build_request_from_values(
-            BuildRequestValueInput {
-                execution_space: self.set.execution_space(),
-                operation: name,
-                arguments: Value::Object(arguments.unwrap_or_default()),
-            },
-            &self.catalog,
-        ) {
+        let request = match self.build_request(&name, arguments.unwrap_or_default()) {
             Ok(request) => request,
-            Err(error) => return error_outcome(error.to_error_envelope()),
+            Err(error) => return error_outcome(error),
         };
 
         match self.client.send(&request).await {
@@ -58,10 +55,116 @@ impl ToolDispatcher {
             Err(error) => error_outcome(gateway_error(&error)),
         }
     }
+
+    fn build_request(
+        &self,
+        operation: &str,
+        arguments: Map<String, Value>,
+    ) -> Result<OperationRequest, Value> {
+        if operation == "help" {
+            return Err(invalid_request(
+                "help is reserved and cannot be used as an operation name",
+            ));
+        }
+        let spec = self
+            .catalog
+            .operations
+            .iter()
+            .find(|spec| spec.name == operation)
+            .ok_or_else(|| invalid_request(format!("unknown operation: {operation}")))?;
+        let scope_policy = self
+            .catalog
+            .routes
+            .iter()
+            .find(|route| {
+                route.operation == operation && route.visibility == OperationVisibility::Public
+            })
+            .map(|route| route.scope_policy)
+            .ok_or_else(|| invalid_request(format!("unknown operation: {operation}")))?;
+        let scope_selector = self.scope_selector(operation, scope_policy, &arguments)?;
+        let scope_kind = match scope_policy {
+            OperationScopePolicy::System => OperationScopeKind::System,
+            OperationScopePolicy::SandboxRequired => OperationScopeKind::Sandbox,
+            OperationScopePolicy::SystemOrSandbox if scope_selector.is_some() => {
+                OperationScopeKind::Sandbox
+            }
+            OperationScopePolicy::SystemOrSandbox => OperationScopeKind::System,
+        };
+        if !self.catalog.routes.iter().any(|route| {
+            route.operation == operation
+                && route.scope_kind == scope_kind
+                && route.visibility == OperationVisibility::Public
+        }) {
+            return Err(invalid_request(format!("unknown operation: {operation}")));
+        }
+        let request = build_request_from_values(BuildRequestValueInput {
+            spec,
+            scope_policy,
+            scope_selector,
+            arguments: Value::Object(arguments),
+        })
+        .map_err(|error| error.to_error_envelope())?;
+        apply_migration(request)
+    }
+
+    fn scope_selector(
+        &self,
+        operation: &str,
+        scope_policy: OperationScopePolicy,
+        arguments: &Map<String, Value>,
+    ) -> Result<Option<String>, Value> {
+        if scope_policy == OperationScopePolicy::System {
+            return Ok(None);
+        }
+        match arguments.get("sandbox_id") {
+            Some(Value::String(sandbox_id)) if sandbox_id.trim().is_empty() => {
+                let message = if self.set == OperationSet::Observability {
+                    "--sandbox-id must be non-empty"
+                } else {
+                    "sandbox_id must be non-empty"
+                };
+                Err(invalid_request(message))
+            }
+            Some(Value::String(sandbox_id)) => Ok(Some(sandbox_id.clone())),
+            Some(_) => Err(invalid_request("sandbox_id must be a string")),
+            None if scope_policy == OperationScopePolicy::SandboxRequired => {
+                let message = if self.set == OperationSet::Observability {
+                    format!("sandbox_id is required for {operation}")
+                } else {
+                    "sandbox_id is required for runtime operations".to_owned()
+                };
+                Err(invalid_request(message))
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+fn apply_migration(mut request: OperationRequest) -> Result<OperationRequest, Value> {
+    let Some(target) =
+        sandbox_operation_catalog::internal::migration::resolve(&request.op, request.scope.kind())
+    else {
+        return Ok(request);
+    };
+    let Some(arguments) = request.args.as_object_mut() else {
+        return Err(invalid_request("operation arguments must be an object"));
+    };
+    request.op = target.operation.to_owned();
+    for argument in target.arguments {
+        arguments.insert(
+            argument.name.to_owned(),
+            Value::String(argument.value.to_owned()),
+        );
+    }
+    Ok(request)
 }
 
 fn gateway_error(error: &GatewayClientError) -> Value {
     error_response_with_details(error.kind(), error.to_string(), json!({}))
+}
+
+fn invalid_request(message: impl Into<String>) -> Value {
+    error_response_with_details("invalid_request", message, json!({}))
 }
 
 fn error_outcome(value: Value) -> ToolOutcome {

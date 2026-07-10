@@ -7,8 +7,7 @@ mod server;
 mod tools;
 
 use rmcp::ServiceExt;
-use sandbox_cli::core::client::GatewayClient;
-use sandbox_cli::core::GatewayConfig;
+use sandbox_operation_client::{GatewayClient, GatewayConfig};
 
 use crate::catalog::selected_catalog;
 use crate::config::OperationSet;

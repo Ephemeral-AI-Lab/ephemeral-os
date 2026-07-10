@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use sandbox_cli::core::GatewayConfig;
 use sandbox_config::configs::console::ConsoleConfig as ConsoleSection;
 use sandbox_console::config::{ConsoleConfig, ConsoleConfigOverrides};
+use sandbox_operation_client::GatewayConfig;
 
 fn stub_gateway() -> GatewayConfig {
     GatewayConfig {

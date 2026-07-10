@@ -9,14 +9,13 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 
-use crate::core::client::GatewayClient;
 use crate::core::output::{
     discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
 };
 use crate::core::request_builder::BuildRequestInput;
-use crate::core::GatewayConfigOverrides;
 use crate::projection::document::catalog_document;
+use sandbox_operation_client::{GatewayClient, GatewayConfigOverrides, RequestBuildError};
 use sandbox_operation_contract::OperationDomain;
 
 const PROGRAM: &str = "sandbox-observability-cli";
@@ -79,7 +78,7 @@ where
     ) {
         Ok(catalog) => catalog,
         Err(error) => {
-            let error = error.into();
+            let error = RequestBuildError::invalid(error.message());
             let _ = render_request_error(&error, stderr);
             return EXIT_USAGE;
         }

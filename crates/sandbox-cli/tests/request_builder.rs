@@ -1,11 +1,9 @@
 #![cfg(all(feature = "manager", feature = "runtime", feature = "observability"))]
 
-use sandbox_cli::core::request_builder::{
-    build_request_from_catalog_with_id, build_request_from_values,
-    build_request_from_values_with_id, BuildRequestInput, BuildRequestValueInput,
-};
+use sandbox_cli::core::request_builder::{build_request_from_catalog_with_id, BuildRequestInput};
 use sandbox_cli::projection::document::{catalog_document, CatalogDocument};
-use sandbox_operation_contract::{OperationDomain, OperationScope};
+use sandbox_operation_client::{build_request_from_values_with_id, BuildRequestValueInput};
+use sandbox_operation_contract::{OperationDomain, OperationScope, OperationSpecDocument};
 use serde_json::json;
 
 fn manager_catalog_document() -> CatalogDocument {
@@ -32,8 +30,30 @@ fn observability_catalog_document() -> CatalogDocument {
     .expect("observability catalog")
 }
 
+fn operation<'a>(catalog: &'a CatalogDocument, name: &str) -> &'a OperationSpecDocument {
+    catalog
+        .semantic
+        .operations
+        .iter()
+        .find(|spec| spec.name == name)
+        .expect("operation")
+}
+
+fn scope_policy(
+    catalog: &CatalogDocument,
+    name: &str,
+) -> sandbox_operation_contract::OperationScopePolicy {
+    catalog
+        .semantic
+        .routes
+        .iter()
+        .find(|route| route.operation == name)
+        .expect("route")
+        .scope_policy
+}
+
 #[test]
-fn value_and_argv_inputs_share_management_defaults_and_scope() {
+fn argv_projection_and_shared_value_builder_match_manager_requests() {
     let catalog = manager_catalog_document();
     let argv_request = build_request_from_catalog_with_id(
         BuildRequestInput {
@@ -53,14 +73,14 @@ fn value_and_argv_inputs_share_management_defaults_and_scope() {
     .expect("argv request");
     let value_request = build_request_from_values_with_id(
         BuildRequestValueInput {
-            execution_space: OperationDomain::Manager,
-            operation: "create_sandbox".to_owned(),
+            spec: operation(&catalog, "create_sandbox"),
+            scope_policy: scope_policy(&catalog, "create_sandbox"),
+            scope_selector: None,
             arguments: json!({
                 "image": "ubuntu:24.04",
                 "workspace_root": "/workspace"
             }),
         },
-        &catalog.semantic,
         "request-1",
     )
     .expect("value request");
@@ -94,40 +114,21 @@ fn workspace_root_flag_remains_accepted() {
 }
 
 #[test]
-fn value_input_mints_a_uuid_request_id() {
-    let catalog = manager_catalog_document();
-    let request = build_request_from_values(
-        BuildRequestValueInput {
-            execution_space: OperationDomain::Manager,
-            operation: "list_sandboxes".to_owned(),
-            arguments: json!({}),
-        },
-        &catalog.semantic,
-    )
-    .expect("value request");
-
-    uuid::Uuid::parse_str(&request.request_id).expect("UUID request id");
-}
-
-#[test]
-fn runtime_value_selector_is_required_and_removed_from_operation_args() {
+fn runtime_selector_is_required_and_removed_from_operation_args() {
     let catalog = runtime_catalog_document();
-    let request = build_request_from_values_with_id(
-        BuildRequestValueInput {
+    let request = build_request_from_catalog_with_id(
+        BuildRequestInput {
             execution_space: OperationDomain::Runtime,
             operation: "read_command_lines".to_owned(),
-            arguments: json!({
-                "sandbox_id": "eos-runtime",
-                "command_session_id": "cmd-1"
-            }),
+            operation_argv: vec!["--command-session-id".to_owned(), "cmd-1".to_owned()],
+            sandbox_id: Some("eos-runtime".to_owned()),
         },
-        &catalog.semantic,
+        &catalog,
         "request-2",
     )
-    .expect("runtime value request");
+    .expect("runtime request");
 
     assert_eq!(request.op, "read_command_lines");
-    assert_eq!(request.request_id, "request-2");
     assert_eq!(request.scope, OperationScope::sandbox("eos-runtime"));
     assert_eq!(
         request.args,
@@ -136,7 +137,7 @@ fn runtime_value_selector_is_required_and_removed_from_operation_args() {
 }
 
 #[test]
-fn argv_and_value_inputs_share_native_file_edit_arrays() {
+fn argv_projection_and_shared_value_builder_match_file_edits() {
     let catalog = runtime_catalog_document();
     let argv_request = build_request_from_catalog_with_id(
         BuildRequestInput {
@@ -156,15 +157,15 @@ fn argv_and_value_inputs_share_native_file_edit_arrays() {
     .expect("argv request");
     let value_request = build_request_from_values_with_id(
         BuildRequestValueInput {
-            execution_space: OperationDomain::Runtime,
-            operation: "file_edit".to_owned(),
+            spec: operation(&catalog, "file_edit"),
+            scope_policy: scope_policy(&catalog, "file_edit"),
+            scope_selector: Some("eos-runtime".to_owned()),
             arguments: json!({
                 "sandbox_id": "eos-runtime",
                 "path": "notes.txt",
                 "edits": [{"old_string": "draft", "new_string": "final"}]
             }),
         },
-        &catalog.semantic,
         "request-edit",
     )
     .expect("value request");
@@ -174,7 +175,7 @@ fn argv_and_value_inputs_share_native_file_edit_arrays() {
 }
 
 #[test]
-fn file_edit_requires_a_json_array_for_both_input_forms() {
+fn file_edit_keeps_cli_labels_while_sharing_value_validation() {
     let catalog = runtime_catalog_document();
     let argv_error = build_request_from_catalog_with_id(
         BuildRequestInput {
@@ -194,15 +195,14 @@ fn file_edit_requires_a_json_array_for_both_input_forms() {
     .expect_err("object edits rejected");
     let value_error = build_request_from_values_with_id(
         BuildRequestValueInput {
-            execution_space: OperationDomain::Runtime,
-            operation: "file_edit".to_owned(),
+            spec: operation(&catalog, "file_edit"),
+            scope_policy: scope_policy(&catalog, "file_edit"),
+            scope_selector: Some("eos-runtime".to_owned()),
             arguments: json!({
-                "sandbox_id": "eos-runtime",
                 "path": "notes.txt",
                 "edits": "[]"
             }),
         },
-        &catalog.semantic,
         "request-edit-value-error",
     )
     .expect_err("string edits rejected");
@@ -212,25 +212,27 @@ fn file_edit_requires_a_json_array_for_both_input_forms() {
 }
 
 #[test]
-fn observability_values_share_aggregate_and_scoped_translation() {
+fn observability_adapter_applies_the_catalog_migration_resolver() {
     let catalog = observability_catalog_document();
-    let aggregate = build_request_from_values_with_id(
-        BuildRequestValueInput {
+    let aggregate = build_request_from_catalog_with_id(
+        BuildRequestInput {
             execution_space: OperationDomain::Observability,
             operation: "snapshot".to_owned(),
-            arguments: json!({}),
+            operation_argv: Vec::new(),
+            sandbox_id: None,
         },
-        &catalog.semantic,
+        &catalog,
         "request-3",
     )
     .expect("aggregate request");
-    let scoped = build_request_from_values_with_id(
-        BuildRequestValueInput {
+    let scoped = build_request_from_catalog_with_id(
+        BuildRequestInput {
             execution_space: OperationDomain::Observability,
             operation: "trace".to_owned(),
-            arguments: json!({"sandbox_id": "eos-observe"}),
+            operation_argv: vec!["--sandbox-id".to_owned(), "eos-observe".to_owned()],
+            sandbox_id: None,
         },
-        &catalog.semantic,
+        &catalog,
         "request-4",
     )
     .expect("scoped request");
@@ -241,82 +243,4 @@ fn observability_values_share_aggregate_and_scoped_translation() {
     assert_eq!(scoped.op, "get_observability");
     assert_eq!(scoped.scope, OperationScope::sandbox("eos-observe"));
     assert_eq!(scoped.args, json!({"view": "trace", "trace_id": "last"}));
-}
-
-#[test]
-fn value_errors_are_deterministic_invalid_request_envelopes() {
-    let catalog = runtime_catalog_document();
-    let cases = [
-        (
-            json!({"sandbox_id": "eos-x", "cmd": "pwd", "request_id": "injected"}),
-            "unknown argument for exec_command: request_id",
-        ),
-        (
-            json!({"sandbox_id": "eos-x", "command_session_id": "cmd-1", "limit": -1}),
-            "limit must be an unsigned integer",
-        ),
-        (
-            json!({"cmd": "pwd"}),
-            "sandbox_id is required for runtime operations",
-        ),
-    ];
-
-    for (arguments, expected) in cases {
-        let error = build_request_from_values_with_id(
-            BuildRequestValueInput {
-                execution_space: OperationDomain::Runtime,
-                operation: if arguments.get("command_session_id").is_some() {
-                    "read_command_lines".to_owned()
-                } else {
-                    "exec_command".to_owned()
-                },
-                arguments,
-            },
-            &catalog.semantic,
-            "request-error",
-        )
-        .expect_err("invalid value request");
-
-        assert_eq!(error.message(), expected);
-        assert_eq!(
-            error.to_error_envelope(),
-            json!({
-                "error": {
-                    "kind": "invalid_request",
-                    "message": expected,
-                    "details": {}
-                }
-            })
-        );
-    }
-}
-
-#[test]
-fn value_input_requires_an_object_and_selected_catalog_operation() {
-    let catalog = manager_catalog_document();
-    for (operation, arguments, expected) in [
-        (
-            "list_sandboxes",
-            json!([]),
-            "arguments for list_sandboxes must be an object",
-        ),
-        ("exec_command", json!({}), "unknown operation: exec_command"),
-        (
-            "list_sandboxes",
-            json!({"sandbox_id": "eos-injected"}),
-            "unknown argument for list_sandboxes: sandbox_id",
-        ),
-    ] {
-        let error = build_request_from_values_with_id(
-            BuildRequestValueInput {
-                execution_space: OperationDomain::Manager,
-                operation: operation.to_owned(),
-                arguments,
-            },
-            &catalog.semantic,
-            "request-error",
-        )
-        .expect_err("invalid value request");
-        assert_eq!(error.message(), expected);
-    }
 }
