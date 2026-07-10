@@ -1,4 +1,4 @@
-//! Agent CLI: drive exactly one sandbox (commands, workspace sessions, files).
+//! Agent CLI: drive exactly one sandbox (commands and files).
 //!
 //! A thin protocol client over [`crate::core`]. It links only the runtime
 //! spec catalog — never a manager/runtime engine — and stamps sandbox scope. A
