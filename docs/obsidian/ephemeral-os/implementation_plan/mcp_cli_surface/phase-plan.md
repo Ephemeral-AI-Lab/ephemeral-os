@@ -32,7 +32,7 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | Phase | Status | Dependency | Outcome |
 | --- | --- | --- | --- |
 | 0. Contract baseline | complete | none | public surface, architecture, and migration constraints documented |
-| 1. Catalog and visibility boundary | in progress | 0 | one canonical public catalog with correct names/visibility |
+| 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
 | 2. Consolidate the CLI package | not started | 1 | one package, three separately grantable binaries |
 | 3. Add the MCP adapter | not started | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | not started | 1 | `export_changes` uses authenticated RPC chunk paging only |
@@ -40,8 +40,8 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Only Phase 0 is complete: it records the design work already published in
-this directory. No production-code migration phase has started.
+Phases 0 and 1 are complete. Phase 2 is the next eligible phase and has not
+started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -99,7 +99,7 @@ implementation shortcut.
 
 ## Phase 1 — Catalog and visibility boundary
 
-**Status:** in progress
+**Status:** complete
 
 **Depends on:** Phase 0
 
@@ -108,31 +108,31 @@ public operation sets before changing clients or HTTP callers.
 
 ### Scope and tasks
 
-- [ ] Rename the public manager operation specification from
+- [x] Rename the public manager operation specification from
   `checkpoint_squash` to `squash_layerstacks` in
   `crates/sandbox-manager-operations/src/lib.rs`.
-- [ ] Update manager dispatch registration in
+- [x] Update manager dispatch registration in
   `crates/sandbox-manager/src/operation/cli_definition/management_operations.rs`
   to use the renamed public specification while retaining the internal
   `squash_layerstack` daemon request.
-- [ ] Remove `create_workspace_session`, `destroy_workspace_session`, and
+- [x] Remove `create_workspace_session`, `destroy_workspace_session`, and
   their `workspace_session` family from the public
   `sandbox-runtime-operations` catalog and public exports.
-- [ ] Retain daemon workspace lifecycle dispatch in
+- [x] Retain daemon workspace lifecycle dispatch in
   `crates/sandbox-runtime/operation/src/cli_definition/workspace_session_operations.rs`,
   but make both entries non-public with `cli: None`.
-- [ ] Keep `FILE_LIST_SPEC`/the runtime `FILE_LIST` dispatch entry non-public;
+- [x] Keep `FILE_LIST_SPEC`/the runtime `FILE_LIST` dispatch entry non-public;
   it remains callable only by daemon HTTP `POST /files/list`.
-- [ ] Move the canonical `snapshot` operation specification from
+- [x] Move the canonical `snapshot` operation specification from
   `sandbox-manager-operations` into
   `sandbox-observability-operations`; manager imports it only to dispatch
   aggregate snapshot work.
-- [ ] Update observability catalog command usage/examples to the future
+- [x] Update observability catalog command usage/examples to the future
   `sandbox-observability-cli` program name.
-- [ ] Rename `crates/sandbox-runtime/operation/src/cli_definition/` to
+- [x] Rename `crates/sandbox-runtime/operation/src/cli_definition/` to
   `operation_adapter/` and update module paths/tests. This is a naming cleanup
   only: daemon-side request parsing/dispatch stays in the runtime engine.
-- [ ] Add catalog-membership tests that encode the final exact public sets.
+- [x] Add catalog-membership tests that encode the final exact public sets.
 
 ### Files expected to change
 
@@ -147,33 +147,61 @@ relevant catalog/operation tests
 
 ### Acceptance criteria
 
-- [ ] The public management catalog lists exactly
+- [x] The public management catalog lists exactly
   `create_sandbox`, `destroy_sandbox`, `list_sandboxes`, `inspect_sandbox`,
   `squash_layerstacks`, and `export_changes`; it does not list
   `checkpoint_squash`.
-- [ ] The public runtime catalog lists exactly `exec_command`,
+- [x] The public runtime catalog lists exactly `exec_command`,
   `write_command_stdin`, `read_command_lines`, `file_read`, `file_write`,
   `file_edit`, and `file_blame`.
-- [ ] `file_list`, `create_workspace_session`, and
+- [x] `file_list`, `create_workspace_session`, and
   `destroy_workspace_session` are absent from all public runtime catalog/help
   projections yet remain daemon-dispatchable where required.
-- [ ] The public observability catalog lists exactly `snapshot`, `trace`,
+- [x] The public observability catalog lists exactly `snapshot`, `trace`,
   `events`, `cgroup`, and `layerstack`; `snapshot` is not a management tool.
-- [ ] An automatic `exec_command` session still has
+- [x] An automatic `exec_command` session still has
   `publish_then_destroy` lifecycle behaviour; no regression in command
   execution/session finalization tests.
-- [ ] `cargo test -p sandbox-manager-operations -p sandbox-runtime-operations -p sandbox-observability-operations` passes.
-- [ ] Focused manager/runtime operation tests pass, including public squash
+- [x] `cargo test -p sandbox-manager-operations -p sandbox-runtime-operations -p sandbox-observability-operations` passes.
+- [x] Focused manager/runtime operation tests pass, including public squash
   forwarding and file-list daemon dispatch.
 
 ### Evidence to record
 
-```text
-Commit/PR: pending Phase 1 completion
-Commands: pending implementation and direct acceptance proof
-Catalog test output: pending
-Known deviations/waivers: none
-```
+- Commits: `4bda5df70` (catalog/dispatch implementation) and `0217248e5`
+  (internal lifecycle E2E routing and caller/documentation cleanup).
+  PR: not applicable; this repository's `CLAUDE.md` requires direct work on
+  `main`.
+- Exact catalog proof:
+  `cargo test -p sandbox-manager-operations -p sandbox-runtime-operations -p sandbox-observability-operations`
+  passed (7 catalog tests: manager 2, runtime 2, observability 3), including
+  exact membership, pairwise disjointness, the public squash rename, canonical
+  observability snapshot, and hidden lifecycle/file-list serialization checks.
+- Manager proof:
+  `cargo test -p sandbox-manager --test manager_core --test manager_router --test manager_export`
+  passed 54 tests, including public `squash_layerstacks` forwarding to the
+  singular daemon request and aggregate snapshot routing.
+- Runtime proof:
+  `cargo test -p sandbox-runtime --test service_graph --test workspace_session --test file_operations --test layerstack_publish --test layerstack_squash --test layerstack_export`
+  passed 90 tests, including non-public lifecycle dispatch, HTTP-only
+  `file_list` dispatch, and automatic publish-then-destroy finalization.
+- Public projection proof:
+  `cargo test -p sandbox-manager-cli --test smoke -p sandbox-runtime-cli --test smoke`
+  passed 24 tests; old squash, lifecycle, and `file_list` commands are rejected.
+  `cargo test -p sandbox-console --test console` passed 26 tests against the
+  corrected catalog projections.
+- E2E harness proof: an inline fake TCP gateway test of
+  `core.cli.internal_runtime` passed with exact operation, sandbox scope,
+  arguments, authentication token, request id, and newline framing assertions
+  (`fake gateway internal lifecycle routing: PASS`).
+  `python3 -m compileall -q cli-operation-e2e-live-test` also passed.
+- Boundary/quality proof: `cargo fmt --all -- --check` and
+  `git diff --check` passed. Targeted runtime-source and current CLI-guide
+  searches found no old `cli_definition` module path, duplicate runtime
+  catalog export, or public lifecycle invocation; `checkpoint_squash` remains
+  only in intentional negative tests.
+- Known deviations/waivers: none. No live Docker E2E was required for this
+  catalog boundary; the mandatory gateway rebuild remains gated to Phase 7.
 
 ## Phase 2 — Consolidate the CLI package
 
@@ -592,6 +620,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 1 | Completed exact public catalogs, visibility boundaries, canonical snapshot ownership, runtime adapter rename, and caller cleanup without starting Phase 2. | commits `4bda5df70`, `0217248e5`; 201 focused Rust tests, fake-gateway, formatting, compile, and boundary-search proof |
 | 2026-07-10 | 1 | Started the catalog and visibility boundary after confirming Phase 0 complete and reading all companion contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 0 | Created the phase-gated execution tracker from the approved design contracts. | documentation only |
 
