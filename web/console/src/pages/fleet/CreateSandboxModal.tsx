@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { buildArgs, findOperation, useCatalogs } from "@/api/catalog";
-import type { SystemOpArgs } from "@/api/gen/operations";
 import { rpcStream, systemScope } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
 import { Button } from "@/components/ui/button";
@@ -47,7 +46,7 @@ export function CreateSandboxModal({
     onStream(logs.slice());
     setOpen(false);
     try {
-      await rpcStream("create_sandbox", systemScope, built.args as unknown as SystemOpArgs["create_sandbox"], (line) => {
+      await rpcStream("create_sandbox", systemScope, built.args, (line) => {
         logs.push(line);
         onStream(logs.slice());
         void queryClient.invalidateQueries({ queryKey: ["fleet"] });

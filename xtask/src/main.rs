@@ -37,7 +37,6 @@ fn main() -> Result<()> {
     {
         Some("package") => package(&PackageArgs::parse(args)?),
         Some("package-console") => package_console(),
-        Some("gen-console-api") => gen_console_api(&GenConsoleApiArgs::parse(args)?),
         Some("check-mod-lib-size") => {
             check_mod_lib_size_policy(&ModLibSizePolicyArgs::parse(args)?)
         }
@@ -1007,61 +1006,12 @@ fn package(args: &PackageArgs) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
-struct GenConsoleApiArgs {
-    check: bool,
-}
-
-impl GenConsoleApiArgs {
-    fn parse<I>(args: I) -> Result<Self>
-    where
-        I: IntoIterator<Item = OsString>,
-    {
-        let mut check = false;
-        for arg in args {
-            let arg = arg
-                .into_string()
-                .map_err(|_| anyhow::anyhow!("xtask arguments must be valid UTF-8"))?;
-            match arg.as_str() {
-                "--check" => check = true,
-                other => bail!("unknown gen-console-api option {other:?}"),
-            }
-        }
-        Ok(Self { check })
-    }
-}
-
-fn gen_console_api(args: &GenConsoleApiArgs) -> Result<()> {
-    let path = workspace_root()?.join(xtask::console_api::BINDINGS_RELATIVE_PATH);
-    let rendered = xtask::console_api::rendered_bindings()?;
-    if args.check {
-        let current = fs::read_to_string(&path)
-            .with_context(|| format!("read generated bindings {}", path.display()))?;
-        if current != rendered {
-            bail!(
-                "{} is stale; run `cargo run -p xtask -- gen-console-api`",
-                path.display()
-            );
-        }
-        println!("console bindings are current: {}", path.display());
-        return Ok(());
-    }
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .with_context(|| format!("create bindings dir {}", parent.display()))?;
-    }
-    fs::write(&path, rendered).with_context(|| format!("write bindings {}", path.display()))?;
-    println!("generated console bindings: {}", path.display());
-    Ok(())
-}
-
 fn package_console() -> Result<()> {
     let root = workspace_root()?;
     let spa_dir = root.join("web/console");
     if !spa_dir.join("package.json").is_file() {
         bail!("SPA scaffold missing at {}", spa_dir.display());
     }
-    gen_console_api(&GenConsoleApiArgs { check: false })?;
     run_npm(&spa_dir, &["install", "--no-fund", "--no-audit"])?;
     run_npm(&spa_dir, &["run", "build"])?;
     let built = spa_dir.join("dist");
@@ -1466,9 +1416,6 @@ xtask commands:
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
   package-console
           build the web console SPA (web/console) and stage it into dist/console
-  gen-console-api [--check]
-          regenerate web/console/src/api/gen/operations.ts from the public
-          operation catalogs (--check fails when the file is stale)
 
 Targets:
   {AMD64_TARGET} -> sandbox-daemon-linux-amd64

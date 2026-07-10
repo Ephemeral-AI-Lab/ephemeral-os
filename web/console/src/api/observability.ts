@@ -1,5 +1,4 @@
-import type { SandboxOp, SandboxOpArgs } from "@/api/gen/operations";
-import { rpc, rpcUnchecked, sandboxScope, systemScope } from "@/api/rpc";
+import { rpc, sandboxScope, systemScope } from "@/api/rpc";
 
 export interface ResourceSample {
   ts: number;
@@ -55,12 +54,12 @@ export function fetchSandboxSnapshot(sandboxId: string): Promise<SnapshotResult>
   }));
 }
 
-export function fetchObservabilityView<T = unknown, O extends SandboxOp = SandboxOp>(
+export function fetchObservabilityView<T = unknown>(
   sandboxId: string,
-  operation: O,
-  args?: SandboxOpArgs[O],
+  operation: string,
+  args: Record<string, unknown> = {},
 ): Promise<T> {
-  return rpc<T, O>(operation, sandboxScope(sandboxId), args);
+  return rpc<T>(operation, sandboxScope(sandboxId), args);
 }
 
 export function inFlightCount(snapshot: SandboxSnapshot): number {
@@ -204,7 +203,7 @@ export function fetchLayerStackLayer(
   sandboxId: string,
   layerId: string,
 ): Promise<LayerStackLayerResult> {
-  return rpcUnchecked<LayerStackLayerResult>("layerstack", sandboxScope(sandboxId), {
+  return fetchObservabilityView<LayerStackLayerResult>(sandboxId, "layerstack", {
     layer_id: layerId,
   });
 }

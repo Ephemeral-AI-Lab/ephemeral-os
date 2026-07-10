@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { Plus, Trash2 } from "lucide-react";
-import { RpcError, rpcUnchecked, sandboxScope } from "@/api/rpc";
+import { rpc, sandboxScope, RpcError } from "@/api/rpc";
 import type { WorkspaceSessionCreated } from "@/api/types";
 import type { WorkspaceSnapshot } from "@/api/observability";
 import { useErrorToast } from "@/components/ErrorToast";
@@ -49,7 +49,7 @@ export function SessionSidebar({
   const create = async () => {
     setCreating(true);
     try {
-      await rpcUnchecked<WorkspaceSessionCreated>(
+      await rpc<WorkspaceSessionCreated>(
         "create_workspace_session",
         sandboxScope(sandboxId),
         { network_profile: profile },
@@ -69,7 +69,7 @@ export function SessionSidebar({
       args["grace_s"] = Number(grace);
     }
     try {
-      await rpcUnchecked("destroy_workspace_session", sandboxScope(sandboxId), args);
+      await rpc("destroy_workspace_session", sandboxScope(sandboxId), args);
       setRefusal(null);
       if (selected === sessionId) onSelect(null);
       onChanged();

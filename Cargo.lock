@@ -2744,8 +2744,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ignore",
- "sandbox-operation-catalog",
- "sandbox-operation-contract",
  "sha2",
 ]
 

@@ -1,4 +1,3 @@
-import type { FileReadArgs, FileWriteArgs } from "@/api/gen/operations";
 import { postJson } from "@/api/http";
 import { rpc, sandboxScope } from "@/api/rpc";
 
@@ -57,10 +56,10 @@ export function fileRead(
   offset?: number,
   limit?: number,
 ): Promise<FileReadWindow> {
-  const args: FileReadArgs = { path };
-  if (session) args.workspace_session_id = session;
-  if (offset !== undefined) args.offset = offset;
-  if (limit !== undefined) args.limit = limit;
+  const args: Record<string, unknown> = { path };
+  if (session) args["workspace_session_id"] = session;
+  if (offset !== undefined) args["offset"] = offset;
+  if (limit !== undefined) args["limit"] = limit;
   return rpc<FileReadWindow>("file_read", sandboxScope(sandboxId), args);
 }
 
@@ -74,8 +73,8 @@ export function fileWrite(
   content: string,
   session: string | null,
 ): Promise<unknown> {
-  const args: FileWriteArgs = { path, content };
-  if (session) args.workspace_session_id = session;
+  const args: Record<string, unknown> = { path, content };
+  if (session) args["workspace_session_id"] = session;
   return rpc("file_write", sandboxScope(sandboxId), args);
 }
 

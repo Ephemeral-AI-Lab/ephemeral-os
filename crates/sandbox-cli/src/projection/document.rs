@@ -4,44 +4,16 @@ use sandbox_operation_contract::document::arg_kind_name;
 use sandbox_operation_contract::{
     catalog_from_value as semantic_catalog_from_value,
     catalog_to_value as semantic_catalog_to_value, operation_domain_name, OperationCatalog,
-    OperationCatalogDocument, OperationDomain, OperationSpecDocument,
+    OperationCatalogDocument, OperationSpecDocument,
 };
 use serde_json::{json, Value};
 
-use super::{CatalogProjection, OperationProjection};
+use super::{ArgumentProjection, CatalogProjection, OperationProjection};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CatalogDocument {
     pub semantic: OperationCatalogDocument,
-    pub projection: Vec<OperationProjectionDocument>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct OperationProjectionDocument {
-    pub name: String,
-    pub path: Vec<String>,
-    pub usage: String,
-    pub examples: Vec<String>,
-    pub arguments: Vec<ArgumentProjectionDocument>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ArgumentProjectionDocument {
-    pub name: String,
-    pub flag: Option<String>,
-    pub additional_flags: Vec<String>,
-    pub positional: Option<String>,
-}
-
-impl ArgumentProjectionDocument {
-    #[must_use]
-    pub fn accepts_flag(&self, flag: &str) -> bool {
-        self.flag.as_deref() == Some(flag)
-            || self
-                .additional_flags
-                .iter()
-                .any(|candidate| candidate == flag)
-    }
+    pub projection: CatalogProjection,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,22 +36,13 @@ impl std::fmt::Display for ProjectionError {
 
 impl std::error::Error for ProjectionError {}
 
-/// Join a semantic catalog with its CLI projection overrides.
-///
-/// Every public operation receives a projection: an override from `overrides`
-/// when one is declared, otherwise a derived projection mapping each argument
-/// to a `--kebab-case` flag with a usage line composed from the spec.
-///
-/// # Errors
-/// Returns an error when the semantic catalog is invalid, an override does not
-/// match a semantic operation, or a projection binds arguments inconsistently.
 pub fn catalog_document(
     catalog: OperationCatalog,
-    overrides: CatalogProjection,
+    projection: CatalogProjection,
 ) -> Result<CatalogDocument, ProjectionError> {
     let semantic = semantic_catalog_from_value(&semantic_catalog_to_value(catalog))
         .map_err(|error| projection_error(error.message()))?;
-    let projection = merged_projection(&semantic, overrides)?;
+    validate_projection(&semantic, projection)?;
     Ok(CatalogDocument {
         semantic,
         projection,
@@ -96,7 +59,7 @@ pub fn catalog_to_value(document: &CatalogDocument) -> Value {
             "summary": family.summary,
             "description": family.description,
         })).collect::<Vec<_>>(),
-        "operations": document.semantic.operations.iter().zip(&document.projection).map(|(operation, projection)| {
+        "operations": document.semantic.operations.iter().zip(document.projection.operations).map(|(operation, projection)| {
             operation_to_value(operation, projection)
         }).collect::<Vec<_>>(),
     })
@@ -106,163 +69,91 @@ pub fn catalog_to_value(document: &CatalogDocument) -> Value {
 pub fn operation_projection<'a>(
     document: &'a CatalogDocument,
     operation: &str,
-) -> Option<&'a OperationProjectionDocument> {
+) -> Option<&'a OperationProjection> {
     document
         .projection
+        .operations
         .iter()
         .find(|candidate| candidate.name == operation)
 }
 
 #[must_use]
 pub fn argument_projection<'a>(
-    projection: &'a OperationProjectionDocument,
+    projection: &'a OperationProjection,
     argument: &str,
-) -> Option<&'a ArgumentProjectionDocument> {
+) -> Option<&'a ArgumentProjection> {
     projection
         .arguments
         .iter()
         .find(|candidate| candidate.name == argument)
 }
 
-fn merged_projection(
+fn validate_projection(
     semantic: &OperationCatalogDocument,
-    overrides: CatalogProjection,
-) -> Result<Vec<OperationProjectionDocument>, ProjectionError> {
-    if semantic.operation_execution_space != overrides.operation_execution_space {
+    projection: CatalogProjection,
+) -> Result<(), ProjectionError> {
+    if semantic.operation_execution_space != projection.operation_execution_space {
         return Err(projection_error("catalog and projection domains differ"));
     }
+    if semantic.operations.len() != projection.operations.len() {
+        return Err(projection_error(
+            "semantic catalog and CLI projection operation counts differ",
+        ));
+    }
+    if semantic
+        .operations
+        .iter()
+        .zip(projection.operations)
+        .any(|(semantic, projected)| semantic.name != projected.name)
+    {
+        return Err(projection_error(
+            "semantic catalog and CLI projection operation order differs",
+        ));
+    }
 
-    let mut override_names = HashSet::new();
-    for operation in overrides.operations {
-        if !override_names.insert(operation.name) {
+    let mut operation_names = HashSet::new();
+    let mut paths = HashSet::new();
+    for operation in projection.operations {
+        if !operation_names.insert(operation.name) {
             return Err(projection_error(format!(
                 "duplicate projected operation: {}",
                 operation.name
             )));
         }
-        if !semantic
+        if !paths.insert(operation.path) {
+            return Err(projection_error(format!(
+                "duplicate projected path for operation: {}",
+                operation.name
+            )));
+        }
+        let semantic_operation = semantic
             .operations
             .iter()
-            .any(|candidate| candidate.name == operation.name)
-        {
+            .find(|candidate| candidate.name == operation.name)
+            .ok_or_else(|| {
+                projection_error(format!(
+                    "projected operation is absent from semantic catalog: {}",
+                    operation.name
+                ))
+            })?;
+        validate_arguments(semantic_operation, operation)?;
+    }
+
+    for operation in &semantic.operations {
+        if !operation_names.contains(operation.name.as_str()) {
             return Err(projection_error(format!(
-                "projected operation is absent from semantic catalog: {}",
+                "semantic operation has no CLI projection: {}",
                 operation.name
             )));
         }
     }
 
-    let mut merged = Vec::with_capacity(semantic.operations.len());
-    let mut paths = HashSet::new();
-    for spec in &semantic.operations {
-        let projection = overrides
-            .operations
-            .iter()
-            .find(|candidate| candidate.name == spec.name)
-            .map_or_else(
-                || derived_projection(semantic.operation_execution_space, spec),
-                override_document,
-            );
-        validate_arguments(spec, &projection)?;
-        if !paths.insert(projection.path.clone()) {
-            return Err(projection_error(format!(
-                "duplicate projected path for operation: {}",
-                projection.name
-            )));
-        }
-        merged.push(projection);
-    }
-    Ok(merged)
-}
-
-fn override_document(operation: &OperationProjection) -> OperationProjectionDocument {
-    OperationProjectionDocument {
-        name: operation.name.to_owned(),
-        path: operation
-            .path
-            .iter()
-            .map(|part| (*part).to_owned())
-            .collect(),
-        usage: operation.usage.to_owned(),
-        examples: operation
-            .examples
-            .iter()
-            .map(|example| (*example).to_owned())
-            .collect(),
-        arguments: operation
-            .arguments
-            .iter()
-            .map(|argument| ArgumentProjectionDocument {
-                name: argument.name.to_owned(),
-                flag: argument.flag.map(str::to_owned),
-                additional_flags: argument
-                    .additional_flags
-                    .iter()
-                    .map(|flag| (*flag).to_owned())
-                    .collect(),
-                positional: argument.positional.map(str::to_owned),
-            })
-            .collect(),
-    }
-}
-
-fn derived_projection(
-    domain: OperationDomain,
-    spec: &OperationSpecDocument,
-) -> OperationProjectionDocument {
-    OperationProjectionDocument {
-        name: spec.name.clone(),
-        path: vec![operation_domain_name(domain).to_owned(), spec.name.clone()],
-        usage: derived_usage(domain, spec),
-        examples: Vec::new(),
-        arguments: spec
-            .args
-            .iter()
-            .map(|arg| ArgumentProjectionDocument {
-                name: arg.name.clone(),
-                flag: Some(derived_flag(&arg.name)),
-                additional_flags: Vec::new(),
-                positional: None,
-            })
-            .collect(),
-    }
-}
-
-fn derived_flag(name: &str) -> String {
-    format!("--{}", name.replace('_', "-"))
-}
-
-fn derived_usage(domain: OperationDomain, spec: &OperationSpecDocument) -> String {
-    let mut usage = format!("{} {}", domain_program(domain), spec.name);
-    for arg in &spec.args {
-        let token = format!(
-            "{} {}",
-            derived_flag(&arg.name),
-            arg.name.to_ascii_uppercase()
-        );
-        usage.push(' ');
-        if arg.required {
-            usage.push_str(&token);
-        } else {
-            usage.push('[');
-            usage.push_str(&token);
-            usage.push(']');
-        }
-    }
-    usage
-}
-
-const fn domain_program(domain: OperationDomain) -> &'static str {
-    match domain {
-        OperationDomain::Manager => "sandbox-manager-cli",
-        OperationDomain::Runtime => "sandbox-runtime-cli --sandbox-id ID",
-        OperationDomain::Observability => "sandbox-observability-cli",
-    }
+    Ok(())
 }
 
 fn validate_arguments(
     semantic: &OperationSpecDocument,
-    projection: &OperationProjectionDocument,
+    projection: &OperationProjection,
 ) -> Result<(), ProjectionError> {
     if semantic.args.len() != projection.arguments.len() {
         return Err(projection_error(format!(
@@ -273,7 +164,7 @@ fn validate_arguments(
     if semantic
         .args
         .iter()
-        .zip(&projection.arguments)
+        .zip(projection.arguments)
         .any(|(semantic, projected)| semantic.name != projected.name)
     {
         return Err(projection_error(format!(
@@ -284,14 +175,24 @@ fn validate_arguments(
     let mut argument_names = HashSet::new();
     let mut flags = HashSet::new();
     let mut positionals = HashSet::new();
-    for argument in &projection.arguments {
-        if !argument_names.insert(argument.name.as_str()) {
+    for argument in projection.arguments {
+        if !argument_names.insert(argument.name) {
             return Err(projection_error(format!(
                 "duplicate projected argument for {}: {}",
                 projection.name, argument.name
             )));
         }
-        if let Some(flag) = argument.flag.as_deref() {
+        if !semantic
+            .args
+            .iter()
+            .any(|candidate| candidate.name == argument.name)
+        {
+            return Err(projection_error(format!(
+                "projected argument is absent from {}: {}",
+                projection.name, argument.name
+            )));
+        }
+        if let Some(flag) = argument.flag {
             if !flags.insert(flag) {
                 return Err(projection_error(format!(
                     "duplicate flag for {}: {flag}",
@@ -299,7 +200,7 @@ fn validate_arguments(
                 )));
             }
         }
-        for flag in &argument.additional_flags {
+        for flag in argument.additional_flags {
             if !flags.insert(flag) {
                 return Err(projection_error(format!(
                     "duplicate flag for {}: {flag}",
@@ -307,7 +208,7 @@ fn validate_arguments(
                 )));
             }
         }
-        if let Some(positional) = argument.positional.as_deref() {
+        if let Some(positional) = argument.positional {
             if !positionals.insert(positional) {
                 return Err(projection_error(format!(
                     "duplicate positional for {}: {positional}",
@@ -316,19 +217,26 @@ fn validate_arguments(
             }
         }
     }
+
+    for argument in &semantic.args {
+        if !argument_names.contains(argument.name.as_str()) {
+            return Err(projection_error(format!(
+                "semantic argument has no CLI projection for {}: {}",
+                projection.name, argument.name
+            )));
+        }
+    }
+
     Ok(())
 }
 
-fn operation_to_value(
-    operation: &OperationSpecDocument,
-    cli: &OperationProjectionDocument,
-) -> Value {
+fn operation_to_value(operation: &OperationSpecDocument, cli: &OperationProjection) -> Value {
     json!({
         "name": operation.name,
         "family": operation.family,
         "summary": operation.summary,
         "description": operation.description,
-        "args": operation.args.iter().zip(&cli.arguments).map(|(argument, cli)| {
+        "args": operation.args.iter().zip(cli.arguments).map(|(argument, cli)| {
             json!({
                 "name": argument.name,
                 "kind": arg_kind_name(argument.kind),
