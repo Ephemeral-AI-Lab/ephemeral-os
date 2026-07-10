@@ -35,12 +35,13 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
 | 2. Consolidate the CLI package | complete | 1 | one package, three separately grantable binaries |
 | 3. Add the MCP adapter | complete | 1, 2 | one set-configured stdio server with three registrations |
-| 4. Replace export HTTP streaming | not started | 1 | `export_changes` uses authenticated RPC chunk paging only |
+| 4. Replace export HTTP streaming | in progress | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | not started | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 3 are complete. No later phase has started.
+Phases 0 through 3 are complete. Phase 4 is in progress; no later phase has
+started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -455,7 +456,7 @@ crates/sandbox-cli/src/core/request_builder.rs
 
 ## Phase 4 — Replace export HTTP streaming with gateway RPC chunks
 
-**Status:** not started
+**Status:** in progress
 
 **Depends on:** Phase 1
 
@@ -723,6 +724,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 4 | Started the manager export transport migration after confirming the Phase 1 gate and re-reading the binding export, RPC, CLI, MCP, and daemon HTTP contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 3 | Completed the fixed-set catalog-driven MCP adapter, shared value request construction, structured error/result boundary, and real stdio/fake-gateway coverage for all three registrations. | commits `7bee540ca`, `e15839cda`; 75 focused tests, Rust 1.85 check, exact fixture/routing assertions, lint, formatting, and dependency-boundary proof |
 | 2026-07-10 | 3 | Started the fixed-set MCP adapter after confirming the Phase 1 and 2 gates and re-reading all binding MCP, CLI, HTTP, operation, and implementation contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 2 | Completed one core-only CLI package with three feature-isolated binaries, exact set help/routing, migrated consumers/tests, and removal of all legacy CLI packages. | commits `73e5fa612`, `2fa2943fc`, `7aab1e035`; 67 focused tests, three isolated artifact/tree checks, wrapper/launcher, lint, formatting, and dependency-audit proof |
