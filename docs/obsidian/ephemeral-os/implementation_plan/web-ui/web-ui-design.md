@@ -8,11 +8,12 @@ operation that exists today in `sandbox-manager-operations`,
 ## Architecture note (constrains everything below)
 
 The gateway speaks newline-delimited JSON over raw TCP, so the browser talks
-to a thin **`sandbox-console` HTTP server** — a client peer of the two CLIs,
-built on `sandbox-cli-core`'s `GatewayClient` — that bridges RPC to the
-gateway and reverse-proxies the per-sandbox `daemon_http` surface (`/health`
-plus `/forward` port forwarding). Endpoint spec: [[http-server]]. Operations
-map 1:1 — the bridge adds no vocabulary. Three realities shape the UI:
+to a thin **`sandbox-console` HTTP server** — a client peer of the three CLI
+executables, built on `sandbox_cli::core::GatewayClient` — that bridges RPC
+to the gateway and reverse-proxies the per-sandbox `daemon_http` surface
+(`/health` plus `/forward` port forwarding and exact `/files/list`). Endpoint
+spec: [[http-server]]. Operations map 1:1 — the bridge adds no vocabulary.
+Three realities shape the UI:
 
 - **Command output is transcript-based, not raw PTY.** The exposed API is
   `exec_command` → `read_command_lines` (stable line offsets) →

@@ -5,7 +5,7 @@ tags:
   - mcp
   - cli
   - implementation-plan
-status: proposed
+status: implemented
 updated: 2026-07-10
 ---
 

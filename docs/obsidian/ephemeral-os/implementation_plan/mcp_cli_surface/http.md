@@ -6,7 +6,7 @@ tags:
   - daemon
   - api
   - implementation-plan
-status: proposed
+status: implemented
 updated: 2026-07-10
 aliases:
   - Daemon HTTP API

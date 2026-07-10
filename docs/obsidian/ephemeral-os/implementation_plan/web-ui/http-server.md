@@ -13,11 +13,11 @@ protocol 1:1, preview passes through to `daemon_http` 1:1.
 
 ## Position
 
-New bin crate `sandbox-console`. It is a **client peer** of
-`sandbox-manager-cli` and `sandbox-runtime-cli`, built on `sandbox-cli-core`'s
-`GatewayClient` — not an extension of `sandbox-gateway` (the gateway must
-never own client code) and not a vocabulary owner (operation vocabulary stays
-in `sandbox-protocol`).
+New bin crate `sandbox-console`. It is a **client peer** of the three CLI
+executables, built on `sandbox_cli::core::GatewayClient` — not an extension
+of `sandbox-gateway` (the gateway must never own client code) and not a
+vocabulary owner (operation vocabulary stays in the three canonical catalog
+crates).
 
 ```text
 browser
@@ -26,6 +26,8 @@ browser
 sandbox-console
    | /api/rpc                    GatewayClient (JSON-line over TCP)
    |                               -> sandbox-gateway -> manager / daemon rpc
+   | /api/sandboxes/<id>/files/list
+   |                               -> daemon_http /files/list
    | /s/<sandbox-id>/...         reverse proxy
    |                               -> daemon_http /forward/...  (per sandbox)
    | /api/sandboxes/<id>/health  -> daemon_http /health
@@ -44,6 +46,7 @@ POST /api/rpc                                  one-shot operation dispatch
 POST /api/rpc   (Accept: text/event-stream)    same, streaming progress logs
 GET  /api/catalog                              operation catalogs
 GET  /api/sandboxes/<id>/health                daemon_http health probe
+POST /api/sandboxes/<id>/files/list            exact daemon_http list proxy
 ANY  /s/<id>/shared/<port>/...                 preview proxy, shared network
 ANY  /s/<id>/isolated=<ws-id>/<port>/...       preview proxy, isolated ws
 GET  /*                                        SPA assets + route fallback
@@ -189,10 +192,11 @@ extra work.
 
 V0:
 
-- `sandbox-console` bin crate: HTTP server over `sandbox-cli-core`'s
-  `GatewayClient`.
+- `sandbox-console` bin crate: HTTP server over
+  `sandbox_cli::core::GatewayClient`.
 - `/api/rpc` (one-shot + SSE), `/api/catalog`,
-  `/api/sandboxes/<id>/health`.
+  `/api/sandboxes/<id>/health`, and exact
+  `/api/sandboxes/<id>/files/list`.
 - `/s/...` preview proxy with body streaming and upgrade tunneling, plus
   short-TTL endpoint resolution cache.
 - Static SPA serving with client-route fallback.

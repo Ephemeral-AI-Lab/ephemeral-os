@@ -36,10 +36,10 @@ Milestones:
 
 ## Standing constraints (apply to every phase)
 
-- `sandbox-console` is a client peer built on `sandbox-cli-core`'s
-  `GatewayClient`. It must never define operation vocabulary, contact the
-  daemon RPC endpoint directly, or expose the gateway auth token to the
-  browser ([[http-server]] · Position).
+- `sandbox-console` is a client peer built on
+  `sandbox_cli::core::GatewayClient`. It must never define operation
+  vocabulary, contact the daemon RPC endpoint directly, or expose the gateway
+  auth token to the browser ([[http-server]] · Position).
 - Repo rules from `CLAUDE.md`: SRP, no inline comments in `src/`, tests under
   `tests/` only, workspace-level dependency declarations, `cargo clippy
   --all-targets` clean, work directly on `main`.
@@ -327,7 +327,7 @@ Exit: journey script passes clean against a fresh gateway (verified
 - **SPA stack** — held as fixed in [[design]]; no package failed. (One
   deviation: npm resolves react-router to v8 by default now — the console
   pins `react-router@^7` per the design doc.)
-- **`sandbox-cli-core` reuse** (Phase 1): consumed as-is; `send_with_logs`
+- **`sandbox_cli::core` reuse** (Phase 1): consumed as-is; `send_with_logs`
   and the config surface were public enough — no visibility change needed.
 - **Health fan-out** (Phase 3): resolved by accepting the slower cadence —
   each card probes independently every 10s; no batch endpoint added.
