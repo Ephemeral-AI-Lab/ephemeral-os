@@ -5,7 +5,7 @@ use sandbox_manager_operations::{
     LIST_SANDBOXES_SPEC, SQUASH_LAYERSTACKS_SPEC,
 };
 use sandbox_observability_operations::SNAPSHOT_SPEC;
-use sandbox_protocol::{Request, Response};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use serde_json::{json, Value};
 
 use crate::operation::dispatch::ManagerOperationEntry;
@@ -33,15 +33,18 @@ pub(crate) fn operation_entries() -> &'static [ManagerOperationEntry] {
     OPERATIONS
 }
 
-fn dispatch_create_sandbox(services: &ManagerServices, request: &Request) -> Response {
+fn dispatch_create_sandbox(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
     dispatch_create_sandbox_with_progress(services, request, &ProgressSink::noop())
 }
 
 pub(crate) fn dispatch_create_sandbox_with_progress(
     services: &ManagerServices,
-    request: &Request,
+    request: &OperationRequest,
     progress: &ProgressSink,
-) -> Response {
+) -> OperationResponse {
     let image = match image(request) {
         Ok(image) => image,
         Err(response) => return response,
@@ -63,59 +66,73 @@ pub(crate) fn dispatch_create_sandbox_with_progress(
         },
         progress,
     ) {
-        Ok(mut records) if records.len() == 1 => Response::ok(record_value(records.remove(0))),
-        Ok(records) => Response::ok(records_value(records)),
+        Ok(mut records) if records.len() == 1 => {
+            OperationResponse::ok(record_value(records.remove(0)))
+        }
+        Ok(records) => OperationResponse::ok(records_value(records)),
         Err(error) => error.into_response(),
     }
 }
 
-fn dispatch_destroy_sandbox(services: &ManagerServices, request: &Request) -> Response {
+fn dispatch_destroy_sandbox(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
     let id = match sandbox_id(request) {
         Ok(id) => id,
         Err(response) => return response,
     };
     match destroy_sandbox(services, id) {
-        Ok(record) => Response::ok(record_value(record)),
+        Ok(record) => OperationResponse::ok(record_value(record)),
         Err(error) => error.into_response(),
     }
 }
 
-fn dispatch_inspect_sandbox(services: &ManagerServices, request: &Request) -> Response {
+fn dispatch_inspect_sandbox(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
     let id = match sandbox_id(request) {
         Ok(id) => id,
         Err(response) => return response,
     };
     match inspect_sandbox(services, &id) {
-        Ok(record) => Response::ok(record_value(record)),
+        Ok(record) => OperationResponse::ok(record_value(record)),
         Err(error) => error.into_response(),
     }
 }
 
-fn dispatch_list_sandboxes(services: &ManagerServices, _request: &Request) -> Response {
+fn dispatch_list_sandboxes(
+    services: &ManagerServices,
+    _request: &OperationRequest,
+) -> OperationResponse {
     match list_sandboxes(services) {
-        Ok(records) => Response::ok(records_value(records)),
+        Ok(records) => OperationResponse::ok(records_value(records)),
         Err(error) => error.into_response(),
     }
 }
 
-fn dispatch_observability_snapshot(services: &ManagerServices, request: &Request) -> Response {
+fn dispatch_observability_snapshot(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
     let options = match snapshot_options(request) {
         Ok(options) => options,
         Err(response) => return response,
     };
     match observability_snapshot(services, options, &request.request_id) {
-        Ok(sandboxes) => Response::ok(json!({ "sandboxes": sandboxes })),
+        Ok(sandboxes) => OperationResponse::ok(json!({ "sandboxes": sandboxes })),
         Err(error) => error.into_response(),
     }
 }
 
-fn sandbox_id(request: &Request) -> Result<SandboxId, Response> {
+fn sandbox_id(request: &OperationRequest) -> Result<SandboxId, OperationResponse> {
     request
         .required_string("sandbox_id")
         .and_then(|value| SandboxId::new(value).map_err(ManagerError::into_response))
 }
 
-fn workspace_root(request: &Request) -> Result<PathBuf, Response> {
+fn workspace_root(request: &OperationRequest) -> Result<PathBuf, OperationResponse> {
     let raw = request.required_string("workspace_root")?;
     let path = PathBuf::from(&raw);
     if !path.is_absolute() {
@@ -124,7 +141,7 @@ fn workspace_root(request: &Request) -> Result<PathBuf, Response> {
     Ok(path)
 }
 
-fn image(request: &Request) -> Result<String, Response> {
+fn image(request: &OperationRequest) -> Result<String, OperationResponse> {
     let image = request.required_string("image")?;
     if image.trim().is_empty() {
         return Err(ManagerError::InvalidImage { value: image }.into_response());
@@ -132,7 +149,7 @@ fn image(request: &Request) -> Result<String, Response> {
     Ok(image)
 }
 
-fn count(request: &Request) -> Result<usize, Response> {
+fn count(request: &OperationRequest) -> Result<usize, OperationResponse> {
     let value = request.optional_u64("count")?.unwrap_or(1);
     if value == 0 {
         return Err(ManagerError::InvalidSandboxCount { value }.into_response());
@@ -140,7 +157,7 @@ fn count(request: &Request) -> Result<usize, Response> {
     usize::try_from(value).map_err(|_| ManagerError::InvalidSandboxCount { value }.into_response())
 }
 
-fn snapshot_options(request: &Request) -> Result<SnapshotOptions, Response> {
+fn snapshot_options(request: &OperationRequest) -> Result<SnapshotOptions, OperationResponse> {
     let sandbox_id = request
         .optional_string("sandbox_id")?
         .map(SandboxId::new)

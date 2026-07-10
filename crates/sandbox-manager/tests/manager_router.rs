@@ -7,7 +7,7 @@ use sandbox_manager::{
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
     SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
-use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse, OperationScope};
 use serde_json::{json, Value};
 
 struct FakeRuntime;
@@ -60,22 +60,22 @@ impl SandboxDaemonInstaller for FakeInstaller {
 
 #[derive(Default)]
 struct RecordingDaemonClient {
-    invocations: Mutex<Vec<(u16, String, CliOperationScope)>>,
+    invocations: Mutex<Vec<(u16, String, OperationScope)>>,
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
-    fn invoke_with_timeout(
+    fn invoke(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-        _timeout: Duration,
-    ) -> Result<Response, ManagerError> {
+        request: OperationRequest,
+        _timeout_override: Option<Duration>,
+    ) -> Result<OperationResponse, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.port,
             request.op.clone(),
             request.scope.clone(),
         ));
-        Ok(Response::ok(json!({"forwarded": true})))
+        Ok(OperationResponse::ok(json!({"forwarded": true})))
     }
 }
 
@@ -101,8 +101,8 @@ fn router(services: Arc<ManagerServices>) -> SandboxManagerRouter {
     SandboxManagerRouter::new(services)
 }
 
-fn request(op: &str, scope: CliOperationScope, args: Value) -> Request {
-    Request::new(op, "req-1", scope, args)
+fn request(op: &str, scope: OperationScope, args: Value) -> OperationRequest {
+    OperationRequest::new(op, "req-1", scope, args)
 }
 
 fn sandbox_id(value: &str) -> SandboxId {
@@ -126,11 +126,7 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
     let router = router(services);
 
     let response = router
-        .dispatch_request(request(
-            "list_sandboxes",
-            CliOperationScope::System,
-            json!({}),
-        ))
+        .dispatch_request(request("list_sandboxes", OperationScope::System, json!({})))
         .await
         .into_json_value();
 
@@ -153,7 +149,7 @@ async fn manager_router_dispatches_hidden_observability_snapshot_locally() {
     let router = router(services);
 
     let response = router
-        .dispatch_request(request("snapshot", CliOperationScope::System, json!({})))
+        .dispatch_request(request("snapshot", OperationScope::System, json!({})))
         .await
         .into_json_value();
 
@@ -161,7 +157,7 @@ async fn manager_router_dispatches_hidden_observability_snapshot_locally() {
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].1, "get_observability");
-    assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
+    assert_eq!(invocations[0].2, OperationScope::sandbox("sbox-1"));
 }
 
 #[tokio::test]
@@ -172,13 +168,13 @@ async fn manager_router_rejects_manager_operation_with_sandbox_scope() {
     let response = router
         .dispatch_request(request(
             "list_sandboxes",
-            CliOperationScope::sandbox("sbox-1"),
+            OperationScope::sandbox("sbox-1"),
             json!({}),
         ))
         .await
         .into_json_value();
 
-    assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
+    assert_eq!(response["error"]["kind"], error::INVALID_REQUEST);
 }
 
 #[tokio::test]
@@ -187,11 +183,7 @@ async fn manager_router_unknown_system_operation_returns_unknown_op() {
     let router = router(services);
 
     let response = router
-        .dispatch_request(request(
-            "exec_command",
-            CliOperationScope::System,
-            json!({}),
-        ))
+        .dispatch_request(request("exec_command", OperationScope::System, json!({})))
         .await
         .into_json_value();
 
@@ -216,7 +208,7 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     let response = router
         .dispatch_request(request(
             "exec_command",
-            CliOperationScope::sandbox("sbox-1"),
+            OperationScope::sandbox("sbox-1"),
             json!({"cmd": "pwd"}),
         ))
         .await
@@ -227,7 +219,7 @@ async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].0, 7000);
     assert_eq!(invocations[0].1, "exec_command");
-    assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
+    assert_eq!(invocations[0].2, OperationScope::sandbox("sbox-1"));
 }
 
 #[tokio::test]
@@ -238,13 +230,13 @@ async fn manager_router_rejects_sandbox_scope_when_sandbox_missing() {
     let response = router
         .dispatch_request(request(
             "exec_command",
-            CliOperationScope::sandbox("missing"),
+            OperationScope::sandbox("missing"),
             json!({}),
         ))
         .await
         .into_json_value();
 
-    assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
+    assert_eq!(response["error"]["kind"], error::INVALID_REQUEST);
 }
 
 #[tokio::test]
@@ -258,11 +250,11 @@ async fn manager_router_rejects_sandbox_scope_when_daemon_unavailable() {
     let response = router
         .dispatch_request(request(
             "exec_command",
-            CliOperationScope::sandbox("sbox-1"),
+            OperationScope::sandbox("sbox-1"),
             json!({}),
         ))
         .await
         .into_json_value();
 
-    assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
+    assert_eq!(response["error"]["kind"], error::INVALID_REQUEST);
 }

@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use sandbox_mcp::catalog::selected_catalog;
 use sandbox_mcp::config::OperationSet;
-use sandbox_protocol::{ArgKind, CliOperationSpecDocument};
+use sandbox_operation_contract::{ArgKind, OperationSpecDocument};
 use serde_json::{json, Map, Value};
 
 const GATEWAY_AUTH_TOKEN: &str = "mcp-test-token";
@@ -253,7 +253,7 @@ fn tools_list_fixture(set: OperationSet) -> Value {
     serde_json::from_str(fixture).expect("tools/list fixture JSON")
 }
 
-fn assert_schema(set: OperationSet, tool: &Value, spec: &CliOperationSpecDocument) {
+fn assert_schema(set: OperationSet, tool: &Value, spec: &OperationSpecDocument) {
     assert_eq!(tool["description"], spec.description);
     let schema = tool["inputSchema"].as_object().expect("tool input schema");
     assert_eq!(schema.get("type"), Some(&json!("object")));

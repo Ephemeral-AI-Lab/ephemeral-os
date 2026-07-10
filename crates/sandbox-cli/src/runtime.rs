@@ -19,11 +19,10 @@ use crate::core::output::{
     discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
 };
-use crate::core::request_builder::{
-    catalog_document, resolve_runtime_sandbox_id, BuildRequestInput,
-};
+use crate::core::request_builder::{resolve_runtime_sandbox_id, BuildRequestInput};
 use crate::core::GatewayConfigOverrides;
-use sandbox_protocol::CliOperationExecutionSpace;
+use crate::projection::document::catalog_document;
+use sandbox_operation_contract::OperationDomain;
 
 const PROGRAM: &str = "sandbox-runtime-cli --sandbox-id ID";
 const HELP_OP: &str = "help";
@@ -82,9 +81,13 @@ where
         }
     };
 
-    let catalog = match catalog_document(sandbox_runtime_operations::runtime_catalog()) {
+    let catalog = match catalog_document(
+        sandbox_runtime_operations::runtime_catalog(),
+        crate::projection::runtime::catalog_projection(),
+    ) {
         Ok(catalog) => catalog,
         Err(error) => {
+            let error = error.into();
             let _ = render_request_error(&error, stderr);
             return EXIT_USAGE;
         }
@@ -112,7 +115,7 @@ where
         return EXIT_USAGE;
     };
     let request_input = BuildRequestInput {
-        execution_space: CliOperationExecutionSpace::Runtime,
+        execution_space: OperationDomain::Runtime,
         operation,
         operation_argv: cli.operation_argv,
         sandbox_id: Some(sandbox_id),

@@ -1,4 +1,5 @@
-use sandbox_protocol::{ProtocolLimits, Request, GATEWAY_AUTH_FIELD};
+use sandbox_operation_contract::OperationRequest;
+use sandbox_protocol::{ProtocolLimits, GATEWAY_AUTH_FIELD};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -27,13 +28,13 @@ impl GatewayClient {
         }
     }
 
-    pub async fn send(&self, request: &Request) -> Result<Value, GatewayClientError> {
+    pub async fn send(&self, request: &OperationRequest) -> Result<Value, GatewayClientError> {
         self.send_with_logs(request, false, |_| {}).await
     }
 
     pub async fn send_with_logs<F>(
         &self,
-        request: &Request,
+        request: &OperationRequest,
         stream_logs: bool,
         on_log: F,
     ) -> Result<Value, GatewayClientError>

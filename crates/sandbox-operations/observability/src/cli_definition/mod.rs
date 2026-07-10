@@ -1,8 +1,4 @@
-//! Adapter layer: the `CliOperationSpec` catalog for the `observability`
-//! execution space. One module per operation owns that operation's spec. No
-//! per-operation dispatch code lives here because sandbox-scoped views resolve
-//! to the daemon op `get_observability`; aggregate `snapshot` routing is handled
-//! by the gateway and manager.
+//! Observability operation declarations.
 mod cgroup;
 mod events;
 mod layerstack;
@@ -11,12 +7,11 @@ mod trace;
 
 pub use snapshot::SNAPSHOT_SPEC;
 
-use sandbox_protocol::{
-    ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
-    CliOperationFamilySpec, CliOperationSpec,
+use sandbox_operation_contract::{
+    ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
 };
 
-const OBSERVABILITY_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
+const OBSERVABILITY_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "observability",
     title: "Observability",
     summary: "Inspect traces, events, and resource stats for a sandbox.",
@@ -25,20 +20,14 @@ events, cgroup/disk resource series, and live state. Snapshot can also \
 aggregate ready manager-known sandboxes when --sandbox-id is omitted.",
 };
 
-/// Shared `--sandbox-id` selector for observability operations that must target
-/// one sandbox's daemon.
 pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
     "sandbox_id",
     ArgKind::String,
     "Target sandbox id (selects the daemon to query).",
-    Some(ArgCliSpec {
-        flag: Some("--sandbox-id"),
-        positional: None,
-    }),
 );
 
-const FAMILIES: &[&CliOperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
-const SPECS: &[&CliOperationSpec] = &[
+const FAMILIES: &[&OperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
+const SPECS: &[&OperationSpec] = &[
     &SNAPSHOT_SPEC,
     &trace::TRACE_SPEC,
     &events::EVENTS_SPEC,
@@ -47,6 +36,6 @@ const SPECS: &[&CliOperationSpec] = &[
 ];
 
 #[must_use]
-pub fn observability_catalog() -> CliOperationCatalog {
-    CliOperationCatalog::new(CliOperationExecutionSpace::Observability, FAMILIES, SPECS)
+pub const fn observability_catalog() -> OperationCatalog {
+    OperationCatalog::new(OperationDomain::Observability, FAMILIES, SPECS)
 }

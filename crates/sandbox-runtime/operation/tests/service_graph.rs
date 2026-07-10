@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use sandbox_observability::Observer;
-use sandbox_protocol::CliOperationExecutionSpace;
+use sandbox_operation_contract::OperationDomain;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService, ExecCommandInput};
 use sandbox_runtime::file::FileService;
 use sandbox_runtime::layerstack::LayerStackService;
@@ -187,10 +187,7 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
         .map(|spec| spec.name)
         .collect::<Vec<_>>();
 
-    assert_eq!(
-        catalog.operation_execution_space,
-        CliOperationExecutionSpace::Runtime
-    );
+    assert_eq!(catalog.operation_execution_space, OperationDomain::Runtime);
     assert_eq!(
         catalog
             .families
@@ -211,11 +208,10 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
             "file_blame",
         ]
     );
-    assert!(catalog.operations.iter().all(|spec| spec.cli.is_some()));
 }
 
 #[test]
-fn service_graph_cli_catalog_families_match_cli_operations() {
+fn service_graph_catalog_families_match_public_operations() {
     let catalog = sandbox_runtime_operations::runtime_catalog();
     let families = catalog
         .families
@@ -236,7 +232,7 @@ fn service_graph_cli_catalog_families_match_cli_operations() {
 }
 
 #[test]
-fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
+fn service_graph_catalog_keeps_internal_helpers_out() {
     let catalog = sandbox_runtime_operations::runtime_catalog();
     let names = catalog
         .operations
@@ -288,30 +284,13 @@ fn hidden_http_and_lifecycle_operations_remain_registered_for_daemon_dispatch() 
 }
 
 #[test]
-fn cli_operation_catalog_metadata_uses_runtime_space() {
-    let catalog = sandbox_runtime_operations::runtime_catalog();
-
-    for spec in catalog.operations {
-        let cli = spec.cli.expect("runtime catalog spec must be CLI-visible");
-        assert_eq!(cli.path.first(), Some(&"runtime"));
-        assert!(cli
-            .usage
-            .starts_with("sandbox-runtime-cli --sandbox-id ID "));
-        assert!(cli.examples.iter().all(|example| {
-            example.starts_with("sandbox-runtime-cli --sandbox-id ID ")
-                && !example.contains("daemon")
-        }));
-    }
-}
-
-#[test]
 fn service_graph_workspace_session_source_boundaries_stay_private() {
     let workspace_session_sources = rust_sources("src/workspace_session");
     for (path, source) in workspace_session_sources {
         for forbidden in [
-            "sandbox_protocol::Request",
-            "sandbox_protocol::Response",
-            "CliOperationSpec",
+            "sandbox_operation_contract::OperationRequest",
+            "sandbox_operation_contract::OperationResponse",
+            "OperationSpec",
             "OperationEntry",
             "CommandOperationService",
             "crate::operation",
@@ -327,13 +306,13 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
     let adapter = include_str!("../src/operation_adapter/workspace_session_operations.rs");
     assert!(adapter.contains(".create_workspace_session("));
     assert!(adapter.contains(".guarded_destroy("));
-    assert_eq!(adapter.matches("cli: None").count(), 2);
+    assert_eq!(adapter.matches("spec: None").count(), 2);
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 
     let file_adapter = include_str!("../src/operation_adapter/file_operations.rs");
     assert!(file_adapter.contains("const FILE_LIST: OperationEntry = OperationEntry {"));
-    assert_eq!(file_adapter.matches("cli: None").count(), 1);
+    assert_eq!(file_adapter.matches("spec: None").count(), 1);
 
     for (path, source) in rust_sources("src/command") {
         assert!(

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/sandbox-operations/contract",
     "crates/sandbox-runtime/operation",
     "crates/sandbox-config",
     "crates/sandbox-daemon",
@@ -72,6 +73,7 @@ http-body-util = "0.1"
 rmcp = { version = "=0.11.0", features = ["transport-io"] }
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
+sandbox-operation-contract = { path = "crates/sandbox-operations/contract" }
 sandbox-config = { path = "crates/sandbox-config" }
 sandbox-runtime-layerstack = { path = "crates/sandbox-runtime/layerstack" }
 sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-process" }

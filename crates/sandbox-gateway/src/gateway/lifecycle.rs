@@ -59,7 +59,7 @@ where
     S: AsyncWrite + Unpin,
 {
     let response = error::error_response(
-        sandbox_protocol::error_kind::INTERNAL_ERROR,
+        sandbox_operation_contract::error::INTERNAL_ERROR,
         "gateway is at connection capacity",
         serde_json::json!({ "max_concurrent_connections": max_connections }),
     );

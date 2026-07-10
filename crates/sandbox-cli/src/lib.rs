@@ -2,6 +2,8 @@
 #![forbid(unsafe_code)]
 
 pub mod core;
+pub mod help;
+pub mod projection;
 
 #[cfg(feature = "manager")]
 pub mod manager;

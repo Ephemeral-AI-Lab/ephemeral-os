@@ -7,18 +7,16 @@ license.workspace = true
 
 [dependencies]
 base64.workspace = true
+sandbox-operation-contract.workspace = true
 sandbox-manager-operations.workspace = true
 sandbox-observability-operations.workspace = true
-sandbox-protocol.workspace = true
 sandbox-runtime-layerstack.workspace = true
-nix = { workspace = true, features = ["process", "signal"] }
 rustix.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tar.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-uuid.workspace = true
 zstd.workspace = true
 
 [lints]

@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::Duration;
 
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::command::{
     CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
@@ -418,10 +418,10 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
         layerstack_service()?,
         support::test_file_service(),
     );
-    let destroy_request = Request::new(
+    let destroy_request = OperationRequest::new(
         "destroy_workspace_session",
         "req-destroy-race",
-        CliOperationScope::system(),
+        OperationScope::system(),
         json!({ "workspace_session_id": workspace_session_id.0 }),
     );
     let destroy_handle = std::thread::spawn(move || {

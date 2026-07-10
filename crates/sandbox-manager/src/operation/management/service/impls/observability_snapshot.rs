@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use serde_json::{json, Map, Value};
 
 use crate::operation::{ManagerServices, ObservabilitySnapshotLimits};
@@ -104,23 +104,23 @@ fn sandbox_node(
         return unavailable_node(&record, None, "sandbox daemon endpoint is unavailable");
     };
     let request = private_snapshot_request(&record, request_id);
-    match daemon_client.invoke_with_timeout(&endpoint, request, Duration::from_millis(timeout_ms)) {
+    match daemon_client.invoke(&endpoint, request, Some(Duration::from_millis(timeout_ms))) {
         Ok(response) => node_from_daemon_response(&record, &endpoint, response.into_json_value()),
         Err(error) => unavailable_node(&record, Some(&endpoint), error.to_string()),
     }
 }
 
-fn private_snapshot_request(record: &SandboxRecord, request_id: &str) -> Request {
+fn private_snapshot_request(record: &SandboxRecord, request_id: &str) -> OperationRequest {
     let mut args = Map::new();
     args.insert("view".to_owned(), json!("snapshot"));
-    Request::new(
+    OperationRequest::new(
         PRIVATE_DAEMON_OBSERVABILITY_OP,
         format!(
             "{}:{}:observability_snapshot",
             request_id,
             record.id.as_str()
         ),
-        CliOperationScope::sandbox(record.id.as_str()),
+        OperationScope::sandbox(record.id.as_str()),
         Value::Object(args),
     )
 }

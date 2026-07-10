@@ -151,42 +151,42 @@ atomic change.
 
 ### Change list
 
-- [ ] Create `sandbox-operation-contract` at
+- [x] Create `sandbox-operation-contract` at
   `crates/sandbox-operations/contract/` (workspace member added; the
   namespace root transiently also holds the three legacy catalog packages
   until Phase 2).
-- [ ] Move catalog/spec/scope/route types into the contract
+- [x] Move catalog/spec/scope/route types into the contract
   (`operation.rs`, `family.rs`, `argument.rs`, `document.rs`, `domain.rs`,
   `scope.rs`, `route.rs`); split the application envelope
   (`request.rs`, `response.rs`, `error.rs`) from the wire codec.
-- [ ] Narrow `sandbox-protocol` in place to
+- [x] Narrow `sandbox-protocol` in place to
   `{auth,codec,error,framing,handshake,limits}.rs`; preserve package name,
   path, and external response strings.
-- [ ] Apply all semantic type renames in one change: `CliOperationSpec` →
+- [x] Apply all semantic type renames in one change: `CliOperationSpec` →
   `OperationSpec`, `CliOperationFamilySpec` → `OperationFamilySpec`,
   `CliOperationCatalog` → `OperationCatalog`, `CliOperationCatalogDocument`
   → `OperationCatalogDocument`, `CliOperationExecutionSpace` →
   `OperationDomain`, `CliOperationScope` → `OperationScope`, protocol
   `Request`/`Response` → contract `OperationRequest`/`OperationResponse`.
-- [ ] Move CLI paths, flags, positionals, usage, examples, help, and search
+- [x] Move CLI paths, flags, positionals, usage, examples, help, and search
   into `sandbox-cli::projection` (+ `help.rs`); contract retains no CLI
   fields.
-- [ ] Centralize the daemon readiness handshake in
+- [x] Centralize the daemon readiness handshake in
   `sandbox-protocol/src/handshake.rs`; update
   `sandbox-provider-docker/src/readiness.rs` and daemon
   `rpc/dispatch.rs` to consume it.
-- [ ] Move `TcpSandboxDaemonClient` and its `ProtocolLimits`-derived
+- [x] Move `TcpSandboxDaemonClient` and its `ProtocolLimits`-derived
   timeout/deadline enforcement from manager to
   `crates/sandbox-gateway/src/daemon_client.rs`; manager keeps only the
   `SandboxDaemonClient` port.
-- [ ] Move `LocalSandboxDaemonInstaller`, launch/process/socket helpers, and
+- [x] Move `LocalSandboxDaemonInstaller`, launch/process/socket helpers, and
   their focused tests to
   `crates/sandbox-gateway/src/local_daemon_installer.rs` and gateway tests;
   manager keeps the `SandboxDaemonInstaller` port and neutral
   `StartedDaemon` DTO.
-- [ ] Split the 497-line protocol test suite by owner (contract / protocol /
+- [x] Split the 497-line protocol test suite by owner (contract / protocol /
   catalog-to-be / CLI).
-- [ ] Update all application consumers to contract envelopes directly; no
+- [x] Update all application consumers to contract envelopes directly; no
   deprecated aliases or re-exports.
 
 ### Acceptance criteria
@@ -213,6 +213,15 @@ atomic change.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
+| 2026-07-10 | Contract crate and application envelopes (changes 1–2) | `find crates/sandbox-operations/contract/src -maxdepth 1 -type f -print \| sort`; `cargo test -p sandbox-operation-contract --all-features` | Contract contains the seven semantic modules, split `request.rs` / `response.rs` / `error.rs`, and `lib.rs`; 10/10 focused tests passed, including missing-domain, unknown-family, and duplicate-operation rejection. | None. |
+| 2026-07-10 | Protocol narrowing (change 3) | `find crates/sandbox-protocol/src -maxdepth 1 -type f -print \| sort`; `cargo test -p sandbox-protocol --all-features` | Source tree is exactly `auth.rs`, `codec.rs`, `error.rs`, `framing.rs`, `handshake.rs`, `limits.rs`, and `lib.rs`; 9/9 protocol tests passed. | None. |
+| 2026-07-10 | Semantic type and envelope rename (change 4) | `rg 'CliOperation\|CliSpec\|ArgCliSpec' crates/*/src crates/*/*/src`; `cargo check --workspace --all-targets --all-features` | Legacy semantic names produced no matches (expected `rg` exit 1); the full workspace compiled with contract-owned `Operation*` types. | None. |
+| 2026-07-10 | CLI projection and compatibility (change 5) | `find crates/sandbox-cli/src/projection -maxdepth 1 -type f -print \| sort`; `cargo test -p sandbox-cli --all-features --test compatibility --test help --test request_builder` | Projection owns `document`, `manager`, `observability`, and `runtime` metadata plus its module root; compatibility 2/2, help 3/3, and request-builder 9/9 passed, including retained `--workspace-root` syntax. | None. |
+| 2026-07-10 | Central readiness handshake (change 6) | `rg -n 'daemon_readiness_request_line\|DAEMON_READINESS_OPERATION\|sandbox_daemon_ready' crates/sandbox-protocol/src crates/sandbox-provider-docker/src crates/sandbox-daemon/src`; `cargo test -p sandbox-provider-docker --all-features --test readiness` | The readiness literal is defined only in `sandbox-protocol/src/handshake.rs`; provider request construction and daemon dispatch consume the centralized API; readiness tests passed 7/7. | None. |
+| 2026-07-10 | TCP daemon client ownership (change 7) | `cargo test -p sandbox-gateway --test daemon_client`; `cargo test -p sandbox-manager --test manager_router --test manager_export --test manager_core`; `cargo tree -i sandbox-protocol -e normal,dev,build` | Gateway's stalled-response deadline proof passed 1/1; manager router/export/core passed 7/7, 31/31, and 14/14; the dependency tree lists neither manager nor runtime beneath protocol. | None. |
+| 2026-07-10 | Local daemon installer ownership (change 8) | `cargo test -p sandbox-gateway --test local_daemon_installer`; `rg 'LocalSandboxDaemonInstaller\|\bnix::\|\buuid::' crates/sandbox-manager/src crates/sandbox-manager/tests` | Gateway launch/process/socket proofs passed 3/3; ownership search produced no matches (expected `rg` exit 1), so manager retains no concrete installer, `nix`, or `uuid` use. | None. |
+| 2026-07-10 | Test split and application conversion (changes 9–10) | `cargo test -p sandbox-operation-contract -p sandbox-protocol -p sandbox-cli -p sandbox-mcp -p sandbox-console -p sandbox-manager -p sandbox-runtime -p sandbox-daemon -p sandbox-gateway -p sandbox-provider-docker --all-features`; `cargo fmt --all -- --check` | Every selected owner package test binary passed after both adapter moves; formatting check was clean. | None. |
+| 2026-07-10 | Phase 1 code-complete compile | `git diff --check`; `cargo check --workspace --all-targets --all-features` | Diff validation and the full all-target, all-feature workspace compile exited 0. | None. |
 | | | | | |
 
 ---

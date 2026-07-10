@@ -31,6 +31,7 @@ clap = { workspace = true, optional = true }
 sandbox-config.workspace = true
 sandbox-manager-operations = { workspace = true, optional = true }
 sandbox-observability-operations = { workspace = true, optional = true }
+sandbox-operation-contract.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime-operations = { workspace = true, optional = true }
 serde_json.workspace = true

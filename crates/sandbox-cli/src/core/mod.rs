@@ -2,7 +2,7 @@
 //!
 //! Owns the gateway client transport, CLI config discovery, catalog-driven
 //! request building, and response/error/help rendering. It is space- and
-//! operation-agnostic: it works against any `CliOperationCatalogDocument` and
+//! operation-agnostic: it works against any semantic catalog plus CLI projection and
 //! never links a concrete operation catalog or a manager/runtime engine.
 #![forbid(unsafe_code)]
 

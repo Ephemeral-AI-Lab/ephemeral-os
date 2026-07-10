@@ -17,9 +17,10 @@ use crate::core::output::{
     discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, take_progress_flag, EXIT_SUCCESS, EXIT_USAGE,
 };
-use crate::core::request_builder::{catalog_document, BuildRequestInput, RequestBuildError};
+use crate::core::request_builder::{BuildRequestInput, RequestBuildError};
 use crate::core::GatewayConfigOverrides;
-use sandbox_protocol::{CliOperationCatalogDocument, CliOperationExecutionSpace};
+use crate::projection::document::{catalog_document, CatalogDocument};
+use sandbox_operation_contract::OperationDomain;
 
 const PROGRAM: &str = "sandbox-manager-cli";
 const HELP_OP: &str = "help";
@@ -128,7 +129,7 @@ where
         return EXIT_USAGE;
     };
     let request_input = BuildRequestInput {
-        execution_space: CliOperationExecutionSpace::Manager,
+        execution_space: OperationDomain::Manager,
         operation,
         operation_argv,
         sandbox_id: None,
@@ -136,20 +137,24 @@ where
     run_request_from_catalog(&client, request_input, &catalog, progress, stdout, stderr).await
 }
 
-fn manager_catalog<WErr>(stderr: &mut WErr) -> Result<CliOperationCatalogDocument, u8>
+fn manager_catalog<WErr>(stderr: &mut WErr) -> Result<CatalogDocument, u8>
 where
     WErr: Write,
 {
     catalog_or_usage_error(
-        catalog_document(sandbox_manager_operations::manager_catalog()),
+        catalog_document(
+            sandbox_manager_operations::manager_catalog(),
+            crate::projection::manager::catalog_projection(),
+        )
+        .map_err(RequestBuildError::from),
         stderr,
     )
 }
 
 fn catalog_or_usage_error<WErr>(
-    catalog: Result<CliOperationCatalogDocument, RequestBuildError>,
+    catalog: Result<CatalogDocument, RequestBuildError>,
     stderr: &mut WErr,
-) -> Result<CliOperationCatalogDocument, u8>
+) -> Result<CatalogDocument, u8>
 where
     WErr: Write,
 {

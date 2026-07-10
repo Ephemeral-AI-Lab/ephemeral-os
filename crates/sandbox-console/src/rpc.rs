@@ -12,7 +12,8 @@ use http::header::{HeaderValue, ACCEPT, CACHE_CONTROL, CONTENT_TYPE};
 use http::{HeaderMap, Request as HttpRequest, Response, StatusCode};
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
-use sandbox_protocol::{error_response_with_details, CliOperationScope, ProtocolLimits, Request};
+use sandbox_operation_contract::{error_response_with_details, OperationRequest, OperationScope};
+use sandbox_protocol::ProtocolLimits;
 use serde_json::{json, Value};
 
 use crate::response::{self, BoxBody};
@@ -31,7 +32,7 @@ pub async fn handle(state: &Arc<AppState>, req: HttpRequest<Incoming>) -> Respon
     }
 }
 
-async fn one_shot(state: &AppState, request: Request) -> Response<BoxBody> {
+async fn one_shot(state: &AppState, request: OperationRequest) -> Response<BoxBody> {
     let sent = tokio::time::timeout(state.config.rpc_timeout, state.gateway.send(&request)).await;
     match sent {
         Ok(Ok(body)) => response::json_value(StatusCode::OK, &body),
@@ -46,7 +47,7 @@ async fn one_shot(state: &AppState, request: Request) -> Response<BoxBody> {
     }
 }
 
-fn stream(state: Arc<AppState>, request: Request) -> Response<BoxBody> {
+fn stream(state: Arc<AppState>, request: OperationRequest) -> Response<BoxBody> {
     let (sender, body) = response::channel_body();
     tokio::spawn(async move {
         let log_sender = sender.clone();
@@ -76,7 +77,7 @@ fn stream(state: Arc<AppState>, request: Request) -> Response<BoxBody> {
     response
 }
 
-async fn read_request(req: HttpRequest<Incoming>) -> Result<Request, Response<BoxBody>> {
+async fn read_request(req: HttpRequest<Incoming>) -> Result<OperationRequest, Response<BoxBody>> {
     let body =
         http_body_util::Limited::new(req.into_body(), ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES);
     let bytes = match body.collect().await {
@@ -100,7 +101,7 @@ async fn read_request(req: HttpRequest<Incoming>) -> Result<Request, Response<Bo
         .map_err(|message| transport_error(StatusCode::BAD_REQUEST, "invalid_request", &message))
 }
 
-fn request_from_value(value: Value) -> Result<Request, String> {
+fn request_from_value(value: Value) -> Result<OperationRequest, String> {
     let Value::Object(mut object) = value else {
         return Err("request body must be a json object".to_owned());
     };
@@ -109,7 +110,7 @@ fn request_from_value(value: Value) -> Result<Request, String> {
         _ => return Err("op is required and must be a non-empty string".to_owned()),
     };
     let scope = match object.remove("scope") {
-        Some(scope) => serde_json::from_value::<CliOperationScope>(scope)
+        Some(scope) => serde_json::from_value::<OperationScope>(scope)
             .map_err(|error| format!("scope is invalid: {error}"))?,
         None => return Err("scope is required".to_owned()),
     };
@@ -126,7 +127,7 @@ fn request_from_value(value: Value) -> Result<Request, String> {
         Some(_) => return Err("request_id must be a non-empty string".to_owned()),
         None => uuid::Uuid::new_v4().to_string(),
     };
-    Ok(Request::new(op, request_id, scope, args))
+    Ok(OperationRequest::new(op, request_id, scope, args))
 }
 
 fn transport_error(status: StatusCode, kind: &str, message: &str) -> Response<BoxBody> {

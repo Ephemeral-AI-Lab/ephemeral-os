@@ -25,7 +25,7 @@ use crate::workspace_session::{SweptDisposition, SweptSession};
 
 const SQUASH_LAYERSTACK: OperationEntry = OperationEntry {
     name: "squash_layerstack",
-    cli: None,
+    spec: None,
     dispatch: dispatch_squash_layerstack,
 };
 
@@ -37,13 +37,15 @@ pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
 
 fn dispatch_squash_layerstack(
     operations: &SandboxRuntimeOperations,
-    _request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
+    _request: &sandbox_operation_contract::OperationRequest,
+) -> sandbox_operation_contract::OperationResponse {
     match run_squash_layerstack(operations) {
-        Ok(value) => sandbox_protocol::Response::ok(value),
-        Err(message) => {
-            sandbox_protocol::Response::fault_with_details("operation_failed", message, json!({}))
-        }
+        Ok(value) => sandbox_operation_contract::OperationResponse::ok(value),
+        Err(message) => sandbox_operation_contract::OperationResponse::fault_with_details(
+            "operation_failed",
+            message,
+            json!({}),
+        ),
     }
 }
 

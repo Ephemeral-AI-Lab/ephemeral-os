@@ -4,20 +4,22 @@ use super::SandboxDaemonServer;
 use crate::rpc::error::SandboxDaemonError;
 use sandbox_observability::record::names;
 use sandbox_observability::{SpanStatus, TraceContext};
-use sandbox_protocol::{decode_request_value, error_kind, Request, DAEMON_AUTH_FIELD};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
+use sandbox_protocol::{
+    decode_request_value, error as wire_error, DAEMON_AUTH_FIELD, DAEMON_READINESS_OPERATION,
+};
 use serde_json::{Map, Value};
 
 pub(crate) const PRIVATE_OBSERVABILITY_OP: &str = "get_observability";
-pub(crate) const PRIVATE_DAEMON_READY_OP: &str = "sandbox_daemon_ready";
 const DAEMON_NAME: &str = "sandbox-daemon";
 
 impl SandboxDaemonServer {
-    pub(crate) async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> serde_json::Value {
+    pub(crate) async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> OperationResponse {
         let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
             Err(err) => {
                 return super::error_response(
-                    error_kind::BAD_JSON,
+                    wire_error::BAD_JSON,
                     format!("bad json: {err}"),
                     serde_json::json!({}),
                 );
@@ -43,12 +45,12 @@ impl SandboxDaemonServer {
         }
     }
 
-    async fn dispatch_request(&self, request: Request) -> serde_json::Value {
+    async fn dispatch_request(&self, request: OperationRequest) -> OperationResponse {
         if let Err(response) = validate_daemon_scope(&request) {
             return response;
         }
-        if request.op == PRIVATE_DAEMON_READY_OP {
-            return sandbox_daemon_ready_response(self.config.sandbox_id.as_deref(), &request);
+        if request.op == DAEMON_READINESS_OPERATION {
+            return daemon_readiness_response(self.config.sandbox_id.as_deref(), &request);
         }
         if request.op == PRIVATE_OBSERVABILITY_OP {
             return self.dispatch_private_observability(request).await;
@@ -63,12 +65,11 @@ impl SandboxDaemonServer {
             observer.with_context(ctx, || {
                 let dispatch = observer.span(names::DAEMON_DISPATCH);
                 dispatch.attr("op", request.op.clone());
-                let json =
-                    sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
-                if json.get("error").is_some() {
+                let response = sandbox_runtime::dispatch_operation(&operations, &request);
+                if response.as_json_value().get("error").is_some() {
                     dispatch.status(SpanStatus::Error);
                 }
-                json
+                response
             })
         });
         match task.await {
@@ -77,19 +78,19 @@ impl SandboxDaemonServer {
                 response
             }
             Err(err) if err.is_cancelled() => super::error_response(
-                error_kind::INTERNAL_ERROR,
+                error::INTERNAL_ERROR,
                 "daemon request cancelled",
                 serde_json::json!({}),
             ),
             Err(err) => super::error_response(
-                error_kind::INTERNAL_ERROR,
+                error::INTERNAL_ERROR,
                 format!("daemon request failed: {err}"),
                 serde_json::json!({}),
             ),
         }
     }
 
-    async fn dispatch_private_observability(&self, request: Request) -> Value {
+    async fn dispatch_private_observability(&self, request: OperationRequest) -> OperationResponse {
         let operations = Arc::clone(&self.operations);
         let observability = self.observability.clone();
         let task = tokio::task::spawn_blocking(move || {
@@ -98,17 +99,16 @@ impl SandboxDaemonServer {
                 observability.as_deref(),
                 &request,
             )
-            .into_json_value()
         });
         match task.await {
             Ok(response) => response,
             Err(err) if err.is_cancelled() => super::error_response(
-                error_kind::INTERNAL_ERROR,
+                error::INTERNAL_ERROR,
                 "daemon observability request cancelled",
                 serde_json::json!({}),
             ),
             Err(err) => super::error_response(
-                error_kind::INTERNAL_ERROR,
+                error::INTERNAL_ERROR,
                 format!("daemon observability request failed: {err}"),
                 serde_json::json!({}),
             ),
@@ -162,7 +162,7 @@ fn configured_token(token: Option<&str>) -> Option<&str> {
     token.filter(|token| !token.is_empty())
 }
 
-pub(crate) fn decode_request(value: Value) -> Result<Request, Value> {
+pub(crate) fn decode_request(value: Value) -> Result<OperationRequest, OperationResponse> {
     decode_request_value(value)
         .map_err(|err| super::error_response(err.kind(), err.message(), serde_json::json!({})))
 }
@@ -171,21 +171,21 @@ pub(crate) fn decode_request(value: Value) -> Result<Request, Value> {
 /// accepted the sandbox scope, and agrees with the expected sandbox id. When a
 /// sandbox id is configured it must match the request's scope; otherwise the
 /// request's scope id is echoed back.
-pub(crate) fn sandbox_daemon_ready_response(
+pub(crate) fn daemon_readiness_response(
     configured_sandbox_id: Option<&str>,
-    request: &Request,
-) -> Value {
+    request: &OperationRequest,
+) -> OperationResponse {
     let Some(requested) = request.scope.sandbox_id() else {
         return super::error_response(
-            error_kind::INVALID_REQUEST,
-            "sandbox_daemon_ready requires sandbox scope",
+            error::INVALID_REQUEST,
+            format!("{DAEMON_READINESS_OPERATION} requires sandbox scope"),
             serde_json::json!({}),
         );
     };
     let sandbox_id = match configured_sandbox_id {
         Some(configured) if configured != requested => {
             return super::error_response(
-                error_kind::INVALID_REQUEST,
+                error::INVALID_REQUEST,
                 format!(
                     "sandbox id mismatch: daemon is configured for {configured}, request targeted {requested}"
                 ),
@@ -195,19 +195,19 @@ pub(crate) fn sandbox_daemon_ready_response(
         Some(configured) => configured,
         None => requested,
     };
-    serde_json::json!({
+    OperationResponse::ok(serde_json::json!({
         "status": "ready",
         "sandbox_id": sandbox_id,
         "daemon": DAEMON_NAME,
-    })
+    }))
 }
 
-pub(crate) fn validate_daemon_scope(request: &Request) -> Result<(), Value> {
+pub(crate) fn validate_daemon_scope(request: &OperationRequest) -> Result<(), OperationResponse> {
     if request.scope.is_sandbox() {
         return Ok(());
     }
     Err(super::error_response(
-        error_kind::INVALID_REQUEST,
+        error::INVALID_REQUEST,
         "daemon requests require sandbox scope",
         serde_json::json!({}),
     ))

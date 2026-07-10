@@ -38,7 +38,7 @@ pub fn known_operation_name(operation: &str) -> Option<&'static str> {
 #[must_use]
 pub fn dispatch_operation(
     operations: &SandboxRuntimeOperations,
-    request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
+    request: &sandbox_operation_contract::OperationRequest,
+) -> sandbox_operation_contract::OperationResponse {
     operation::dispatch_operation(operations, request)
 }

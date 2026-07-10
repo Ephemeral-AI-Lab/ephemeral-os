@@ -1,5 +1,5 @@
 use sandbox_cli::core::request_builder::{catalog_document, RequestBuildError};
-use sandbox_protocol::CliOperationCatalogDocument;
+use sandbox_operation_contract::OperationCatalogDocument;
 
 use crate::config::OperationSet;
 
@@ -7,9 +7,7 @@ use crate::config::OperationSet;
 ///
 /// # Errors
 /// Returns an error when the selected source catalog is invalid.
-pub fn selected_catalog(
-    set: OperationSet,
-) -> Result<CliOperationCatalogDocument, RequestBuildError> {
+pub fn selected_catalog(set: OperationSet) -> Result<OperationCatalogDocument, RequestBuildError> {
     catalog_document(match set {
         OperationSet::Management => sandbox_manager_operations::manager_catalog(),
         OperationSet::Runtime => sandbox_runtime_operations::runtime_catalog(),

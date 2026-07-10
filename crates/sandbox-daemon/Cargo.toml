@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 sandbox-config.workspace = true
+sandbox-operation-contract.workspace = true
 sandbox-observability.workspace = true
 sandbox-runtime-namespace-process.workspace = true
 sandbox-protocol.workspace = true

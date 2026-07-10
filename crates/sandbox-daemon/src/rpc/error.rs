@@ -1,6 +1,7 @@
 //! Sandbox daemon error algebra and response-kind mapping.
 
-use sandbox_protocol::error_kind;
+use sandbox_operation_contract::error::INTERNAL_ERROR;
+use sandbox_protocol::error::{REQUEST_TOO_LARGE, UNAUTHORIZED};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -21,9 +22,9 @@ impl SandboxDaemonError {
     #[must_use]
     pub const fn response_kind(&self) -> &'static str {
         match self {
-            Self::RequestTooLarge { .. } => error_kind::REQUEST_TOO_LARGE,
-            Self::Unauthorized => error_kind::UNAUTHORIZED,
-            _ => error_kind::INTERNAL_ERROR,
+            Self::RequestTooLarge { .. } => REQUEST_TOO_LARGE,
+            Self::Unauthorized => UNAUTHORIZED,
+            _ => INTERNAL_ERROR,
         }
     }
 }

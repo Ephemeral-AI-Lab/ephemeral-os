@@ -1,13 +1,16 @@
-use sandbox_protocol::{
-    catalog_from_value, catalog_to_value, error_kind, error_response_with_details, ArgKind,
-    CliOperationCatalog, CliOperationCatalogDocument, CliOperationExecutionSpace,
-    CliOperationScope, CliOperationSpecDocument, Request,
+use sandbox_operation_contract::{
+    catalog_from_value, catalog_to_value, error, error_response_with_details,
+    operation_domain_name, ArgKind, ArgSpecDocument, OperationCatalog, OperationCatalogDocument,
+    OperationDomain, OperationRequest, OperationScope, OperationSpecDocument,
 };
 use serde_json::{Map, Number, Value};
 
+use crate::projection::document::{operation_projection, CatalogDocument, ProjectionError};
+use crate::projection::{ArgumentProjection, OperationProjection};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildRequestInput {
-    pub execution_space: CliOperationExecutionSpace,
+    pub execution_space: OperationDomain,
     pub operation: String,
     pub operation_argv: Vec<String>,
     pub sandbox_id: Option<String>,
@@ -15,7 +18,7 @@ pub struct BuildRequestInput {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildRequestValueInput {
-    pub execution_space: CliOperationExecutionSpace,
+    pub execution_space: OperationDomain,
     pub operation: String,
     pub arguments: Value,
 }
@@ -28,7 +31,7 @@ pub struct RequestBuildError {
 impl RequestBuildError {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
-        error_kind::INVALID_REQUEST
+        error::INVALID_REQUEST
     }
 
     #[must_use]
@@ -50,14 +53,19 @@ impl std::fmt::Display for RequestBuildError {
 
 impl std::error::Error for RequestBuildError {}
 
-/// Convert a static catalog into its owned document form (round-tripping through
-/// the protocol's JSON encoding, which also runs catalog validation).
+impl From<ProjectionError> for RequestBuildError {
+    fn from(error: ProjectionError) -> Self {
+        build_error(error.message())
+    }
+}
+
+/// Convert a static semantic catalog into its validated owned document form.
 ///
 /// # Errors
-/// Returns an error when the catalog fails protocol validation.
+/// Returns an error when the catalog fails validation.
 pub fn catalog_document(
-    catalog: CliOperationCatalog,
-) -> Result<CliOperationCatalogDocument, RequestBuildError> {
+    catalog: OperationCatalog,
+) -> Result<OperationCatalogDocument, RequestBuildError> {
     catalog_from_value(&catalog_to_value(catalog)).map_err(|error| build_error(error.message()))
 }
 
@@ -68,8 +76,8 @@ pub fn catalog_document(
 /// missing/empty runtime sandbox id.
 pub fn build_request_from_catalog(
     input: BuildRequestInput,
-    catalog: &CliOperationCatalogDocument,
-) -> Result<Request, RequestBuildError> {
+    catalog: &CatalogDocument,
+) -> Result<OperationRequest, RequestBuildError> {
     build_request_from_catalog_with_id(input, catalog, next_request_id())
 }
 
@@ -80,14 +88,14 @@ pub fn build_request_from_catalog(
 /// missing/empty runtime sandbox id.
 pub fn build_request_from_catalog_with_id(
     input: BuildRequestInput,
-    catalog: &CliOperationCatalogDocument,
+    catalog: &CatalogDocument,
     request_id: impl Into<String>,
-) -> Result<Request, RequestBuildError> {
-    let spec = operation_spec(input.execution_space, &input.operation, catalog)?;
-    let args = build_args(spec, &input.operation_argv)?;
+) -> Result<OperationRequest, RequestBuildError> {
+    let (spec, projection) = projected_operation(input.execution_space, &input.operation, catalog)?;
+    let args = build_args(spec, projection, &input.operation_argv)?;
     build_scoped_request(
         input.execution_space,
-        spec,
+        &spec.name,
         args,
         input.sandbox_id,
         request_id,
@@ -102,8 +110,8 @@ pub fn build_request_from_catalog_with_id(
 /// invalid scalar type, missing required value, or invalid sandbox selector.
 pub fn build_request_from_values(
     input: BuildRequestValueInput,
-    catalog: &CliOperationCatalogDocument,
-) -> Result<Request, RequestBuildError> {
+    catalog: &OperationCatalogDocument,
+) -> Result<OperationRequest, RequestBuildError> {
     build_request_from_values_with_id(input, catalog, next_request_id())
 }
 
@@ -119,61 +127,76 @@ pub fn build_request_from_values(
 /// invalid scalar type, missing required value, or invalid sandbox selector.
 pub fn build_request_from_values_with_id(
     input: BuildRequestValueInput,
-    catalog: &CliOperationCatalogDocument,
+    catalog: &OperationCatalogDocument,
     request_id: impl Into<String>,
-) -> Result<Request, RequestBuildError> {
-    let spec = operation_spec(input.execution_space, &input.operation, catalog)?;
+) -> Result<OperationRequest, RequestBuildError> {
+    let spec = semantic_operation(input.execution_space, &input.operation, catalog)?;
     let Value::Object(mut values) = input.arguments else {
         return Err(build_error(format!(
             "arguments for {} must be an object",
             input.operation
         )));
     };
-    let sandbox_id = if input.execution_space == CliOperationExecutionSpace::Runtime {
+    let sandbox_id = if input.execution_space == OperationDomain::Runtime {
         Some(take_runtime_sandbox_id(&mut values)?)
     } else {
         None
     };
     let args = build_args_from_values(spec, values)?;
-    build_scoped_request(input.execution_space, spec, args, sandbox_id, request_id)
+    build_scoped_request(
+        input.execution_space,
+        &spec.name,
+        args,
+        sandbox_id,
+        request_id,
+    )
 }
 
 fn build_scoped_request(
-    execution_space: CliOperationExecutionSpace,
-    spec: &CliOperationSpecDocument,
+    execution_space: OperationDomain,
+    operation: &str,
     args: Value,
     sandbox_id: Option<String>,
     request_id: impl Into<String>,
-) -> Result<Request, RequestBuildError> {
+) -> Result<OperationRequest, RequestBuildError> {
     match execution_space {
-        CliOperationExecutionSpace::Manager => Ok(Request::new(
-            &spec.name,
+        OperationDomain::Manager => Ok(OperationRequest::new(
+            operation,
             request_id,
-            CliOperationScope::system(),
+            OperationScope::system(),
             args,
         )),
-        CliOperationExecutionSpace::Runtime => Ok(Request::new(
-            &spec.name,
+        OperationDomain::Runtime => Ok(OperationRequest::new(
+            operation,
             request_id,
-            CliOperationScope::sandbox(resolve_runtime_sandbox_id(sandbox_id)?),
+            OperationScope::sandbox(resolve_runtime_sandbox_id(sandbox_id)?),
             args,
         )),
-        CliOperationExecutionSpace::Observability => {
-            build_observability_request(&spec.name, args, request_id)
-        }
+        OperationDomain::Observability => build_observability_request(operation, args, request_id),
     }
 }
 
-fn operation_spec<'a>(
-    execution_space: CliOperationExecutionSpace,
+fn projected_operation<'a>(
+    execution_space: OperationDomain,
     operation: &str,
-    catalog: &'a CliOperationCatalogDocument,
-) -> Result<&'a CliOperationSpecDocument, RequestBuildError> {
+    catalog: &'a CatalogDocument,
+) -> Result<(&'a OperationSpecDocument, &'a OperationProjection), RequestBuildError> {
+    let spec = semantic_operation(execution_space, operation, &catalog.semantic)?;
+    let projection = operation_projection(catalog, operation)
+        .ok_or_else(|| build_error(format!("unknown operation: {operation}")))?;
+    Ok((spec, projection))
+}
+
+fn semantic_operation<'a>(
+    execution_space: OperationDomain,
+    operation: &str,
+    catalog: &'a OperationCatalogDocument,
+) -> Result<&'a OperationSpecDocument, RequestBuildError> {
     if execution_space != catalog.operation_execution_space {
         return Err(build_error(format!(
             "loaded catalog is for {}, not {}",
-            sandbox_protocol::operation_execution_space_name(catalog.operation_execution_space),
-            sandbox_protocol::operation_execution_space_name(execution_space)
+            operation_domain_name(catalog.operation_execution_space),
+            operation_domain_name(execution_space)
         )));
     }
     if operation == "help" {
@@ -181,20 +204,18 @@ fn operation_spec<'a>(
             "help is reserved and cannot be used as an operation name",
         ));
     }
-    find_cli_operation_spec(catalog, operation)
+    catalog
+        .operations
+        .iter()
+        .find(|spec| spec.name == operation)
+        .ok_or_else(|| build_error(format!("unknown operation: {operation}")))
 }
 
-/// Build the wire request for the read-only `observability` space.
-///
-/// Sandbox-scoped views resolve to the daemon op `get_observability`; the
-/// operation name becomes the `view` param, and `--sandbox-id` is CLI routing
-/// (it selects the daemon) rather than an op param. `snapshot` without
-/// `--sandbox-id` is manager-owned and aggregates ready sandboxes.
 fn build_observability_request(
     view: &str,
     args: Value,
     request_id: impl Into<String>,
-) -> Result<Request, RequestBuildError> {
+) -> Result<OperationRequest, RequestBuildError> {
     let Value::Object(mut args) = args else {
         return Err(build_error("observability arguments must be an object"));
     };
@@ -206,18 +227,18 @@ fn build_observability_request(
         None => return Err(build_error("observability operations require --sandbox-id")),
     };
     let Some(sandbox_id) = sandbox_id else {
-        return Ok(Request::new(
+        return Ok(OperationRequest::new(
             OBSERVABILITY_SNAPSHOT_OP,
             request_id,
-            CliOperationScope::system(),
+            OperationScope::system(),
             Value::Object(args),
         ));
     };
     args.insert("view".to_owned(), Value::String(view.to_owned()));
-    Ok(Request::new(
+    Ok(OperationRequest::new(
         OBSERVABILITY_OP,
         request_id,
-        CliOperationScope::sandbox(sandbox_id),
+        OperationScope::sandbox(sandbox_id),
         Value::Object(args),
     ))
 }
@@ -243,19 +264,15 @@ pub fn resolve_runtime_sandbox_id(sandbox_id: Option<String>) -> Result<String, 
 }
 
 fn build_args(
-    spec: &CliOperationSpecDocument,
+    spec: &OperationSpecDocument,
+    projection: &OperationProjection,
     argv: &[String],
 ) -> Result<Value, RequestBuildError> {
     let mut values = Map::new();
-    let positional_args = spec
-        .args
+    let positional_args = projection
+        .arguments
         .iter()
-        .filter(|arg| {
-            arg.cli
-                .as_ref()
-                .and_then(|cli| cli.positional.as_ref())
-                .is_some()
-        })
+        .filter(|arg| arg.positional.is_some())
         .collect::<Vec<_>>();
     let mut next_positional = 0usize;
     let mut index = 0usize;
@@ -263,30 +280,32 @@ fn build_args(
     while index < argv.len() {
         let token = &argv[index];
         if token.starts_with("--") {
-            let arg = find_flag_arg(spec, token)?;
+            let projected_arg = find_flag_arg(projection, token)?;
+            let arg = semantic_argument(spec, projected_arg)?;
             index = index.saturating_add(1);
             let value = argv
                 .get(index)
                 .ok_or_else(|| build_error(format!("{token} requires a value")))?;
-            insert_arg_value(&mut values, arg, value)?;
+            insert_arg_value(&mut values, arg, projected_arg, value)?;
         } else {
-            let arg = positional_args.get(next_positional).ok_or_else(|| {
+            let projected_arg = positional_args.get(next_positional).ok_or_else(|| {
                 build_error(format!(
                     "unexpected positional argument for {}: {token}",
                     spec.name
                 ))
             })?;
+            let arg = semantic_argument(spec, projected_arg)?;
             next_positional = next_positional.saturating_add(1);
-            insert_arg_value(&mut values, arg, token)?;
+            insert_arg_value(&mut values, arg, projected_arg, token)?;
         }
         index = index.saturating_add(1);
     }
 
-    finish_args(spec, values, true)
+    finish_args(spec, values, Some(projection))
 }
 
 fn build_args_from_values(
-    spec: &CliOperationSpecDocument,
+    spec: &OperationSpecDocument,
     mut supplied: Map<String, Value>,
 ) -> Result<Value, RequestBuildError> {
     let mut unknown = supplied
@@ -308,23 +327,25 @@ fn build_args_from_values(
             values.insert(arg.name.clone(), validate_arg_value(arg, value, &arg.name)?);
         }
     }
-    finish_args(spec, values, false)
+    finish_args(spec, values, None)
 }
 
 fn finish_args(
-    spec: &CliOperationSpecDocument,
+    spec: &OperationSpecDocument,
     mut values: Map<String, Value>,
-    cli_names: bool,
+    projection: Option<&OperationProjection>,
 ) -> Result<Value, RequestBuildError> {
     for arg in &spec.args {
         if values.contains_key(&arg.name) {
             continue;
         }
-        let name = if cli_names {
-            cli_arg_name(arg)
-        } else {
-            &arg.name
-        };
+        let projected_arg = projection.and_then(|projection| {
+            projection
+                .arguments
+                .iter()
+                .find(|candidate| candidate.name == arg.name)
+        });
+        let name = cli_arg_name(arg, projected_arg);
         if let Some(default) = catalog_arg_default(arg)? {
             values.insert(arg.name.clone(), default);
         } else if arg.required {
@@ -340,9 +361,7 @@ fn finish_args(
 ///
 /// # Errors
 /// Returns an error when a declared default does not match its catalog kind.
-pub fn catalog_arg_default(
-    arg: &sandbox_protocol::ArgSpecDocument,
-) -> Result<Option<Value>, RequestBuildError> {
+pub fn catalog_arg_default(arg: &ArgSpecDocument) -> Result<Option<Value>, RequestBuildError> {
     arg.default
         .as_deref()
         .map(|default| parse_arg_value(arg, default, &arg.name))
@@ -351,24 +370,25 @@ pub fn catalog_arg_default(
 
 fn insert_arg_value(
     values: &mut Map<String, Value>,
-    arg: &sandbox_protocol::ArgSpecDocument,
+    arg: &ArgSpecDocument,
+    projection: &ArgumentProjection,
     value: &str,
 ) -> Result<(), RequestBuildError> {
     if values.contains_key(&arg.name) {
         return Err(build_error(format!(
             "{} was provided more than once",
-            cli_arg_name(arg)
+            cli_arg_name(arg, Some(projection))
         )));
     }
     values.insert(
         arg.name.clone(),
-        parse_arg_value(arg, value, cli_arg_name(arg))?,
+        parse_arg_value(arg, value, cli_arg_name(arg, Some(projection)))?,
     );
     Ok(())
 }
 
 fn parse_arg_value(
-    arg: &sandbox_protocol::ArgSpecDocument,
+    arg: &ArgSpecDocument,
     value: &str,
     name: &str,
 ) -> Result<Value, RequestBuildError> {
@@ -393,7 +413,7 @@ fn parse_arg_value(
 }
 
 fn validate_arg_value(
-    arg: &sandbox_protocol::ArgSpecDocument,
+    arg: &ArgSpecDocument,
     value: Value,
     name: &str,
 ) -> Result<Value, RequestBuildError> {
@@ -425,41 +445,37 @@ fn take_runtime_sandbox_id(values: &mut Map<String, Value>) -> Result<String, Re
 }
 
 fn find_flag_arg<'a>(
-    spec: &'a CliOperationSpecDocument,
+    projection: &'a OperationProjection,
     flag: &str,
-) -> Result<&'a sandbox_protocol::ArgSpecDocument, RequestBuildError> {
+) -> Result<&'a ArgumentProjection, RequestBuildError> {
+    projection
+        .arguments
+        .iter()
+        .find(|arg| arg.accepts_flag(flag))
+        .ok_or_else(|| build_error(format!("unknown flag for {}: {flag}", projection.name)))
+}
+
+fn semantic_argument<'a>(
+    spec: &'a OperationSpecDocument,
+    projection: &ArgumentProjection,
+) -> Result<&'a ArgSpecDocument, RequestBuildError> {
     spec.args
         .iter()
-        .find(|arg| arg.cli.as_ref().and_then(|cli| cli.flag.as_deref()) == Some(flag))
-        .or_else(|| legacy_flag_arg(spec, flag))
-        .ok_or_else(|| build_error(format!("unknown flag for {}: {flag}", spec.name)))
+        .find(|arg| arg.name == projection.name)
+        .ok_or_else(|| {
+            build_error(format!(
+                "unknown argument for {}: {}",
+                spec.name, projection.name
+            ))
+        })
 }
 
-fn legacy_flag_arg<'a>(
-    spec: &'a CliOperationSpecDocument,
-    flag: &str,
-) -> Option<&'a sandbox_protocol::ArgSpecDocument> {
-    if spec.name == "create_sandbox" && flag == "--workspace-root" {
-        return spec.args.iter().find(|arg| arg.name == "workspace_root");
-    }
-    None
-}
-
-fn find_cli_operation_spec<'a>(
-    catalog: &'a CliOperationCatalogDocument,
-    operation: &str,
-) -> Result<&'a CliOperationSpecDocument, RequestBuildError> {
-    catalog
-        .operations
-        .iter()
-        .find(|spec| spec.name == operation)
-        .ok_or_else(|| build_error(format!("unknown operation: {operation}")))
-}
-
-fn cli_arg_name(arg: &sandbox_protocol::ArgSpecDocument) -> &str {
-    arg.cli
-        .as_ref()
-        .and_then(|cli| cli.flag.as_deref().or(cli.positional.as_deref()))
+fn cli_arg_name<'a>(
+    arg: &'a ArgSpecDocument,
+    projection: Option<&'a ArgumentProjection>,
+) -> &'a str {
+    projection
+        .and_then(|projection| projection.flag.or(projection.positional))
         .unwrap_or(&arg.name)
 }
 

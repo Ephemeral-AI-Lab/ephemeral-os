@@ -1,13 +1,10 @@
-use sandbox_protocol::{catalog_to_value, ArgKind, CliOperationExecutionSpace};
+use sandbox_operation_contract::{catalog_to_value, ArgKind, OperationDomain};
 
 #[test]
 fn runtime_catalog_is_the_exact_public_runtime_surface() {
     let catalog = sandbox_runtime_operations::runtime_catalog();
 
-    assert_eq!(
-        catalog.operation_execution_space,
-        CliOperationExecutionSpace::Runtime
-    );
+    assert_eq!(catalog.operation_execution_space, OperationDomain::Runtime);
     assert_eq!(
         catalog
             .families
@@ -32,10 +29,6 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
             "file_blame",
         ]
     );
-    assert!(catalog
-        .operations
-        .iter()
-        .all(|operation| operation.cli.is_some()));
     let edits = catalog
         .operations
         .iter()
@@ -61,7 +54,6 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
 fn internal_runtime_operations_do_not_leak_into_the_public_catalog() {
     let encoded = catalog_to_value(sandbox_runtime_operations::runtime_catalog()).to_string();
 
-    assert!(sandbox_runtime_operations::FILE_LIST_SPEC.cli.is_none());
     for internal in [
         "create_workspace_session",
         "destroy_workspace_session",

@@ -1,18 +1,18 @@
 use super::ManagerServices;
 use crate::ProgressSink;
+use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationSpec};
 
 #[derive(Clone, Copy)]
 pub(crate) struct ManagerOperationEntry {
-    pub(crate) spec: &'static sandbox_protocol::CliOperationSpec,
-    pub(crate) dispatch:
-        fn(&ManagerServices, &sandbox_protocol::Request) -> sandbox_protocol::Response,
+    pub(crate) spec: &'static OperationSpec,
+    pub(crate) dispatch: fn(&ManagerServices, &OperationRequest) -> OperationResponse,
 }
 
 impl ManagerOperationEntry {
     #[must_use]
     pub(crate) const fn new(
-        spec: &'static sandbox_protocol::CliOperationSpec,
-        dispatch: fn(&ManagerServices, &sandbox_protocol::Request) -> sandbox_protocol::Response,
+        spec: &'static OperationSpec,
+        dispatch: fn(&ManagerServices, &OperationRequest) -> OperationResponse,
     ) -> Self {
         Self { spec, dispatch }
     }
@@ -21,12 +21,12 @@ impl ManagerOperationEntry {
 #[must_use]
 pub fn dispatch_operation(
     services: &ManagerServices,
-    request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     super::cli_definition::operation_entries()
         .iter()
         .find(|entry| entry.spec.name == request.op)
-        .map_or_else(sandbox_protocol::Response::unknown_op, |entry| {
+        .map_or_else(OperationResponse::unknown_op, |entry| {
             (entry.dispatch)(services, request)
         })
 }
@@ -34,9 +34,9 @@ pub fn dispatch_operation(
 #[must_use]
 pub fn dispatch_operation_with_progress(
     services: &ManagerServices,
-    request: &sandbox_protocol::Request,
+    request: &OperationRequest,
     progress: ProgressSink,
-) -> sandbox_protocol::Response {
+) -> OperationResponse {
     if request.op == "create_sandbox" {
         return super::cli_definition::management_operations::dispatch_create_sandbox_with_progress(
             services, request, &progress,

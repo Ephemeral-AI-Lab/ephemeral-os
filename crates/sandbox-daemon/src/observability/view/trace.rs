@@ -1,12 +1,12 @@
-use sandbox_protocol::{error_kind, Request, Response};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use serde_json::{json, Value};
 
 use crate::observability::DaemonObservability;
 
 pub(super) fn trace_view_response(
     observability: Option<&DaemonObservability>,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let Some(observability) = observability else {
         return super::observability_unconfigured();
     };
@@ -17,8 +17,8 @@ pub(super) fn trace_view_response(
         Err(response) => return response,
     };
     let Some(id) = id else {
-        return Response::fault(
-            error_kind::INVALID_REQUEST,
+        return OperationResponse::fault(
+            error::INVALID_REQUEST,
             "trace view requires a trace id (--trace-id)".to_owned(),
         );
     };
@@ -29,5 +29,5 @@ pub(super) fn trace_view_response(
     };
     let spans =
         serde_json::to_value(observability.trace(&id)).unwrap_or_else(|_| Value::Array(Vec::new()));
-    Response::ok(json!({ "view": "trace", "trace": id, "spans": spans }))
+    OperationResponse::ok(json!({ "view": "trace", "trace": id, "spans": spans }))
 }

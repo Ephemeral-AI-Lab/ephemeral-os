@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::workspace_session::SweptDisposition;
 use sandbox_runtime::SandboxRuntimeOperations;
 use sandbox_runtime_layerstack::{LayerChange, LayerPath, LayerStack};
@@ -16,11 +16,11 @@ use serde_json::json;
 mod support;
 use support::FakeWorkspaceService;
 
-fn squash_request() -> Request {
-    Request::new(
+fn squash_request() -> OperationRequest {
+    OperationRequest::new(
         "squash_layerstack",
         "req-squash-test",
-        CliOperationScope::system(),
+        OperationScope::system(),
         json!({}),
     )
 }
@@ -55,7 +55,7 @@ fn publish(root: &std::path::Path, path: &str, content: &str) {
 }
 
 // squash_layerstack dispatches by name but appears in no CLI catalog — the
-// existing `cli: None` field is the whole mechanism (no
+// internal registration is the whole mechanism (no
 // OperationEntry::internal exists).
 #[test]
 fn squash_layerstack_registers_with_cli_none() {
@@ -64,10 +64,10 @@ fn squash_layerstack_registers_with_cli_none() {
         Some("squash_layerstack")
     );
     let catalog = sandbox_runtime_operations::runtime_catalog();
-    let encoded = sandbox_protocol::catalog_to_value(catalog).to_string();
+    let encoded = sandbox_operation_contract::catalog_to_value(catalog).to_string();
     assert!(
         !encoded.contains("squash_layerstack"),
-        "cli: None must keep the op out of every catalog surface"
+        "internal registration must keep the op out of every catalog surface"
     );
 }
 
@@ -202,10 +202,10 @@ fn admission_gate_serializes_destroy_against_file_ops() {
     let destroyer = std::thread::spawn(move || {
         sandbox_runtime::dispatch_operation(
             &destroy_ops,
-            &Request::new(
+            &OperationRequest::new(
                 "destroy_workspace_session",
                 "req-destroy-gate",
-                CliOperationScope::system(),
+                OperationScope::system(),
                 json!({ "workspace_session_id": destroy_id }),
             ),
         )

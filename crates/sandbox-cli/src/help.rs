@@ -1,11 +1,14 @@
-use crate::catalog::catalog_arg_kind_name;
-use crate::{
-    operation_execution_space_name, ArgSpecDocument, CliOperationCatalogDocument,
-    CliOperationExecutionSpace, CliOperationFamilyDocument, CliOperationSpecDocument,
+use sandbox_operation_contract::document::arg_kind_name;
+use sandbox_operation_contract::{
+    operation_domain_name, ArgSpecDocument, OperationDomain, OperationFamilyDocument,
+    OperationSpecDocument,
 };
 
+use crate::projection::document::{argument_projection, operation_projection, CatalogDocument};
+use crate::projection::{ArgumentProjection, OperationProjection};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CliOperationSearchResult {
+pub struct OperationSearchResult {
     pub name: String,
     pub family: String,
     pub summary: String,
@@ -13,9 +16,9 @@ pub struct CliOperationSearchResult {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HelpRenderError {
-    operation_execution_space: CliOperationExecutionSpace,
+    operation_execution_space: OperationDomain,
     operation: String,
-    suggestions: Vec<CliOperationSearchResult>,
+    suggestions: Vec<OperationSearchResult>,
     program: String,
 }
 
@@ -26,14 +29,14 @@ impl HelpRenderError {
     }
 
     #[must_use]
-    pub fn suggestions(&self) -> &[CliOperationSearchResult] {
+    pub fn suggestions(&self) -> &[OperationSearchResult] {
         &self.suggestions
     }
 }
 
 impl std::fmt::Display for HelpRenderError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let space = operation_execution_space_name(self.operation_execution_space);
+        let space = operation_domain_name(self.operation_execution_space);
         writeln!(
             formatter,
             "unknown {space} operation for help: {}",
@@ -56,12 +59,12 @@ impl std::fmt::Display for HelpRenderError {
 impl std::error::Error for HelpRenderError {}
 
 #[must_use]
-pub fn render_catalog_help(catalog: &CliOperationCatalogDocument, program: &str) -> String {
+pub fn render_catalog_help(catalog: &CatalogDocument, program: &str) -> String {
     let mut output = String::new();
-    output.push_str(catalog_title(catalog.operation_execution_space));
+    output.push_str(catalog_title(catalog.semantic.operation_execution_space));
     output.push_str("\n\n");
 
-    for family in &catalog.families {
+    for family in &catalog.semantic.families {
         output.push_str(&family.title);
         output.push('\n');
         push_indented_line(&mut output, 2, &family.summary);
@@ -82,42 +85,39 @@ pub fn render_catalog_help(catalog: &CliOperationCatalogDocument, program: &str)
 }
 
 pub fn render_operation_help(
-    catalog: &CliOperationCatalogDocument,
+    catalog: &CatalogDocument,
     operation: &str,
     program: &str,
 ) -> Result<String, HelpRenderError> {
     let spec = catalog
+        .semantic
         .operations
         .iter()
         .find(|candidate| candidate.name == operation)
-        .ok_or_else(|| HelpRenderError {
-            operation_execution_space: catalog.operation_execution_space,
-            operation: operation.to_owned(),
-            suggestions: search_operation_help(catalog, operation),
-            program: program.to_owned(),
-        })?;
+        .ok_or_else(|| help_error(catalog, operation, program))?;
+    let cli = operation_projection(catalog, operation)
+        .ok_or_else(|| help_error(catalog, operation, program))?;
     let family = catalog
+        .semantic
         .families
         .iter()
         .find(|candidate| candidate.id == spec.family);
-    Ok(render_operation_page(family, spec))
+    Ok(render_operation_page(family, spec, cli))
 }
 
 #[must_use]
-pub fn search_operation_help(
-    catalog: &CliOperationCatalogDocument,
-    query: &str,
-) -> Vec<CliOperationSearchResult> {
+pub fn search_operation_help(catalog: &CatalogDocument, query: &str) -> Vec<OperationSearchResult> {
     let query = query.trim().to_ascii_lowercase();
     if query.is_empty() {
         return Vec::new();
     }
 
     catalog
+        .semantic
         .operations
         .iter()
         .filter(|operation| operation_matches_query(catalog, operation, &query))
-        .map(|operation| CliOperationSearchResult {
+        .map(|operation| OperationSearchResult {
             name: operation.name.clone(),
             family: operation.family.clone(),
             summary: operation.summary.clone(),
@@ -126,8 +126,9 @@ pub fn search_operation_help(
 }
 
 fn render_operation_page(
-    family: Option<&CliOperationFamilyDocument>,
-    spec: &CliOperationSpecDocument,
+    family: Option<&OperationFamilyDocument>,
+    spec: &OperationSpecDocument,
+    cli: &OperationProjection,
 ) -> String {
     let mut output = String::new();
     output.push_str(&spec.name);
@@ -145,30 +146,26 @@ fn render_operation_page(
     push_indented_line(&mut output, 2, &spec.description);
     output.push('\n');
 
-    if let Some(cli) = &spec.cli {
-        output.push_str("Usage\n");
-        push_indented_line(&mut output, 2, &cli.usage);
-        output.push('\n');
-    }
+    output.push_str("Usage\n");
+    push_indented_line(&mut output, 2, cli.usage);
+    output.push('\n');
 
     output.push_str("Arguments\n");
     if spec.args.is_empty() {
         push_indented_line(&mut output, 2, "None");
     } else {
         for arg in &spec.args {
-            push_argument(&mut output, arg);
+            push_argument(&mut output, arg, argument_projection(cli, &arg.name));
         }
     }
     output.push('\n');
 
-    if let Some(cli) = &spec.cli {
-        if !cli.examples.is_empty() {
-            output.push_str("Examples\n");
-            for example in &cli.examples {
-                push_indented_line(&mut output, 2, example);
-            }
-            output.push('\n');
+    if !cli.examples.is_empty() {
+        output.push_str("Examples\n");
+        for example in cli.examples {
+            push_indented_line(&mut output, 2, example);
         }
+        output.push('\n');
     }
 
     if !spec.related.is_empty() {
@@ -182,14 +179,14 @@ fn render_operation_page(
     trim_trailing_blank_lines(output)
 }
 
-fn push_argument(output: &mut String, arg: &ArgSpecDocument) {
+fn push_argument(output: &mut String, arg: &ArgSpecDocument, cli: Option<&ArgumentProjection>) {
     push_indented_line(
         output,
         2,
         &format!(
             "{} {} {}",
-            cli_arg_name(arg),
-            catalog_arg_kind_name(arg.kind),
+            cli_arg_name(arg, cli),
+            arg_kind_name(arg.kind),
             if arg.required { "required" } else { "optional" }
         ),
     );
@@ -201,8 +198,8 @@ fn push_argument(output: &mut String, arg: &ArgSpecDocument) {
 }
 
 fn operation_matches_query(
-    catalog: &CliOperationCatalogDocument,
-    operation: &CliOperationSpecDocument,
+    catalog: &CatalogDocument,
+    operation: &OperationSpecDocument,
     query: &str,
 ) -> bool {
     contains_query(&operation.name, query)
@@ -212,12 +209,13 @@ fn operation_matches_query(
             .args
             .iter()
             .any(|arg| contains_query(&arg.name, query) || contains_query(&arg.help, query))
-        || operation.cli.as_ref().is_some_and(|cli| {
+        || operation_projection(catalog, &operation.name).is_some_and(|cli| {
             cli.examples
                 .iter()
                 .any(|example| contains_query(example, query))
         })
         || catalog
+            .semantic
             .families
             .iter()
             .find(|family| family.id == operation.family)
@@ -229,29 +227,37 @@ fn operation_matches_query(
 }
 
 fn operations_for_family<'a>(
-    catalog: &'a CliOperationCatalogDocument,
+    catalog: &'a CatalogDocument,
     family_id: &str,
-) -> Vec<&'a CliOperationSpecDocument> {
+) -> Vec<&'a OperationSpecDocument> {
     catalog
+        .semantic
         .operations
         .iter()
         .filter(|operation| operation.family == family_id)
         .collect()
 }
 
-fn catalog_title(operation_execution_space: CliOperationExecutionSpace) -> &'static str {
+fn catalog_title(operation_execution_space: OperationDomain) -> &'static str {
     match operation_execution_space {
-        CliOperationExecutionSpace::Manager => "Sandbox Manager Help",
-        CliOperationExecutionSpace::Runtime => "Sandbox Runtime Help",
-        CliOperationExecutionSpace::Observability => "Sandbox Observability Help",
+        OperationDomain::Manager => "Sandbox Manager Help",
+        OperationDomain::Runtime => "Sandbox Runtime Help",
+        OperationDomain::Observability => "Sandbox Observability Help",
     }
 }
 
-fn cli_arg_name(arg: &ArgSpecDocument) -> &str {
-    arg.cli
-        .as_ref()
-        .and_then(|cli| cli.flag.as_deref().or(cli.positional.as_deref()))
+fn cli_arg_name<'a>(arg: &'a ArgSpecDocument, cli: Option<&'a ArgumentProjection>) -> &'a str {
+    cli.and_then(|cli| cli.flag.or(cli.positional))
         .unwrap_or(&arg.name)
+}
+
+fn help_error(catalog: &CatalogDocument, operation: &str, program: &str) -> HelpRenderError {
+    HelpRenderError {
+        operation_execution_space: catalog.semantic.operation_execution_space,
+        operation: operation.to_owned(),
+        suggestions: search_operation_help(catalog, operation),
+        program: program.to_owned(),
+    }
 }
 
 fn contains_query(value: &str, query: &str) -> bool {

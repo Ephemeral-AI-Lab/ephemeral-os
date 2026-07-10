@@ -1,10 +1,4 @@
-//! Runtime CLI operation surface (the `runtime` execution space).
-//!
-//! This crate is **spec-only**: it owns the `CliOperationSpec` catalog for the
-//! runtime execution space and nothing else. `OperationEntry` registrations and
-//! dispatch fn-pointers live in `sandbox-runtime`, which imports these specs.
-//! Keeping the catalog in a thin, dependency-light crate lets protocol clients
-//! link the runtime operation surface without pulling in the runtime engine.
+//! Runtime operation catalog.
 #![forbid(unsafe_code)]
 
 mod command;
@@ -15,13 +9,13 @@ pub use file::{
     FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_FAMILY, FILE_LIST_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC,
 };
 
-use sandbox_protocol::{
-    CliOperationCatalog, CliOperationExecutionSpace, CliOperationFamilySpec, CliOperationSpec,
+use sandbox_operation_contract::{
+    OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
 };
 
-const FAMILIES: &[&CliOperationFamilySpec] = &[&COMMAND_FAMILY, &FILE_FAMILY];
+const FAMILIES: &[&OperationFamilySpec] = &[&COMMAND_FAMILY, &FILE_FAMILY];
 
-const SPECS: &[&CliOperationSpec] = &[
+const SPECS: &[&OperationSpec] = &[
     &EXEC_COMMAND_SPEC,
     &WRITE_STDIN_SPEC,
     &READ_LINES_SPEC,
@@ -32,16 +26,16 @@ const SPECS: &[&CliOperationSpec] = &[
 ];
 
 #[must_use]
-pub const fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
+pub const fn operation_families() -> &'static [&'static OperationFamilySpec] {
     FAMILIES
 }
 
 #[must_use]
-pub const fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
+pub const fn operation_specs() -> &'static [&'static OperationSpec] {
     SPECS
 }
 
 #[must_use]
-pub const fn runtime_catalog() -> CliOperationCatalog {
-    CliOperationCatalog::new(CliOperationExecutionSpace::Runtime, FAMILIES, SPECS)
+pub const fn runtime_catalog() -> OperationCatalog {
+    OperationCatalog::new(OperationDomain::Runtime, FAMILIES, SPECS)
 }

@@ -9,7 +9,9 @@ use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
 use base64::Engine as _;
-use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
+use sandbox_operation_contract::{
+    error, error_response_with_details, OperationRequest, OperationResponse, OperationScope,
+};
 use serde_json::{json, Value};
 
 use crate::export_apply::{
@@ -49,7 +51,10 @@ impl ExportFormat {
     }
 }
 
-pub(crate) fn dispatch_export_changes(services: &ManagerServices, request: &Request) -> Response {
+pub(crate) fn dispatch_export_changes(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
     let sandbox_id = match request.required_string("sandbox_id") {
         Ok(sandbox_id) => sandbox_id,
         Err(response) => return response,
@@ -63,29 +68,29 @@ pub(crate) fn dispatch_export_changes(services: &ManagerServices, request: &Requ
         Err(response) => return response,
     };
     let Some(format) = ExportFormat::parse(&format) else {
-        return Response::fault(
-            error_kind::INVALID_REQUEST,
+        return OperationResponse::fault(
+            error::INVALID_REQUEST,
             format!("format must be dir, tar, or tar-zst: {format}"),
         );
     };
     match run_export_changes(services, request, &sandbox_id, &dest, format) {
-        Ok(value) => Response::ok(value),
+        Ok(value) => OperationResponse::ok(value),
         Err(response) => response,
     }
 }
 
 fn run_export_changes(
     services: &ManagerServices,
-    request: &Request,
+    request: &OperationRequest,
     sandbox_id: &str,
     dest: &str,
     format: ExportFormat,
-) -> Result<Value, Response> {
+) -> Result<Value, OperationResponse> {
     let normalized = guard_dest(services, dest, format).map_err(ManagerError::into_response)?;
     let start = forward(services, request, sandbox_id, RUNTIME_EXPORT_OP, json!({}))?;
     let start = translate_stale_start(start);
     if start.get("error").is_some() {
-        return Err(Response::ok(start));
+        return Err(OperationResponse::ok(start));
     }
     let export_id = start["export_id"]
         .as_str()
@@ -121,7 +126,7 @@ fn render(
     dest_path: &Path,
     start: &Value,
     caps: ExportApplyCaps,
-) -> Result<Value, Response> {
+) -> Result<Value, OperationResponse> {
     match format {
         ExportFormat::Dir => {
             let stats = apply_dir_delta(&mut delivery, dest_path, caps)
@@ -142,15 +147,15 @@ fn render(
 
 fn forward(
     services: &ManagerServices,
-    request: &Request,
+    request: &OperationRequest,
     sandbox_id: &str,
     op: &str,
     args: Value,
-) -> Result<Value, Response> {
-    let runtime_request = Request::new(
+) -> Result<Value, OperationResponse> {
+    let runtime_request = OperationRequest::new(
         op,
         request.request_id.clone(),
-        CliOperationScope::sandbox(sandbox_id.to_owned()),
+        OperationScope::sandbox(sandbox_id.to_owned()),
         args,
     );
     match forward_sandbox_request(services, runtime_request) {
@@ -161,11 +166,11 @@ fn forward(
 
 fn page_stream(
     services: &ManagerServices,
-    request: &Request,
+    request: &OperationRequest,
     sandbox_id: &str,
     export_id: &str,
     expected_total: u64,
-) -> Result<Vec<u8>, Response> {
+) -> Result<Vec<u8>, OperationResponse> {
     let mut compressed: Vec<u8> = Vec::new();
     loop {
         let requested_offset = compressed.len() as u64;
@@ -401,8 +406,8 @@ fn translate_stale_start(value: Value) -> Value {
         .and_then(Value::as_str)
         == Some("unknown_op");
     if unknown {
-        return sandbox_protocol::error_response_with_details(
-            error_kind::OPERATION_FAILED,
+        return error_response_with_details(
+            error::OPERATION_FAILED,
             "sandbox daemon does not support export_changes; recreate the sandbox so it uses the current daemon binary",
             json!({ "daemon_op": RUNTIME_EXPORT_OP }),
         );

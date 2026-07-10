@@ -11,10 +11,8 @@ pub(crate) mod router;
 mod runtime;
 mod store;
 
-pub use daemon_client::{SandboxDaemonClient, TcpSandboxDaemonClient};
-pub use daemon_install::{
-    LocalDaemonTimeouts, LocalSandboxDaemonInstaller, SandboxDaemonInstaller, StartedDaemon,
-};
+pub use daemon_client::SandboxDaemonClient;
+pub use daemon_install::{SandboxDaemonInstaller, StartedDaemon};
 pub use error::ManagerError;
 pub use export_apply::ExportApplyCaps;
 pub use model::{
@@ -22,8 +20,8 @@ pub use model::{
     SharedBaseMount,
 };
 pub use operation::{
-    cli_operation_catalog, cli_operation_families, cli_operation_specs, dispatch_operation,
-    dispatch_operation_with_progress, ManagerServices, ObservabilitySnapshotLimits,
+    dispatch_operation, dispatch_operation_with_progress, operation_catalog, operation_families,
+    operation_specs, ManagerServices, ObservabilitySnapshotLimits,
 };
 pub use progress::ProgressSink;
 pub use router::SandboxManagerRouter;

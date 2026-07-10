@@ -1,13 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OperationScopeKind {
+    System,
+    Sandbox,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum CliOperationScope {
+pub enum OperationScope {
     System,
     Sandbox { sandbox_id: String },
 }
 
-impl CliOperationScope {
+impl OperationScope {
     #[must_use]
     pub const fn system() -> Self {
         Self::System
@@ -38,7 +44,15 @@ impl CliOperationScope {
         matches!(self, Self::Sandbox { .. })
     }
 
-    pub(crate) fn validate(&self) -> Result<(), &'static str> {
+    #[must_use]
+    pub const fn kind(&self) -> OperationScopeKind {
+        match self {
+            Self::System => OperationScopeKind::System,
+            Self::Sandbox { .. } => OperationScopeKind::Sandbox,
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), &'static str> {
         match self {
             Self::System => Ok(()),
             Self::Sandbox { sandbox_id } if sandbox_id.trim().is_empty() => {

@@ -1,6 +1,6 @@
 use sandbox_cli::core::client::{GatewayClient, GatewayClientError};
 use sandbox_cli::core::request_builder::{build_request_from_values, BuildRequestValueInput};
-use sandbox_protocol::{error_response_with_details, CliOperationCatalogDocument};
+use sandbox_operation_contract::{error_response_with_details, OperationCatalogDocument};
 use serde_json::{json, Map, Value};
 
 use crate::config::OperationSet;
@@ -14,7 +14,7 @@ pub struct ToolOutcome {
 #[derive(Debug)]
 pub struct ToolDispatcher {
     set: OperationSet,
-    catalog: CliOperationCatalogDocument,
+    catalog: OperationCatalogDocument,
     client: GatewayClient,
 }
 
@@ -22,7 +22,7 @@ impl ToolDispatcher {
     #[must_use]
     pub fn new(
         set: OperationSet,
-        catalog: CliOperationCatalogDocument,
+        catalog: OperationCatalogDocument,
         client: GatewayClient,
     ) -> Self {
         Self {

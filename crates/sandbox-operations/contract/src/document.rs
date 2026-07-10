@@ -2,28 +2,23 @@ use std::collections::HashSet;
 
 use serde_json::{json, Map, Value};
 
-use crate::{ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec};
+use crate::{
+    operation_domain_name, ArgKind, ArgSpec, OperationDomain, OperationFamilySpec, OperationSpec,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CliOperationExecutionSpace {
-    Manager,
-    Runtime,
-    Observability,
+pub struct OperationCatalog {
+    pub operation_execution_space: OperationDomain,
+    pub families: &'static [&'static OperationFamilySpec],
+    pub operations: &'static [&'static OperationSpec],
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct CliOperationCatalog {
-    pub operation_execution_space: CliOperationExecutionSpace,
-    pub families: &'static [&'static CliOperationFamilySpec],
-    pub operations: &'static [&'static CliOperationSpec],
-}
-
-impl CliOperationCatalog {
+impl OperationCatalog {
     #[must_use]
     pub const fn new(
-        operation_execution_space: CliOperationExecutionSpace,
-        families: &'static [&'static CliOperationFamilySpec],
-        operations: &'static [&'static CliOperationSpec],
+        operation_execution_space: OperationDomain,
+        families: &'static [&'static OperationFamilySpec],
+        operations: &'static [&'static OperationSpec],
     ) -> Self {
         Self {
             operation_execution_space,
@@ -34,14 +29,14 @@ impl CliOperationCatalog {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CliOperationCatalogDocument {
-    pub operation_execution_space: CliOperationExecutionSpace,
-    pub families: Vec<CliOperationFamilyDocument>,
-    pub operations: Vec<CliOperationSpecDocument>,
+pub struct OperationCatalogDocument {
+    pub operation_execution_space: OperationDomain,
+    pub families: Vec<OperationFamilyDocument>,
+    pub operations: Vec<OperationSpecDocument>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CliOperationFamilyDocument {
+pub struct OperationFamilyDocument {
     pub id: String,
     pub title: String,
     pub summary: String,
@@ -49,13 +44,12 @@ pub struct CliOperationFamilyDocument {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CliOperationSpecDocument {
+pub struct OperationSpecDocument {
     pub name: String,
     pub family: String,
     pub summary: String,
     pub description: String,
     pub args: Vec<ArgSpecDocument>,
-    pub cli: Option<CliSpecDocument>,
     pub related: Vec<String>,
 }
 
@@ -66,20 +60,6 @@ pub struct ArgSpecDocument {
     pub required: bool,
     pub help: String,
     pub default: Option<String>,
-    pub cli: Option<ArgCliSpecDocument>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ArgCliSpecDocument {
-    pub flag: Option<String>,
-    pub positional: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CliSpecDocument {
-    pub path: Vec<String>,
-    pub usage: String,
-    pub examples: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -103,40 +83,38 @@ impl std::fmt::Display for CatalogDecodeError {
 impl std::error::Error for CatalogDecodeError {}
 
 #[must_use]
-pub fn catalog_to_value(catalog: CliOperationCatalog) -> Value {
+pub fn catalog_to_value(catalog: OperationCatalog) -> Value {
     json!({
-        "operation_execution_space": operation_execution_space_name(catalog.operation_execution_space),
+        "operation_execution_space": operation_domain_name(catalog.operation_execution_space),
         "families": catalog
             .families
             .iter()
-            .map(|family| cli_operation_family_value(family))
+            .map(|family| operation_family_value(family))
             .collect::<Vec<_>>(),
         "operations": catalog
             .operations
             .iter()
-            .map(|spec| cli_operation_spec_value(spec))
+            .map(|spec| operation_spec_value(spec))
             .collect::<Vec<_>>(),
     })
 }
 
-pub fn catalog_from_value(
-    value: &Value,
-) -> Result<CliOperationCatalogDocument, CatalogDecodeError> {
+pub fn catalog_from_value(value: &Value) -> Result<OperationCatalogDocument, CatalogDecodeError> {
     let object = value
         .as_object()
-        .ok_or_else(|| decode_error("cli operation catalog response must be an object"))?;
+        .ok_or_else(|| decode_error("operation catalog response must be an object"))?;
     let operation_execution_space =
-        operation_execution_space_from_name(required_string(object, "operation_execution_space")?)?;
+        operation_domain_from_name(required_string(object, "operation_execution_space")?)?;
     let families = required_array(object, "families")?
         .iter()
-        .map(cli_operation_family_from_value)
+        .map(operation_family_from_value)
         .collect::<Result<Vec<_>, _>>()?;
     let operations = required_array(object, "operations")?
         .iter()
-        .map(cli_operation_spec_from_value)
+        .map(operation_spec_from_value)
         .collect::<Result<Vec<_>, _>>()?;
     validate_catalog(&families, &operations)?;
-    Ok(CliOperationCatalogDocument {
+    Ok(OperationCatalogDocument {
         operation_execution_space,
         families,
         operations,
@@ -144,18 +122,7 @@ pub fn catalog_from_value(
 }
 
 #[must_use]
-pub const fn operation_execution_space_name(
-    operation_execution_space: CliOperationExecutionSpace,
-) -> &'static str {
-    match operation_execution_space {
-        CliOperationExecutionSpace::Manager => "manager",
-        CliOperationExecutionSpace::Runtime => "runtime",
-        CliOperationExecutionSpace::Observability => "observability",
-    }
-}
-
-#[must_use]
-pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
+pub const fn arg_kind_name(kind: ArgKind) -> &'static str {
     match kind {
         ArgKind::String => "string",
         ArgKind::Integer => "integer",
@@ -165,19 +132,18 @@ pub(crate) const fn catalog_arg_kind_name(kind: ArgKind) -> &'static str {
     }
 }
 
-fn cli_operation_spec_value(spec: &CliOperationSpec) -> Value {
+fn operation_spec_value(spec: &OperationSpec) -> Value {
     json!({
         "name": spec.name,
         "family": spec.family,
         "summary": spec.summary,
         "description": spec.description,
         "args": spec.args.iter().map(arg_spec_value).collect::<Vec<_>>(),
-        "cli": spec.cli.map(cli_spec_value),
         "related": spec.related,
     })
 }
 
-fn cli_operation_family_value(spec: &CliOperationFamilySpec) -> Value {
+fn operation_family_value(spec: &OperationFamilySpec) -> Value {
     json!({
         "id": spec.id,
         "title": spec.title,
@@ -189,36 +155,20 @@ fn cli_operation_family_value(spec: &CliOperationFamilySpec) -> Value {
 fn arg_spec_value(spec: &ArgSpec) -> Value {
     json!({
         "name": spec.name,
-        "kind": catalog_arg_kind_name(spec.kind),
+        "kind": arg_kind_name(spec.kind),
         "required": spec.required,
         "help": spec.help,
         "default": spec.default,
-        "cli": spec.cli.map(arg_cli_spec_value),
     })
 }
 
-fn cli_spec_value(spec: CliSpec) -> Value {
-    json!({
-        "path": spec.path,
-        "usage": spec.usage,
-        "examples": spec.examples,
-    })
-}
-
-fn arg_cli_spec_value(spec: ArgCliSpec) -> Value {
-    json!({
-        "flag": spec.flag,
-        "positional": spec.positional,
-    })
-}
-
-fn cli_operation_family_from_value(
+fn operation_family_from_value(
     value: &Value,
-) -> Result<CliOperationFamilyDocument, CatalogDecodeError> {
+) -> Result<OperationFamilyDocument, CatalogDecodeError> {
     let object = value
         .as_object()
-        .ok_or_else(|| decode_error("cli operation family spec must be an object"))?;
-    Ok(CliOperationFamilyDocument {
+        .ok_or_else(|| decode_error("operation family spec must be an object"))?;
+    Ok(OperationFamilyDocument {
         id: required_string(object, "id")?.to_owned(),
         title: required_string(object, "title")?.to_owned(),
         summary: required_string(object, "summary")?.to_owned(),
@@ -226,40 +176,34 @@ fn cli_operation_family_from_value(
     })
 }
 
-fn cli_operation_spec_from_value(
-    value: &Value,
-) -> Result<CliOperationSpecDocument, CatalogDecodeError> {
+fn operation_spec_from_value(value: &Value) -> Result<OperationSpecDocument, CatalogDecodeError> {
     let object = value
         .as_object()
-        .ok_or_else(|| decode_error("cli operation spec must be an object"))?;
+        .ok_or_else(|| decode_error("operation spec must be an object"))?;
     let args = required_array(object, "args")?
         .iter()
         .map(arg_spec_from_value)
         .collect::<Result<Vec<_>, _>>()?;
-    let cli = optional_object_value(object, "cli")?
-        .map(cli_spec_from_value)
-        .transpose()?;
     let related = required_string_array(object, "related", "related operation entries")?;
-    Ok(CliOperationSpecDocument {
+    Ok(OperationSpecDocument {
         name: required_string(object, "name")?.to_owned(),
         family: required_string(object, "family")?.to_owned(),
         summary: required_string(object, "summary")?.to_owned(),
         description: required_string(object, "description")?.to_owned(),
         args,
-        cli,
         related,
     })
 }
 
 fn validate_catalog(
-    families: &[CliOperationFamilyDocument],
-    operations: &[CliOperationSpecDocument],
+    families: &[OperationFamilyDocument],
+    operations: &[OperationSpecDocument],
 ) -> Result<(), CatalogDecodeError> {
     let mut family_ids = HashSet::new();
     for family in families {
         if !family_ids.insert(family.id.as_str()) {
             return Err(decode_error(format!(
-                "duplicate cli operation family id: {}",
+                "duplicate operation family id: {}",
                 family.id
             )));
         }
@@ -299,49 +243,20 @@ fn arg_spec_from_value(value: &Value) -> Result<ArgSpecDocument, CatalogDecodeEr
     let object = value
         .as_object()
         .ok_or_else(|| decode_error("operation arg spec must be an object"))?;
-    let cli = optional_object_value(object, "cli")?
-        .map(arg_cli_spec_from_value)
-        .transpose()?;
     Ok(ArgSpecDocument {
         name: required_string(object, "name")?.to_owned(),
         kind: arg_kind_from_name(required_string(object, "kind")?)?,
         required: required_bool(object, "required")?,
         help: required_string(object, "help")?.to_owned(),
         default: optional_string(object, "default")?.map(str::to_owned),
-        cli,
     })
 }
 
-fn cli_spec_from_value(value: &Value) -> Result<CliSpecDocument, CatalogDecodeError> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| decode_error("operation cli spec must be an object"))?;
-    let path = required_string_array(object, "path", "operation cli path entries")?;
-    let examples = required_string_array(object, "examples", "operation cli examples")?;
-    Ok(CliSpecDocument {
-        path,
-        usage: required_string(object, "usage")?.to_owned(),
-        examples,
-    })
-}
-
-fn arg_cli_spec_from_value(value: &Value) -> Result<ArgCliSpecDocument, CatalogDecodeError> {
-    let object = value
-        .as_object()
-        .ok_or_else(|| decode_error("operation arg cli spec must be an object"))?;
-    Ok(ArgCliSpecDocument {
-        flag: optional_string(object, "flag")?.map(str::to_owned),
-        positional: optional_string(object, "positional")?.map(str::to_owned),
-    })
-}
-
-fn operation_execution_space_from_name(
-    value: &str,
-) -> Result<CliOperationExecutionSpace, CatalogDecodeError> {
+fn operation_domain_from_name(value: &str) -> Result<OperationDomain, CatalogDecodeError> {
     match value {
-        "manager" => Ok(CliOperationExecutionSpace::Manager),
-        "runtime" => Ok(CliOperationExecutionSpace::Runtime),
-        "observability" => Ok(CliOperationExecutionSpace::Observability),
+        "manager" => Ok(OperationDomain::Manager),
+        "runtime" => Ok(OperationDomain::Runtime),
+        "observability" => Ok(OperationDomain::Observability),
         other => Err(decode_error(format!(
             "unknown operation_execution_space: {other}"
         ))),
@@ -383,17 +298,6 @@ fn required_string_array(
                 .ok_or_else(|| decode_error(format!("{entry_label} must be strings")))
         })
         .collect()
-}
-
-fn optional_object_value<'a>(
-    object: &'a Map<String, Value>,
-    field: &str,
-) -> Result<Option<&'a Value>, CatalogDecodeError> {
-    match object.get(field) {
-        Some(Value::Null) | None => Ok(None),
-        Some(value) if value.is_object() => Ok(Some(value)),
-        Some(_) => Err(decode_error(format!("{field} must be an object or null"))),
-    }
 }
 
 fn required_string<'a>(

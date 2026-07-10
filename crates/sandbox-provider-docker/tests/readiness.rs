@@ -3,11 +3,12 @@ use serde_json::Value;
 #[path = "../src/readiness.rs"]
 mod readiness;
 
-use readiness::{readiness_request_line, validate_readiness_response};
+use readiness::validate_readiness_response;
 
 #[test]
 fn readiness_request_line_is_sandbox_scoped_and_authenticated() {
-    let line = readiness_request_line("sbox-1", "tok-123");
+    let line = sandbox_protocol::daemon_readiness_request_line("sbox-1", "tok-123")
+        .expect("readiness request encodes");
 
     assert_eq!(
         line.last(),

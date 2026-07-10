@@ -1,4 +1,4 @@
-//! The daemon-local export operations, both `cli: None` (the
+//! The daemon-local export operations, both absent from the public catalog (the
 //! `squash_layerstack` precedent): `export_layerstack` folds the published
 //! delta and spools it as one `tar.zst` under `<scratch_root>/.export/`;
 //! `read_export_chunk` pages the spool back in bounded base64 frames and
@@ -25,13 +25,13 @@ use crate::services::SandboxRuntimeOperations;
 
 const EXPORT_LAYERSTACK: OperationEntry = OperationEntry {
     name: "export_layerstack",
-    cli: None,
+    spec: None,
     dispatch: dispatch_export_layerstack,
 };
 
 const READ_EXPORT_CHUNK: OperationEntry = OperationEntry {
     name: "read_export_chunk",
-    cli: None,
+    spec: None,
     dispatch: dispatch_read_export_chunk,
 };
 
@@ -43,13 +43,15 @@ pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
 
 fn dispatch_export_layerstack(
     operations: &SandboxRuntimeOperations,
-    request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
+    request: &sandbox_operation_contract::OperationRequest,
+) -> sandbox_operation_contract::OperationResponse {
     match run_export_layerstack(operations, &request.request_id) {
-        Ok(value) => sandbox_protocol::Response::ok(value),
-        Err(message) => {
-            sandbox_protocol::Response::fault_with_details("operation_failed", message, json!({}))
-        }
+        Ok(value) => sandbox_operation_contract::OperationResponse::ok(value),
+        Err(message) => sandbox_operation_contract::OperationResponse::fault_with_details(
+            "operation_failed",
+            message,
+            json!({}),
+        ),
     }
 }
 
@@ -177,8 +179,8 @@ fn register_spool(
 
 fn dispatch_read_export_chunk(
     operations: &SandboxRuntimeOperations,
-    request: &sandbox_protocol::Request,
-) -> sandbox_protocol::Response {
+    request: &sandbox_operation_contract::OperationRequest,
+) -> sandbox_operation_contract::OperationResponse {
     let export_id = match request.required_string("export_id") {
         Ok(export_id) => export_id,
         Err(response) => return response,
@@ -193,10 +195,12 @@ fn dispatch_read_export_chunk(
         Err(response) => return response,
     };
     match run_read_export_chunk(operations, &export_id, offset, limit) {
-        Ok(value) => sandbox_protocol::Response::ok(value),
-        Err(message) => {
-            sandbox_protocol::Response::fault_with_details("operation_failed", message, json!({}))
-        }
+        Ok(value) => sandbox_operation_contract::OperationResponse::ok(value),
+        Err(message) => sandbox_operation_contract::OperationResponse::fault_with_details(
+            "operation_failed",
+            message,
+            json!({}),
+        ),
     }
 }
 

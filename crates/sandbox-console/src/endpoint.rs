@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 
 use http::StatusCode;
 use hyper::Response;
-use sandbox_protocol::{error_kind, CliOperationScope, Request};
+use sandbox_operation_contract::{
+    error, error_response_with_details, OperationRequest, OperationScope,
+};
 use serde_json::{json, Value};
 
 use crate::response::{self, BoxBody};
@@ -47,7 +49,7 @@ impl ResolveError {
         };
         response::json_value(
             status,
-            &sandbox_protocol::error_response_with_details(kind, message, json!({})),
+            &error_response_with_details(kind, message, json!({})),
         )
     }
 }
@@ -93,10 +95,10 @@ pub async fn resolve(state: &AppState, sandbox_id: &str) -> Result<HttpEndpoint,
     if let Some(endpoint) = state.endpoints.get(sandbox_id) {
         return Ok(endpoint);
     }
-    let request = Request::new(
+    let request = OperationRequest::new(
         "inspect_sandbox",
         uuid::Uuid::new_v4().to_string(),
-        CliOperationScope::system(),
+        OperationScope::system(),
         json!({ "sandbox_id": sandbox_id }),
     );
     let sent = tokio::time::timeout(
@@ -118,7 +120,7 @@ fn endpoint_from_record(sandbox_id: &str, response: &Value) -> Result<HttpEndpoi
     if let Some(error) = response.get("error") {
         let kind = error.get("kind").and_then(Value::as_str).unwrap_or("");
         let message = error.get("message").and_then(Value::as_str).unwrap_or("");
-        if kind == error_kind::INVALID_REQUEST && message.contains(SANDBOX_NOT_FOUND_MESSAGE) {
+        if kind == error::INVALID_REQUEST && message.contains(SANDBOX_NOT_FOUND_MESSAGE) {
             return Err(ResolveError::UnknownSandbox(sandbox_id.to_owned()));
         }
         return Err(ResolveError::Gateway(format!(

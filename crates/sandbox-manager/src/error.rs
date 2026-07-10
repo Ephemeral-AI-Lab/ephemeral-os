@@ -1,3 +1,4 @@
+use sandbox_operation_contract::OperationResponse;
 use thiserror::Error;
 
 use crate::model::{SandboxId, SandboxState};
@@ -69,20 +70,22 @@ impl ManagerError {
             | Self::MissingSandbox { .. }
             | Self::InvalidStateTransition { .. }
             | Self::InvalidExportDest { .. }
-            | Self::DaemonUnavailable { .. } => sandbox_protocol::error_kind::INVALID_REQUEST,
+            | Self::DaemonUnavailable { .. } => sandbox_operation_contract::error::INVALID_REQUEST,
             Self::RuntimeFailed { .. }
             | Self::DaemonInstallFailed { .. }
             | Self::ForwardingFailed { .. }
             | Self::StorePoisoned
-            | Self::RegistryPersistFailed { .. } => sandbox_protocol::error_kind::INTERNAL_ERROR,
+            | Self::RegistryPersistFailed { .. } => {
+                sandbox_operation_contract::error::INTERNAL_ERROR
+            }
             Self::WorkspaceSetupFailed { .. } | Self::ExportFailed { .. } => {
-                sandbox_protocol::error_kind::OPERATION_FAILED
+                sandbox_operation_contract::error::OPERATION_FAILED
             }
         }
     }
 
     #[must_use]
-    pub fn into_response(self) -> sandbox_protocol::Response {
-        sandbox_protocol::Response::fault(self.protocol_kind(), self.to_string())
+    pub fn into_response(self) -> OperationResponse {
+        OperationResponse::fault(self.protocol_kind(), self.to_string())
     }
 }

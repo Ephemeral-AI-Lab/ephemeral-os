@@ -211,6 +211,7 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
             false,
         )
         .await;
+    let response = response.as_json_value();
 
     assert_eq!(response["view"], "cgroup");
     assert_eq!(response["scope"], "sandbox");
@@ -233,6 +234,7 @@ async fn get_observability_wire_op_dispatches_snapshot_and_layerstack() -> TestR
             false,
         )
         .await;
+    let snapshot = snapshot.as_json_value();
 
     assert_eq!(snapshot["sandbox_id"], "sandbox-1");
     assert_eq!(snapshot["lifecycle_state"], "ready");
@@ -257,6 +259,7 @@ async fn get_observability_wire_op_dispatches_snapshot_and_layerstack() -> TestR
             false,
         )
         .await;
+    let layerstack = layerstack.as_json_value();
 
     assert_eq!(layerstack["view"], "layerstack");
     assert!(layerstack["manifest_version"].is_u64());
@@ -289,6 +292,7 @@ async fn events_view_dispatch_returns_parsed_events_by_name() -> TestResult {
             false,
         )
         .await;
+    let response = response.as_json_value();
 
     assert_eq!(response["view"], "events");
     let events = response["events"].as_array().expect("events array");
@@ -322,6 +326,7 @@ async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
             false,
         )
         .await;
+    let response = response.as_json_value();
 
     assert_eq!(response["view"], "trace");
     assert_eq!(response["trace"], "req-7f3");
@@ -359,6 +364,7 @@ async fn events_view_dispatch_last_n_keeps_newest_matched() -> TestResult {
             false,
         )
         .await;
+    let response = response.as_json_value();
 
     let events = response["events"].as_array().expect("events array");
     assert_eq!(events.len(), 2, "last_n caps the fold to the newest N");
@@ -390,6 +396,7 @@ async fn trace_view_dispatch_last_resolves_most_recent_root() -> TestResult {
             false,
         )
         .await;
+    let response = response.as_json_value();
 
     // "last" resolves to the root span with the latest start, not a trace named "last".
     assert_eq!(response["trace"], "req-new");
@@ -410,7 +417,7 @@ async fn observability_emit_does_not_change_operation_responses() -> TestResult 
 
     assert_eq!(
         response,
-        sandbox_protocol::Response::unknown_op().into_json_value()
+        sandbox_operation_contract::OperationResponse::unknown_op()
     );
     Ok(())
 }

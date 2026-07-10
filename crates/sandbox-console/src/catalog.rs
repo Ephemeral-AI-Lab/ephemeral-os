@@ -1,27 +1,52 @@
 //! `/api/catalog`: the management, runtime, and observability operation
-//! catalogs, rendered once from the same spec-only crates the CLIs link so
-//! browser forms cannot drift from the protocol.
+//! catalogs, rendered once from the semantic catalogs and CLI-owned
+//! compatibility projection.
 
 use std::sync::OnceLock;
 
 use http::StatusCode;
 use hyper::Response;
-use sandbox_protocol::catalog_to_value;
+use sandbox_cli::projection::document::{catalog_document, catalog_to_value};
 use serde_json::{json, Value};
 
 use crate::response::{self, BoxBody};
 
-static CATALOGS: OnceLock<Value> = OnceLock::new();
+static CATALOGS: OnceLock<Result<Value, String>> = OnceLock::new();
 
 pub fn handle() -> Response<BoxBody> {
-    let catalogs = CATALOGS.get_or_init(|| {
-        json!({
-            "management": catalog_to_value(sandbox_manager_operations::manager_catalog()),
-            "runtime": catalog_to_value(sandbox_runtime_operations::runtime_catalog()),
-            "observability": catalog_to_value(
-                sandbox_observability_operations::observability_catalog()
+    match CATALOGS.get_or_init(catalogs) {
+        Ok(catalogs) => response::json_value(StatusCode::OK, catalogs),
+        Err(message) => response::json_value(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            &sandbox_operation_contract::error_response_with_details(
+                "internal_error",
+                message,
+                json!({}),
             ),
-        })
-    });
-    response::json_value(StatusCode::OK, catalogs)
+        ),
+    }
+}
+
+fn catalogs() -> Result<Value, String> {
+    let management = catalog_document(
+        sandbox_manager_operations::manager_catalog(),
+        sandbox_cli::projection::manager::catalog_projection(),
+    )
+    .map_err(|error| error.to_string())?;
+    let runtime = catalog_document(
+        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_cli::projection::runtime::catalog_projection(),
+    )
+    .map_err(|error| error.to_string())?;
+    let observability = catalog_document(
+        sandbox_observability_operations::observability_catalog(),
+        sandbox_cli::projection::observability::catalog_projection(),
+    )
+    .map_err(|error| error.to_string())?;
+
+    Ok(json!({
+        "management": catalog_to_value(&management),
+        "runtime": catalog_to_value(&runtime),
+        "observability": catalog_to_value(&observability),
+    }))
 }

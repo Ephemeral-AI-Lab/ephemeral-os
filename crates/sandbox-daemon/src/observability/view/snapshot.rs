@@ -1,5 +1,5 @@
 use sandbox_observability::sample_layerstack;
-use sandbox_protocol::{Request, Response};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use sandbox_runtime::SandboxRuntimeOperations;
 use serde_json::Value;
 
@@ -10,8 +10,8 @@ use crate::observability::DaemonObservability;
 pub(super) fn snapshot_view_response(
     operations: &SandboxRuntimeOperations,
     observability: Option<&DaemonObservability>,
-    _request: &Request,
-) -> Response {
+    _request: &OperationRequest,
+) -> OperationResponse {
     let Some(observability) = observability else {
         return super::observability_unconfigured();
     };
@@ -25,5 +25,5 @@ pub(super) fn snapshot_view_response(
             stack_summary_value(&observation, &bytes),
         );
     }
-    Response::ok(snapshot)
+    OperationResponse::ok(snapshot)
 }

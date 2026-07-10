@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
 use sandbox_cli::core::{GatewayConfig, GatewayConfigOverrides};
-use sandbox_protocol::CliOperationExecutionSpace;
+use sandbox_operation_contract::OperationDomain;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 pub enum OperationSet {
@@ -13,11 +13,11 @@ pub enum OperationSet {
 
 impl OperationSet {
     #[must_use]
-    pub const fn execution_space(self) -> CliOperationExecutionSpace {
+    pub const fn execution_space(self) -> OperationDomain {
         match self {
-            Self::Management => CliOperationExecutionSpace::Manager,
-            Self::Runtime => CliOperationExecutionSpace::Runtime,
-            Self::Observability => CliOperationExecutionSpace::Observability,
+            Self::Management => OperationDomain::Manager,
+            Self::Runtime => OperationDomain::Runtime,
+            Self::Observability => OperationDomain::Observability,
         }
     }
 }

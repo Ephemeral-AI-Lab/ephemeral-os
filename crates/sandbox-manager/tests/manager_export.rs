@@ -20,7 +20,7 @@ use sandbox_manager::{
     SandboxDaemonClient, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxHttpEndpoint,
     SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
-use sandbox_protocol::{error_kind, CliOperationScope, Request, Response};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse, OperationScope};
 use serde_json::{json, Value};
 
 const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
@@ -108,12 +108,12 @@ impl ExportDaemon {
 const HONEST_CHUNK_BYTES: usize = 48;
 
 impl SandboxDaemonClient for ExportDaemon {
-    fn invoke_with_timeout(
+    fn invoke(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-        _timeout: Duration,
-    ) -> Result<Response, ManagerError> {
+        request: OperationRequest,
+        _timeout_override: Option<Duration>,
+    ) -> Result<OperationResponse, ManagerError> {
         self.invocations
             .lock()
             .expect("invocations lock")
@@ -126,7 +126,7 @@ impl SandboxDaemonClient for ExportDaemon {
                     .expect("starts lock")
                     .pop_front()
                     .unwrap_or_else(|| start_value(2, &["L000002-a"], (0, 0, 0, 0), 0, None));
-                Ok(Response::ok(value))
+                Ok(OperationResponse::ok(value))
             }
             "read_export_chunk" => {
                 if let Some(scripted) = self
@@ -135,14 +135,14 @@ impl SandboxDaemonClient for ExportDaemon {
                     .expect("chunks lock")
                     .pop_front()
                 {
-                    return Ok(Response::ok(scripted));
+                    return Ok(OperationResponse::ok(scripted));
                 }
                 let stream = self.stream.lock().expect("stream lock");
                 let bytes = stream.as_deref().unwrap_or(&[]);
                 let offset = request.args["offset"].as_u64().unwrap_or(0) as usize;
                 let end = bytes.len().min(offset + HONEST_CHUNK_BYTES);
                 let chunk = bytes.get(offset..end).unwrap_or(&[]);
-                Ok(Response::ok(json!({
+                Ok(OperationResponse::ok(json!({
                     "chunk": base64::engine::general_purpose::STANDARD.encode(chunk),
                     "offset": offset,
                     "len": chunk.len(),
@@ -150,7 +150,7 @@ impl SandboxDaemonClient for ExportDaemon {
                     "eof": end >= bytes.len(),
                 })))
             }
-            other => Ok(Response::ok(json!({ "forwarded": other }))),
+            other => Ok(OperationResponse::ok(json!({ "forwarded": other }))),
         }
     }
 }
@@ -267,7 +267,7 @@ fn sandbox_id(value: &str) -> SandboxId {
     SandboxId::new(value).expect("valid sandbox id")
 }
 
-fn export_request(sandbox_id: &str, dest: &Path, format: Option<&str>) -> Request {
+fn export_request(sandbox_id: &str, dest: &Path, format: Option<&str>) -> OperationRequest {
     let mut args = json!({
         "sandbox_id": sandbox_id,
         "dest": dest.to_string_lossy(),
@@ -275,15 +275,10 @@ fn export_request(sandbox_id: &str, dest: &Path, format: Option<&str>) -> Reques
     if let Some(format) = format {
         args["format"] = json!(format);
     }
-    Request::new(
-        "export_changes",
-        "req-export",
-        CliOperationScope::System,
-        args,
-    )
+    OperationRequest::new("export_changes", "req-export", OperationScope::System, args)
 }
 
-fn dispatch(env: &Env, request: &Request) -> Value {
+fn dispatch(env: &Env, request: &OperationRequest) -> Value {
     sandbox_manager::dispatch_operation(&env.services, request).into_json_value()
 }
 
@@ -395,18 +390,14 @@ fn dir_entries(path: &Path) -> Vec<String> {
 
 #[test]
 fn export_changes_spec_is_in_the_catalog() {
-    let spec = sandbox_manager_operations::cli_operation_specs()
+    let spec = sandbox_manager_operations::operation_specs()
         .iter()
         .find(|spec| spec.name == "export_changes")
         .expect("export_changes spec");
     assert_eq!(spec.family, "management");
     let arg_names: Vec<&str> = spec.args.iter().map(|arg| arg.name).collect();
     assert_eq!(arg_names, ["sandbox_id", "dest", "format"]);
-    let cli = spec.cli.as_ref().expect("cli spec");
-    assert!(cli.usage.contains("--sandbox-id"));
-    assert!(cli.usage.contains("--dest"));
-    assert!(cli.usage.contains("--format"));
-    let squash = sandbox_manager_operations::cli_operation_specs()
+    let squash = sandbox_manager_operations::operation_specs()
         .iter()
         .find(|spec| spec.name == "squash_layerstacks")
         .expect("squash_layerstacks spec");
@@ -421,15 +412,10 @@ fn export_changes_spec_is_in_the_catalog() {
 #[test]
 fn every_catalog_spec_has_a_dispatcher() {
     let env = env("parity");
-    for spec in sandbox_manager_operations::cli_operation_specs() {
+    for spec in sandbox_manager_operations::operation_specs() {
         let response = dispatch(
             &env,
-            &Request::new(
-                spec.name,
-                "req-parity",
-                CliOperationScope::System,
-                json!({}),
-            ),
+            &OperationRequest::new(spec.name, "req-parity", OperationScope::System, json!({})),
         );
         assert_ne!(
             response["error"]["kind"],
@@ -771,14 +757,14 @@ fn tar_archive_is_decompressed_plain_tar() {
 #[test]
 fn relative_dest_is_rejected_before_any_forward() {
     let env = env("relative-dest");
-    let request = Request::new(
+    let request = OperationRequest::new(
         "export_changes",
         "req-export",
-        CliOperationScope::System,
+        OperationScope::System,
         json!({ "sandbox_id": "sbox-1", "dest": "./relative" }),
     );
     let result = dispatch(&env, &request);
-    assert_eq!(result["error"]["kind"], json!(error_kind::INVALID_REQUEST));
+    assert_eq!(result["error"]["kind"], json!(error::INVALID_REQUEST));
     assert!(error_message(&result).contains("absolute"));
     assert!(
         env.daemon.invocations().is_empty(),
@@ -809,7 +795,7 @@ fn deny_list_rejects_root_home_state_dir_and_export_spool_paths() {
         let result = dispatch(&env, &export_request("sbox-1", &dest, None));
         assert_eq!(
             result["error"]["kind"],
-            json!(error_kind::INVALID_REQUEST),
+            json!(error::INVALID_REQUEST),
             "deny-list must reject {}: {result}",
             dest.display()
         );
@@ -830,21 +816,15 @@ fn format_and_dest_shape_violations_are_rejected() {
     std::fs::write(&file_dest, "x").expect("file");
 
     let bad_format = dispatch(&env, &export_request("sbox-1", &dir_dest, Some("zip")));
-    assert_eq!(
-        bad_format["error"]["kind"],
-        json!(error_kind::INVALID_REQUEST)
-    );
+    assert_eq!(bad_format["error"]["kind"], json!(error::INVALID_REQUEST));
 
     let tar_onto_dir = dispatch(&env, &export_request("sbox-1", &dir_dest, Some("tar")));
-    assert_eq!(
-        tar_onto_dir["error"]["kind"],
-        json!(error_kind::INVALID_REQUEST)
-    );
+    assert_eq!(tar_onto_dir["error"]["kind"], json!(error::INVALID_REQUEST));
 
     let dir_onto_file = dispatch(&env, &export_request("sbox-1", &file_dest, None));
     assert_eq!(
         dir_onto_file["error"]["kind"],
-        json!(error_kind::INVALID_REQUEST)
+        json!(error::INVALID_REQUEST)
     );
 
     let orphan_parent = dispatch(
@@ -853,7 +833,7 @@ fn format_and_dest_shape_violations_are_rejected() {
     );
     assert_eq!(
         orphan_parent["error"]["kind"],
-        json!(error_kind::INVALID_REQUEST)
+        json!(error::INVALID_REQUEST)
     );
 
     assert!(env.daemon.invocations().is_empty());
@@ -876,12 +856,9 @@ fn non_ready_sandbox_is_rejected_by_the_forward_gate_with_dest_untouched() {
     let dest = env.base.join("untouched");
 
     let creating = dispatch(&env, &export_request("sbox-creating", &dest, None));
-    assert_eq!(
-        creating["error"]["kind"],
-        json!(error_kind::INVALID_REQUEST)
-    );
+    assert_eq!(creating["error"]["kind"], json!(error::INVALID_REQUEST));
     let missing = dispatch(&env, &export_request("sbox-missing", &dest, None));
-    assert_eq!(missing["error"]["kind"], json!(error_kind::INVALID_REQUEST));
+    assert_eq!(missing["error"]["kind"], json!(error::INVALID_REQUEST));
     assert!(!dest.exists(), "dest is never created on a gate reject");
 }
 
@@ -920,7 +897,7 @@ fn traversal_entries_are_rejected_with_nothing_applied() {
             );
         }),
     );
-    assert_eq!(dotdot["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert_eq!(dotdot["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&dotdot).contains("'..'"),
         "error names the rejection: {dotdot}"
@@ -962,10 +939,7 @@ fn absolute_entry_names_are_rejected_with_nothing_outside_dest() {
             );
         }),
     );
-    assert_eq!(
-        absolute["error"]["kind"],
-        json!(error_kind::OPERATION_FAILED)
-    );
+    assert_eq!(absolute["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&absolute).contains("absolute"),
         "error names the rejection: {absolute}"
@@ -993,10 +967,7 @@ fn hardlink_entries_are_rejected() {
             );
         }),
     );
-    assert_eq!(
-        hardlink["error"]["kind"],
-        json!(error_kind::OPERATION_FAILED)
-    );
+    assert_eq!(hardlink["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&hardlink).contains("hardlink"),
         "error names the rejection: {hardlink}"
@@ -1059,10 +1030,7 @@ fn whiteout_target_escaping_dest_is_rejected() {
         &dest,
         build_stream(|builder| add_raw(builder, ".wh...", tar::EntryType::Regular, b"", None)),
     );
-    assert_eq!(
-        after_strip["error"]["kind"],
-        json!(error_kind::OPERATION_FAILED)
-    );
+    assert_eq!(after_strip["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&after_strip).contains("whiteout"),
         "error names the whiteout rejection: {after_strip}"
@@ -1077,7 +1045,7 @@ fn whiteout_target_escaping_dest_is_rejected() {
     );
     assert_eq!(
         parent_escape["error"]["kind"],
-        json!(error_kind::OPERATION_FAILED)
+        json!(error::OPERATION_FAILED)
     );
     assert_eq!(
         read_to_string(&victim),
@@ -1106,7 +1074,7 @@ fn reserved_wh_path_component_is_rejected() {
             )
         }),
     );
-    assert_eq!(result["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert_eq!(result["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(error_message(&result).contains(".wh."));
 }
 
@@ -1128,7 +1096,7 @@ fn decompression_bomb_is_capped() {
     });
     let result = hostile_apply(&env, &dest, bomb);
 
-    assert_eq!(result["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert_eq!(result["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&result).contains("decompressed"),
         "error names the cap: {result}"
@@ -1156,7 +1124,7 @@ fn entry_count_bomb_is_capped() {
     });
     let result = hostile_apply(&env, &dest, bomb);
 
-    assert_eq!(result["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert_eq!(result["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&result).contains("entry-count cap"),
         "error names the cap: {result}"
@@ -1180,7 +1148,7 @@ fn stream_cap_rejects_oversized_spool() {
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
 
-    assert_eq!(result["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert_eq!(result["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&result).contains("export stream cap exceeded"),
         "error names the cap: {result}"
@@ -1256,7 +1224,7 @@ fn stale_daemon_unknown_op_is_translated() {
     }));
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
-    assert_eq!(result["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+    assert_eq!(result["error"]["kind"], json!(error::OPERATION_FAILED));
     assert!(
         error_message(&result).contains("export_changes"),
         "error tells the operator to recreate: {result}"
@@ -1390,7 +1358,7 @@ fn malformed_chunk_envelopes_leave_the_directory_unchanged() {
         let value = dispatch(&env, &export_request("sbox-1", &dest, None));
         assert_eq!(
             value["error"]["kind"],
-            json!(error_kind::OPERATION_FAILED),
+            json!(error::OPERATION_FAILED),
             "{label}: {value}"
         );
         assert!(
@@ -1429,7 +1397,7 @@ fn chunk_completeness_failures_preserve_an_existing_archive() {
         let value = dispatch(&env, &export_request("sbox-1", &dest, Some("tar-zst")));
         assert_eq!(
             value["error"]["kind"],
-            json!(error_kind::OPERATION_FAILED),
+            json!(error::OPERATION_FAILED),
             "{label}: {value}"
         );
         assert!(
@@ -1468,7 +1436,7 @@ fn declared_size_is_required_and_capped_before_destination_creation() {
         env.daemon.push_start(start);
 
         let value = dispatch(&env, &export_request("sbox-1", &dest, None));
-        assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+        assert_eq!(value["error"]["kind"], json!(error::OPERATION_FAILED));
         assert!(
             error_message(&value).contains(expected_message),
             "{label}: {value}"
@@ -1503,10 +1471,7 @@ fn complete_but_invalid_archive_bytes_do_not_mutate_outputs() {
     ));
     dir_env.daemon.set_stream(invalid.clone());
     let dir_result = dispatch(&dir_env, &export_request("sbox-1", &dir_dest, None));
-    assert_eq!(
-        dir_result["error"]["kind"],
-        json!(error_kind::OPERATION_FAILED)
-    );
+    assert_eq!(dir_result["error"]["kind"], json!(error::OPERATION_FAILED));
     assert_eq!(read_to_string(&dir_dest.join("keep.txt")), "old\n");
     assert_eq!(dir_entries(&dir_dest), ["keep.txt"]);
 
@@ -1527,7 +1492,7 @@ fn complete_but_invalid_archive_bytes_do_not_mutate_outputs() {
     );
     assert_eq!(
         archive_result["error"]["kind"],
-        json!(error_kind::OPERATION_FAILED)
+        json!(error::OPERATION_FAILED)
     );
     assert_eq!(
         std::fs::read(&archive_dest).expect("archive"),

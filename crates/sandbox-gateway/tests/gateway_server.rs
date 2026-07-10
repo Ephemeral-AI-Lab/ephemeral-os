@@ -11,7 +11,8 @@ use sandbox_manager::{
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
     SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
-use sandbox_protocol::{error_kind, CliOperationScope, ProtocolLimits, Request, Response};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse, OperationScope};
+use sandbox_protocol::{error as wire_error, ProtocolLimits};
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -77,22 +78,22 @@ impl SandboxDaemonInstaller for FakeInstaller {
 
 #[derive(Default)]
 struct RecordingDaemonClient {
-    invocations: Mutex<Vec<(u16, String, CliOperationScope)>>,
+    invocations: Mutex<Vec<(u16, String, OperationScope)>>,
 }
 
 impl SandboxDaemonClient for RecordingDaemonClient {
-    fn invoke_with_timeout(
+    fn invoke(
         &self,
         endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-        _timeout: Duration,
-    ) -> Result<Response, ManagerError> {
+        request: OperationRequest,
+        _timeout_override: Option<Duration>,
+    ) -> Result<OperationResponse, ManagerError> {
         self.invocations.lock().expect("invocations lock").push((
             endpoint.port,
             request.op.clone(),
             request.scope.clone(),
         ));
-        Ok(Response::ok(json!({"forwarded": true})))
+        Ok(OperationResponse::ok(json!({"forwarded": true})))
     }
 }
 
@@ -128,7 +129,7 @@ fn server(
     )
 }
 
-fn request(op: &str, scope: CliOperationScope, args: Value) -> Value {
+fn request(op: &str, scope: OperationScope, args: Value) -> Value {
     json!({
         "op": op,
         "request_id": "req-1",
@@ -258,7 +259,7 @@ async fn gateway_connection_decodes_request_and_writes_response() -> TestResult 
 
     let response = send_value(
         &server,
-        request("list_sandboxes", CliOperationScope::System, json!({})),
+        request("list_sandboxes", OperationScope::System, json!({})),
     )
     .await;
 
@@ -283,7 +284,7 @@ async fn gateway_streams_create_sandbox_progress_before_final_response() -> Test
     );
     let mut request = request(
         "create_sandbox",
-        CliOperationScope::System,
+        OperationScope::System,
         json!({"image": "ubuntu:24.04", "workspace_root": workspace_root.clone()}),
     );
     request["_stream_logs"] = json!(true);
@@ -324,7 +325,7 @@ async fn gateway_connection_rejects_oversized_request() -> TestResult {
 
     let response = send_raw(&server, &oversized).await;
 
-    assert_eq!(response["error"]["kind"], error_kind::REQUEST_TOO_LARGE);
+    assert_eq!(response["error"]["kind"], wire_error::REQUEST_TOO_LARGE);
     assert_eq!(
         response["error"]["details"]["limit"],
         ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES
@@ -345,7 +346,7 @@ async fn gateway_connection_rejects_missing_newline() -> TestResult {
 
     let response = send_raw(&server, br#"{"op":"list_sandboxes"}"#).await;
 
-    assert_eq!(response["error"]["kind"], error_kind::INVALID_REQUEST);
+    assert_eq!(response["error"]["kind"], error::INVALID_REQUEST);
     Ok(())
 }
 
@@ -372,7 +373,7 @@ async fn gateway_overload_response_is_structured_json() -> TestResult {
     reader.read_line(&mut response).await?;
     let response = serde_json::from_str::<Value>(&response)?;
 
-    assert_eq!(response["error"]["kind"], error_kind::INTERNAL_ERROR);
+    assert_eq!(response["error"]["kind"], error::INTERNAL_ERROR);
     assert_eq!(
         response["error"]["details"]["max_concurrent_connections"],
         0
@@ -400,17 +401,17 @@ async fn gateway_rejects_request_with_missing_or_wrong_auth_token() -> TestResul
 
     let missing = send_value(
         &server,
-        request("list_sandboxes", CliOperationScope::System, json!({})),
+        request("list_sandboxes", OperationScope::System, json!({})),
     )
     .await;
-    assert_eq!(missing["error"]["kind"], error_kind::UNAUTHORIZED);
+    assert_eq!(missing["error"]["kind"], wire_error::UNAUTHORIZED);
 
-    let mut wrong = request("list_sandboxes", CliOperationScope::System, json!({}));
+    let mut wrong = request("list_sandboxes", OperationScope::System, json!({}));
     wrong["_sandbox_gateway_auth_token"] = json!("nope");
     let wrong = send_value(&server, wrong).await;
-    assert_eq!(wrong["error"]["kind"], error_kind::UNAUTHORIZED);
+    assert_eq!(wrong["error"]["kind"], wire_error::UNAUTHORIZED);
 
-    let mut authorized = request("list_sandboxes", CliOperationScope::System, json!({}));
+    let mut authorized = request("list_sandboxes", OperationScope::System, json!({}));
     authorized["_sandbox_gateway_auth_token"] = json!("expected-token");
     let authorized = send_value(&server, authorized).await;
     assert_eq!(authorized["sandboxes"], json!([]));
@@ -442,7 +443,7 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
         &server,
         request(
             "exec_command",
-            CliOperationScope::sandbox("sbox-1"),
+            OperationScope::sandbox("sbox-1"),
             json!({"cmd": "pwd"}),
         ),
     )
@@ -453,7 +454,7 @@ async fn gateway_dispatches_sandbox_scope_through_manager_router() -> TestResult
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].0, 7000);
     assert_eq!(invocations[0].1, "exec_command");
-    assert_eq!(invocations[0].2, CliOperationScope::sandbox("sbox-1"));
+    assert_eq!(invocations[0].2, OperationScope::sandbox("sbox-1"));
     Ok(())
 }
 

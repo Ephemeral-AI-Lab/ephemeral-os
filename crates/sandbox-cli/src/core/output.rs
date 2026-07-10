@@ -4,10 +4,12 @@ use std::time::Instant;
 use serde_json::{json, Value};
 
 use sandbox_config::configs::cli::{GatewayConfig, GatewayConfigOverrides};
-use sandbox_protocol::{render_catalog_help, render_operation_help, CliOperationCatalogDocument};
+use sandbox_operation_contract::error_response_with_details;
 
 use super::client::GatewayClient;
 use super::request_builder::{build_request_from_catalog, BuildRequestInput, RequestBuildError};
+use crate::help::{render_catalog_help, render_operation_help};
+use crate::projection::document::CatalogDocument;
 
 pub const EXIT_SUCCESS: u8 = 0;
 pub const EXIT_FAILURE: u8 = 1;
@@ -34,7 +36,7 @@ where
 }
 
 pub fn render_help_command<WOut, WErr>(
-    catalog: &CliOperationCatalogDocument,
+    catalog: &CatalogDocument,
     operation_argv: &[String],
     program: &str,
     stdout: &mut WOut,
@@ -78,7 +80,7 @@ pub fn take_progress_flag(argv: &mut Vec<String>) -> bool {
 pub async fn run_request_from_catalog<WOut, WErr>(
     client: &GatewayClient,
     request_input: BuildRequestInput,
-    catalog: &CliOperationCatalogDocument,
+    catalog: &CatalogDocument,
     stream_logs: bool,
     stdout: &mut WOut,
     stderr: &mut WErr,
@@ -150,7 +152,7 @@ pub fn render_error<WErr>(
 where
     WErr: Write,
 {
-    let response = sandbox_protocol::error_response_with_details(kind, message, json!({}));
+    let response = error_response_with_details(kind, message, json!({}));
     write_json_line(stderr, &response)
 }
 

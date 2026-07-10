@@ -1,4 +1,5 @@
-use sandbox_protocol::error_kind;
+use sandbox_operation_contract::{error as operation_error, OperationResponse};
+use sandbox_protocol::error::{BAD_JSON, REQUEST_TOO_LARGE, UNAUTHORIZED};
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -28,12 +29,12 @@ impl GatewayError {
     #[must_use]
     pub const fn response_kind(&self) -> &'static str {
         match self {
-            Self::Json(_) => error_kind::BAD_JSON,
+            Self::Json(_) => BAD_JSON,
             Self::BadRequest { kind, .. } => kind,
-            Self::RequestTooLarge { .. } => error_kind::REQUEST_TOO_LARGE,
-            Self::MissingNewline => error_kind::INVALID_REQUEST,
-            Self::Unauthorized => error_kind::UNAUTHORIZED,
-            Self::Io(_) => error_kind::INTERNAL_ERROR,
+            Self::RequestTooLarge { .. } => REQUEST_TOO_LARGE,
+            Self::MissingNewline => operation_error::INVALID_REQUEST,
+            Self::Unauthorized => UNAUTHORIZED,
+            Self::Io(_) => operation_error::INTERNAL_ERROR,
         }
     }
 
@@ -46,7 +47,7 @@ impl GatewayError {
     }
 
     #[must_use]
-    pub fn to_response_value(&self) -> Value {
+    pub fn to_response(&self) -> OperationResponse {
         error_response(
             self.response_kind(),
             self.to_string(),
@@ -56,6 +57,10 @@ impl GatewayError {
 }
 
 #[must_use]
-pub(crate) fn error_response(kind: &str, message: impl Into<String>, details: Value) -> Value {
-    sandbox_protocol::error_response_with_details(kind, message, details)
+pub(crate) fn error_response(
+    kind: impl Into<String>,
+    message: impl Into<String>,
+    details: Value,
+) -> OperationResponse {
+    OperationResponse::fault_with_details(kind, message, details)
 }

@@ -1,13 +1,13 @@
 use sandbox_observability::RawFilter;
-use sandbox_protocol::{Request, Response};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use serde_json::{json, Value};
 
 use crate::observability::DaemonObservability;
 
 pub(super) fn events_view_response(
     observability: Option<&DaemonObservability>,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let Some(observability) = observability else {
         return super::observability_unconfigured();
     };
@@ -27,10 +27,10 @@ pub(super) fn events_view_response(
         events.drain(..events.len() - keep);
     }
     let events = serde_json::to_value(events).unwrap_or_else(|_| Value::Array(Vec::new()));
-    Response::ok(json!({ "view": "events", "events": events }))
+    OperationResponse::ok(json!({ "view": "events", "events": events }))
 }
 
-fn event_filter(request: &Request) -> Result<RawFilter, Response> {
+fn event_filter(request: &OperationRequest) -> Result<RawFilter, OperationResponse> {
     Ok(RawFilter {
         name: optional_filter(request, "name")?,
         since_ms: since_ms(request)?,
@@ -38,14 +38,17 @@ fn event_filter(request: &Request) -> Result<RawFilter, Response> {
     })
 }
 
-fn optional_filter(request: &Request, field: &str) -> Result<Option<String>, Response> {
+fn optional_filter(
+    request: &OperationRequest,
+    field: &str,
+) -> Result<Option<String>, OperationResponse> {
     Ok(request
         .optional_string(field)?
         .map(|value| value.trim().to_owned())
         .filter(|value| !value.is_empty()))
 }
 
-fn since_ms(request: &Request) -> Result<i64, Response> {
+fn since_ms(request: &OperationRequest) -> Result<i64, OperationResponse> {
     Ok(request
         .optional_u64("since_ms")?
         .map(|value| i64::try_from(value).unwrap_or(i64::MAX))

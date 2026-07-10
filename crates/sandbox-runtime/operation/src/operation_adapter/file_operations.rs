@@ -7,7 +7,7 @@ use crate::file::{
 use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{error_kind, Request, Response};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use sandbox_runtime_layerstack::LayerPath;
 use sandbox_runtime_operations::{
     FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_LIST_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC,
@@ -17,15 +17,15 @@ const FILE_NOT_FOUND: &str = "not_found";
 const READ_LIMIT_MAX: u64 = 2000;
 
 // `file_list` is daemon HTTP-only; the other file operations stay in the runtime CLI.
-const FILE_BLAME: OperationEntry = OperationEntry::cli(&FILE_BLAME_SPEC, dispatch_file_blame);
+const FILE_BLAME: OperationEntry = OperationEntry::public(&FILE_BLAME_SPEC, dispatch_file_blame);
 const FILE_LIST: OperationEntry = OperationEntry {
     name: FILE_LIST_SPEC.name,
-    cli: None,
+    spec: None,
     dispatch: dispatch_file_list,
 };
-const FILE_READ: OperationEntry = OperationEntry::cli(&FILE_READ_SPEC, dispatch_file_read);
-const FILE_WRITE: OperationEntry = OperationEntry::cli(&FILE_WRITE_SPEC, dispatch_file_write);
-const FILE_EDIT: OperationEntry = OperationEntry::cli(&FILE_EDIT_SPEC, dispatch_file_edit);
+const FILE_READ: OperationEntry = OperationEntry::public(&FILE_READ_SPEC, dispatch_file_read);
+const FILE_WRITE: OperationEntry = OperationEntry::public(&FILE_WRITE_SPEC, dispatch_file_write);
+const FILE_EDIT: OperationEntry = OperationEntry::public(&FILE_EDIT_SPEC, dispatch_file_edit);
 
 const OPERATIONS: &[OperationEntry] = &[FILE_BLAME, FILE_LIST, FILE_READ, FILE_WRITE, FILE_EDIT];
 
@@ -33,7 +33,10 @@ pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
 }
 
-fn dispatch_file_blame(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+fn dispatch_file_blame(
+    operations: &SandboxRuntimeOperations,
+    request: &OperationRequest,
+) -> OperationResponse {
     let path = match request.required_string("path") {
         Ok(path) => path,
         Err(response) => return response,
@@ -41,7 +44,7 @@ fn dispatch_file_blame(operations: &SandboxRuntimeOperations, request: &Request)
     let canonical_path = match LayerPath::parse(&path) {
         Ok(path) => path,
         Err(_) => {
-            return Response::fault_with_details(
+            return OperationResponse::fault_with_details(
                 FILE_NOT_FOUND,
                 format!("no auditability record for path: {path}"),
                 json!({ "path": path }),
@@ -49,8 +52,8 @@ fn dispatch_file_blame(operations: &SandboxRuntimeOperations, request: &Request)
         }
     };
     match operations.file.blame(canonical_path.as_str()) {
-        Ok(ranges) => Response::ok(file_blame_value(canonical_path.as_str(), &ranges)),
-        Err(FileError::NotFound(missing)) => Response::fault_with_details(
+        Ok(ranges) => OperationResponse::ok(file_blame_value(canonical_path.as_str(), &ranges)),
+        Err(FileError::NotFound(missing)) => OperationResponse::fault_with_details(
             FILE_NOT_FOUND,
             format!("no auditability record for path: {missing}"),
             json!({ "path": missing }),
@@ -58,7 +61,10 @@ fn dispatch_file_blame(operations: &SandboxRuntimeOperations, request: &Request)
     }
 }
 
-fn dispatch_file_list(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+fn dispatch_file_list(
+    operations: &SandboxRuntimeOperations,
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_list_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -68,12 +74,15 @@ fn dispatch_file_list(operations: &SandboxRuntimeOperations, request: &Request) 
         operations.workspace_session.as_ref(),
         input,
     ) {
-        Ok(output) => Response::ok(file_list_value(&output)),
+        Ok(output) => OperationResponse::ok(file_list_value(&output)),
         Err(error) => file_operation_error_response(error),
     }
 }
 
-fn dispatch_file_read(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+fn dispatch_file_read(
+    operations: &SandboxRuntimeOperations,
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_read_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -83,12 +92,15 @@ fn dispatch_file_read(operations: &SandboxRuntimeOperations, request: &Request) 
         operations.workspace_session.as_ref(),
         input,
     ) {
-        Ok(output) => Response::ok(file_read_value(&output)),
+        Ok(output) => OperationResponse::ok(file_read_value(&output)),
         Err(error) => file_operation_error_response(error),
     }
 }
 
-fn dispatch_file_write(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+fn dispatch_file_write(
+    operations: &SandboxRuntimeOperations,
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_write_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -98,12 +110,15 @@ fn dispatch_file_write(operations: &SandboxRuntimeOperations, request: &Request)
         operations.workspace_session.as_ref(),
         input,
     ) {
-        Ok(output) => Response::ok(file_write_value(&output)),
+        Ok(output) => OperationResponse::ok(file_write_value(&output)),
         Err(error) => file_operation_error_response(error),
     }
 }
 
-fn dispatch_file_edit(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+fn dispatch_file_edit(
+    operations: &SandboxRuntimeOperations,
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_edit_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -113,12 +128,12 @@ fn dispatch_file_edit(operations: &SandboxRuntimeOperations, request: &Request) 
         operations.workspace_session.as_ref(),
         input,
     ) {
-        Ok(output) => Response::ok(file_edit_value(&output)),
+        Ok(output) => OperationResponse::ok(file_edit_value(&output)),
         Err(error) => file_operation_error_response(error),
     }
 }
 
-fn parse_list_input(request: &Request) -> Result<ListInput, Response> {
+fn parse_list_input(request: &OperationRequest) -> Result<ListInput, OperationResponse> {
     Ok(ListInput {
         path: request
             .optional_string("path")?
@@ -127,7 +142,7 @@ fn parse_list_input(request: &Request) -> Result<ListInput, Response> {
     })
 }
 
-fn parse_read_input(request: &Request) -> Result<ReadInput, Response> {
+fn parse_read_input(request: &OperationRequest) -> Result<ReadInput, OperationResponse> {
     let limit = request.optional_usize("limit")?;
     if matches!(limit, Some(value) if value < 1 || value as u64 > READ_LIMIT_MAX) {
         return Err(request.invalid_argument("limit must be between 1 and 2000"));
@@ -140,7 +155,7 @@ fn parse_read_input(request: &Request) -> Result<ReadInput, Response> {
     })
 }
 
-fn parse_write_input(request: &Request) -> Result<WriteInput, Response> {
+fn parse_write_input(request: &OperationRequest) -> Result<WriteInput, OperationResponse> {
     Ok(WriteInput {
         path: request.required_string("path")?,
         content: request.optional_string("content")?.unwrap_or_default(),
@@ -149,7 +164,7 @@ fn parse_write_input(request: &Request) -> Result<WriteInput, Response> {
     })
 }
 
-fn parse_edit_input(request: &Request) -> Result<EditInput, Response> {
+fn parse_edit_input(request: &OperationRequest) -> Result<EditInput, OperationResponse> {
     Ok(EditInput {
         path: request.required_string("path")?,
         edits: parse_edits(request)?,
@@ -158,14 +173,16 @@ fn parse_edit_input(request: &Request) -> Result<EditInput, Response> {
     })
 }
 
-fn parse_workspace_session_id(request: &Request) -> Result<Option<WorkspaceSessionId>, Response> {
+fn parse_workspace_session_id(
+    request: &OperationRequest,
+) -> Result<Option<WorkspaceSessionId>, OperationResponse> {
     Ok(request
         .optional_string("workspace_session_id")?
         .filter(|workspace_session_id| !workspace_session_id.is_empty())
         .map(WorkspaceSessionId))
 }
 
-fn parse_edits(request: &Request) -> Result<Vec<EditOp>, Response> {
+fn parse_edits(request: &OperationRequest) -> Result<Vec<EditOp>, OperationResponse> {
     let value = request
         .args
         .get("edits")
@@ -189,7 +206,11 @@ fn parse_edits(request: &Request) -> Result<Vec<EditOp>, Response> {
         .collect()
 }
 
-fn parse_edit_op(request: &Request, index: usize, item: &Value) -> Result<EditOp, Response> {
+fn parse_edit_op(
+    request: &OperationRequest,
+    index: usize,
+    item: &Value,
+) -> Result<EditOp, OperationResponse> {
     let object = item
         .as_object()
         .ok_or_else(|| request.invalid_argument(format!("edits[{index}] must be an object")))?;
@@ -221,13 +242,13 @@ fn parse_edit_op(request: &Request, index: usize, item: &Value) -> Result<EditOp
     })
 }
 
-fn file_operation_error_response(error: FileOperationError) -> Response {
+fn file_operation_error_response(error: FileOperationError) -> OperationResponse {
     let message = error.to_string();
     match error {
         FileOperationError::NotFound(path) => {
-            Response::fault_with_details(FILE_NOT_FOUND, message, json!({ "path": path }))
+            OperationResponse::fault_with_details(FILE_NOT_FOUND, message, json!({ "path": path }))
         }
-        FileOperationError::WorkspaceSessionNotFound(id) => Response::fault_with_details(
+        FileOperationError::WorkspaceSessionNotFound(id) => OperationResponse::fault_with_details(
             FILE_NOT_FOUND,
             message,
             json!({ "workspace_session_id": id }),
@@ -241,10 +262,14 @@ fn file_operation_error_response(error: FileOperationError) -> Response {
         | FileOperationError::EditNotFound { .. }
         | FileOperationError::EditNotUnique { .. }
         | FileOperationError::NoEdits
-        | FileOperationError::NoChanges(_) => Response::fault(error_kind::INVALID_REQUEST, message),
+        | FileOperationError::NoChanges(_) => {
+            OperationResponse::fault(error::INVALID_REQUEST, message)
+        }
         FileOperationError::WorkspaceSession(_)
         | FileOperationError::LayerStack(_)
-        | FileOperationError::Io { .. } => Response::fault(error_kind::OPERATION_FAILED, message),
+        | FileOperationError::Io { .. } => {
+            OperationResponse::fault(error::OPERATION_FAILED, message)
+        }
     }
 }
 

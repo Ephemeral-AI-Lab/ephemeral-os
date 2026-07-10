@@ -1,8 +1,8 @@
-use sandbox_protocol::{ArgCliSpec, ArgKind, ArgSpec, CliOperationSpec, CliSpec};
+use sandbox_operation_contract::{ArgKind, ArgSpec, OperationSpec};
 
 use super::SANDBOX_ID_ARG;
 
-pub(super) const TRACE_SPEC: CliOperationSpec = CliOperationSpec {
+pub(super) const TRACE_SPEC: OperationSpec = OperationSpec {
     name: "trace",
     family: "observability",
     summary: "Render one flow as a span waterfall.",
@@ -16,19 +16,7 @@ recent root trace.",
             ArgKind::String,
             "Trace id to render, or 'last' for the most recent root trace.",
             Some("last"),
-            Some(ArgCliSpec {
-                flag: Some("--trace-id"),
-                positional: None,
-            }),
         ),
     ],
-    cli: Some(CliSpec {
-        path: &["observability", "trace"],
-        usage: "sandbox-observability-cli trace --sandbox-id ID [--trace-id TRACE|last]",
-        examples: &[
-            "sandbox-observability-cli trace --sandbox-id eos-abc --trace-id req-7f3",
-            "sandbox-observability-cli trace --sandbox-id eos-abc --trace-id last",
-        ],
-    }),
     related: &["events", "snapshot"],
 };

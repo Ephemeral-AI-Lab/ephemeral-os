@@ -1,5 +1,5 @@
 use sandbox_observability_operations::{observability_catalog, SNAPSHOT_SPEC};
-use sandbox_protocol::CliOperationExecutionSpace;
+use sandbox_operation_contract::{catalog_to_value, OperationDomain};
 
 #[test]
 fn observability_catalog_is_the_exact_public_set() {
@@ -12,7 +12,7 @@ fn observability_catalog_is_the_exact_public_set() {
 
     assert_eq!(
         catalog.operation_execution_space,
-        CliOperationExecutionSpace::Observability
+        OperationDomain::Observability
     );
     assert_eq!(catalog.families.len(), 1);
     assert_eq!(catalog.families[0].id, "observability");
@@ -20,17 +20,11 @@ fn observability_catalog_is_the_exact_public_set() {
         names,
         ["snapshot", "trace", "events", "cgroup", "layerstack"]
     );
-    assert!(catalog.operations.iter().all(|operation| {
-        operation.family == "observability"
-            && operation.cli.is_some_and(|cli| {
-                cli.usage.starts_with("sandbox-observability-cli ")
-                    && cli
-                        .examples
-                        .iter()
-                        .all(|example| example.starts_with("sandbox-observability-cli "))
-            })
-    }));
-    let serialized = sandbox_protocol::catalog_to_value(catalog).to_string();
+    assert!(catalog
+        .operations
+        .iter()
+        .all(|operation| operation.family == "observability"));
+    let serialized = catalog_to_value(catalog).to_string();
     assert!(!serialized.contains("sandbox-manager-cli observability"));
 }
 

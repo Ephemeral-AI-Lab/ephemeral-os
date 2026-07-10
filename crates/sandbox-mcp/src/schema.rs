@@ -1,6 +1,6 @@
 use sandbox_cli::core::request_builder::{catalog_arg_default, RequestBuildError};
-use sandbox_protocol::{
-    ArgKind, ArgSpecDocument, CliOperationCatalogDocument, CliOperationSpecDocument,
+use sandbox_operation_contract::{
+    ArgKind, ArgSpecDocument, OperationCatalogDocument, OperationSpecDocument,
 };
 use serde_json::{json, Map, Value};
 
@@ -20,7 +20,7 @@ pub struct ToolDefinition {
 /// declared argument type.
 pub fn tool_definitions(
     set: OperationSet,
-    catalog: &CliOperationCatalogDocument,
+    catalog: &OperationCatalogDocument,
 ) -> Result<Vec<ToolDefinition>, RequestBuildError> {
     catalog
         .operations
@@ -37,7 +37,7 @@ pub fn tool_definitions(
 
 fn input_schema(
     set: OperationSet,
-    spec: &CliOperationSpecDocument,
+    spec: &OperationSpecDocument,
 ) -> Result<Map<String, Value>, RequestBuildError> {
     let mut properties = Map::new();
     let mut required = Vec::new();

@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+sandbox-operation-contract.workspace = true
 serde.workspace = true
 # preserve_order keeps RPC request args in caller order across daemon clients
 # and daemon server parsing.

@@ -48,7 +48,7 @@ mod connection_tests {
 
 mod dispatch_tests {
     pub(crate) use crate::rpc::dispatch::{
-        decode_request, sandbox_daemon_ready_response, strip_tcp_auth, validate_daemon_scope,
+        daemon_readiness_response, decode_request, strip_tcp_auth, validate_daemon_scope,
     };
     pub(crate) use crate::rpc::SandboxDaemonError;
     include!(concat!(

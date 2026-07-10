@@ -4,7 +4,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
 use sandbox_observability::Observer;
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::workspace_session::{
     FinalizePolicy, WorkspaceSessionError, WorkspaceSessionService,
@@ -905,8 +905,8 @@ fn operations_with_fake(
     ))
 }
 
-fn runtime_request(op: &str, args: serde_json::Value) -> Request {
-    Request::new(op, "req-test", CliOperationScope::system(), args)
+fn runtime_request(op: &str, args: serde_json::Value) -> OperationRequest {
+    OperationRequest::new(op, "req-test", OperationScope::system(), args)
 }
 
 fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Error + Send + Sync>>

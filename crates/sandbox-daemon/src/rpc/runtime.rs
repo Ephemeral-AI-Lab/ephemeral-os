@@ -5,6 +5,7 @@ use crate::observability::DaemonObservability;
 use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability::Observer;
+use sandbox_operation_contract::OperationResponse;
 use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::{SandboxRuntimeConfig, SandboxRuntimeOperations};
 use serde_json::{json, Value};
@@ -115,8 +116,8 @@ pub(crate) fn error_response(
     kind: &'static str,
     message: impl Into<String>,
     details: Value,
-) -> Value {
-    sandbox_protocol::response::error_response_with_details(kind, message, fault_details(details))
+) -> OperationResponse {
+    OperationResponse::fault_with_details(kind, message, fault_details(details))
 }
 
 fn fault_details(details: Value) -> Value {

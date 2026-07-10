@@ -1,12 +1,12 @@
-use sandbox_protocol::{Request, Response};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use serde_json::json;
 
 use crate::observability::DaemonObservability;
 
 pub(super) fn cgroup_view_response(
     observability: Option<&DaemonObservability>,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let scope = match request.optional_string("scope") {
         Ok(scope) => scope.unwrap_or_else(|| "sandbox".to_owned()),
         Err(response) => return response,
@@ -19,7 +19,7 @@ pub(super) fn cgroup_view_response(
         Ok(window_ms) => window_ms.unwrap_or(max_window_ms),
         Err(response) => return response,
     };
-    Response::ok(json!({
+    OperationResponse::ok(json!({
         "view": "cgroup",
         "scope": scope,
         "series": observability.cgroup_series(&scope, window_ms),

@@ -13,7 +13,7 @@ use sandbox_observability::record::{names, proc};
 use sandbox_observability::{
     Observer, ObserverConfig, RawFilter, Reader, Sink, SpanStatus, TraceContext,
 };
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::command::{CommandStatus, ExecCommandInput};
 use sandbox_runtime::SandboxRuntimeOperations;
 use sandbox_runtime_workspace::{
@@ -263,10 +263,10 @@ fn fault_response_marks_daemon_dispatch_error() {
     let log = TempLog::new("fault");
     let obs = enabled_observer(&log.path);
     let operations = disabled_operations();
-    let request = Request::new(
+    let request = OperationRequest::new(
         "nonexistent_op",
         "req-fault",
-        CliOperationScope::system(),
+        OperationScope::system(),
         serde_json::json!({}),
     );
 
@@ -283,7 +283,7 @@ fn fault_response_marks_daemon_dispatch_error() {
     let dispatch = span(&records, names::DAEMON_DISPATCH);
     assert_eq!(
         dispatch["status"], "error",
-        "a fault Response flips the dispatch root to error"
+        "a fault OperationResponse flips the dispatch root to error"
     );
 }
 

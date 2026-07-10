@@ -1,17 +1,16 @@
 use std::path::{Path, PathBuf};
-#[cfg(unix)]
-use std::process::{Child, Command};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use sandbox_manager::LocalSandboxDaemonInstaller;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
     SandboxState, SandboxStore, SharedBaseMount, StartedDaemon,
 };
-use sandbox_protocol::{ArgKind, CliOperationExecutionSpace, CliOperationScope, Request, Response};
+use sandbox_operation_contract::{
+    ArgKind, OperationDomain, OperationRequest, OperationResponse, OperationScope,
+};
 use serde_json::{json, Value};
 
 #[derive(Default)]
@@ -138,13 +137,13 @@ impl SandboxDaemonInstaller for FakeInstaller {
 struct FakeClient;
 
 impl SandboxDaemonClient for FakeClient {
-    fn invoke_with_timeout(
+    fn invoke(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-        _request: sandbox_protocol::Request,
-        _timeout: Duration,
-    ) -> Result<Response, ManagerError> {
-        Ok(Response::ok(json!({"forwarded": true})))
+        _request: sandbox_operation_contract::OperationRequest,
+        _timeout_override: Option<Duration>,
+    ) -> Result<OperationResponse, ManagerError> {
+        Ok(OperationResponse::ok(json!({"forwarded": true})))
     }
 }
 
@@ -157,9 +156,9 @@ struct RecordingSnapshotClient {
 #[derive(Debug)]
 struct SnapshotInvocation {
     op: String,
-    scope: CliOperationScope,
+    scope: OperationScope,
     args: Value,
-    timeout: Duration,
+    timeout_override: Option<Duration>,
 }
 
 impl RecordingSnapshotClient {
@@ -179,19 +178,19 @@ impl RecordingSnapshotClient {
                 op: invocation.op.clone(),
                 scope: invocation.scope.clone(),
                 args: invocation.args.clone(),
-                timeout: invocation.timeout,
+                timeout_override: invocation.timeout_override,
             })
             .collect()
     }
 }
 
 impl SandboxDaemonClient for RecordingSnapshotClient {
-    fn invoke_with_timeout(
+    fn invoke(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-        timeout: Duration,
-    ) -> Result<Response, ManagerError> {
+        request: OperationRequest,
+        timeout_override: Option<Duration>,
+    ) -> Result<OperationResponse, ManagerError> {
         let sandbox_id = request
             .scope
             .sandbox_id()
@@ -204,7 +203,7 @@ impl SandboxDaemonClient for RecordingSnapshotClient {
                 op: request.op.clone(),
                 scope: request.scope.clone(),
                 args: request.args.clone(),
-                timeout,
+                timeout_override,
             });
         if self
             .failures
@@ -217,7 +216,7 @@ impl SandboxDaemonClient for RecordingSnapshotClient {
                 message: format!("daemon {sandbox_id} timed out"),
             });
         }
-        Ok(Response::ok(daemon_snapshot(&sandbox_id)))
+        Ok(OperationResponse::ok(daemon_snapshot(&sandbox_id)))
     }
 }
 
@@ -240,12 +239,12 @@ impl SlowSnapshotClient {
 }
 
 impl SandboxDaemonClient for SlowSnapshotClient {
-    fn invoke_with_timeout(
+    fn invoke(
         &self,
         _endpoint: &SandboxDaemonEndpoint,
-        request: Request,
-        _timeout: Duration,
-    ) -> Result<Response, ManagerError> {
+        request: OperationRequest,
+        _timeout_override: Option<Duration>,
+    ) -> Result<OperationResponse, ManagerError> {
         let active = self.active.fetch_add(1, Ordering::SeqCst) + 1;
         self.max_active.fetch_max(active, Ordering::SeqCst);
         std::thread::sleep(Duration::from_millis(10));
@@ -254,7 +253,7 @@ impl SandboxDaemonClient for SlowSnapshotClient {
             .scope
             .sandbox_id()
             .expect("private daemon request has sandbox scope");
-        Ok(Response::ok(daemon_snapshot(sandbox_id)))
+        Ok(OperationResponse::ok(daemon_snapshot(sandbox_id)))
     }
 }
 
@@ -298,7 +297,7 @@ fn services_with_client(
 }
 
 fn dispatch(services: &ManagerServices, op: &str, args: Value) -> Value {
-    let request = Request::new(op, "req-1", CliOperationScope::System, args);
+    let request = OperationRequest::new(op, "req-1", OperationScope::System, args);
     sandbox_manager::dispatch_operation(services, &request).into_json_value()
 }
 
@@ -382,39 +381,16 @@ fn daemon_snapshot(sandbox_id: &str) -> Value {
     })
 }
 
-#[cfg(unix)]
-fn temp_root(label: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    Ok(std::env::temp_dir().join(format!(
-        "sandbox-manager-{label}-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)?
-            .as_nanos()
-    )))
-}
-
-#[cfg(unix)]
-fn daemon_file_paths(runtime_root: &std::path::Path, sandbox_id: &str) -> (PathBuf, PathBuf) {
-    let runtime_dir = runtime_root.join(sandbox_id);
-    (
-        runtime_dir.join("runtime.sock"),
-        runtime_dir.join("runtime.pid"),
-    )
-}
-
 #[test]
-fn cli_operation_catalog_contains_only_manager_operations() {
-    let catalog = sandbox_manager::cli_operation_catalog();
+fn operation_catalog_contains_only_manager_operations() {
+    let catalog = sandbox_manager::operation_catalog();
     let names = catalog
         .operations
         .iter()
         .map(|spec| spec.name)
         .collect::<Vec<_>>();
 
-    assert_eq!(
-        catalog.operation_execution_space,
-        CliOperationExecutionSpace::Manager
-    );
+    assert_eq!(catalog.operation_execution_space, OperationDomain::Manager);
     assert_eq!(catalog.families.len(), 1);
     assert_eq!(catalog.families[0].title, "Management");
     assert_eq!(
@@ -440,15 +416,6 @@ fn cli_operation_catalog_contains_only_manager_operations() {
         .args
         .iter()
         .any(|arg| arg.name == "sandbox_id" && arg.kind == ArgKind::String)));
-    assert!(catalog.operations.iter().all(|spec| {
-        spec.cli
-            .map(|cli| {
-                cli.examples
-                    .iter()
-                    .all(|example| example.starts_with("sandbox-manager-cli "))
-            })
-            .unwrap_or(true)
-    }));
 }
 
 #[test]
@@ -552,7 +519,7 @@ fn create_sandbox_rolls_back_runtime_and_store_when_install_fails() {
 
     assert_eq!(
         response["error"]["kind"],
-        sandbox_protocol::error_kind::INTERNAL_ERROR
+        sandbox_operation_contract::error::INTERNAL_ERROR
     );
     assert!(response["error"]["message"]
         .as_str()
@@ -583,7 +550,7 @@ fn create_sandbox_rolls_back_runtime_and_store_when_start_fails() {
 
     assert_eq!(
         response["error"]["kind"],
-        sandbox_protocol::error_kind::INTERNAL_ERROR
+        sandbox_operation_contract::error::INTERNAL_ERROR
     );
     assert!(response["error"]["message"]
         .as_str()
@@ -610,7 +577,7 @@ fn create_sandbox_rolls_back_runtime_and_store_when_check_fails() {
 
     assert_eq!(
         response["error"]["kind"],
-        sandbox_protocol::error_kind::INTERNAL_ERROR
+        sandbox_operation_contract::error::INTERNAL_ERROR
     );
     assert!(response["error"]["message"]
         .as_str()
@@ -681,7 +648,7 @@ fn observability_snapshot_aggregates_ready_sandboxes_with_private_daemon_request
     assert!(invocations.iter().all(|invocation| {
         matches!(
             &invocation.scope,
-            CliOperationScope::Sandbox { sandbox_id }
+            OperationScope::Sandbox { sandbox_id }
                 if sandbox_id == "sbox-1" || sandbox_id == "sbox-2"
         )
     }));
@@ -690,7 +657,7 @@ fn observability_snapshot_aggregates_ready_sandboxes_with_private_daemon_request
         .all(|invocation| invocation.args == json!({ "view": "snapshot" })));
     assert!(invocations
         .iter()
-        .all(|invocation| invocation.timeout == Duration::from_millis(1_500)));
+        .all(|invocation| invocation.timeout_override == Some(Duration::from_millis(1_500))));
 }
 
 #[test]
@@ -741,7 +708,7 @@ fn observability_snapshot_errors_for_explicit_unknown_sandbox_id() {
 
     assert_eq!(
         response["error"]["kind"],
-        sandbox_protocol::error_kind::INVALID_REQUEST
+        sandbox_operation_contract::error::INVALID_REQUEST
     );
     assert!(response["error"]["message"]
         .as_str()
@@ -802,77 +769,6 @@ fn observability_snapshot_bounds_daemon_fanout_concurrency() {
     );
 }
 
-#[cfg(unix)]
-#[test]
-fn local_daemon_installer_stop_daemon_terminates_pid_file_process(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let root = temp_root("daemon-stop")?;
-    let workspace_root = root.join("workspace");
-    let runtime_root = root.join("runtime");
-    std::fs::create_dir_all(&workspace_root)?;
-    let installer = LocalSandboxDaemonInstaller::new(
-        "/bin/sandbox-daemon",
-        root.join("config.yml"),
-        runtime_root.clone(),
-    );
-    let record = SandboxRecord::new(id("container-1"), workspace_root, SandboxState::Ready);
-    let (socket_path, pid_path) = daemon_file_paths(&runtime_root, "container-1");
-    std::fs::create_dir_all(pid_path.parent().expect("pid path parent"))?;
-    std::fs::write(&socket_path, b"socket placeholder")?;
-
-    let child = Command::new("/bin/sleep").arg("30").spawn()?;
-    let pid = child.id();
-    let _cleanup = ChildCleanup::new(child);
-    std::fs::write(&pid_path, pid.to_string())?;
-
-    installer.stop_daemon(&record)?;
-
-    assert!(
-        !pid_exists(pid),
-        "daemon pid {pid} should be gone after stop_daemon"
-    );
-    assert!(!pid_path.exists());
-    assert!(!socket_path.exists());
-
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
-#[cfg(unix)]
-#[test]
-fn local_daemon_installer_stop_daemon_rejects_socket_without_pid_file(
-) -> Result<(), Box<dyn std::error::Error>> {
-    let root = temp_root("daemon-stop-missing-pid")?;
-    let workspace_root = root.join("workspace");
-    let runtime_root = root.join("runtime");
-    std::fs::create_dir_all(&workspace_root)?;
-    let installer = LocalSandboxDaemonInstaller::new(
-        "/bin/sandbox-daemon",
-        root.join("config.yml"),
-        runtime_root.clone(),
-    );
-    let record = SandboxRecord::new(id("container-1"), workspace_root, SandboxState::Ready);
-    let (socket_path, _pid_path) = daemon_file_paths(&runtime_root, "container-1");
-    std::fs::create_dir_all(socket_path.parent().expect("socket path parent"))?;
-    std::fs::write(&socket_path, b"socket placeholder")?;
-
-    let error = installer
-        .stop_daemon(&record)
-        .expect_err("socket without pid is not silently cleaned up");
-
-    assert!(
-        matches!(error, ManagerError::DaemonInstallFailed { .. }),
-        "unexpected error: {error}"
-    );
-    assert!(
-        socket_path.exists(),
-        "socket artifact should remain for failed stop diagnosis"
-    );
-
-    let _ = std::fs::remove_dir_all(root);
-    Ok(())
-}
-
 #[test]
 fn store_duplicate_and_missing_sandbox_error_cases() {
     let store = SandboxStore::new();
@@ -895,45 +791,14 @@ fn store_duplicate_and_missing_sandbox_error_cases() {
     assert!(matches!(missing, ManagerError::MissingSandbox { .. }));
 }
 
-#[cfg(unix)]
-struct ChildCleanup {
-    child: Child,
-}
-
-#[cfg(unix)]
-impl ChildCleanup {
-    fn new(child: Child) -> Self {
-        Self { child }
-    }
-}
-
-#[cfg(unix)]
-impl Drop for ChildCleanup {
-    fn drop(&mut self) {
-        match self.child.try_wait() {
-            Ok(Some(_)) | Err(_) => {}
-            Ok(None) => {
-                let _ = self.child.kill();
-                let _ = self.child.wait();
-            }
-        }
-    }
-}
-
-#[cfg(unix)]
-fn pid_exists(pid: u32) -> bool {
-    let pid = nix::unistd::Pid::from_raw(pid.try_into().expect("test pid fits nix pid"));
-    nix::sys::signal::kill(pid, None).is_ok()
-}
-
 // Test 18: squash_layerstacks lives under the existing "management" family,
 // takes only --sandbox-id, and forwards ONE sandbox-scoped
 // squash_layerstack request through the generic router path — no bespoke
 // client sequence, no "checkpoint" family, no manager-local lifecycle work.
 #[test]
 fn squash_layerstacks_public_operation_forwards_singular_runtime_request() {
-    let catalog = sandbox_manager::cli_operation_catalog();
-    let encoded = sandbox_protocol::catalog_to_value(catalog).to_string();
+    let catalog = sandbox_manager::operation_catalog();
+    let encoded = sandbox_operation_contract::catalog_to_value(catalog).to_string();
     let catalog: Value = serde_json::from_str(&encoded).expect("catalog json");
     let spec = catalog["operations"]
         .as_array()
@@ -974,7 +839,7 @@ fn squash_layerstacks_public_operation_forwards_singular_runtime_request() {
         "renamed to the daemon op"
     );
     assert!(
-        matches!(&invocations[0].scope, CliOperationScope::Sandbox { sandbox_id } if sandbox_id == "sbox-1"),
+        matches!(&invocations[0].scope, OperationScope::Sandbox { sandbox_id } if sandbox_id == "sbox-1"),
         "rebuilt as a sandbox-scoped runtime request"
     );
     assert_eq!(invocations[0].args, json!({}), "squash takes no options");
@@ -985,13 +850,13 @@ fn squash_layerstacks_reports_stale_daemon_unknown_op() {
     struct UnknownOpClient;
 
     impl SandboxDaemonClient for UnknownOpClient {
-        fn invoke_with_timeout(
+        fn invoke(
             &self,
             _endpoint: &SandboxDaemonEndpoint,
-            _request: Request,
-            _timeout: Duration,
-        ) -> Result<Response, ManagerError> {
-            Ok(Response::unknown_op())
+            _request: OperationRequest,
+            _timeout_override: Option<Duration>,
+        ) -> Result<OperationResponse, ManagerError> {
+            Ok(OperationResponse::unknown_op())
         }
     }
 

@@ -1,6 +1,6 @@
 use sandbox_config::configs::observability::ViewsConfig;
 use sandbox_observability::sample_layerstack;
-use sandbox_protocol::{error_kind, Request, Response};
+use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use sandbox_runtime::SandboxRuntimeOperations;
 use serde_json::Value;
 
@@ -12,8 +12,8 @@ use crate::observability::DaemonObservability;
 pub(super) fn layerstack_view_response(
     operations: &SandboxRuntimeOperations,
     observability: Option<&DaemonObservability>,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let workspace = match request.optional_string("workspace_id") {
         Ok(workspace) => workspace.filter(|workspace| !workspace.trim().is_empty()),
         Err(response) => return response,
@@ -23,8 +23,8 @@ pub(super) fn layerstack_view_response(
         Err(response) => return response,
     };
     if workspace.is_some() && layer.is_some() {
-        return Response::fault(
-            error_kind::INVALID_REQUEST,
+        return OperationResponse::fault(
+            error::INVALID_REQUEST,
             "layerstack request cannot include both workspace_id and layer_id".to_owned(),
         );
     }
@@ -39,8 +39,8 @@ pub(super) fn layerstack_view_response(
     let observation = match operations.observe_layerstack() {
         Ok(observation) => observation,
         Err(error) => {
-            return Response::fault(
-                error_kind::INTERNAL_ERROR,
+            return OperationResponse::fault(
+                error::INTERNAL_ERROR,
                 format!("layerstack observe failed: {error}"),
             )
         }
@@ -61,15 +61,15 @@ pub(super) fn layerstack_view_response(
             Value::Array(observability.stack_trend(window_ms)),
         );
     }
-    Response::ok(view)
+    OperationResponse::ok(view)
 }
 
 fn layer_view_response(
     operations: &SandboxRuntimeOperations,
-    request: &Request,
+    request: &OperationRequest,
     layer_id: &str,
     views: ViewsConfig,
-) -> Response {
+) -> OperationResponse {
     let limit = match layer_delta_limit(request, views) {
         Ok(limit) => limit,
         Err(response) => return response,
@@ -77,8 +77,8 @@ fn layer_view_response(
     let observation = match operations.observe_layerstack() {
         Ok(observation) => observation,
         Err(error) => {
-            return Response::fault(
-                error_kind::INTERNAL_ERROR,
+            return OperationResponse::fault(
+                error::INTERNAL_ERROR,
                 format!("layerstack observe failed: {error}"),
             )
         }
@@ -89,8 +89,8 @@ fn layer_view_response(
         .map(|status| &status.layer)
         .find(|layer| layer.layer_id == layer_id)
     else {
-        return Response::fault(
-            error_kind::INVALID_REQUEST,
+        return OperationResponse::fault(
+            error::INVALID_REQUEST,
             format!("unknown layer: {layer_id}"),
         );
     };
@@ -98,39 +98,42 @@ fn layer_view_response(
     let delta = match sandbox_runtime::describe_layer_delta(&layer_dir, limit) {
         Ok(delta) => delta,
         Err(error) => {
-            return Response::fault(
-                error_kind::INTERNAL_ERROR,
+            return OperationResponse::fault(
+                error::INTERNAL_ERROR,
                 format!("layer delta inspect failed: {error}"),
             )
         }
     };
-    Response::ok(layer_delta_value(&layer.layer_id, &delta))
+    OperationResponse::ok(layer_delta_value(&layer.layer_id, &delta))
 }
 
 fn workspace_view_response(
     operations: &SandboxRuntimeOperations,
     observability: Option<&DaemonObservability>,
     workspace: &str,
-) -> Response {
+) -> OperationResponse {
     let snapshot = operations.observability_snapshot();
     let upper_bytes =
         observability.and_then(|observability| observability.latest_upper_bytes(workspace));
     match workspace_layerstack_value(&snapshot.workspaces, workspace, upper_bytes) {
-        Some(value) => Response::ok(value),
-        None => Response::fault(
-            error_kind::INVALID_REQUEST,
+        Some(value) => OperationResponse::ok(value),
+        None => OperationResponse::fault(
+            error::INVALID_REQUEST,
             format!("unknown workspace: {workspace}"),
         ),
     }
 }
 
-fn layer_delta_limit(request: &Request, views: ViewsConfig) -> Result<usize, Response> {
+fn layer_delta_limit(
+    request: &OperationRequest,
+    views: ViewsConfig,
+) -> Result<usize, OperationResponse> {
     let limit = request
         .optional_usize("limit")?
         .unwrap_or(views.layer_delta_default_limit);
     if limit > views.layer_delta_max_limit {
-        return Err(Response::fault(
-            error_kind::INVALID_REQUEST,
+        return Err(OperationResponse::fault(
+            error::INVALID_REQUEST,
             format!("limit exceeds max ({})", views.layer_delta_max_limit),
         ));
     }

@@ -13,7 +13,7 @@ use std::thread;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use sandbox_observability::{Observer, SpanRegistry};
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::file::{
     EditInput, EditOp, FileEntryKind, FileListEntryKind, FileOperationError, FileService,
     ListInput, ListOutput, ReadInput, ReadOutput, WriteInput,
@@ -663,8 +663,8 @@ fn dispatch_operations(env: &Env) -> SandboxRuntimeOperations {
     )
 }
 
-fn runtime_request(op: &str, args: serde_json::Value) -> Request {
-    Request::new(op, "req-test", CliOperationScope::system(), args)
+fn runtime_request(op: &str, args: serde_json::Value) -> OperationRequest {
+    OperationRequest::new(op, "req-test", OperationScope::system(), args)
 }
 
 // ---------- layerstack helpers ----------

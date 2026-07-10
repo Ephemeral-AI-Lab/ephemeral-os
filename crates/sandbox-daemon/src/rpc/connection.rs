@@ -4,6 +4,7 @@ use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::time::timeout;
 
+use sandbox_operation_contract::OperationResponse;
 use sandbox_protocol::ProtocolLimits;
 
 use super::{error_response, SandboxDaemonServer};
@@ -39,7 +40,7 @@ impl SandboxDaemonServer {
         Ok(())
     }
 
-    fn read_error_response(&self, err: SandboxDaemonError, _is_tcp: bool) -> serde_json::Value {
+    fn read_error_response(&self, err: SandboxDaemonError, _is_tcp: bool) -> OperationResponse {
         match err {
             err @ SandboxDaemonError::RequestTooLarge { limit } => error_response(
                 err.response_kind(),
@@ -51,7 +52,7 @@ impl SandboxDaemonServer {
     }
 }
 
-fn encode_response(response: &serde_json::Value) -> Vec<u8> {
+fn encode_response(response: &OperationResponse) -> Vec<u8> {
     sandbox_protocol::response_line(response)
 }
 

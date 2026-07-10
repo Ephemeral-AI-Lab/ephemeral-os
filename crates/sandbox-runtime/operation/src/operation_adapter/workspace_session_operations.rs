@@ -6,16 +6,16 @@ use crate::workspace_session::{
     CreateSessionRequest, FinalizePolicy, WorkspaceSessionError, WorkspaceSessionHandler,
 };
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{Request, Response};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 
 const CREATE_WORKSPACE_SESSION: OperationEntry = OperationEntry {
     name: "create_workspace_session",
-    cli: None,
+    spec: None,
     dispatch: dispatch_create_workspace_session,
 };
 const DESTROY_WORKSPACE_SESSION: OperationEntry = OperationEntry {
     name: "destroy_workspace_session",
-    cli: None,
+    spec: None,
     dispatch: dispatch_destroy_workspace_session,
 };
 
@@ -27,8 +27,8 @@ pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
 
 fn dispatch_create_workspace_session(
     operations: &SandboxRuntimeOperations,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let network = match parse_workspace_profile(request) {
         Ok(network) => network,
         Err(response) => return response,
@@ -43,8 +43,8 @@ fn dispatch_create_workspace_session(
 
 fn dispatch_destroy_workspace_session(
     operations: &SandboxRuntimeOperations,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_destroy_workspace_session(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -53,7 +53,7 @@ fn dispatch_destroy_workspace_session(
         .workspace_session
         .guarded_destroy(input.workspace_session_id, input.grace_s)
     {
-        Ok(result) => Response::ok(destroy_workspace_session_value(result)),
+        Ok(result) => OperationResponse::ok(destroy_workspace_session_value(result)),
         Err(WorkspaceSessionError::ActiveCommands {
             active_command_session_ids,
             ..
@@ -62,7 +62,9 @@ fn dispatch_destroy_workspace_session(
     }
 }
 
-fn parse_workspace_profile(request: &Request) -> Result<NetworkProfile, Response> {
+fn parse_workspace_profile(
+    request: &OperationRequest,
+) -> Result<NetworkProfile, OperationResponse> {
     match request.optional_string("network_profile")? {
         None => Ok(NetworkProfile::Shared),
         Some(value) if value == NetworkProfile::Shared.as_str() => Ok(NetworkProfile::Shared),
@@ -74,8 +76,8 @@ fn parse_workspace_profile(request: &Request) -> Result<NetworkProfile, Response
 }
 
 fn parse_destroy_workspace_session(
-    request: &Request,
-) -> Result<DestroyWorkspaceSessionInput, Response> {
+    request: &OperationRequest,
+) -> Result<DestroyWorkspaceSessionInput, OperationResponse> {
     let workspace_session_id = WorkspaceSessionId(request.required_string("workspace_session_id")?);
     let grace_s = request.optional_f64("grace_s")?;
     if matches!(grace_s, Some(value) if value < 0.0) {
@@ -94,21 +96,21 @@ struct DestroyWorkspaceSessionInput {
 
 fn workspace_session_handler_response(
     result: Result<WorkspaceSessionHandler, WorkspaceSessionError>,
-) -> Response {
+) -> OperationResponse {
     match result {
-        Ok(handler) => Response::ok(create_workspace_session_value(handler)),
+        Ok(handler) => OperationResponse::ok(create_workspace_session_value(handler)),
         Err(error) => workspace_session_error_response(error),
     }
 }
 
-fn workspace_session_error_response(error: WorkspaceSessionError) -> Response {
-    Response::fault_with_details("operation_failed", error.to_string(), json!({}))
+fn workspace_session_error_response(error: WorkspaceSessionError) -> OperationResponse {
+    OperationResponse::fault_with_details("operation_failed", error.to_string(), json!({}))
 }
 
 fn active_command_rejection(
     active_command_session_ids: &[sandbox_runtime_namespace_execution::NamespaceExecutionId],
-) -> Response {
-    Response::fault_with_details(
+) -> OperationResponse {
+    OperationResponse::fault_with_details(
         "operation_failed",
         "workspace session has active command sessions",
         json!({

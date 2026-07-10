@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
-sandbox-protocol.workspace = true
+sandbox-operation-contract.workspace = true
 
 [dev-dependencies]
 sandbox-manager-operations.workspace = true

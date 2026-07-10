@@ -7,11 +7,11 @@ license.workspace = true
 
 [dependencies]
 base64.workspace = true
+sandbox-operation-contract.workspace = true
 sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-namespace-process.workspace = true
 sandbox-runtime-layerstack.workspace = true
 sandbox-observability.workspace = true
-sandbox-protocol.workspace = true
 sandbox-runtime-operations.workspace = true
 rustix.workspace = true
 serde_json.workspace = true

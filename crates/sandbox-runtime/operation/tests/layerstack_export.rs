@@ -1,4 +1,4 @@
-//! Export daemon-op surface: `cli: None` registration, the start result
+//! Export daemon-op surface: internal registration, the start result
 //! contract, spool paging to eof (unlink-on-eof), the empty delta, coexisting
 //! per-export spools, and lease release after the fold.
 
@@ -6,7 +6,7 @@ use std::io::Read;
 use std::sync::Arc;
 
 use base64::Engine as _;
-use sandbox_protocol::{CliOperationScope, Request};
+use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::SandboxRuntimeOperations;
 use sandbox_runtime_layerstack::{LayerChange, LayerPath, LayerStack};
 use serde_json::{json, Value};
@@ -14,24 +14,24 @@ use serde_json::{json, Value};
 mod support;
 use support::FakeWorkspaceService;
 
-fn export_request() -> Request {
-    Request::new(
+fn export_request() -> OperationRequest {
+    OperationRequest::new(
         "export_layerstack",
         "req-export-test",
-        CliOperationScope::system(),
+        OperationScope::system(),
         json!({}),
     )
 }
 
-fn chunk_request(export_id: &str, offset: u64, limit: Option<u64>) -> Request {
+fn chunk_request(export_id: &str, offset: u64, limit: Option<u64>) -> OperationRequest {
     let mut args = json!({ "export_id": export_id, "offset": offset });
     if let Some(limit) = limit {
         args["limit"] = json!(limit);
     }
-    Request::new(
+    OperationRequest::new(
         "read_export_chunk",
         "req-export-test",
-        CliOperationScope::system(),
+        OperationScope::system(),
         args,
     )
 }
@@ -122,7 +122,7 @@ fn decode_entry_names(bytes: &[u8]) -> Vec<String> {
 }
 
 // export_layerstack and read_export_chunk dispatch by name but appear in no
-// CLI catalog — the cli: None field is the whole mechanism (inv 6).
+// Public catalog exclusion is the whole mechanism (inv 6).
 #[test]
 fn export_operations_register_with_cli_none() {
     assert_eq!(
@@ -134,10 +134,10 @@ fn export_operations_register_with_cli_none() {
         Some("read_export_chunk")
     );
     let catalog = sandbox_runtime_operations::runtime_catalog();
-    let encoded = sandbox_protocol::catalog_to_value(catalog).to_string();
+    let encoded = sandbox_operation_contract::catalog_to_value(catalog).to_string();
     assert!(
         !encoded.contains("export_layerstack") && !encoded.contains("read_export_chunk"),
-        "cli: None must keep both ops out of every catalog surface"
+        "internal registration must keep both ops out of every catalog surface"
     );
 }
 

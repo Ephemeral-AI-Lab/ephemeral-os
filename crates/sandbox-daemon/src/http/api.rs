@@ -5,7 +5,8 @@ use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
 use sandbox_observability::record::names;
 use sandbox_observability::{SpanStatus, TraceContext};
-use sandbox_protocol::{error_kind, CliOperationScope, Request};
+use sandbox_operation_contract::{error, OperationRequest, OperationScope};
+use sandbox_protocol::error::{BAD_JSON, REQUEST_TOO_LARGE};
 use serde_json::{json, Map, Value};
 
 use super::response::{self, BoxBody};
@@ -61,7 +62,7 @@ async fn read_args(
         Err(_) => {
             return Err(transport_error(
                 StatusCode::BAD_REQUEST,
-                "request_too_large",
+                REQUEST_TOO_LARGE,
                 "request body exceeded the protocol size limit",
             ))
         }
@@ -73,22 +74,22 @@ async fn read_args(
         Ok(Value::Object(args)) => Ok(args),
         Ok(_) => Err(transport_error(
             StatusCode::BAD_REQUEST,
-            error_kind::INVALID_REQUEST,
+            error::INVALID_REQUEST,
             "request body must be a json object",
         )),
         Err(error) => Err(transport_error(
             StatusCode::BAD_REQUEST,
-            error_kind::BAD_JSON,
+            BAD_JSON,
             &format!("request body is not valid json: {error}"),
         )),
     }
 }
 
-fn protocol_request(state: &HttpState, args: Value) -> Request {
-    Request::new(
+fn protocol_request(state: &HttpState, args: Value) -> OperationRequest {
+    OperationRequest::new(
         "file_list",
         uuid::Uuid::new_v4().to_string(),
-        CliOperationScope::sandbox(state.sandbox_id()),
+        OperationScope::sandbox(state.sandbox_id()),
         args,
     )
 }
@@ -108,15 +109,15 @@ fn collect_observability(state: &Arc<HttpState>) {
 fn transport_error(status: StatusCode, kind: &str, message: &str) -> Response<BoxBody> {
     response::json_value(
         status,
-        &sandbox_protocol::error_response_with_details(kind, message, json!({})),
+        &sandbox_operation_contract::error_response_with_details(kind, message, json!({})),
     )
 }
 
 fn protocol_error(message: &str) -> Response<BoxBody> {
     response::json_value(
         StatusCode::OK,
-        &sandbox_protocol::error_response_with_details(
-            error_kind::INTERNAL_ERROR,
+        &sandbox_operation_contract::error_response_with_details(
+            error::INTERNAL_ERROR,
             message,
             json!({}),
         ),

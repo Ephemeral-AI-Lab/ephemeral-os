@@ -22,7 +22,7 @@ fn decode_request_preserves_request_fields() {
     assert_eq!(parsed.request_id, "req-1");
     assert_eq!(
         parsed.scope,
-        sandbox_protocol::CliOperationScope::sandbox("sbox-1")
+        sandbox_operation_contract::OperationScope::sandbox("sbox-1")
     );
     assert_eq!(parsed.args, args);
 }
@@ -35,7 +35,9 @@ fn decode_request_rejects_missing_scope() {
         "args": {},
     });
 
-    let response = decode_request(request).expect_err("missing scope rejected");
+    let response = decode_request(request)
+        .expect_err("missing scope rejected")
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], "invalid_request");
     assert_eq!(response["error"]["message"], "scope is required");
@@ -53,7 +55,9 @@ fn decode_request_rejects_non_object_args() {
         "args": "not an object",
     });
 
-    let response = decode_request(request).expect_err("non-object args rejected");
+    let response = decode_request(request)
+        .expect_err("non-object args rejected")
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], "invalid_request");
     assert_eq!(response["error"]["message"], "args must be an object");
@@ -61,14 +65,14 @@ fn decode_request_rejects_non_object_args() {
 
 #[test]
 fn sandbox_daemon_ready_echoes_configured_sandbox_id() {
-    let request = sandbox_protocol::Request::new(
+    let request = sandbox_operation_contract::OperationRequest::new(
         "sandbox_daemon_ready",
         "docker-readiness",
-        sandbox_protocol::CliOperationScope::sandbox("sbox-1"),
+        sandbox_operation_contract::OperationScope::sandbox("sbox-1"),
         json!({}),
     );
 
-    let response = sandbox_daemon_ready_response(Some("sbox-1"), &request);
+    let response = daemon_readiness_response(Some("sbox-1"), &request).into_json_value();
 
     assert_eq!(response["status"], "ready");
     assert_eq!(response["sandbox_id"], "sbox-1");
@@ -78,14 +82,14 @@ fn sandbox_daemon_ready_echoes_configured_sandbox_id() {
 
 #[test]
 fn sandbox_daemon_ready_echoes_request_scope_when_unconfigured() {
-    let request = sandbox_protocol::Request::new(
+    let request = sandbox_operation_contract::OperationRequest::new(
         "sandbox_daemon_ready",
         "docker-readiness",
-        sandbox_protocol::CliOperationScope::sandbox("sbox-9"),
+        sandbox_operation_contract::OperationScope::sandbox("sbox-9"),
         json!({}),
     );
 
-    let response = sandbox_daemon_ready_response(None, &request);
+    let response = daemon_readiness_response(None, &request).into_json_value();
 
     assert_eq!(response["status"], "ready");
     assert_eq!(response["sandbox_id"], "sbox-9");
@@ -93,14 +97,14 @@ fn sandbox_daemon_ready_echoes_request_scope_when_unconfigured() {
 
 #[test]
 fn sandbox_daemon_ready_rejects_sandbox_id_mismatch() {
-    let request = sandbox_protocol::Request::new(
+    let request = sandbox_operation_contract::OperationRequest::new(
         "sandbox_daemon_ready",
         "docker-readiness",
-        sandbox_protocol::CliOperationScope::sandbox("requested"),
+        sandbox_operation_contract::OperationScope::sandbox("requested"),
         json!({}),
     );
 
-    let response = sandbox_daemon_ready_response(Some("configured"), &request);
+    let response = daemon_readiness_response(Some("configured"), &request).into_json_value();
 
     assert_eq!(response["error"]["kind"], "invalid_request");
     let message = response["error"]["message"].as_str().expect("message");
@@ -111,14 +115,14 @@ fn sandbox_daemon_ready_rejects_sandbox_id_mismatch() {
 
 #[test]
 fn sandbox_daemon_ready_requires_sandbox_scope() {
-    let request = sandbox_protocol::Request::new(
+    let request = sandbox_operation_contract::OperationRequest::new(
         "sandbox_daemon_ready",
         "docker-readiness",
-        sandbox_protocol::CliOperationScope::system(),
+        sandbox_operation_contract::OperationScope::system(),
         json!({}),
     );
 
-    let response = sandbox_daemon_ready_response(None, &request);
+    let response = daemon_readiness_response(None, &request).into_json_value();
 
     assert_eq!(response["error"]["kind"], "invalid_request");
     assert!(response.get("status").is_none());
@@ -169,14 +173,16 @@ fn strip_tcp_auth_passes_through_when_unconfigured() {
 
 #[test]
 fn daemon_scope_rejects_system_requests() {
-    let request = sandbox_protocol::Request::new(
+    let request = sandbox_operation_contract::OperationRequest::new(
         "exec_command",
         "req-1",
-        sandbox_protocol::CliOperationScope::system(),
+        sandbox_operation_contract::OperationScope::system(),
         json!({}),
     );
 
-    let response = validate_daemon_scope(&request).expect_err("system scope rejected");
+    let response = validate_daemon_scope(&request)
+        .expect_err("system scope rejected")
+        .into_json_value();
 
     assert_eq!(response["error"]["kind"], "invalid_request");
     assert_eq!(

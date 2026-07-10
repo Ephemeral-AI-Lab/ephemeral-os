@@ -2,17 +2,30 @@
 
 use std::process::Command;
 
-use sandbox_protocol::catalog_to_value;
+use sandbox_cli::projection::document::{catalog_document, catalog_to_value};
 use serde_json::{json, Value};
 
 #[test]
 fn all_feature_compatibility_catalog_matches_phase_zero_fixture() {
+    let management = catalog_document(
+        sandbox_manager_operations::manager_catalog(),
+        sandbox_cli::projection::manager::catalog_projection(),
+    )
+    .expect("management projection");
+    let runtime = catalog_document(
+        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_cli::projection::runtime::catalog_projection(),
+    )
+    .expect("runtime projection");
+    let observability = catalog_document(
+        sandbox_observability_operations::observability_catalog(),
+        sandbox_cli::projection::observability::catalog_projection(),
+    )
+    .expect("observability projection");
     let catalog = json!({
-        "management": catalog_to_value(sandbox_manager_operations::manager_catalog()),
-        "runtime": catalog_to_value(sandbox_runtime_operations::runtime_catalog()),
-        "observability": catalog_to_value(
-            sandbox_observability_operations::observability_catalog()
-        ),
+        "management": catalog_to_value(&management),
+        "runtime": catalog_to_value(&runtime),
+        "observability": catalog_to_value(&observability),
     });
     let fixture = include_str!("fixtures/compatibility-catalog.json");
     let fixture = fixture.strip_suffix('\n').unwrap_or(fixture);

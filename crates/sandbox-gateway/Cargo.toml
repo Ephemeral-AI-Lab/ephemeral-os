@@ -11,7 +11,9 @@ name = "sandbox-gateway"
 path = "src/gateway/main.rs"
 
 [dependencies]
+nix = { workspace = true, features = ["process", "signal"] }
 sandbox-config.workspace = true
+sandbox-operation-contract.workspace = true
 sandbox-manager.workspace = true
 sandbox-protocol.workspace = true
 sandbox-provider-docker.workspace = true
@@ -20,6 +22,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true

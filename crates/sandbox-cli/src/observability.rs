@@ -14,9 +14,10 @@ use crate::core::output::{
     discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
 };
-use crate::core::request_builder::{catalog_document, BuildRequestInput};
+use crate::core::request_builder::BuildRequestInput;
 use crate::core::GatewayConfigOverrides;
-use sandbox_protocol::CliOperationExecutionSpace;
+use crate::projection::document::catalog_document;
+use sandbox_operation_contract::OperationDomain;
 
 const PROGRAM: &str = "sandbox-observability-cli";
 const HELP_OP: &str = "help";
@@ -72,10 +73,13 @@ where
         }
     };
 
-    let catalog = match catalog_document(sandbox_observability_operations::observability_catalog())
-    {
+    let catalog = match catalog_document(
+        sandbox_observability_operations::observability_catalog(),
+        crate::projection::observability::catalog_projection(),
+    ) {
         Ok(catalog) => catalog,
         Err(error) => {
+            let error = error.into();
             let _ = render_request_error(&error, stderr);
             return EXIT_USAGE;
         }
@@ -96,7 +100,7 @@ where
         return EXIT_USAGE;
     };
     let request_input = BuildRequestInput {
-        execution_space: CliOperationExecutionSpace::Observability,
+        execution_space: OperationDomain::Observability,
         operation,
         operation_argv: cli.operation_argv,
         sandbox_id: None,

@@ -7,13 +7,12 @@ use sandbox_config::configs::manager::ManagerConfig;
 use sandbox_config::ConfigDocument;
 use sandbox_gateway::{
     resolve_gateway_config, GatewayCliOverrides, GatewayConfig, SandboxGatewayServer,
-    SANDBOX_GATEWAY_AUTH_TOKEN_ENV, SANDBOX_GATEWAY_SOCKET_ENV,
+    TcpSandboxDaemonClient, SANDBOX_GATEWAY_AUTH_TOKEN_ENV, SANDBOX_GATEWAY_SOCKET_ENV,
 };
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ExportApplyCaps, ManagerError, ManagerServices,
     ObservabilitySnapshotLimits, SandboxDaemonEndpoint, SandboxDaemonInstaller,
     SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxStore, StartedDaemon,
-    TcpSandboxDaemonClient,
 };
 use sandbox_provider_docker::{DockerSandboxDaemonInstaller, DockerSandboxRuntime};
 use tokio_util::sync::CancellationToken;

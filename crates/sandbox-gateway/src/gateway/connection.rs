@@ -1,6 +1,7 @@
 use std::time::Duration;
 
-use sandbox_protocol::{decode_request_value, Request};
+use sandbox_operation_contract::OperationRequest;
+use sandbox_protocol::decode_request_value;
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::mpsc;
@@ -20,14 +21,10 @@ impl SandboxGatewayServer {
                 Ok((request, stream_logs)) if stream_logs => {
                     return self.handle_streaming_request(request, &mut writer).await;
                 }
-                Ok((request, _)) => self
-                    .manager
-                    .dispatch_request(request)
-                    .await
-                    .into_json_value(),
-                Err(error) => error.to_response_value(),
+                Ok((request, _)) => self.manager.dispatch_request(request).await,
+                Err(error) => error.to_response(),
             },
-            Err(error) => error.to_response_value(),
+            Err(error) => error.to_response(),
         };
         writer
             .write_all(&sandbox_protocol::response_line(&response))
@@ -38,7 +35,7 @@ impl SandboxGatewayServer {
 
     async fn handle_streaming_request<W>(
         &self,
-        request: Request,
+        request: OperationRequest,
         writer: &mut W,
     ) -> Result<(), GatewayError>
     where
@@ -53,7 +50,6 @@ impl SandboxGatewayServer {
             manager
                 .dispatch_request_with_progress(request, progress)
                 .await
-                .into_json_value()
         });
         while let Some(log) = rx.recv().await {
             writer.write_all(&cli_log_line(&log)).await?;
@@ -70,7 +66,7 @@ impl SandboxGatewayServer {
         Ok(())
     }
 
-    fn authorize_and_decode(&self, bytes: &[u8]) -> Result<(Request, bool), GatewayError> {
+    fn authorize_and_decode(&self, bytes: &[u8]) -> Result<(OperationRequest, bool), GatewayError> {
         let value = serde_json::from_slice::<Value>(bytes)?;
         let Value::Object(mut object) = value else {
             return decode_request(value).map(|request| (request, false));
@@ -132,7 +128,7 @@ where
     Ok(buf)
 }
 
-fn decode_request(value: Value) -> Result<Request, GatewayError> {
+fn decode_request(value: Value) -> Result<OperationRequest, GatewayError> {
     decode_request_value(value).map_err(|error| GatewayError::BadRequest {
         kind: error.kind(),
         message: error.message().to_owned(),

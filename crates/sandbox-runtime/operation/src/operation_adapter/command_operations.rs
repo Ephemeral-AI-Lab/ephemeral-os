@@ -7,15 +7,16 @@ use crate::command::{
 use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
-use sandbox_protocol::{Request, Response};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 use sandbox_runtime_operations::{EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};
 
-const EXEC_COMMAND: OperationEntry = OperationEntry::cli(&EXEC_COMMAND_SPEC, dispatch_exec_command);
+const EXEC_COMMAND: OperationEntry =
+    OperationEntry::public(&EXEC_COMMAND_SPEC, dispatch_exec_command);
 const WRITE_COMMAND_STDIN: OperationEntry =
-    OperationEntry::cli(&WRITE_STDIN_SPEC, dispatch_write_command_stdin);
+    OperationEntry::public(&WRITE_STDIN_SPEC, dispatch_write_command_stdin);
 const READ_COMMAND_LINES: OperationEntry =
-    OperationEntry::cli(&READ_LINES_SPEC, dispatch_read_command_lines);
+    OperationEntry::public(&READ_LINES_SPEC, dispatch_read_command_lines);
 
 const OPERATIONS: &[OperationEntry] = &[EXEC_COMMAND, WRITE_COMMAND_STDIN, READ_COMMAND_LINES];
 
@@ -23,7 +24,10 @@ pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS
 }
 
-fn dispatch_exec_command(operations: &SandboxRuntimeOperations, request: &Request) -> Response {
+fn dispatch_exec_command(
+    operations: &SandboxRuntimeOperations,
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_exec_command_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -31,7 +35,9 @@ fn dispatch_exec_command(operations: &SandboxRuntimeOperations, request: &Reques
     command_output_response(operations.command.exec_command(input))
 }
 
-fn parse_exec_command_input(request: &Request) -> Result<ExecCommandInput, Response> {
+fn parse_exec_command_input(
+    request: &OperationRequest,
+) -> Result<ExecCommandInput, OperationResponse> {
     Ok(ExecCommandInput {
         workspace_session_id: request
             .optional_string("workspace_session_id")?
@@ -45,8 +51,8 @@ fn parse_exec_command_input(request: &Request) -> Result<ExecCommandInput, Respo
 
 fn dispatch_write_command_stdin(
     operations: &SandboxRuntimeOperations,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_write_command_stdin_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -54,7 +60,9 @@ fn dispatch_write_command_stdin(
     command_output_response(operations.command.write_command_stdin(input))
 }
 
-fn parse_write_command_stdin_input(request: &Request) -> Result<WriteCommandStdinInput, Response> {
+fn parse_write_command_stdin_input(
+    request: &OperationRequest,
+) -> Result<WriteCommandStdinInput, OperationResponse> {
     Ok(WriteCommandStdinInput {
         command_session_id: NamespaceExecutionId(request.required_string("command_session_id")?),
         stdin: request.required_string("stdin")?,
@@ -64,8 +72,8 @@ fn parse_write_command_stdin_input(request: &Request) -> Result<WriteCommandStdi
 
 fn dispatch_read_command_lines(
     operations: &SandboxRuntimeOperations,
-    request: &Request,
-) -> Response {
+    request: &OperationRequest,
+) -> OperationResponse {
     let input = match parse_read_command_lines_input(request) {
         Ok(input) => input,
         Err(response) => return response,
@@ -73,7 +81,9 @@ fn dispatch_read_command_lines(
     command_output_response(Ok(operations.command.read_command_lines(input)))
 }
 
-fn parse_read_command_lines_input(request: &Request) -> Result<ReadCommandLinesInput, Response> {
+fn parse_read_command_lines_input(
+    request: &OperationRequest,
+) -> Result<ReadCommandLinesInput, OperationResponse> {
     Ok(ReadCommandLinesInput {
         command_session_id: NamespaceExecutionId(request.required_string("command_session_id")?),
         start_offset: request.optional_u64("start_offset")?,
@@ -81,19 +91,21 @@ fn parse_read_command_lines_input(request: &Request) -> Result<ReadCommandLinesI
     })
 }
 
-fn command_output_response(result: Result<CommandOutput, CommandServiceError>) -> Response {
+fn command_output_response(
+    result: Result<CommandOutput, CommandServiceError>,
+) -> OperationResponse {
     match result {
         Ok(output) if output.status == CommandStatus::Running => {
-            Response::running(command_output_value(output))
+            OperationResponse::running(command_output_value(output))
         }
-        Ok(output) => Response::ok(command_output_value(output)),
+        Ok(output) => OperationResponse::ok(command_output_value(output)),
         Err(error) => command_service_error_response(error),
     }
 }
 
-fn command_service_error_response(error: CommandServiceError) -> Response {
+fn command_service_error_response(error: CommandServiceError) -> OperationResponse {
     let details = command_error_details(&error);
-    Response::fault_with_details("operation_failed", error.to_string(), details)
+    OperationResponse::fault_with_details("operation_failed", error.to_string(), details)
 }
 
 fn command_error_details(error: &CommandServiceError) -> Value {

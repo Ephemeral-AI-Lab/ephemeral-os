@@ -12,10 +12,11 @@ use sandbox_manager::{
     ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxHttpEndpoint,
     SandboxRecord, StartedDaemon,
 };
+use sandbox_protocol::daemon_readiness_request_line;
 
 use crate::archive::build_install_archive;
 use crate::engine::{DockerEngine, DockerError};
-use crate::readiness::{readiness_request_line, validate_readiness_response};
+use crate::readiness::validate_readiness_response;
 
 const ARCHIVE_ROOT: &str = "/";
 const READINESS_IO_TIMEOUT: Duration = Duration::from_millis(250);
@@ -161,7 +162,8 @@ fn poll_until_ready_with_progress<F>(
 where
     F: FnMut() -> Result<(), String>,
 {
-    let request_line = readiness_request_line(sandbox_id, &endpoint.auth_token);
+    let request_line = daemon_readiness_request_line(sandbox_id, &endpoint.auth_token)
+        .map_err(|error| format!("encode readiness request: {error}"))?;
     let deadline = Instant::now() + timeout;
     loop {
         on_poll()?;
