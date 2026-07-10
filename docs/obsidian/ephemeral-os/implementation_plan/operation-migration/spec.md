@@ -322,43 +322,43 @@ tooling.
 Production LOC means physical lines in tracked `src/**/*.rs` plus a
 crate-root `build.rs`, including comments and blank lines. It excludes tests,
 examples, manifests, lockfiles, documentation, fixtures, generated assets,
-caches, and historical reports. Exact straight-move values use committed
-`HEAD` `cc5f9974e`; working-tree changes are excluded. Ranges are
-responsibility-split estimates and must be replaced with measured
-post-migration counts in Phase 8. They are planning bounds, not code-growth
-targets.
+caches, and historical reports. Cutover values use committed
+`HEAD` `e3a59d432`; working-tree changes are excluded. The allocation baseline
+remains committed `cc5f9974e`. Every value below is measured by the documented
+rule; the reconciliation after the tables accounts for every net production
+addition and deletion.
 
 ### New operation packages
 
-| Resulting Cargo package | Target path | Expected production LOC | Basis |
+| Resulting Cargo package | Target path | Measured production LOC | Basis |
 | --- | --- | ---: | --- |
-| `sandbox-operation-contract` | `crates/sandbox-operations/contract/` | 600–750 | Adapter-neutral catalog model, semantic argument types, scope/routes, and application envelopes; CLI-only fields are excluded. |
-| `sandbox-operation-catalog` | `crates/sandbox-operations/catalog/` | 800–1,000 | Current three-package baseline is 963 LOC; CLI declarations leave while route manifest, internal identifiers, and integrity checks are added. |
-| `sandbox-operation-client` | `crates/sandbox-operations/client/` | 550–650 | Gateway transport (177 LOC today), discovery config (93 LOC today), and the value-based half of request construction extracted from CLI. |
-| `sandbox-observability-application` | `crates/sandbox-observability/application/` | 550–800 | Structured query/response behavior extracted from daemon plus neutral input-port DTOs (~40 LOC mirrored runtime snapshot types); sampling, lifecycle, and rendering stay outside. |
+| `sandbox-operation-contract` | `crates/sandbox-operations/contract/` | 997 | Adapter-neutral semantic types, scope/routes, and application envelopes; CLI-only fields are excluded. |
+| `sandbox-operation-catalog` | `crates/sandbox-operations/catalog/` | 921 | The three baseline catalogs were merged; CLI declarations left while route manifests, internal identifiers, and integrity surfaces were added. |
+| `sandbox-operation-client` | `crates/sandbox-operations/client/` | 554 | Gateway transport, discovery configuration, and value-based request construction were extracted from their former owners. |
+| `sandbox-observability-application` | `crates/sandbox-observability/application/` | 648 | Structured query/response behavior and neutral input-port DTOs moved from daemon; collection and lifecycle stayed outside. |
 
-Expected new-package production total: **2,500–3,200 LOC**.
+Measured new-package production total: **3,120 LOC**.
 
 ### Reshaped packages
 
-| Resulting Cargo package | Target path | Expected production LOC | Basis |
+| Resulting Cargo package | Target path | Measured production LOC | Basis |
 | --- | --- | ---: | --- |
-| `sandbox-protocol` | `crates/sandbox-protocol/` | 150–250 | Auth field vocabulary (2), framing (11), limits (26), wire codec split out of request/response, wire errors, and the readiness handshake. |
-| `sandbox-manager` | `crates/sandbox-manager/` | about 2,800 | Current 3,266 LOC minus the 537 LOC of concrete TCP client and local-process installer moved to gateway composition, plus registry/bijection tests glue. |
-| `sandbox-runtime` | `crates/sandbox-runtime/operation/` | 6,024 | Exact straight baseline; dependency and registry renames only. |
-| `sandbox-cli` | `crates/sandbox-cli/` | 1,400–1,600 | Current 1,305 LOC minus client/value-builder extraction, plus `help.rs` (273) from protocol and 350–400 LOC of CLI paths, flags, usage, and examples removed from catalog declarations. |
-| `sandbox-mcp` | `crates/sandbox-mcp/` | 414 | Dependency swap only. |
-| `sandbox-console` | `crates/sandbox-console/` | about 1,160 | Dependency swap plus public-route validation and a client-owned request-size bound. |
-| `sandbox-gateway` | `crates/sandbox-gateway/` | about 1,030 | Current 572 LOC plus manager TCP client and local daemon installer composition. |
-| `sandbox-daemon` | `crates/sandbox-daemon/` | 2,424–2,674 | Current 3,224 LOC minus observability query/response behavior; lifecycle, sampling, and composition remain. |
-| `sandbox-config` | `crates/sandbox-config/` | about 1,407 | Current 1,501 LOC minus client-discovery configuration moved to the client. |
-| `sandbox-provider-docker` | `crates/sandbox-provider-docker/` | 1,970–1,988 | Duplicated protocol readiness construction may be removed. |
+| `sandbox-protocol` | `crates/sandbox-protocol/` | 206 | Wire codec, framing, limits, errors, authentication vocabulary, and readiness handshake remain. |
+| `sandbox-manager` | `crates/sandbox-manager/` | 2,915 | Concrete TCP and local-process adapters moved to gateway; application ports, registries, and business logic remain. |
+| `sandbox-runtime` | `crates/sandbox-runtime/operation/` | 6,141 | Registry ownership and canonical internal dispatch are measured after the in-place rename. |
+| `sandbox-cli` | `crates/sandbox-cli/` | 1,906 | CLI parsing, help, projection, output, and binaries remain after transport and value-building extraction. |
+| `sandbox-mcp` | `crates/sandbox-mcp/` | 488 | Adapter code is measured after the client and catalog dependency cutover. |
+| `sandbox-console` | `crates/sandbox-console/` | 1,270 | Public-route validation and the client-owned request-size bound are included. |
+| `sandbox-gateway` | `crates/sandbox-gateway/` | 1,122 | Manager TCP client and local daemon installer composition moved here. |
+| `sandbox-daemon` | `crates/sandbox-daemon/` | 2,736 | Observability query behavior moved out; lifecycle, sampling, adapters, and composition remain. |
+| `sandbox-config` | `crates/sandbox-config/` | 1,651 | Client-discovery configuration moved to the client; unrelated committed configuration work remains. |
+| `sandbox-provider-docker` | `crates/sandbox-provider-docker/` | 1,980 | Provider polling consumes the protocol-owned readiness helper through one local boundary. |
 
-Expected reshaped production total: **18,779–19,347 LOC**.
+Measured reshaped production total: **20,415 LOC**.
 
 ### Unchanged packages
 
-| Resulting Cargo package | Target path | Production LOC |
+| Resulting Cargo package | Target path | Measured production LOC |
 | --- | --- | ---: |
 | `sandbox-observability` | `crates/sandbox-observability/primitives/` | 1,582 |
 | `sandbox-runtime-layerstack` | `crates/sandbox-runtime/layerstack/` | 6,146 |
@@ -371,39 +371,39 @@ Expected reshaped production total: **18,779–19,347 LOC**.
 only its manifest path relocates one level when the observability namespace
 forms in Phase 6.
 
-Unchanged production total: **17,771 LOC**.
-Expected production across all 20 Cargo crates under `crates/`:
-**39,050–40,318 LOC** (current baseline 39,391).
+Measured unchanged production total: **17,771 LOC**.
+Measured production across all 20 Cargo crates under `crates/`:
+**41,306 LOC** (allocation baseline 39,391; net +1,915).
 
 ### Workspace tooling outside `crates/`
 
-| Resulting Cargo package | Target path | Expected source LOC | Basis |
+| Resulting Cargo package | Target path | Measured source LOC | Basis |
 | --- | --- | ---: | --- |
-| `xtask` | `xtask/` | 1,600–1,750 | Current baseline is 1,439 LOC; the operation architecture checker adds the layer map, edge, feature-closure, and route/projection gates. |
+| `xtask` | `xtask/` | 7,014 | Baseline 1,439 plus 5,575 lines for deny-by-default metadata, feature, semantic, source-boundary, stale-reference, and authority-evidence enforcement. |
 
 The Cargo workspace therefore has **21 members**.
 
 ### Maintained non-Cargo source
 
-| Area | Expected source LOC | Basis |
+| Area | Measured source LOC | Basis |
 | --- | ---: | --- |
-| `web/console/` | 6,424 | Tracked TypeScript, TSX, CSS, and `index.html`; generated output and `*.tsbuildinfo` excluded and untracked. |
-| `e2e/` | 18,571 | Maintained Python test and harness source (87 tracked files), reported separately from production. |
+| `web/console/` | 6,283 | Tracked TypeScript, TSX, CSS, and `index.html`; generated output and `*.tsbuildinfo` excluded and untracked. |
+| `e2e/` | 19,000 | Maintained Python test and harness source (75 tracked files), reported separately from production. |
 | `crates/sandbox-provider-docker/examples/` | 82 | Rust example source, excluded from crate production totals. |
 
 Adding frontend and provider example source to the 20-crate production
-total, but excluding E2E and root tooling, gives **45,556–46,824 LOC**.
-Including `xtask` gives **47,156–48,574 LOC** of maintained non-test
-workspace/frontend/example source. The goal is near-zero net feature LOC:
-most change is responsibility splitting, type renaming, and deletion of
-duplicated routing.
+total, but excluding E2E and root tooling, gives **47,671 LOC**.
+Including `xtask` gives **54,685 LOC** of maintained non-test
+workspace/frontend/example source. `git diff --numstat -M cc5f9974e..HEAD`
+reports 5,911 additions and 3,996 deletions under governed crate production
+paths: net +1,915, exactly 41,306 - 39,391; `xtask` adds separate +5,575 tooling LOC.
 
-The current E2E tree also contains 7,977 tracked report files totaling
+The Phase 0 baseline E2E tree contained 7,977 tracked report files totaling
 **4,274,972 lines** of generated/historical output (measured at `cc5f9974e`
-by summing newline counts of tracked file contents). Those files are
-explicitly outside the target LOC inventory. Remove them from Git, archive
-any required summary outside the source tree, and add durable ignore rules
-before moving the 87 maintained files to `e2e/`.
+by summing newline counts of tracked file contents). Those files were
+explicitly outside the target LOC inventory and were removed from Git; the
+required summaries remain in the immutable Phase 0 evidence bundle, with
+durable ignore rules protecting the relocated `e2e/` tree.
 
 ## Target dependency law
 
