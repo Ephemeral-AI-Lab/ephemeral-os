@@ -2,12 +2,12 @@
 
 A live, Docker-backed end-to-end suite that exercises the real
 `sandbox-cli → gateway → manager → daemon → runtime` path against actual
-containers. It is a **skeleton**: minimal, CLI-driven, and easy to extend.
+containers.
 
-Built with **pytest**. Every operation goes through `sandbox-cli`; the whole
-lifecycle — setup, execution, observation, cleanup — is CLI-driven. Verification
-reads the **structured JSON** each operation returns (`json.loads`); the suite
-never scrapes `/tmp/eos-gateway.log`.
+Built with **pytest**. Public management, runtime, and observability operations
+go through their dedicated `sandbox-cli` binaries. The daemon HTTP boundary
+tests intentionally call the allowlisted HTTP routes directly. Verification
+reads structured responses; the suite never scrapes `/tmp/eos-gateway.log`.
 
 ## Layout
 
@@ -31,9 +31,9 @@ cli-operation-e2e-live-test/
 │   ├── test_daemon_reload.py  # Lane A: per-create daemon YAML reload + behavior knobs
 │   ├── test_validation.py     # invalid config rejection on both lanes
 │   ├── test_manager_section.py# Lane B: gateway-start manager.docker knobs
-│   └── test_phase_knobs.py    # consolidation phases 1–3 (skip-marked until landed)
-├── runtime/                   # placeholder (empty; tests not implemented yet)
-└── observability/             # placeholder (see observability/README.md)
+│   └── test_phase_knobs.py    # consolidation phases 1–3
+├── runtime/                   # command, file, lifecycle, and daemon HTTP boundary tests
+└── observability/             # aggregate and sandbox-scoped public CLI tests
     └── test_observability.py
 ```
 
@@ -46,10 +46,6 @@ Each **family** owns a folder with its own `helpers.py` (thin wrappers over the
 family's `sandbox-cli` operations) and its `test_*.py`. `core/` holds only
 generic, cross-family machinery. Sandbox lifecycle lives in `conftest.py`
 fixtures so teardown runs even when a test fails.
-
-`runtime/` is intentionally empty for now — when runtime tests are added they
-follow the same per-family layout (e.g. `runtime/command/`,
-`runtime/workspace_session/`).
 
 ## Prerequisites
 
@@ -65,7 +61,7 @@ cd cli-operation-e2e-live-test
 
 pytest -m smoke              # smallest check: gateway up + structured list_sandboxes
 pytest manager              # management lifecycle: create -> inspect -> list -> destroy
-pytest observability        # placeholder (skipped)
+pytest observability        # aggregate and sandbox-scoped snapshots
 pytest                      # everything
 ```
 
@@ -116,10 +112,9 @@ subfolder.
 
 ## Why no log scraping
 
-State and results are read from each operation's JSON output, not from gateway
-or daemon logs. Structured observability (`observability snapshot`,
-`manager get_observability_tree`) is the intended source for richer state
-checks; see `observability/README.md`.
+State and results are read from structured CLI or HTTP responses, not from
+gateway or daemon logs. `sandbox-observability-cli snapshot` is the public
+source for richer state checks; see `observability/README.md`.
 
 ## Extending
 
