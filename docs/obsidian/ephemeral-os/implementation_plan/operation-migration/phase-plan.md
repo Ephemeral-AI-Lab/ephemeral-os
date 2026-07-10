@@ -54,7 +54,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | approved | 2026-07-11 | 2026-07-11 | Codex |
-| 7 | Update documentation, scripts, law statements | in progress | 2026-07-11 | — | — |
+| 7 | Update documentation, scripts, law statements | gate review | 2026-07-11 | — | — |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
 
 ## Standing gate (every phase)
@@ -608,16 +608,16 @@ one commit.
 
 ### Acceptance criteria
 
-- [ ] No normative doc, executable script, manifest, or CI reference names
+- [x] No normative doc, executable script, manifest, or CI reference names
   a deleted package, an old catalog path, `sandbox_cli::core`, or the old
   E2E location:
   `rg 'sandbox-manager-operations|sandbox-runtime-operations|sandbox-observability-operations|sandbox_cli::core|cli-operation-e2e-live-test' --glob '!docs/obsidian/**/implementation_plan/**' --glob '!**/target/**'`
   returns only explicitly historical documents.
-- [ ] Boundary-law statements in `README.md`/`CLAUDE.md` match the
+- [x] Boundary-law statements in `README.md`/`CLAUDE.md` match the
   specification's dependency law and namespace list. *Evidence: doc diff.*
-- [ ] `bin/start-sandbox-docker-gateway --rebuild-binary` and the E2E
+- [x] `bin/start-sandbox-docker-gateway --rebuild-binary` and the E2E
   source-assertion tests pass after repointing.
-- [ ] Standing gate passed.
+- [x] Standing gate passed.
 
 ### Progress log
 
@@ -635,6 +635,12 @@ one commit.
 | 2026-07-11 | Maintained document targets | `pattern='sandbox-manager-operations\|sandbox-runtime-operations\|sandbox-observability-operations\|sandbox_cli::core\|cli-operation-e2e-live-test\|crates/sandbox-operations/(manager\|runtime\|observability)\|crates/sandbox-manager/src/operation/\|get_observability'; base=docs/obsidian/ephemeral-os/implementation_plan; maintained=($base/config/cli-e2e-test-spec.md $base/daemon-command-child-policy-refined-spec.md $base/daemon-shell-security-knob-removal-adversarial-review-prompt.md $base/{file_operations/test-case.md,finalize-policy/spec.md,git-policy/test-case.md,security-policy.md,squash/test-case.md,web-ui/http-server.md,web-ui/web-ui-design.md,wh-reserved-namespace/spec.md,wh-reserved-namespace/test-case.md,export_changes/test-case.md,mcp_cli_surface/operation-contract.md}); if rg -n "$pattern" "${maintained[@]}"; then exit 1; fi`; `test -d e2e/runtime/shell_security && test -f crates/sandbox-observability/primitives/src/record.rs && test -d e2e/runtime/reserved_paths && test -d e2e/manager/management/export` | The maintained-document stale scan returned no output; every corrected source or E2E target exists. This includes the concrete `layerstack` config probe and the internal-operation contract after `get_observability` removal. Historical execution prompts and completed trackers were classified locally instead of having their evidence rewritten. | None. |
 | 2026-07-11 | Frozen historical experiment scripts | `scripts=(docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/scripts/{run_combo.sh,ab_driver.py}); for script in "${scripts[@]}"; do test ! -x "$script"; done`; `bash -n "${scripts[1]}"`; `python3 -m py_compile "${scripts[2]}"` | Both scripts are explicitly frozen, non-executable historical artifacts and still parse successfully. The adjacent `RESULTS.md` classifies the immutable `wtuning/*.json` measurement bundle. | None. |
 | 2026-07-11 | Independent normative-route audit | `pattern='sandbox-manager-operations\|sandbox-runtime-operations\|sandbox-observability-operations\|sandbox_cli::core\|cli-operation-e2e-live-test\|crates/sandbox-operations/(manager\|runtime\|observability)\|crates/sandbox-manager/src/operation/\|get_observability\|checkpoint_squash\|(?:bin/)?sandbox-cli (?:manager\|runtime\|observability)\|view=snapshot\|view-generic\|private daemon snapshot\|operation vocabulary[^\\n]*sandbox-protocol\|sandbox-protocol[^\\n]*operation vocabulary'; rg -l --pcre2 "$pattern" docs e2e README.md CLAUDE.md AGENTS.md --glob '!docs/obsidian/ephemeral-os/implementation_plan/operation-migration/**' --glob '!docs/obsidian/ephemeral-os/implementation_plan/cli_migration/**' --glob '!**/*.json' --glob '!**/target/**' > "$list_file"; while IFS= read -r file; do rg -qi 'operation-layout exempt\|status: superseded\|^# Archived\|^## Historical\|retained as historical\|Historical decision record\|frozen historical\|archived completed implementation record' "$file" \|\| exit 1; done < "$list_file"`; current maintained-document `rg --pcre2` scan plus current sections of `export_changes/spec.md`; `git diff --check`; historical script parse checks | Exit 0: `classified_files=54`, `maintained_route_scan=clean`, and `diff_and_script_parse=passed`. The audit additionally corrected the direct `snapshot` wording and the console vocabulary owner, and classified two completed observability prompts; dated commands and estimated source trees remain unchanged inside explicit historical scopes. | None. |
+| 2026-07-11 | Post-checkpoint workspace proof | `git show --stat --oneline 456c7a8a2`; `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-cli -p sandbox-console -p sandbox-operation-contract -p sandbox-operation-catalog --all-features` | Checkpoint `456c7a8a2` records the historical/current documentation classification. Workspace check passed; focused suites passed with CLI compatibility 2/2, help 3/3, manager 14/14, observability 10/10, projection 2/2, request builder 6/6, runtime 10/10, console 39/39, catalog integrity/domain 10/10, and contract 12/12. | None. |
+| 2026-07-11 | Acceptance: stale references are explicitly historical | `rg 'sandbox-manager-operations\|sandbox-runtime-operations\|sandbox-observability-operations\|sandbox_cli::core\|cli-operation-e2e-live-test' --glob '!docs/obsidian/**/implementation_plan/**' --glob '!**/target/**'`; `files=(${(f)"$(rg -l "$pattern" --glob '!docs/obsidian/**/implementation_plan/**' --glob '!**/target/**')"}); for file in "${files[@]}"; do rg -n -m 1 'operation-layout exempt\|^# Archived' "$file"; done` | Exit 0; the exact named scan returned five files only: the archived daemon-HTTP prompt and four append-only E2E/progress records. Marker verification printed one explicit archived or operation-layout-exempt heading for every file. | None. |
+| 2026-07-11 | Acceptance: root boundary laws | `git diff 06ecde296..HEAD -- README.md CLAUDE.md`; `rg -n 'sandbox-operation-contract\|sandbox-operation-catalog\|sandbox-operation-client\|sandbox-operations\|sandbox-observability\|sandbox-runtime' README.md CLAUDE.md` | The Phase 7 diff assigns neutral semantics to the contract, canonical public/internal routes to the catalog, shared transport to the client, and wire-only behavior to protocol; it forbids application dependencies on protocol/client/adapters/composition roots and lists exactly the three grouping-only namespace directories with no root package or re-export layer. | None. |
+| 2026-07-11 | Acceptance: rebuilt gateway and source assertions | `bin/start-sandbox-docker-gateway --rebuild-binary`; `cd e2e && E2E_REBUILD_BINARY=0 python3 -m pytest manager/management/squash/test_squash_smoke.py -k SMK-05 -q -s` | The rebuild proof above produced arm64 daemon SHA-256 `47986ca25a0a582cc47439f20af02b0560680089eaf82cfeeaa43d0e782577e2`. The final source-assertion rerun passed `1 passed, 9 deselected in 2.94s`; its append-only report is `squash-20260711-033351`. | None. |
+| 2026-07-11 | Phase 7 standing gate | `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check` | All workspace unit, integration, policy, and doc tests passed (the experiment-only OCC benchmark remained intentionally ignored); clippy finished with warnings denied in 1m27s; formatting returned no diff. | None. |
+| 2026-07-11 | Phase 7 gate review | Phase 7 change checklist, acceptance checklist, progress evidence, and deviation register | Every change and acceptance item is checked from command evidence. Dashboard status advanced to `gate review`; no specification deviation was required. | None. |
 
 ---
 
