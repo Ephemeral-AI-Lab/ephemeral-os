@@ -53,7 +53,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 3 | Extract the shared gateway client | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 6 | Extract observability application, remove multiplexing | blocked | — | — | — |
+| 6 | Extract observability application, remove multiplexing | in progress | 2026-07-10 | — | — |
 | 7 | Update documentation, scripts, law statements | blocked | — | — | — |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
 
@@ -563,7 +563,7 @@ one commit.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
-| | | | | |
+| 2026-07-10 | Phase 6 started | Dashboard entry criteria and Phase 5 acceptance checklist | Phase 5 is approved and every Phase 5 acceptance item is checked; Phase 6 is unblocked. | None. |
 
 ---
 
