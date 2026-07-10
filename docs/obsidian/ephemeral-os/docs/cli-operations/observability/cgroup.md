@@ -13,7 +13,8 @@ status: ready
 
 Resource series for a scope (cpu/mem/io + disk).
 
-> Resolves to the daemon op `get_observability` with view `cgroup`; `--sandbox-id` selects the daemon.
+> The direct `cgroup` catalog operation is sandbox-scoped and routed to the
+> observability application in the daemon selected by `--sandbox-id`.
 
 ## Manual
 

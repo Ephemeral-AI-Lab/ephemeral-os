@@ -134,8 +134,8 @@ def test_forward_shared_arbitrary_port(tmp_path):
         assert sandbox_id, f"create_sandbox failed: {created}"
         host, daemon_port = daemon_http_endpoint(sandbox_id)
 
-        # No workspace session: exec_command runs in a one-shot shared-network
-        # workspace, so the server is reachable on the daemon's 127.0.0.1.
+        # No explicit workspace session: exec_command runs in an implicit
+        # shared-network workspace, so the server is reachable on 127.0.0.1.
         result = runtime(
             sandbox_id,
             "exec_command",

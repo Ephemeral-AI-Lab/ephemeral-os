@@ -21,7 +21,7 @@ pub struct BuildRequestInput {
     pub sandbox_id: Option<String>,
 }
 
-/// Build a wire request for `input` against `catalog`, minting a fresh request id.
+/// Build an operation request for `input` against `catalog`, minting a fresh request id.
 ///
 /// # Errors
 /// Returns an error for unknown operations, argument parse failures, or an
@@ -39,7 +39,7 @@ pub fn build_request_from_catalog(
     })
 }
 
-/// Build a wire request for `input` against `catalog` with an explicit request id.
+/// Build an operation request for `input` against `catalog` with an explicit request id.
 ///
 /// # Errors
 /// Returns an error for unknown operations, argument parse failures, or an

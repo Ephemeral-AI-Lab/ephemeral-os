@@ -11,7 +11,7 @@ operator or agent
    | sandbox-console
    v
 sandbox-operation-catalog + adapter-owned projection
-   |
+   | adapter builds an operation-contract request
    v
 sandbox-operation-client
    | authenticated newline-delimited JSON via sandbox-protocol
@@ -35,8 +35,8 @@ sandbox-runtime-overlay / sandbox-observability
 | Component | Kind | Job | Must never |
 |---|---|---|---|
 | `sandbox-operation-contract` | lib | own adapter-neutral operation, argument, scope, route, request, response, and application-error types | depend on any workspace package or own wire/presentation behavior |
-| `sandbox-operation-catalog` | lib | own every public operation declaration, canonical internal identifier, and route-manifest entry in feature-gated manager/runtime/observability modules | depend on anything except the contract, own CLI metadata, or contain handlers |
-| `sandbox-operation-client` | lib | own gateway discovery, wire transport, and value-based request construction shared by CLI, MCP, and console | depend on the catalog, applications, adapters, or `sandbox-config` |
+| `sandbox-operation-catalog` | lib | own canonical internal identifiers and routes unconditionally, plus every public declaration and route in feature-gated manager/runtime/observability modules | depend on anything except the contract, own CLI metadata, or contain handlers |
+| `sandbox-operation-client` | lib | own gateway discovery and wire transport shared by CLI, MCP, and console, plus value-based request construction shared by CLI and MCP | depend on the catalog, applications, adapters, or `sandbox-config` |
 | `sandbox-gateway` | bin+lib | compose the public gateway listener, manager application, Docker provider, daemon wire client, and local daemon installer | own application behavior, depend on CLI/MCP/console or the shared client, or compose runtime applications directly |
 | `sandbox-cli` | lib + 3 bins | own CLI paths, flags, positionals, help, output, and separately feature-gated manager/runtime/observability executables | depend on protocol/applications/other adapters, provide a combined executable, or let one binary enumerate another authority |
 | `sandbox-mcp` | bin | project exactly one selected domain from the merged catalog as a stdio MCP server and send through the shared client | define a second catalog, expose a combined set, or depend on protocol/applications/CLI/console |

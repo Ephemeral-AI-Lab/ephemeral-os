@@ -15,7 +15,7 @@ protocol, applications, CLI, or MCP.
 ## Routes
 
 ```text
-POST /api/rpc                                  one-shot operation dispatch
+POST /api/rpc                                  single-operation dispatch
 POST /api/rpc   (Accept: text/event-stream)    same, streaming _stream_logs as SSE
 GET  /api/catalog                              management+runtime+observability catalogs
 GET  /api/sandboxes/<id>/health                daemon_http /health probe
@@ -52,11 +52,16 @@ cargo run -p sandbox-console -- \
   --assets dist/console
 ```
 
-Config discovery: flags > `SANDBOX_GATEWAY_SOCKET` / `SANDBOX_GATEWAY_AUTH_TOKEN`
-/ `SANDBOX_CONSOLE_BIND` / `SANDBOX_CONSOLE_ASSETS` env > defaults
-(`127.0.0.1:7880`, gateway `127.0.0.1:7878`, assets from `dist/console` or
-`web/console/dist`). Bind stays loopback in v0 — browser auth is out of
-scope, matching the gateway and `daemon_http` posture.
+Config discovery: `--config-yaml` outranks `SANDBOX_CONSOLE_CONFIG_YAML` when
+selecting an optional YAML `console` section. Console values use flag > env
+when one exists > YAML > default precedence; assets use `--assets` >
+`SANDBOX_CONSOLE_ASSETS` > the detected `dist/console` or `web/console/dist`
+directory. Gateway discovery is independent and uses
+`--gateway-socket`/`--gateway-auth-token` > `SANDBOX_GATEWAY_SOCKET`/
+`SANDBOX_GATEWAY_AUTH_TOKEN` > its defaults. The default console bind is
+`127.0.0.1:7880` and the default gateway is `127.0.0.1:7878`. Bind stays
+loopback in v0 — browser auth is out of scope, matching the gateway and
+`daemon_http` posture.
 
 SPA development: `cd web/console && npm run dev` proxies `/api` and `/s`
 to the running console.

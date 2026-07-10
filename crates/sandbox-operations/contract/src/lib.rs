@@ -1,4 +1,5 @@
-//! Adapter-neutral operation semantics, routes, scopes, and application envelopes.
+//! Adapter-neutral operation semantics, route types and policies, scopes, and
+//! application envelopes.
 #![forbid(unsafe_code)]
 
 pub mod argument;

@@ -80,9 +80,10 @@ introduce new violations; justify any `unsafe` with a `// SAFETY:` block.
 - The YAML parser is fenced behind `crates/sandbox-config/src/yaml.rs`; callers
   use `ConfigDocument` and typed section schemas, never the parser directly.
 - Adapter-neutral operation and application-envelope vocabulary belongs to
-  `sandbox-operation-contract`; public declarations, routes, and canonical
-  internal identifiers belong to the feature-gated domain modules in
-  `sandbox-operation-catalog`; CLI-only paths, flags, usage, and help belong to
+  `sandbox-operation-contract`; public declarations and routes belong to the
+  feature-gated domain modules in `sandbox-operation-catalog`, while canonical
+  internal identifiers and routes belong to its always-compiled `internal`
+  module; CLI-only paths, flags, usage, and help belong to
   `sandbox-cli::projection`.
 - `sandbox-protocol` owns only wire codec, framing, authentication fields,
   limits, and readiness. Applications (`sandbox-manager`, `sandbox-runtime`,

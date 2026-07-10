@@ -13,7 +13,10 @@ status: ready
 
 Show live sandbox state.
 
-> With `--sandbox-id`, this operation resolves to daemon op `get_observability` with `view: snapshot`; `--sandbox-id` selects which sandbox's daemon to query. Without `--sandbox-id`, the gateway sends a manager `snapshot` request and aggregates ready manager-known sandboxes.
+> With `--sandbox-id`, the direct `snapshot` catalog route is sandbox-scoped
+> and handled by the observability application in the selected daemon. Without
+> `--sandbox-id`, the same public operation is system-scoped; the manager fans
+> out direct `snapshot` requests and aggregates ready manager-known sandboxes.
 
 ## Manual
 

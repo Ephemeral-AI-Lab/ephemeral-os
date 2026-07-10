@@ -13,7 +13,8 @@ status: ready
 
 Per-layer leasing/booking inventory, and stack series.
 
-> Resolves to the daemon op `get_observability` with view `layerstack`; `--sandbox-id` selects the daemon.
+> The direct `layerstack` catalog operation is sandbox-scoped and routed to the
+> observability application in the daemon selected by `--sandbox-id`.
 
 ## Manual
 

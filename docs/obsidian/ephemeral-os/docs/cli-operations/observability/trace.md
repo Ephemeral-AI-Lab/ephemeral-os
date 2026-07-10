@@ -13,7 +13,8 @@ status: ready
 
 Render one flow as a span waterfall.
 
-> Resolves to the daemon op `get_observability` with view `trace`; `--sandbox-id` selects the daemon.
+> The direct `trace` catalog operation is sandbox-scoped and routed to the
+> observability application in the daemon selected by `--sandbox-id`.
 
 ## Manual
 

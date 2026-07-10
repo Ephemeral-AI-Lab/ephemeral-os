@@ -13,7 +13,8 @@ status: ready
 
 List domain-fact events across traces.
 
-> Resolves to the daemon op `get_observability` with view `events`; `--sandbox-id` selects the daemon.
+> The direct `events` catalog operation is sandbox-scoped and routed to the
+> observability application in the daemon selected by `--sandbox-id`.
 
 ## Manual
 

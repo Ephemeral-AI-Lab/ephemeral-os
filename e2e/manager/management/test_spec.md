@@ -17,13 +17,12 @@ Test plan for the `management` family. Two parts per operation:
   finalizer) destroys any sandbox the suite created but a test leaked. Only
   suite-created ids are touched — never other clients' sandboxes. Inline-create
   tests still register automatically via `helpers.create_sandbox`.
-- **Workspace variants**: `--workspace-root` is a **host path** the Docker
+- **Workspace variants**: `--workspace-bind-root` is a **host path** the Docker
   backend bind-mounts into the sandbox. Variants live under `repo/` (one host
   dir each: `repo/testbed` default, `repo/special_case_b`, …), selected via
   `E2E_WORKSPACE_VARIANT` or `config.workspace_variant("name")`.
 - **Helpers**: thin wrappers in `manager/management/helpers.py`
-  (`create_sandbox`, `inspect_sandbox`, `list_sandboxes`, `destroy_sandbox`,
-  `snapshot`).
+  (`create_sandbox`, `inspect_sandbox`, `list_sandboxes`, `destroy_sandbox`).
 - **Error shape**: failures return `{"error": {"kind", "message", "details"}}`;
   missing required CLI flags are a usage error (exit 2), not a request.
 
@@ -46,7 +45,8 @@ feature coverage.
 
 ## 1. create_sandbox
 
-`--image` (req), `--workspace-root` (req) → `{id, workspace_root, state, daemon:{host,port}}`.
+`--image` (req), `--workspace-bind-root` (req) →
+`{id, workspace_root, state, daemon:{host,port}}`.
 On any failure the daemon, runtime sandbox, and record are rolled back.
 
 ### (a) Features
@@ -61,8 +61,8 @@ On any failure the daemon, runtime sandbox, and record are rolled back.
 - **F5 invalid/empty image rolls back** — empty `--image` →
   `error.kind == "invalid_request"`, and the sandbox is absent from
   `list_sandboxes` afterward (rollback verified).
-- **F6 missing required arg** — omitting `--image` or `--workspace-root` is a CLI
-  usage error (no sandbox created).
+- **F6 missing required arg** — omitting `--image` or
+  `--workspace-bind-root` is a CLI usage error (no sandbox created).
 - **F7 nonexistent workspace_root** — a host path that does not exist surfaces a
   backend error (mount failure); documents expected behavior.
 - **F8 special / invalid files in workspace** — a workspace containing a
@@ -80,9 +80,10 @@ On any failure the daemon, runtime sandbox, and record are rolled back.
 > collected as `special`; entries that vanish mid-walk as `unstable`. A non-empty
 > `special`/`unstable` set makes the base build return
 > `Storage("workspace base must be a full copy; special=… unstable=…")`, which
-> panics `Services::from_config`, kills the daemon, and surfaces to the client as
-> `create_sandbox` error `internal_error` "sandbox daemon install failed: start
-> daemon …". **Structured assertion is limited to failure + rollback** — the
+> panics `SandboxRuntimeOperations::from_config`, kills the daemon, and surfaces
+> to the client as `create_sandbox` error `internal_error` "sandbox daemon
+> install failed: start daemon …". **Structured assertion is limited to failure
+> + rollback** — the
 > precise `special=/unstable=` reason is only in the daemon log, not the JSON.
 
 ### (b) Test files

@@ -28,8 +28,8 @@ afterward — you do **not** start it by hand.
 The harness routes logical `manager`, `runtime`, and `observability` calls to
 the matching root wrapper and preserved binary. Semantic routes come from
 `sandbox-operation-catalog`; `sandbox-cli` owns each binary's projection and
-argv parsing; `sandbox-operation-client` owns shared discovery, request
-construction, and gateway transport.
+argv parsing; `sandbox-operation-client` owns shared discovery, value-based
+request construction, and gateway transport.
 
 ## 3. What to run
 

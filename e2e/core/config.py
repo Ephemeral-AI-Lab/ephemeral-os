@@ -22,7 +22,7 @@ IMAGE = os.environ.get("E2E_IMAGE", "ubuntu:24.04")
 
 # Workspace-root variants. repo/ holds one subfolder per variant (e.g. testbed,
 # special_case_b); each is a HOST directory the Docker backend bind-mounts into
-# the sandbox as its workspace root (--workspace-root is a host path).
+# the sandbox as its workspace root (--workspace-bind-root is a host path).
 REPO_DIR = SUITE_DIR / "repo"
 WORKSPACE_VARIANT = os.environ.get("E2E_WORKSPACE_VARIANT", "testbed")
 
