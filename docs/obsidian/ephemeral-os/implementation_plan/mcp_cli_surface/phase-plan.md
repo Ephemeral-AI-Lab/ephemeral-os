@@ -38,9 +38,9 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 4. Replace export HTTP streaming | complete | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | complete | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | complete | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
-| 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
+| 7. Release verification and cutover | in progress | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 6 are complete. Phase 7 has not started.
+Phases 0 through 6 are complete. Phase 7 is in progress.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -723,7 +723,7 @@ README.md
 
 ## Phase 7 — Release verification and cutover
 
-**Status:** not started
+**Status:** in progress
 
 **Depends on:** Phases 1 through 6
 
@@ -819,6 +819,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 7 | Started release verification and cutover after confirming all Phase 1–6 gates and preserving unrelated worktree changes. | fixture capture, cross-surface acceptance proof, required gateway rebuild, and workspace suite pending |
 | 2026-07-10 | 6 | Completed the exact daemon HTTP allowlist, removed HTTP export/token claims, retained RPC spool paging and forwarding semantics, and updated the public route documentation. | commit `2ee1b4240`; 60 daemon tests, 89 supporting regression tests, clippy/format/search checks, listener-level status/route proofs, and two independent audits |
 | 2026-07-10 | 6 | Started the daemon HTTP allowlist enforcement after confirming the Phase 4 and Phase 5 gates and re-reading the binding route, forwarding, file-list, export-removal, and caller-search contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 5 | Completed the console operation cutover to authenticated gateway RPC, exact list-only daemon proxy, canonical public catalogs, and server-only credential boundary. | commit `f2cc10651`; 29 console tests on default and Rust 1.85 toolchains, frontend production build, JSON-array parser check, lint/format/search/dependency checks, and independent review |
