@@ -34,14 +34,14 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 0. Contract baseline | complete | none | public surface, architecture, and migration constraints documented |
 | 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
 | 2. Consolidate the CLI package | complete | 1 | one package, three separately grantable binaries |
-| 3. Add the MCP adapter | not started | 1, 2 | one set-configured stdio server with three registrations |
+| 3. Add the MCP adapter | in progress | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | not started | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | not started | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 2 are complete. Phase 3 is the next eligible phase; no later
-phase has started.
+Phases 0 through 2 are complete. Phase 3 is in progress; no later phase has
+started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -326,7 +326,7 @@ deleted: crates/sandbox-runtime-cli/
 
 ## Phase 3 — Add the MCP adapter
 
-**Status:** not started
+**Status:** in progress
 
 **Depends on:** Phases 1 and 2
 
@@ -666,6 +666,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 3 | Started the fixed-set MCP adapter after confirming the Phase 1 and 2 gates and re-reading all binding MCP, CLI, HTTP, operation, and implementation contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 2 | Completed one core-only CLI package with three feature-isolated binaries, exact set help/routing, migrated consumers/tests, and removal of all legacy CLI packages. | commits `73e5fa612`, `2fa2943fc`, `7aab1e035`; 67 focused tests, three isolated artifact/tree checks, wrapper/launcher, lint, formatting, and dependency-audit proof |
 | 2026-07-10 | 2 | Started CLI package consolidation after confirming the Phase 1 catalog/visibility gate and re-reading the binding CLI, operation, and implementation contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 1 | Completed exact public catalogs, visibility boundaries, canonical snapshot ownership, runtime adapter rename, and caller cleanup without starting Phase 2. | commits `4bda5df70`, `0217248e5`; 201 focused Rust tests, fake-gateway, formatting, compile, and boundary-search proof |
