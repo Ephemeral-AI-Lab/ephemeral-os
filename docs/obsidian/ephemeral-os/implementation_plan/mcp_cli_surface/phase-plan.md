@@ -37,10 +37,11 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 3. Add the MCP adapter | complete | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | complete | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | complete | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
-| 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
+| 6. Enforce daemon HTTP allowlist | in progress | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 5 are complete. Phase 6 has not started.
+Phases 0 through 5 are complete. Phase 6 is in progress; Phase 7 has not
+started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -629,7 +630,7 @@ crates/sandbox-console/tests/console/{catalog.rs,daemon_api.rs,health.rs,proxy.r
 
 ## Phase 6 — Enforce the daemon HTTP allowlist
 
-**Status:** not started
+**Status:** in progress
 
 **Depends on:** Phases 4 and 5
 
@@ -788,6 +789,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 6 | Started the daemon HTTP allowlist enforcement after confirming the Phase 4 and Phase 5 gates and re-reading the binding route, forwarding, file-list, export-removal, and caller-search contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 5 | Completed the console operation cutover to authenticated gateway RPC, exact list-only daemon proxy, canonical public catalogs, and server-only credential boundary. | commit `f2cc10651`; 29 console tests on default and Rust 1.85 toolchains, frontend production build, JSON-array parser check, lint/format/search/dependency checks, and independent review |
 | 2026-07-10 | 5 | Started the console RPC migration after confirming the Phase 2 and Phase 4 gates and re-reading the binding console, CLI, operation, and daemon HTTP contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 4 | Completed authenticated RPC-only export paging with strict start/page completeness checks, pre-mutation failure handling, and removal of the manager HTTP export client. | commit `0644fd64b`; 30 focused manager export tests on default and Rust 1.85 toolchains, full manager suite, runtime EOF cleanup proof, lint/format/search checks, and independent review |
