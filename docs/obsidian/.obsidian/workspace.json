@@ -185,6 +185,7 @@
   },
   "active": "2b73796146464bdb",
   "lastOpenFiles": [
+    "ephemeral-os/implementation_plan/operation-migration/adversarial-architecture-review-prompt.md",
     "ephemeral-os/implementation_plan/operation-migration/spec.md",
     "ephemeral-os/implementation_plan/operation-migration",
     "ephemeral-os/implementation_plan/Untitled",
@@ -220,7 +221,6 @@
     "ephemeral-os/implementation_plan/wh-reserved-namespace/spec.md",
     "ephemeral-os/implementation_plan/web-ui/design.md",
     "ephemeral-os/implementation_plan/web-ui/implementation-plan.md",
-    "ephemeral-os/implementation_plan/export_changes/adversarial-review-prompt.md",
     "ephemeral-os/docs/Untitled.canvas"
   ]
 }

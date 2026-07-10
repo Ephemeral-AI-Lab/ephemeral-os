@@ -1290,3 +1290,15 @@
 - Wall time: 231548.886 ms
 - Description: suite completed with pytest exit status `0`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260710-151013`.
 
+## squash-20260710-173714 START — 2026-07-10T17:43:31+08:00
+- Command/tier: `/opt/homebrew/bin/pytest -q` (preconditions)
+- Cases run/passed/failed/skipped: pending
+- Wall time: pending
+- Description: live e2e run started; per-case verdicts will be written under `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260710-173714`.
+
+## squash-20260710-173714 FINAL — 2026-07-10T17:54:57+08:00
+- Command/tier: `/opt/homebrew/bin/pytest -q`
+- Cases run/passed/failed/skipped: 61/61/0/0
+- Wall time: 1063588.296 ms
+- Description: suite completed with pytest exit status `atexit`; artifacts in `/Users/yifanxu/machine_learning/LoVC/ephemeral-ai/ephemeral-os/cli-operation-e2e-live-test/manager/management/squash/test-reports/squash-20260710-173714`.
+
