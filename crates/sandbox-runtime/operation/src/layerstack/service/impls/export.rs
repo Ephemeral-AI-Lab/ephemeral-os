@@ -21,7 +21,7 @@ use sandbox_runtime_layerstack::{
 use serde_json::{json, Value};
 
 use crate::layerstack::service::core::ExportSpool;
-use crate::operation::OperationEntry;
+use crate::operations::dispatch::OperationEntry;
 use crate::services::SandboxRuntimeOperations;
 
 const EXPORT_LAYERSTACK_ENTRY: OperationEntry = OperationEntry {

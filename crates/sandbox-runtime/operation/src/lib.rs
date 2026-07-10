@@ -7,8 +7,7 @@ pub mod file;
 pub mod layerstack;
 mod namespace_execution;
 mod observability;
-mod operation;
-mod operation_adapter;
+mod operations;
 mod services;
 pub mod workspace_session;
 
@@ -32,7 +31,7 @@ pub use workspace_session::WorkspaceSessionService;
 
 #[must_use]
 pub fn known_operation_name(operation: &str) -> Option<&'static str> {
-    operation::known_operation_name(operation)
+    operations::dispatch::known_operation_name(operation)
 }
 
 #[must_use]
@@ -40,5 +39,5 @@ pub fn dispatch_operation(
     operations: &SandboxRuntimeOperations,
     request: &sandbox_operation_contract::OperationRequest,
 ) -> sandbox_operation_contract::OperationResponse {
-    operation::dispatch_operation(operations, request)
+    operations::dispatch::dispatch_operation(operations, request)
 }

@@ -293,7 +293,7 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
             "OperationSpec",
             "OperationEntry",
             "CommandOperationService",
-            "crate::operation",
+            "crate::operations",
         ] {
             assert!(
                 !source.contains(forbidden),
@@ -303,14 +303,14 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
         }
     }
 
-    let adapter = include_str!("../src/operation_adapter/workspace_session_operations.rs");
+    let adapter = include_str!("../src/operations/registry/workspace_session_operations.rs");
     assert!(adapter.contains(".create_workspace_session("));
     assert!(adapter.contains(".guarded_destroy("));
     assert_eq!(adapter.matches("spec: None").count(), 2);
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 
-    let file_adapter = include_str!("../src/operation_adapter/file_operations.rs");
+    let file_adapter = include_str!("../src/operations/registry/file_operations.rs");
     assert!(file_adapter.contains("const FILE_LIST_ENTRY: OperationEntry = OperationEntry {"));
     assert!(file_adapter.contains("name: FILE_LIST,"));
     assert_eq!(file_adapter.matches("spec: None").count(), 1);

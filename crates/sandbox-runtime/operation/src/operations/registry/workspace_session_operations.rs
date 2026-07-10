@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 
-use crate::operation::OperationEntry;
+use crate::operations::dispatch::OperationEntry;
 use crate::workspace_crate::{DestroyWorkspaceResult, NetworkProfile, WorkspaceSessionId};
 use crate::workspace_session::{
     CreateSessionRequest, FinalizePolicy, WorkspaceSessionError, WorkspaceSessionHandler,

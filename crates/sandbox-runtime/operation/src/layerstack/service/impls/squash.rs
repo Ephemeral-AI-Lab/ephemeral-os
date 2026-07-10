@@ -19,7 +19,7 @@ use sandbox_operation_catalog::internal::runtime::SQUASH_LAYERSTACK;
 use sandbox_runtime_layerstack::LayerStack;
 use serde_json::{json, Value};
 
-use crate::operation::OperationEntry;
+use crate::operations::dispatch::OperationEntry;
 use crate::services::SandboxRuntimeOperations;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_session::{SweptDisposition, SweptSession};

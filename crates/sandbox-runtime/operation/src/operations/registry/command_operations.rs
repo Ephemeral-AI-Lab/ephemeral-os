@@ -4,7 +4,7 @@ use crate::command::{
     CommandOutput, CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use crate::operation::OperationEntry;
+use crate::operations::dispatch::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
 use sandbox_operation_catalog::runtime::{EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};

@@ -4,7 +4,7 @@ use crate::file::{
     BlameRange, EditInput, EditOp, EditOutput, FileError, FileOperationError, ListInput,
     ListOutput, ReadInput, ReadOutput, WriteInput, WriteOutput,
 };
-use crate::operation::OperationEntry;
+use crate::operations::dispatch::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
 use sandbox_operation_catalog::internal::runtime::FILE_LIST;

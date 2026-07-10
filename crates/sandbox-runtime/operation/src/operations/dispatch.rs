@@ -1,4 +1,4 @@
-use crate::operation_adapter::{command_operations, file_operations, workspace_session_operations};
+use super::registry::{command_operations, file_operations, workspace_session_operations};
 use crate::services::SandboxRuntimeOperations;
 use sandbox_operation_contract::OperationSpec;
 
