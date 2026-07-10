@@ -2,7 +2,7 @@ use sandbox_operation_catalog::internal::runtime::SQUASH_LAYERSTACK;
 use sandbox_operation_contract::{error, OperationRequest, OperationResponse, OperationScope};
 use serde_json::{json, Value};
 
-use crate::operation::ManagerServices;
+use crate::operations::ManagerServices;
 use crate::router::forward_sandbox_request;
 
 pub(crate) fn dispatch_squash_layerstacks(

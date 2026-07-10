@@ -8,12 +8,12 @@ use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
 use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use serde_json::{json, Value};
 
-use crate::operation::dispatch::ManagerOperationEntry;
-use crate::operation::management::{
+use crate::operations::dispatch::ManagerOperationEntry;
+use crate::operations::management::{
     create_sandbox, destroy_sandbox, dispatch_export_changes, dispatch_squash_layerstacks,
     inspect_sandbox, list_sandboxes, observability_snapshot, CreateSandboxInput, SnapshotOptions,
 };
-use crate::operation::ManagerServices;
+use crate::operations::ManagerServices;
 use crate::{
     ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId,
     SandboxRecord,

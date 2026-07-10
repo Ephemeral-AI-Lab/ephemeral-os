@@ -18,7 +18,7 @@ use serde_json::{json, Value};
 use crate::export_apply::{
     apply_dir_delta, write_archive, ArchiveFormat, DirApplyStats, ExportApplyCaps,
 };
-use crate::operation::ManagerServices;
+use crate::operations::ManagerServices;
 use crate::router::forward_sandbox_request;
 use crate::ManagerError;
 

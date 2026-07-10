@@ -23,7 +23,7 @@ pub fn dispatch_operation(
     services: &ManagerServices,
     request: &OperationRequest,
 ) -> OperationResponse {
-    super::cli_definition::operation_entries()
+    super::registry::operation_entries()
         .iter()
         .find(|entry| entry.spec.name == request.op)
         .map_or_else(OperationResponse::unknown_op, |entry| {
@@ -38,7 +38,7 @@ pub fn dispatch_operation_with_progress(
     progress: ProgressSink,
 ) -> OperationResponse {
     if request.op == "create_sandbox" {
-        return super::cli_definition::management_operations::dispatch_create_sandbox_with_progress(
+        return super::registry::management_operations::dispatch_create_sandbox_with_progress(
             services, request, &progress,
         );
     }

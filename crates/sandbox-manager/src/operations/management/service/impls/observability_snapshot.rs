@@ -4,7 +4,7 @@ use std::time::Duration;
 use sandbox_operation_contract::{OperationRequest, OperationScope};
 use serde_json::{json, Map, Value};
 
-use crate::operation::{ManagerServices, ObservabilitySnapshotLimits};
+use crate::operations::{ManagerServices, ObservabilitySnapshotLimits};
 use crate::{
     ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord,
     SandboxState,

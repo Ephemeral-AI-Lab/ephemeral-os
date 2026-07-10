@@ -1,6 +1,6 @@
-pub(crate) mod cli_definition;
 pub(crate) mod dispatch;
 mod management;
+pub(crate) mod registry;
 mod services;
 mod specs;
 

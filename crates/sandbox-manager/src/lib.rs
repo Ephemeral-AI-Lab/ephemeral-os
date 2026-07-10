@@ -5,7 +5,7 @@ mod daemon_install;
 mod error;
 mod export_apply;
 mod model;
-mod operation;
+mod operations;
 mod progress;
 pub(crate) mod router;
 mod runtime;
@@ -19,7 +19,7 @@ pub use model::{
     SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxState,
     SharedBaseMount,
 };
-pub use operation::{
+pub use operations::{
     dispatch_operation, dispatch_operation_with_progress, operation_catalog, operation_families,
     operation_specs, ManagerServices, ObservabilitySnapshotLimits,
 };

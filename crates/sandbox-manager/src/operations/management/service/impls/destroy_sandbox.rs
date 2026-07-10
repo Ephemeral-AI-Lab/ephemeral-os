@@ -1,4 +1,4 @@
-use crate::operation::ManagerServices;
+use crate::operations::ManagerServices;
 use crate::{ManagerError, SandboxId, SandboxRecord, SandboxState};
 
 pub(crate) fn destroy_sandbox(

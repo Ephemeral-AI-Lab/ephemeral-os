@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use sandbox_runtime_layerstack::{build_shared_workspace_base, SHARED_BASE_DIR};
 
-use crate::operation::ManagerServices;
+use crate::operations::ManagerServices;
 use crate::{
     CreateSandboxRequest, ManagerError, ProgressSink, SandboxRecord, SandboxState, SharedBaseMount,
     StartedDaemon,

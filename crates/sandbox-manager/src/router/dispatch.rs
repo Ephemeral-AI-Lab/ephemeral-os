@@ -73,7 +73,7 @@ impl SandboxManagerRouter {
 }
 
 fn manager_owns_operation(op: &str) -> bool {
-    crate::operation::cli_definition::operation_entries()
+    crate::operations::registry::operation_entries()
         .iter()
         .any(|entry| entry.spec.name == op)
 }
