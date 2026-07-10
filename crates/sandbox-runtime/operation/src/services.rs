@@ -47,7 +47,7 @@ impl SandboxRuntimeOperations {
         let layer_stack_root = config.workspace.layer_stack_root.clone();
         let workspace_scratch_root = config.workspace.scratch_root.clone();
         let file = Arc::new(
-            FileService::open(file_auditability_dir(&layer_stack_root))
+            FileService::open(file_auditability_dir(&layer_stack_root), config.file)
                 .expect("file auditability store initialization failed"),
         );
         let workspace_runtime = Arc::new(WorkspaceRuntimeService::new(
@@ -57,7 +57,7 @@ impl SandboxRuntimeOperations {
                     .workspace_root
                     .to_string_lossy()
                     .into_owned(),
-                config.workspace.caps.into(),
+                config.workspace.caps.clone().into(),
                 config.workspace.scratch_root,
                 observer.clone(),
             ),
@@ -103,6 +103,11 @@ impl SandboxRuntimeOperations {
             Arc::clone(&workspace_session),
             crate::command::CommandConfig {
                 scratch_root: config.namespace_execution.scratch_root,
+                max_active: config.command.max_active,
+                setup_timeout_s: config.workspace.caps.setup_timeout_s,
+                read_lines_default: config.command.read_lines_default,
+                read_lines_max: config.command.read_lines_max,
+                execution: config.namespace_execution.caps,
             },
             observer.clone(),
         ));
@@ -331,7 +336,49 @@ pub struct SandboxRuntimeConfig {
     pub workspace: WorkspaceRuntimeConfig,
     pub namespace_execution: NamespaceExecutionRuntimeConfig,
     pub layerstack: LayerstackRuntimeConfig,
+    pub command: CommandRuntimeConfig,
+    pub file: FileRuntimeConfig,
     pub cgroup_root: Option<std::path::PathBuf>,
+}
+
+/// Command-operation caps injected by the daemon from `runtime.command`;
+/// `Default` preserves the shipped policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CommandRuntimeConfig {
+    pub max_active: usize,
+    pub read_lines_default: usize,
+    pub read_lines_max: usize,
+}
+
+impl Default for CommandRuntimeConfig {
+    fn default() -> Self {
+        Self {
+            max_active: 256,
+            read_lines_default: 200,
+            read_lines_max: 1000,
+        }
+    }
+}
+
+/// File-operation caps injected by the daemon from `runtime.file`; `Default`
+/// preserves the shipped policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FileRuntimeConfig {
+    pub read_lines_default: usize,
+    pub max_output_bytes: usize,
+    pub max_edit_bytes: usize,
+    pub max_list_entries: usize,
+}
+
+impl Default for FileRuntimeConfig {
+    fn default() -> Self {
+        Self {
+            read_lines_default: 2000,
+            max_output_bytes: 256 * 1024,
+            max_edit_bytes: 4 * 1024 * 1024,
+            max_list_entries: 2000,
+        }
+    }
 }
 
 /// Layer-stack tuning injected by the daemon from `runtime.layerstack`;
@@ -364,6 +411,30 @@ pub struct WorkspaceRuntimeConfig {
 #[derive(Debug, Clone, PartialEq)]
 pub struct NamespaceExecutionRuntimeConfig {
     pub scratch_root: std::path::PathBuf,
+    pub caps: NamespaceExecutionCaps,
+}
+
+/// Namespace-execution caps injected by the daemon from
+/// `runtime.namespace_execution`; `Default` preserves the shipped policy.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NamespaceExecutionCaps {
+    pub freeze_budget_s: f64,
+    pub stdin_write_deadline_s: f64,
+    pub max_terminal_entries: usize,
+    pub max_transcript_window_bytes: u64,
+    pub max_runner_result_bytes: usize,
+}
+
+impl Default for NamespaceExecutionCaps {
+    fn default() -> Self {
+        Self {
+            freeze_budget_s: 0.5,
+            stdin_write_deadline_s: 2.0,
+            max_terminal_entries: 512,
+            max_transcript_window_bytes: 1024 * 1024,
+            max_runner_result_bytes: 8 * 1024 * 1024,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -371,6 +442,7 @@ pub struct WorkspaceResourceCaps {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
+    pub freeze_budget_s: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -388,6 +460,7 @@ impl From<WorkspaceResourceCaps> for crate::workspace_crate::session::ResourceCa
                 Rfc1918Egress::Allow => crate::workspace_crate::session::Rfc1918Egress::Allow,
                 Rfc1918Egress::Deny => crate::workspace_crate::session::Rfc1918Egress::Deny,
             },
+            freeze_budget_s: caps.freeze_budget_s,
         }
     }
 }

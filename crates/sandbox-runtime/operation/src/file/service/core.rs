@@ -6,9 +6,11 @@
 use std::path::PathBuf;
 
 use super::store::FileAuditabilityStore;
+use crate::services::FileRuntimeConfig;
 
 pub struct FileService {
     store: FileAuditabilityStore,
+    caps: FileRuntimeConfig,
 }
 
 /// One run of consecutive lines that share an owner. `owner` is opaque — the
@@ -26,13 +28,18 @@ impl FileService {
     ///
     /// # Errors
     /// Returns an I/O error if the directory or its segments cannot be read.
-    pub fn open(dir: PathBuf) -> std::io::Result<Self> {
+    pub fn open(dir: PathBuf, caps: FileRuntimeConfig) -> std::io::Result<Self> {
         Ok(Self {
             store: FileAuditabilityStore::open(dir)?,
+            caps,
         })
     }
 
     pub(crate) fn store(&self) -> &FileAuditabilityStore {
         &self.store
+    }
+
+    pub(crate) fn caps(&self) -> FileRuntimeConfig {
+        self.caps
     }
 }

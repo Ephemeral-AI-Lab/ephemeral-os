@@ -35,8 +35,7 @@ fn retention_services(
     let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
         Box::new(launch_driver.launcher()),
         exec_spans.clone(),
-        256,
-        30.0,
+        sandbox_runtime_namespace_execution::ExecutionCaps::default(),
     ));
     engine.set_terminal_retention(max_terminal);
     let command = Arc::new(CommandOperationService::with_engine(
@@ -46,6 +45,7 @@ fn retention_services(
                 "namespace-execution-retention-{}-{max_terminal}",
                 std::process::id()
             )),
+            ..sandbox_runtime::command::CommandConfig::default()
         },
         engine,
         exec_spans,

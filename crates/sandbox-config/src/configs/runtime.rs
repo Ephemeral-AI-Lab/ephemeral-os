@@ -19,6 +19,10 @@ pub struct RuntimeConfig {
     pub namespace_execution: NamespaceExecutionConfig,
     #[serde(default)]
     pub layerstack: LayerstackConfig,
+    #[serde(default)]
+    pub command: CommandConfig,
+    #[serde(default)]
+    pub file: FileConfig,
 }
 
 impl RuntimeConfig {
@@ -29,7 +33,96 @@ impl RuntimeConfig {
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         self.workspace.validate()?;
         self.namespace_execution.validate()?;
-        self.layerstack.validate()
+        self.layerstack.validate()?;
+        self.command.validate()?;
+        self.file.validate()
+    }
+}
+
+/// Command-operation caps the daemon injects into the command service.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct CommandConfig {
+    /// Concurrent live commands the engine admits.
+    pub max_active: usize,
+    /// `read_command_lines` window when the caller names no limit.
+    pub read_lines_default: usize,
+    /// Hard cap on a caller-requested `read_command_lines` window.
+    pub read_lines_max: usize,
+}
+
+impl Default for CommandConfig {
+    fn default() -> Self {
+        Self {
+            max_active: 256,
+            read_lines_default: 200,
+            read_lines_max: 1000,
+        }
+    }
+}
+
+impl CommandConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates command-operation policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        require_usize_at_least(self.max_active, 1, "runtime.command.max_active")?;
+        require_usize_at_least(
+            self.read_lines_default,
+            1,
+            "runtime.command.read_lines_default",
+        )?;
+        require_usize_at_least(self.read_lines_max, 1, "runtime.command.read_lines_max")?;
+        if self.read_lines_default > self.read_lines_max {
+            return Err(ConfigFieldError::new(
+                "runtime.command.read_lines_default",
+                "must not exceed read_lines_max",
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// File-operation caps the daemon injects into the file service.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct FileConfig {
+    /// `file_read` line window when the caller names no limit.
+    pub read_lines_default: usize,
+    /// Byte cap on one rendered read window.
+    pub max_output_bytes: usize,
+    /// Byte cap on a file accepted for ordered edits.
+    pub max_edit_bytes: usize,
+    /// Entry cap for one directory listing.
+    pub max_list_entries: usize,
+}
+
+impl Default for FileConfig {
+    fn default() -> Self {
+        Self {
+            read_lines_default: 2000,
+            max_output_bytes: 256 * 1024,
+            max_edit_bytes: 4 * 1024 * 1024,
+            max_list_entries: 2000,
+        }
+    }
+}
+
+impl FileConfig {
+    /// Validate semantic constraints that YAML deserialization cannot express.
+    ///
+    /// # Errors
+    /// Returns an error when a field violates file-operation policy.
+    pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        require_usize_at_least(
+            self.read_lines_default,
+            1,
+            "runtime.file.read_lines_default",
+        )?;
+        require_usize_at_least(self.max_output_bytes, 1, "runtime.file.max_output_bytes")?;
+        require_usize_at_least(self.max_edit_bytes, 1, "runtime.file.max_edit_bytes")?;
+        require_usize_at_least(self.max_list_entries, 1, "runtime.file.max_list_entries")
     }
 }
 
@@ -125,16 +218,39 @@ impl WorkspaceConfig {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct NamespaceExecutionConfig {
     pub scratch_root: PathBuf,
+    /// Freeze-poll budget for the remount quiesce, in seconds. Measured on the
+    /// supported environment: the full stop → poll-`T` → membership-recheck
+    /// shape for 100 tasks takes under 4 ms, so the 0.5 s default bounds only
+    /// D-state stragglers.
+    #[serde(default = "default_freeze_budget_s")]
+    pub freeze_budget_s: f64,
+    /// PTY stdin backpressure deadline, in seconds.
+    #[serde(default = "default_stdin_write_deadline_s")]
+    pub stdin_write_deadline_s: f64,
+    /// Terminal registry entries retained after completion.
+    #[serde(default = "default_max_terminal_entries")]
+    pub max_terminal_entries: usize,
+    /// Byte window scanned from the transcript tail per read.
+    #[serde(default = "default_max_transcript_window_bytes")]
+    pub max_transcript_window_bytes: u64,
+    /// ns-runner result-pipe drain cap in bytes.
+    #[serde(default = "default_max_runner_result_bytes")]
+    pub max_runner_result_bytes: usize,
 }
 
 impl Default for NamespaceExecutionConfig {
     fn default() -> Self {
         Self {
             scratch_root: PathBuf::from("/eos/namespace_execution"),
+            freeze_budget_s: default_freeze_budget_s(),
+            stdin_write_deadline_s: default_stdin_write_deadline_s(),
+            max_terminal_entries: default_max_terminal_entries(),
+            max_transcript_window_bytes: default_max_transcript_window_bytes(),
+            max_runner_result_bytes: default_max_runner_result_bytes(),
         }
     }
 }
@@ -153,8 +269,53 @@ impl NamespaceExecutionConfig {
             &self.scratch_root,
             "runtime.namespace_execution.scratch_root",
         )?;
+        require_f64_at_least(
+            self.freeze_budget_s,
+            0.0,
+            "runtime.namespace_execution.freeze_budget_s",
+        )?;
+        require_f64_gt(
+            self.stdin_write_deadline_s,
+            0.0,
+            "runtime.namespace_execution.stdin_write_deadline_s",
+        )?;
+        require_usize_at_least(
+            self.max_terminal_entries,
+            1,
+            "runtime.namespace_execution.max_terminal_entries",
+        )?;
+        require_u64_at_least(
+            self.max_transcript_window_bytes,
+            1,
+            "runtime.namespace_execution.max_transcript_window_bytes",
+        )?;
+        require_usize_at_least(
+            self.max_runner_result_bytes,
+            1,
+            "runtime.namespace_execution.max_runner_result_bytes",
+        )?;
         Ok(())
     }
+}
+
+fn default_freeze_budget_s() -> f64 {
+    0.5
+}
+
+fn default_stdin_write_deadline_s() -> f64 {
+    2.0
+}
+
+fn default_max_terminal_entries() -> usize {
+    512
+}
+
+fn default_max_transcript_window_bytes() -> u64 {
+    1024 * 1024
+}
+
+fn default_max_runner_result_bytes() -> usize {
+    8 * 1024 * 1024
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]

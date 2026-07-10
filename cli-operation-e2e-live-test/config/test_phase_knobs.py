@@ -297,32 +297,148 @@ class TestPhase2:
             assert "limit exceeds max" in error, error
 
 
-@pytest.mark.skip(reason="config consolidation phase 3 not landed")
 class TestPhase3:
-    """runtime.command, runtime.file, runtime.namespace_execution."""
+    """runtime.command, runtime.file, runtime.namespace_execution (phase 3).
+    Lane A only."""
 
-    def test_file_list_truncates_at_cap(self):
+    def test_file_list_truncates_at_cap(self, lane_a_daemon_yaml):
         """P3-F1 — runtime.file.max_list_entries: 5 lists exactly 5 of 10
-        entries plus the truncation indicator per the operation contract."""
-        raise NotImplementedError
+        entries with the truncation flag set. `file_list` is daemon-internal
+        (`cli: None`), so the probe rides the authenticated internal call."""
+        from core.cli import internal_runtime
 
-    def test_file_read_default_lines(self):
-        """P3-F2 — runtime.file.read_lines_default: 10 returns 10 lines of a
-        100-line file when --limit is omitted."""
-        raise NotImplementedError
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml, {"runtime": {"file": {"max_list_entries": 5}}}
+        )
+        with helpers.sandbox() as sandbox_id:
+            helpers.exec_output(
+                sandbox_id,
+                "mkdir -p listing"
+                " && for i in 0 1 2 3 4 5 6 7 8 9; do echo $i > listing/f$i.txt; done",
+            )
+            listing = internal_runtime(sandbox_id, "file_list", {"path": "listing"})
+            entries = listing.get("entries")
+            assert entries is not None and len(entries) == 5, (
+                f"max_list_entries 5 must cap the listing: {listing}"
+            )
+            assert listing.get("truncated") is True, listing
 
-    def test_file_edit_size_cap_error(self):
-        """P3-F3 — runtime.file.max_edit_bytes: 1024 fails a 2 KiB edit with
-        the size-cap error."""
-        raise NotImplementedError
+    def test_file_read_default_lines(self, lane_a_daemon_yaml):
+        """P3-F2 (adapted) — runtime.file.read_lines_default: 10 returns 10
+        lines of a 100-line file when the request names no limit.
 
-    def test_command_admission_cap(self):
-        """P3-F4 — runtime.command.max_active: 1 returns the admission error
-        naming max_active while one long-running command is active."""
-        raise NotImplementedError
+        Spec drift: the CLI materializes the catalog's `--limit` default
+        (2000) client-side — the argument surface is contract, per the spec's
+        non-goals — so the service default governs the raw operation surface
+        and the probe rides the authenticated internal call."""
+        from core.cli import internal_runtime
 
-    def test_terminal_retention_eviction(self):
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml, {"runtime": {"file": {"read_lines_default": 10}}}
+        )
+        with helpers.sandbox() as sandbox_id:
+            helpers.exec_output(sandbox_id, "seq 1 100 > lines.txt")
+            result = internal_runtime(sandbox_id, "file_read", {"path": "lines.txt"})
+            assert not climod.is_error(result), result
+            lines = [line for line in result.get("content", "").split("\n") if line]
+            assert len(lines) == 10, f"default window must be 10 lines: {result}"
+            assert lines[0] == "1" and lines[-1] == "10", lines
+
+    def test_file_edit_size_cap_error(self, lane_a_daemon_yaml):
+        """P3-F3 — runtime.file.max_edit_bytes: 1024 fails an edit of a 2 KiB
+        file with the size-cap error."""
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml, {"runtime": {"file": {"max_edit_bytes": 1024}}}
+        )
+        with helpers.sandbox() as sandbox_id:
+            helpers.exec_output(
+                sandbox_id, "head -c 2048 /dev/zero | tr '\\0' 'a' > big.txt"
+            )
+            result = climod.runtime(
+                sandbox_id,
+                "file_edit",
+                "--path",
+                "big.txt",
+                "--edits",
+                '[{"old_string": "aaaa", "new_string": "bbbb"}]',
+            )
+            error = helpers.error_text(result)
+            assert "too large" in error, error
+
+    def test_command_admission_cap(self, lane_a_daemon_yaml):
+        """P3-F4 — runtime.command.max_active: 1 refuses a second submission
+        with the admission error while one long-running command is active."""
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml, {"runtime": {"command": {"max_active": 1}}}
+        )
+        with helpers.sandbox() as sandbox_id:
+            running = climod.runtime(
+                sandbox_id, "exec_command", "--yield-time-ms", "100", "sleep 15"
+            )
+            assert isinstance(running, dict) and running.get("status") == "running", (
+                f"the first command must still be running: {running}"
+            )
+            refused = climod.runtime(sandbox_id, "exec_command", "echo second")
+            error = helpers.error_text(refused)
+            assert "admission refused" in error, error
+
+    def test_terminal_retention_eviction(self, lane_a_daemon_yaml):
         """P3-F5 — runtime.namespace_execution.max_terminal_entries: 2 evicts
-        the oldest of three commands (draining it errors; the newest two
-        drain fine)."""
-        raise NotImplementedError
+        the oldest of three completed commands: draining it answers the empty
+        terminal read (the landed missing-entry contract), while the two
+        newest still serve their transcripts."""
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml,
+            {"runtime": {"namespace_execution": {"max_terminal_entries": 2}}},
+        )
+        import time
+
+        with helpers.sandbox() as sandbox_id:
+            ids = {}
+            for word in ("one", "two", "three"):
+                started = climod.runtime(
+                    sandbox_id,
+                    "exec_command",
+                    "--yield-time-ms",
+                    "50",
+                    f"sleep 0.3 && echo {word}",
+                )
+                assert isinstance(started, dict) and started.get("status") == "running", (
+                    f"the command must outlive its yield to expose its id: {started}"
+                )
+                ids[word] = started["command_session_id"]
+                deadline = time.monotonic() + 30
+                while time.monotonic() < deadline:
+                    polled = climod.runtime(
+                        sandbox_id,
+                        "read_command_lines",
+                        "--command-session-id",
+                        ids[word],
+                    )
+                    if isinstance(polled, dict) and polled.get("status") == "ok":
+                        break
+                    time.sleep(0.2)
+                else:
+                    raise AssertionError(f"command {word} never completed")
+
+            evicted = climod.runtime(
+                sandbox_id,
+                "read_command_lines",
+                "--command-session-id",
+                ids["one"],
+            )
+            assert isinstance(evicted, dict) and not climod.is_error(evicted), evicted
+            assert not evicted.get("output"), (
+                f"the evicted command must drain empty: {evicted}"
+            )
+
+            for word in ("two", "three"):
+                drained = climod.runtime(
+                    sandbox_id,
+                    "read_command_lines",
+                    "--command-session-id",
+                    ids[word],
+                )
+                assert isinstance(drained, dict) and word in str(
+                    drained.get("output", "")
+                ), f"retained command {word} must drain its transcript: {drained}"

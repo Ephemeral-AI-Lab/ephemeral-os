@@ -141,6 +141,7 @@ impl CommandOperationService {
                     started_at,
                     "exec_command",
                     Arc::clone(&admitted.finalize_outcome),
+                    self.config().execution.max_transcript_window_bytes,
                 ),
             );
             drop(admission_guard);

@@ -12,7 +12,7 @@ fn id(n: u32) -> NamespaceExecutionId {
 
 #[test]
 fn admits_up_to_capacity_then_refuses() {
-    let registry = ExecutionRegistry::<()>::new(2);
+    let registry = ExecutionRegistry::<()>::new(2, 512);
     registry.try_reserve(&id(1)).expect("first slot");
     registry.try_reserve(&id(2)).expect("second slot");
     let refused = registry.try_reserve(&id(3)).expect_err("over capacity");
@@ -24,7 +24,7 @@ fn admits_up_to_capacity_then_refuses() {
 
 #[test]
 fn complete_moves_live_to_completed() {
-    let registry = ExecutionRegistry::<()>::new(1);
+    let registry = ExecutionRegistry::<()>::new(1, 512);
     registry.try_reserve(&id(1)).expect("slot");
     assert!(registry.is_live(&id(1)));
     assert!(!registry.is_completed(&id(1)));
@@ -37,7 +37,7 @@ fn complete_moves_live_to_completed() {
 
 #[test]
 fn attach_records_the_caller_value() {
-    let registry = ExecutionRegistry::new(1);
+    let registry = ExecutionRegistry::new(1, 512);
     registry.try_reserve(&id(1)).expect("slot");
     registry.attach(&id(1), "command-handle".to_owned());
     assert_eq!(
@@ -52,7 +52,7 @@ fn attach_records_the_caller_value() {
 
 #[test]
 fn abort_releases_a_reservation() {
-    let registry = ExecutionRegistry::<()>::new(1);
+    let registry = ExecutionRegistry::<()>::new(1, 512);
     registry.try_reserve(&id(1)).expect("slot");
     registry.abort(&id(1));
     assert!(!registry.is_live(&id(1)));
@@ -72,7 +72,7 @@ impl Drop for DropProbe {
 #[test]
 fn terminal_retention_evicts_oldest_terminal_entry_and_drops_its_value() {
     let drops = Arc::new(AtomicUsize::new(0));
-    let registry = ExecutionRegistry::new(8);
+    let registry = ExecutionRegistry::new(8, 512);
     registry.set_terminal_retention(2);
     for n in 1..=4 {
         registry.try_reserve(&id(n)).expect("slot");
@@ -97,7 +97,7 @@ fn terminal_retention_evicts_oldest_terminal_entry_and_drops_its_value() {
 #[test]
 fn terminal_retention_never_evicts_live_entries() {
     let drops = Arc::new(AtomicUsize::new(0));
-    let registry = ExecutionRegistry::new(8);
+    let registry = ExecutionRegistry::new(8, 512);
     registry.set_terminal_retention(1);
     registry.try_reserve(&id(1)).expect("slot");
     registry.attach(&id(1), DropProbe(Arc::clone(&drops)));

@@ -6,9 +6,7 @@
 use sandbox_runtime_layerstack::ManifestFileRead;
 
 use crate::file::service::namespace;
-use crate::file::service::support::{
-    amend_error, apply_edits, resolve_layer_path, validate_edits, MAX_EDIT_BYTES,
-};
+use crate::file::service::support::{amend_error, apply_edits, resolve_layer_path, validate_edits};
 use crate::file::{EditInput, EditOutput, FileEntryKind, FileOperationError, FileService};
 use crate::layerstack::LayerStackService;
 use crate::workspace_crate::{FileRunnerOp, FileRunnerResult};
@@ -48,7 +46,7 @@ impl FileService {
                     &path,
                     FileRunnerOp::ReadFile {
                         rel: path.clone(),
-                        max_bytes: MAX_EDIT_BYTES,
+                        max_bytes: self.caps().max_edit_bytes,
                     },
                 )?;
                 let bytes = match current {
@@ -99,7 +97,7 @@ impl FileService {
                 let edits = &input.edits;
                 let mut replacements = 0;
                 let outcome = layerstack
-                    .amend_path(&rel, &owner, MAX_EDIT_BYTES, |read| {
+                    .amend_path(&rel, &owner, self.caps().max_edit_bytes, |read| {
                         let bytes = match read {
                             ManifestFileRead::Absent => {
                                 return Err(FileOperationError::NotFound(path.clone()))

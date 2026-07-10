@@ -9,10 +9,6 @@ use sandbox_runtime_layerstack::LayerPath;
 use crate::file::{EditOp, FileOperationError};
 use crate::layerstack::AmendError;
 
-pub(crate) const DEFAULT_READ_LIMIT: usize = 2000;
-pub(crate) const MAX_OUTPUT_BYTES: usize = 256 * 1024;
-pub(crate) const MAX_EDIT_BYTES: usize = 4 * 1024 * 1024;
-
 const SNIPPET_MAX_CHARS: usize = 60;
 
 /// Map an accepted `path` (absolute under `workspace_root`, or repo-relative) to
@@ -33,13 +29,18 @@ pub(crate) fn resolve_layer_path(
 }
 
 /// Normalize the requested read window: `offset <= 1` starts at line 1, and an
-/// omitted `limit` defaults to 2000. The `limit` range is validated at dispatch.
-pub(crate) fn effective_read_window(offset: Option<u64>, limit: Option<usize>) -> (u64, usize) {
+/// omitted `limit` falls back to the configured default. The `limit` range is
+/// validated at dispatch.
+pub(crate) fn effective_read_window(
+    offset: Option<u64>,
+    limit: Option<usize>,
+    default_limit: usize,
+) -> (u64, usize) {
     let offset = match offset {
         Some(value) if value > 1 => value,
         _ => 1,
     };
-    (offset, limit.unwrap_or(DEFAULT_READ_LIMIT))
+    (offset, limit.unwrap_or(default_limit))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

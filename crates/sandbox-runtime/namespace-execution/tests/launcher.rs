@@ -7,6 +7,10 @@ pub mod pty {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/pty.rs"));
 }
 
+pub mod caps {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/caps.rs"));
+}
+
 #[allow(dead_code)]
 pub mod launcher {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/launcher.rs"));
@@ -33,6 +37,7 @@ pub mod launcher {
                 result_read,
                 mode_flag: Some("--mount-overlay"),
                 setup_timeout_s: 0.01,
+                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
             };
 
             let error = runner.wait_completion().expect_err("timeout");
@@ -53,7 +58,7 @@ pub mod launcher {
                 let mut file = File::from(result_write);
                 let chunk = vec![b'x'; 64 * 1024];
                 let mut written = 0;
-                while written <= MAX_RUNNER_RESULT_BYTES {
+                while written <= crate::caps::ExecutionCaps::default().max_runner_result_bytes {
                     file.write_all(&chunk).expect("write oversized result");
                     written += chunk.len();
                 }
@@ -71,6 +76,7 @@ pub mod launcher {
                 result_read,
                 mode_flag: Some("--file-op"),
                 setup_timeout_s: 5.0,
+                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
             };
 
             let error = runner
@@ -79,9 +85,10 @@ pub mod launcher {
             writer.join().expect("writer thread");
 
             assert!(
-                error
-                    .to_string()
-                    .contains(&format!("exceeds {MAX_RUNNER_RESULT_BYTES} bytes")),
+                error.to_string().contains(&format!(
+                    "exceeds {} bytes",
+                    crate::caps::ExecutionCaps::default().max_runner_result_bytes
+                )),
                 "expected over-cap error, got {error}"
             );
         }
@@ -103,6 +110,7 @@ pub mod launcher {
                 result_read,
                 mode_flag: None,
                 setup_timeout_s: 0.0,
+                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
             };
 
             let error = runner
@@ -132,6 +140,7 @@ pub mod launcher {
                 result_read,
                 mode_flag: None,
                 setup_timeout_s: 0.0,
+                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
             };
 
             let result = runner

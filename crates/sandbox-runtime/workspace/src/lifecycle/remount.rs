@@ -13,9 +13,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use sandbox_runtime_layerstack::{manifest_root_hash, LayerStack, Lease, RewrittenLease};
+use std::time::Duration;
+
 use sandbox_runtime_namespace_execution::quiesce::{
     quiesce_holder_scope, workspace_mount_id, FrozenTasks, QuiesceOutcome, QuiesceSpec,
-    DEFAULT_FREEZE_BUDGET,
 };
 use serde_json::Value;
 
@@ -84,6 +85,7 @@ pub enum ReportClassification {
 pub(crate) struct RemountInputs {
     handle: MountedWorkspace,
     runtime: Arc<NamespaceRuntime>,
+    freeze_budget: Duration,
 }
 
 /// The outcome of the lock-free execute phase, folded into the manager under a
@@ -122,6 +124,7 @@ impl WorkspaceManager {
         Some(RemountInputs {
             handle,
             runtime: Arc::clone(&self.runtime),
+            freeze_budget: Duration::from_secs_f64(self.caps.freeze_budget_s),
         })
     }
 
@@ -232,7 +235,7 @@ pub(crate) fn execute_remount(
         workspace_root: PathBuf::from(&handle.workspace_root),
         cgroup_procs_path,
         runner_pids: Vec::new(),
-        freeze_budget: DEFAULT_FREEZE_BUDGET,
+        freeze_budget: inputs.freeze_budget,
     };
     let (frozen, pre_switch_mount_id): (Option<FrozenTasks>, u64) =
         match quiesce_holder_scope(&spec) {

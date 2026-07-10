@@ -17,8 +17,6 @@ use rustix::pty::ptsname;
 use rustix::pty::{grantpt, openpt, unlockpt, OpenptFlags};
 use time::OffsetDateTime;
 
-const STDIN_WRITE_DEADLINE: Duration = Duration::from_secs(2);
-
 enum TranscriptSink {
     Memory(Arc<AtomicU64>),
     File(PathBuf),
@@ -29,6 +27,7 @@ pub struct PtyMaster {
     writer: Mutex<File>,
     sink: TranscriptSink,
     cancel: Arc<dyn Fn() + Send + Sync>,
+    stdin_write_deadline: Duration,
 }
 
 impl PtyMaster {
@@ -37,6 +36,7 @@ impl PtyMaster {
         pgid: Option<i32>,
         transcript_path: Option<PathBuf>,
         cancel: Box<dyn Fn() + Send + Sync>,
+        stdin_write_deadline: Duration,
     ) -> io::Result<Self> {
         set_nonblocking(&master)?;
         let writer = master.try_clone()?;
@@ -59,6 +59,7 @@ impl PtyMaster {
             writer: Mutex::new(writer),
             sink,
             cancel: Arc::from(cancel),
+            stdin_write_deadline,
         })
     }
 
@@ -76,7 +77,7 @@ impl PtyMaster {
 
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         let mut writer = self.writer.lock().expect("pty writer mutex poisoned");
-        let deadline = Instant::now() + STDIN_WRITE_DEADLINE;
+        let deadline = Instant::now() + self.stdin_write_deadline;
         let mut offset = 0;
         while offset < bytes.len() {
             match writer.write(&bytes[offset..]) {

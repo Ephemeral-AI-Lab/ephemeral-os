@@ -12,7 +12,8 @@ use crate::pty::{open_pty_pair, terminate_pgid_for_test, PtyMaster};
 fn reader_drains_slave_output_into_the_transcript() {
     let _teardown_hook: fn(i32) = terminate_pgid_for_test();
     let (master, mut slave) = open_pty_pair().expect("openpt pair");
-    let pty = PtyMaster::spawn(master, None, None, Box::new(|| {})).expect("pty master");
+    let pty = PtyMaster::spawn(master, None, None, Box::new(|| {}), Duration::from_secs(2))
+        .expect("pty master");
 
     slave.write_all(b"hello pty\n").expect("write to slave");
 
@@ -22,7 +23,8 @@ fn reader_drains_slave_output_into_the_transcript() {
 #[test]
 fn write_stdin_reaches_the_slave() {
     let (master, mut slave) = open_pty_pair().expect("openpt pair");
-    let pty = PtyMaster::spawn(master, None, None, Box::new(|| {})).expect("pty master");
+    let pty = PtyMaster::spawn(master, None, None, Box::new(|| {}), Duration::from_secs(2))
+        .expect("pty master");
 
     pty.write_stdin(b"to-slave\n").expect("write stdin");
 
@@ -43,8 +45,14 @@ fn file_backed_reader_appends_timestamp_prefixed_transcript() {
     let _ = std::fs::remove_file(&path);
 
     let (master, mut slave) = open_pty_pair().expect("openpt pair");
-    let pty =
-        PtyMaster::spawn(master, None, Some(path.clone()), Box::new(|| {})).expect("pty master");
+    let pty = PtyMaster::spawn(
+        master,
+        None,
+        Some(path.clone()),
+        Box::new(|| {}),
+        Duration::from_secs(2),
+    )
+    .expect("pty master");
 
     slave.write_all(b"file line\n").expect("write to slave");
 

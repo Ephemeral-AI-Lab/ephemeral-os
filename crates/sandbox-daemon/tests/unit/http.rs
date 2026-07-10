@@ -456,7 +456,10 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
             }),
         },
     ));
-    let file = Arc::new(FileService::open(root.join("file-audit"))?);
+    let file = Arc::new(FileService::open(
+        root.join("file-audit"),
+        sandbox_runtime::FileRuntimeConfig::default(),
+    )?);
     let layerstack = Arc::new(LayerStackService::new(
         layer_stack_root,
         root.join("scratch"),
@@ -481,6 +484,7 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
         Arc::clone(&workspace_session),
         CommandConfig {
             scratch_root: root.join("commands"),
+            ..CommandConfig::default()
         },
         Observer::disabled(),
     ));

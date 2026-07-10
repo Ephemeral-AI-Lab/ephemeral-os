@@ -3,7 +3,7 @@
 //! session's mounted workspace. Never mounts, publishes, or mutates.
 
 use crate::file::service::namespace;
-use crate::file::service::support::{effective_read_window, resolve_layer_path, MAX_OUTPUT_BYTES};
+use crate::file::service::support::{effective_read_window, resolve_layer_path};
 use crate::file::{FileEntryKind, FileOperationError, FileService, ReadInput, ReadOutput};
 use crate::layerstack::{LayerStackService, ManifestReadWindow};
 use crate::workspace_crate::{FileRunnerOp, FileRunnerResult};
@@ -31,7 +31,11 @@ impl FileService {
                     workspace_session_id.clone(),
                 )?;
                 let path = rel.as_str().to_owned();
-                let (offset, limit) = effective_read_window(input.offset, input.limit);
+                let (offset, limit) = effective_read_window(
+                    input.offset,
+                    input.limit,
+                    self.caps().read_lines_default,
+                );
                 let read = namespace::run_file_op(
                     workspace_session,
                     &handler,
@@ -40,7 +44,7 @@ impl FileService {
                         rel: path.clone(),
                         offset,
                         limit,
-                        output_cap: MAX_OUTPUT_BYTES,
+                        output_cap: self.caps().max_output_bytes,
                     },
                 )?;
                 match read {
@@ -79,8 +83,17 @@ impl FileService {
                 let workspace_root = layerstack.workspace_root()?;
                 let rel = resolve_layer_path(&workspace_root, &input.path)?;
                 let path = rel.as_str().to_owned();
-                let (offset, limit) = effective_read_window(input.offset, input.limit);
-                match layerstack.read_current_window(&rel, offset, limit, MAX_OUTPUT_BYTES)? {
+                let (offset, limit) = effective_read_window(
+                    input.offset,
+                    input.limit,
+                    self.caps().read_lines_default,
+                );
+                match layerstack.read_current_window(
+                    &rel,
+                    offset,
+                    limit,
+                    self.caps().max_output_bytes,
+                )? {
                     ManifestReadWindow::Absent => Err(FileOperationError::NotFound(path)),
                     ManifestReadWindow::Directory => Err(FileOperationError::NotRegular {
                         path,

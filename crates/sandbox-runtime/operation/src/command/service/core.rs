@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
 use sandbox_observability::{Observer, SpanRegistry};
-use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceExecutionId};
+use sandbox_runtime_namespace_execution::{
+    ExecutionCaps, NamespaceExecutionEngine, NamespaceExecutionId,
+};
 
 use crate::command::{CommandConfig, CommandExecValue};
 use crate::namespace_execution::RuntimeNamespaceExecutionSnapshot;
 use crate::workspace_session::WorkspaceSessionService;
-
-const MAX_ACTIVE_COMMANDS: usize = 256;
-
-const COMMAND_ENGINE_SETUP_TIMEOUT_S: f64 = 30.0;
 
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
@@ -29,8 +27,16 @@ impl CommandOperationService {
         let exec_spans = Arc::new(SpanRegistry::new(obs.clone()));
         let engine = Arc::new(NamespaceExecutionEngine::new(
             exec_spans.clone(),
-            MAX_ACTIVE_COMMANDS,
-            COMMAND_ENGINE_SETUP_TIMEOUT_S,
+            ExecutionCaps {
+                max_active: config.max_active,
+                setup_timeout_s: config.setup_timeout_s,
+                stdin_write_deadline: std::time::Duration::from_secs_f64(
+                    config.execution.stdin_write_deadline_s,
+                ),
+                max_terminal_entries: config.execution.max_terminal_entries,
+                max_transcript_window_bytes: config.execution.max_transcript_window_bytes,
+                max_runner_result_bytes: config.execution.max_runner_result_bytes,
+            },
         ));
         Self::with_engine(workspace, config, engine, exec_spans, obs)
     }

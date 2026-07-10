@@ -105,6 +105,111 @@ fn config_validation_rejects_layerstack_edge_values() {
     cfg.validate().expect("zstd level 22 is valid");
 }
 
+#[test]
+fn config_operation_caps_default_to_shipped_policy() {
+    // prd.yml carries none of the tier-3 keys, so every cap must load to
+    // today's exact constants.
+    let config = prd_config();
+    assert_eq!(config.command, CommandConfig::default());
+    assert_eq!(config.command.max_active, 256);
+    assert_eq!(config.command.read_lines_default, 200);
+    assert_eq!(config.command.read_lines_max, 1000);
+    assert_eq!(config.file, FileConfig::default());
+    assert_eq!(config.file.read_lines_default, 2000);
+    assert_eq!(config.file.max_output_bytes, 256 * 1024);
+    assert_eq!(config.file.max_edit_bytes, 4 * 1024 * 1024);
+    assert_eq!(config.file.max_list_entries, 2000);
+    assert!((config.namespace_execution.freeze_budget_s - 0.5).abs() < f64::EPSILON);
+    assert!((config.namespace_execution.stdin_write_deadline_s - 2.0).abs() < f64::EPSILON);
+    assert_eq!(config.namespace_execution.max_terminal_entries, 512);
+    assert_eq!(
+        config.namespace_execution.max_transcript_window_bytes,
+        1024 * 1024
+    );
+    assert_eq!(
+        config.namespace_execution.max_runner_result_bytes,
+        8 * 1024 * 1024
+    );
+}
+
+#[test]
+fn config_operation_caps_overrides_deserialize() {
+    let config = layerstack_config(
+        "  command:
+    max_active: 1
+    read_lines_default: 10
+    read_lines_max: 10
+  file:
+    max_list_entries: 5
+    max_edit_bytes: 1024
+",
+    )
+    .expect("operation cap overrides deserialize");
+    config.validate().expect("operation cap overrides are valid");
+    assert_eq!(config.command.max_active, 1);
+    assert_eq!(config.command.read_lines_default, 10);
+    assert_eq!(config.file.max_list_entries, 5);
+    assert_eq!(config.file.max_edit_bytes, 1024);
+    assert_eq!(config.file.read_lines_default, 2000);
+}
+
+#[test]
+fn config_namespace_execution_cap_overrides_deserialize() {
+    let config = layerstack_config("").map(|mut config| {
+        config.namespace_execution.max_terminal_entries = 2;
+        config
+    });
+    let config = config.expect("baseline deserializes");
+    config.validate().expect("lowered retention is valid");
+
+    let error = layerstack_config("  command:\n    max_parallel: 4\n")
+        .expect_err("unknown command key must be rejected");
+    assert!(error.to_string().contains("max_parallel"), "{error}");
+
+    let error = layerstack_config("  file:\n    list_max: 4\n")
+        .expect_err("unknown file key must be rejected");
+    assert!(error.to_string().contains("list_max"), "{error}");
+}
+
+#[test]
+fn config_validation_rejects_operation_cap_edge_values() {
+    let mut cfg = prd_config();
+    cfg.command.max_active = 0;
+    assert_invalid(cfg, "runtime.command.max_active");
+
+    let mut cfg = prd_config();
+    cfg.command.read_lines_default = 1001;
+    assert_invalid(cfg, "runtime.command.read_lines_default");
+
+    let mut cfg = prd_config();
+    cfg.file.max_list_entries = 0;
+    assert_invalid(cfg, "runtime.file.max_list_entries");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.freeze_budget_s = -0.1;
+    assert_invalid(cfg, "runtime.namespace_execution.freeze_budget_s");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.freeze_budget_s = 0.0;
+    cfg.validate().expect("a zero freeze budget is valid");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.stdin_write_deadline_s = 0.0;
+    assert_invalid(cfg, "runtime.namespace_execution.stdin_write_deadline_s");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.max_terminal_entries = 0;
+    assert_invalid(cfg, "runtime.namespace_execution.max_terminal_entries");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.max_transcript_window_bytes = 0;
+    assert_invalid(cfg, "runtime.namespace_execution.max_transcript_window_bytes");
+
+    let mut cfg = prd_config();
+    cfg.namespace_execution.max_runner_result_bytes = 0;
+    assert_invalid(cfg, "runtime.namespace_execution.max_runner_result_bytes");
+}
+
 fn layerstack_config(layerstack_yaml: &str) -> Result<RuntimeConfig, crate::ConfigError> {
     let yaml = format!(
         "runtime:

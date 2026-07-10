@@ -4,8 +4,6 @@ use std::path::Path;
 
 use serde_json::Value;
 
-const MAX_TRANSCRIPT_WINDOW_BYTES: u64 = 1024 * 1024;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandStream {
     Stdout,
@@ -34,8 +32,9 @@ pub fn transcript_window(
     path: Option<&Path>,
     offset: u64,
     limit: usize,
+    max_window_bytes: u64,
 ) -> CommandTranscriptWindow {
-    let retained = path.and_then(|path| read_transcript(path).ok());
+    let retained = path.and_then(|path| read_transcript(path, max_window_bytes).ok());
     let (rows, truncated_before) = retained.map_or_else(
         || (Vec::new(), 0),
         |retained| {
@@ -52,9 +51,10 @@ pub fn required_transcript_window(
     path: Option<&Path>,
     offset: u64,
     limit: usize,
+    max_window_bytes: u64,
 ) -> Result<CommandTranscriptWindow, String> {
     let path = path.ok_or_else(|| "retained transcript path is missing".to_owned())?;
-    let retained = read_transcript(path)?;
+    let retained = read_transcript(path, max_window_bytes)?;
     Ok(window_rows(
         parse_transcript_rows(&retained.text, retained.truncated_before),
         offset,
@@ -105,7 +105,7 @@ struct RetainedTranscript {
     truncated_before: u64,
 }
 
-fn read_transcript(path: &Path) -> Result<RetainedTranscript, String> {
+fn read_transcript(path: &Path, max_window_bytes: u64) -> Result<RetainedTranscript, String> {
     if path.as_os_str().is_empty() {
         return Err("transcript path is empty".to_owned());
     }
@@ -115,7 +115,7 @@ fn read_transcript(path: &Path) -> Result<RetainedTranscript, String> {
         .metadata()
         .map_err(|error| format!("read transcript metadata {}: {error}", path.display()))?
         .len();
-    let bounded_start = len.saturating_sub(MAX_TRANSCRIPT_WINDOW_BYTES);
+    let bounded_start = len.saturating_sub(max_window_bytes);
     let retained_start = line_aligned_retained_start(&mut file, bounded_start, len)
         .map_err(|error| format!("align transcript window {}: {error}", path.display()))?;
     let truncated_before = count_rows_before(&mut file, retained_start)

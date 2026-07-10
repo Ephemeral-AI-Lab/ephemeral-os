@@ -24,7 +24,7 @@ use sandbox_runtime_workspace::{
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
-const MAX_ACTIVE_COMMANDS: usize = 256;
+const TEST_MAX_ACTIVE_COMMANDS: usize = 256;
 const SETUP_TIMEOUT_S: f64 = 30.0;
 
 pub(crate) struct TestServices {
@@ -391,8 +391,11 @@ pub(crate) fn build_command_service(
     let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
         Box::new(launch_driver.launcher()),
         exec_spans.clone(),
-        MAX_ACTIVE_COMMANDS,
-        SETUP_TIMEOUT_S,
+        sandbox_runtime_namespace_execution::ExecutionCaps {
+            max_active: TEST_MAX_ACTIVE_COMMANDS,
+            setup_timeout_s: SETUP_TIMEOUT_S,
+            ..sandbox_runtime_namespace_execution::ExecutionCaps::default()
+        },
     ));
     CommandOperationService::with_engine(
         Arc::clone(workspace),
@@ -422,8 +425,11 @@ pub(crate) fn build_observed_services(
     let engine = Arc::new(NamespaceExecutionEngine::with_launcher(
         Box::new(launch_driver.launcher()),
         exec_spans.clone(),
-        MAX_ACTIVE_COMMANDS,
-        SETUP_TIMEOUT_S,
+        sandbox_runtime_namespace_execution::ExecutionCaps {
+            max_active: TEST_MAX_ACTIVE_COMMANDS,
+            setup_timeout_s: SETUP_TIMEOUT_S,
+            ..sandbox_runtime_namespace_execution::ExecutionCaps::default()
+        },
     ));
     let command = Arc::new(CommandOperationService::with_engine(
         Arc::clone(&workspace),
@@ -528,6 +534,7 @@ fn test_command_config() -> sandbox_runtime::command::CommandConfig {
             std::process::id(),
             unique_suffix()
         )),
+        ..sandbox_runtime::command::CommandConfig::default()
     }
 }
 
@@ -570,7 +577,10 @@ pub(crate) fn test_file_service() -> Arc<FileService> {
         unique_suffix()
     ));
     let _ = std::fs::remove_dir_all(&dir);
-    Arc::new(FileService::open(dir).expect("create file auditability test service"))
+    Arc::new(
+        FileService::open(dir, sandbox_runtime::FileRuntimeConfig::default())
+            .expect("create file auditability test service"),
+    )
 }
 
 fn test_launch_base_dir() -> PathBuf {

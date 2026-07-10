@@ -26,7 +26,8 @@ fn store_with_event(label: &str, event: &str) -> FileService {
     let dir = temp_store_dir(label);
     let segment = dir.join("file_auditability_0.ndjson");
     std::fs::write(&segment, format!("{event}\n")).expect("write event");
-    FileService::open(dir).expect("open file service")
+    FileService::open(dir, sandbox_runtime::FileRuntimeConfig::default())
+        .expect("open file service")
 }
 
 fn range(start_line: u64, line_count: u64, owner: &str) -> BlameRange {
@@ -121,7 +122,8 @@ fn blame_latest_event_wins_per_path() {
     let second = r#"{"path":"a.txt","line_count":2,"default_owner":"workspace_session:ws-2","owner_ranges":[],"content_digest":""}"#;
     std::fs::write(&segment, format!("{first}\n{second}\n")).expect("write events");
 
-    let service = FileService::open(dir).expect("open");
+    let service =
+        FileService::open(dir, sandbox_runtime::FileRuntimeConfig::default()).expect("open");
     assert_eq!(
         service.blame("a.txt").expect("blame"),
         vec![range(1, 2, "workspace_session:ws-2")],

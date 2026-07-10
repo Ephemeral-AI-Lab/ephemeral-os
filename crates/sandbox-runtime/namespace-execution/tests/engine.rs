@@ -24,7 +24,15 @@ fn test_engine(
     observer: Arc<FakeObserver>,
     max_active: usize,
 ) -> NamespaceExecutionEngine {
-    NamespaceExecutionEngine::with_launcher(Box::new(fake.clone()), observer, max_active, 30.0)
+    NamespaceExecutionEngine::with_launcher(
+        Box::new(fake.clone()),
+        observer,
+        ExecutionCaps {
+            max_active,
+            setup_timeout_s: 30.0,
+            ..ExecutionCaps::default()
+        },
+    )
 }
 
 fn assert_request_target_fields(
@@ -69,8 +77,15 @@ fn shell_execution_resolves_finalized_output_and_records_terminal() {
 fn shell_request_does_not_carry_shell_security_policy() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
-    let engine: NamespaceExecutionEngine =
-        NamespaceExecutionEngine::with_launcher(Box::new(fake.clone()), observer, 4, 30.0);
+    let engine: NamespaceExecutionEngine = NamespaceExecutionEngine::with_launcher(
+        Box::new(fake.clone()),
+        observer,
+        ExecutionCaps {
+            max_active: 4,
+            setup_timeout_s: 30.0,
+            ..ExecutionCaps::default()
+        },
+    );
 
     let exec = engine
         .run_shell_interactive(OkShellOp, sample_target(), id("cs"), |_| {}, None, None)
@@ -356,8 +371,15 @@ fn mount_overlay_nonzero_exit_is_terminal_error() {
 fn mount_overlay_passes_setup_timeout_to_launcher() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
-    let engine: NamespaceExecutionEngine =
-        NamespaceExecutionEngine::with_launcher(Box::new(fake.clone()), observer, 4, 12.5);
+    let engine: NamespaceExecutionEngine = NamespaceExecutionEngine::with_launcher(
+        Box::new(fake.clone()),
+        observer,
+        ExecutionCaps {
+            max_active: 4,
+            setup_timeout_s: 12.5,
+            ..ExecutionCaps::default()
+        },
+    );
 
     let handle = engine
         .mount_overlay(sample_target(), id("timeout"))
@@ -370,8 +392,14 @@ fn mount_overlay_passes_setup_timeout_to_launcher() {
 
 #[test]
 fn engine_allocates_monotonic_namespace_execution_ids() {
-    let engine: NamespaceExecutionEngine =
-        NamespaceExecutionEngine::new(Arc::new(NoopHook), 4, 30.0);
+    let engine: NamespaceExecutionEngine = NamespaceExecutionEngine::new(
+        Arc::new(NoopHook),
+        ExecutionCaps {
+            max_active: 4,
+            setup_timeout_s: 30.0,
+            ..ExecutionCaps::default()
+        },
+    );
 
     assert_eq!(engine.allocate_id().0, "namespace_execution_1");
     assert_eq!(engine.allocate_id().0, "namespace_execution_2");

@@ -1,3 +1,7 @@
+pub mod caps {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/caps.rs"));
+}
+
 pub mod engine {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/engine.rs"));
 }
@@ -34,6 +38,7 @@ pub mod types {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/types.rs"));
 }
 
+pub use caps::ExecutionCaps;
 pub use engine::NamespaceExecutionEngine;
 pub use error::NamespaceExecutionError;
 pub use execution::{ExecutionHandle, InteractiveExecution};

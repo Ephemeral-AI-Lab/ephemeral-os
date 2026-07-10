@@ -471,12 +471,16 @@ fn runtime_config(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeConf
                 setup_timeout_s: 30.0,
                 exit_grace_s: 0.25,
                 rfc1918_egress: sandbox_runtime::Rfc1918Egress::Allow,
+                freeze_budget_s: 0.5,
             },
         },
         namespace_execution: sandbox_runtime::NamespaceExecutionRuntimeConfig {
             scratch_root: root.join("command-scratch"),
+            caps: sandbox_runtime::NamespaceExecutionCaps::default(),
         },
         layerstack: sandbox_runtime::LayerstackRuntimeConfig::default(),
+        command: sandbox_runtime::CommandRuntimeConfig::default(),
+        file: sandbox_runtime::FileRuntimeConfig::default(),
     })
 }
 

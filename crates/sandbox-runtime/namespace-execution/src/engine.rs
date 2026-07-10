@@ -9,6 +9,7 @@ use sandbox_observability::{SpanStatus, TerminalHook, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 use serde_json::Value;
 
+use crate::caps::ExecutionCaps;
 use crate::error::NamespaceExecutionError;
 use crate::execution::{ExecutionHandle, InteractiveExecution};
 use crate::launcher::{
@@ -31,29 +32,25 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
     #[must_use]
     pub fn new(
         terminal_hook: Arc<dyn TerminalHook<NamespaceExecutionId>>,
-        max_active: usize,
-        setup_timeout_s: f64,
+        caps: ExecutionCaps,
     ) -> Self {
-        Self::with_launcher(
-            Box::new(ForkRunnerLauncher),
-            terminal_hook,
-            max_active,
-            setup_timeout_s,
-        )
+        Self::with_launcher(Box::new(ForkRunnerLauncher::new(caps)), terminal_hook, caps)
     }
 
     pub fn with_launcher(
         launcher: Box<dyn NsRunnerLauncher>,
         terminal_hook: Arc<dyn TerminalHook<NamespaceExecutionId>>,
-        max_active: usize,
-        setup_timeout_s: f64,
+        caps: ExecutionCaps,
     ) -> Self {
         Self {
-            registry: Arc::new(ExecutionRegistry::new(max_active)),
+            registry: Arc::new(ExecutionRegistry::new(
+                caps.max_active,
+                caps.max_terminal_entries,
+            )),
             terminal_hook,
             launcher,
             next_id: AtomicU64::new(1),
-            setup_timeout_s,
+            setup_timeout_s: caps.setup_timeout_s,
         }
     }
 
@@ -63,8 +60,8 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         NamespaceExecutionId(format!("namespace_execution_{next_id}"))
     }
 
-    /// Override the registry's terminal-entry retention cap (defaults to
-    /// [`crate::registry::MAX_TERMINAL_ENTRIES`]).
+    /// Override the registry's terminal-entry retention cap (initialized
+    /// from [`ExecutionCaps::max_terminal_entries`]).
     pub fn set_terminal_retention(&self, max_terminal: usize) {
         self.registry.set_terminal_retention(max_terminal);
     }

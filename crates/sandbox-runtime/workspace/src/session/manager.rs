@@ -32,6 +32,8 @@ pub struct ResourceCaps {
     pub setup_timeout_s: f64,
     pub exit_grace_s: f64,
     pub rfc1918_egress: Rfc1918Egress,
+    /// Freeze-poll budget for the remount quiesce, in seconds.
+    pub freeze_budget_s: f64,
 }
 
 impl Default for ResourceCaps {
@@ -40,6 +42,7 @@ impl Default for ResourceCaps {
             setup_timeout_s: 30.0,
             exit_grace_s: 0.25,
             rfc1918_egress: Rfc1918Egress::Allow,
+            freeze_budget_s: 0.5,
         }
     }
 }

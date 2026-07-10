@@ -100,15 +100,37 @@ fn build_runtime_config(
                         sandbox_runtime::Rfc1918Egress::Deny
                     }
                 },
+                freeze_budget_s: config.runtime.namespace_execution.freeze_budget_s,
             },
         },
         namespace_execution: sandbox_runtime::NamespaceExecutionRuntimeConfig {
             scratch_root: config.runtime.namespace_execution.scratch_root.clone(),
+            caps: sandbox_runtime::NamespaceExecutionCaps {
+                freeze_budget_s: config.runtime.namespace_execution.freeze_budget_s,
+                stdin_write_deadline_s: config.runtime.namespace_execution.stdin_write_deadline_s,
+                max_terminal_entries: config.runtime.namespace_execution.max_terminal_entries,
+                max_transcript_window_bytes: config
+                    .runtime
+                    .namespace_execution
+                    .max_transcript_window_bytes,
+                max_runner_result_bytes: config.runtime.namespace_execution.max_runner_result_bytes,
+            },
         },
         layerstack: sandbox_runtime::LayerstackRuntimeConfig {
             remount_sweep_width: config.runtime.layerstack.remount_sweep_width,
             export_chunk_bytes: config.runtime.layerstack.export_chunk_bytes,
             spool_zstd_level: config.runtime.layerstack.spool_zstd_level,
+        },
+        command: sandbox_runtime::CommandRuntimeConfig {
+            max_active: config.runtime.command.max_active,
+            read_lines_default: config.runtime.command.read_lines_default,
+            read_lines_max: config.runtime.command.read_lines_max,
+        },
+        file: sandbox_runtime::FileRuntimeConfig {
+            read_lines_default: config.runtime.file.read_lines_default,
+            max_output_bytes: config.runtime.file.max_output_bytes,
+            max_edit_bytes: config.runtime.file.max_edit_bytes,
+            max_list_entries: config.runtime.file.max_list_entries,
         },
     }
 }

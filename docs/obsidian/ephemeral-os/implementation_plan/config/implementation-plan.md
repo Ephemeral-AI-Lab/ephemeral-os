@@ -43,8 +43,8 @@ injection pattern. It lands in **phase 2** with `ProtocolLimits`, not phase
 | 0 | e2e config family — harness + present-day coverage | — | done |
 | 1 | bench-path knobs + env-var retirement | 0 | done |
 | 2 | daemon service limits + injection patterns | 1 | done |
-| 3 | runtime operation caps | 2 | in progress |
-| 4 | host-side surfaces (gateway, console, docker timing) | 3 | blocked |
+| 3 | runtime operation caps | 2 | done |
+| 4 | host-side surfaces (gateway, console, docker timing) | 3 | in progress |
 
 ## Global definition of done (applies to every phase, in addition to its own criteria)
 
@@ -364,9 +364,25 @@ type, leaf observability mapping) that phase 3 reuses.
 `spec.md` tier 3. Mechanical application of phase 2's construction-injection
 pattern across command/file/namespace-execution services.
 
+### Phase 3 drift note (2026-07-10, recorded while landing)
+
+- The leaf gains one `ExecutionCaps` value type (`Default` preserves the
+  shipped policy) consumed by the engine constructors; the production
+  `ForkRunnerLauncher` carries the stdin deadline and runner-result cap so
+  the `NsRunnerLauncher` trait (and every test fake) keeps its signature.
+- The CLI materializes catalog argument defaults client-side
+  (`request_builder.rs`), so `read_lines_default` knobs govern the raw
+  operation surface; P3-F2 probes `file_read` through the authenticated
+  internal call, as P3-F1 does for the CLI-less `file_list`.
+- Terminal-retention eviction surfaces as the *empty terminal read*
+  (`read_command_lines` on an evicted id answers the empty window), not a
+  structured missing-entry error; P3-F5 pins that landed contract.
+- The freeze budget rides `ResourceCaps` through the workspace manager into
+  the remount quiesce spec (the workspace crate stays config-free).
+
 ### Work items
 
-- [ ] Schema: `configs/runtime.rs` — new `runtime.command`
+- [x] Schema: `configs/runtime.rs` — new `runtime.command`
       (`max_active >= 1`, `read_lines_default >= 1`, `read_lines_max >= 1`,
       cross-field default ≤ max), new `runtime.file`
       (`read_lines_default`, `max_output_bytes`, `max_edit_bytes`,
@@ -374,37 +390,53 @@ pattern across command/file/namespace-execution services.
       `freeze_budget_s >= 0`, `stdin_write_deadline_s > 0`,
       `max_terminal_entries >= 1`, `max_transcript_window_bytes >= 1`,
       `max_runner_result_bytes >= 1`
-- [ ] Wiring: command service (`core.rs` consts deleted;
+- [x] Wiring: command service (`core.rs` consts deleted;
       `COMMAND_ENGINE_SETUP_TIMEOUT_S` collapsed into
       `runtime.workspace.setup_timeout_s` — decision 6);
       `read_command_lines.rs` limits from config
-- [ ] Wiring: file service (`support.rs`, `impls/list.rs` consts deleted;
-      values via service construction)
-- [ ] Wiring: namespace-execution (freeze budget already parameterized via
-      `QuiesceSpec.freeze_budget` — `remount.rs:235` passes the config value
-      instead of `DEFAULT_FREEZE_BUDGET`; stdin deadline, terminal retention
-      via existing `set_terminal_retention`, transcript window, runner
-      result cap through construction)
-- [ ] Schema tests: defaults, rejections, both cross-field rules
-- [ ] Unskip + adapt `TestPhase3` (P3-F1..P3-F5)
+- [x] Wiring: file service (`support.rs`, `impls/list.rs` consts deleted;
+      values via `FileService::open` construction)
+- [x] Wiring: namespace-execution (freeze budget via `ResourceCaps` →
+      `QuiesceSpec.freeze_budget`, `DEFAULT_FREEZE_BUDGET` deleted; stdin
+      deadline + runner result cap via the production launcher; terminal
+      retention initialized from `ExecutionCaps` with
+      `set_terminal_retention` retained; transcript window threaded through
+      `CommandExecValue`)
+- [x] Schema tests: defaults, rejections, both cross-field rules (56 config
+      tests green)
+- [x] Unskip + adapt `TestPhase3` (P3-F1..P3-F5, adaptations per drift note)
 
 ### Acceptance criteria
 
-- [ ] `grep -rn "COMMAND_ENGINE_SETUP_TIMEOUT_S" crates/` → empty (collapsed,
-      not renamed)
-- [ ] `grep -rn "const MAX_ACTIVE_COMMANDS\|const MAX_OUTPUT_BYTES\|const MAX_EDIT_BYTES\|const MAX_LIST_ENTRIES\|const MAX_TERMINAL_ENTRIES\|const MAX_TRANSCRIPT_WINDOW_BYTES\|const MAX_RUNNER_RESULT_BYTES\|const STDIN_WRITE_DEADLINE\|const DEFAULT_FREEZE_BUDGET" crates/sandbox-runtime` shows at most `Default`-impl
-      definitions in config-value types, no live call-site consts
-- [ ] `cargo test -p sandbox-config -p sandbox-runtime` passes; defaults
+- [x] `grep -rn "COMMAND_ENGINE_SETUP_TIMEOUT_S" crates/` → empty (collapsed,
+      not renamed; verified 2026-07-10)
+- [x] `grep -rn "const MAX_ACTIVE_COMMANDS\|const MAX_OUTPUT_BYTES\|const MAX_EDIT_BYTES\|const MAX_LIST_ENTRIES\|const MAX_TERMINAL_ENTRIES\|const MAX_TRANSCRIPT_WINDOW_BYTES\|const MAX_RUNNER_RESULT_BYTES\|const STDIN_WRITE_DEADLINE\|const DEFAULT_FREEZE_BUDGET" crates/sandbox-runtime` shows at most `Default`-impl
+      definitions in config-value types, no live call-site consts — grep is
+      fully empty (defaults live in `Default` fn bodies / `caps.rs`; test
+      fixture consts renamed `TEST_*`)
+- [x] `cargo test -p sandbox-config -p sandbox-runtime` passes; defaults
       equal today's constants (256, 200/1000, 2000, 256 KiB, 4 MiB, 2000,
-      0.5, 2.0, 512, 1 MiB, 8 MiB)
-- [ ] `pytest -m config` fully green including unskipped `TestPhase3`:
+      0.5, 2.0, 512, 1 MiB, 8 MiB) — whole-workspace `cargo test` 108
+      ok-suites / 0 failures;
+      `config_operation_caps_default_to_shipped_policy` pins every value
+- [x] `pytest -m config` fully green including unskipped `TestPhase3`:
       P3-F1 list truncation at 5, P3-F2 read default 10 lines, P3-F3 1 KiB
       edit cap error, P3-F4 `max_active: 1` admission error, P3-F5
-      `max_terminal_entries: 2` eviction (oldest drain → missing entry)
-- [ ] Runtime e2e regressions green: existing file-operation and
+      `max_terminal_entries: 2` eviction (oldest drain → missing entry) —
+      `32 passed, 331 deselected in 339.73s`, zero skips (P3-F2 probes the
+      raw operation via internal call, P3-F5 asserts the empty terminal
+      read, per drift note)
+- [x] Runtime e2e regressions green: existing file-operation and
       workspace-session suites pass with default config (behavioral
-      defaults unchanged end to end)
-- [ ] Global definition of done checked
+      defaults unchanged end to end) — `pytest runtime -m "not config"`:
+      `220 passed, 6 skipped in 522.01s`; every skip environmental (apt
+      egress unavailable, `E2E_RETENTION`/`E2E_STORM` opt-in)
+- [x] Global definition of done checked — build green, whole-workspace
+      `cargo test` 108 ok-suites / 0 failures, `cargo clippy --all-targets`
+      0 warnings (two dangling doc comments left by const deletion fixed),
+      `cargo fmt` no diff, no inline comments in `src/`,
+      `git diff HEAD config/prd.yml` empty, leaf-crate `sandbox-config`
+      grep empty, committed to `main`
 
 ---
 

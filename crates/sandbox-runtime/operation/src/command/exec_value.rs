@@ -27,6 +27,7 @@ pub struct CommandExecValue {
     pub(crate) operation_name: &'static str,
     next_snapshot_offset: Cell<u64>,
     pub(crate) finalize_outcome: Arc<OnceLock<FinalizeOutcome>>,
+    max_transcript_window_bytes: u64,
 }
 
 impl CommandExecValue {
@@ -38,6 +39,7 @@ impl CommandExecValue {
         started_at: Instant,
         operation_name: &'static str,
         finalize_outcome: Arc<OnceLock<FinalizeOutcome>>,
+        max_transcript_window_bytes: u64,
     ) -> Self {
         Self {
             exec,
@@ -47,6 +49,7 @@ impl CommandExecValue {
             operation_name,
             next_snapshot_offset: Cell::new(0),
             finalize_outcome,
+            max_transcript_window_bytes,
         }
     }
 
@@ -66,7 +69,12 @@ impl CommandExecValue {
 
     #[must_use]
     pub fn transcript_window(&self, start: u64, limit: usize) -> CommandTranscriptWindow {
-        transcript_window(Some(&self.transcript_path), start, limit)
+        transcript_window(
+            Some(&self.transcript_path),
+            start,
+            limit,
+            self.max_transcript_window_bytes,
+        )
     }
 
     pub fn required_transcript_window(
@@ -74,7 +82,12 @@ impl CommandExecValue {
         start: u64,
         limit: usize,
     ) -> Result<CommandTranscriptWindow, String> {
-        required_transcript_window(Some(&self.transcript_path), start, limit)
+        required_transcript_window(
+            Some(&self.transcript_path),
+            start,
+            limit,
+            self.max_transcript_window_bytes,
+        )
     }
 }
 

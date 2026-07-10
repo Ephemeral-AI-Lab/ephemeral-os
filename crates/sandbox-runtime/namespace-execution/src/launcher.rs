@@ -26,12 +26,6 @@ pub(crate) const FILE_OP_MODE_FLAG: &str = "--file-op";
 pub(crate) const REMOUNT_OVERLAY_MODE_FLAG: &str = "--remount-overlay";
 const SETUP_WAIT_POLL: Duration = Duration::from_millis(1);
 
-/// Cap on the encoded ns-runner result envelope drained from `result_fd`. A
-/// request/result runner that would emit more is failed rather than buffered
-/// without bound (a `ReadFile` payload is base64, so this is well above
-/// `MAX_EDIT_BYTES`).
-pub const MAX_RUNNER_RESULT_BYTES: usize = 8 * 1024 * 1024;
-
 /// Shared launch placement policy: the optional workspace `cgroup.procs` path the
 /// launcher writes the freshly spawned ns-runner pid into. This is not file-op
 /// logic — `exec_command` and session file ops pass a cgroup; overlay mount
@@ -92,13 +86,26 @@ pub trait RunnerChild: Send {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError>;
 }
 
-pub(crate) struct ForkRunnerLauncher;
+pub(crate) struct ForkRunnerLauncher {
+    stdin_write_deadline: Duration,
+    max_result_bytes: usize,
+}
+
+impl ForkRunnerLauncher {
+    pub(crate) fn new(caps: crate::caps::ExecutionCaps) -> Self {
+        Self {
+            stdin_write_deadline: caps.stdin_write_deadline,
+            max_result_bytes: caps.max_runner_result_bytes,
+        }
+    }
+}
 
 struct ForkRunnerChild {
     child: Child,
     result_read: OwnedFd,
     mode_flag: Option<&'static str>,
     setup_timeout_s: f64,
+    max_result_bytes: usize,
 }
 
 struct SpawnedRunner {
@@ -134,8 +141,14 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             cancelled.store(true, Ordering::Release);
             terminate_pgid(pgid);
         });
-        let pty =
-            PtyMaster::spawn(master, Some(pgid), transcript_path, cancel).map_err(spawn_error);
+        let pty = PtyMaster::spawn(
+            master,
+            Some(pgid),
+            transcript_path,
+            cancel,
+            self.stdin_write_deadline,
+        )
+        .map_err(spawn_error);
         let pty = match pty {
             Ok(pty) => pty,
             Err(error) => {
@@ -143,7 +156,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
                 return Err(error);
             }
         };
-        let child = spawned.into_child(&request_bytes, None, 0.0)?;
+        let child = spawned.into_child(&request_bytes, None, 0.0, self.max_result_bytes)?;
         Ok((Box::new(child), pty))
     }
 
@@ -153,7 +166,13 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        spawn_request_result(MOUNT_OVERLAY_MODE_FLAG, request, placement, setup_timeout_s)
+        spawn_request_result(
+            MOUNT_OVERLAY_MODE_FLAG,
+            request,
+            placement,
+            setup_timeout_s,
+            self.max_result_bytes,
+        )
     }
 
     fn spawn_file_op(
@@ -162,7 +181,13 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
         placement: RunnerPlacement,
         setup_timeout_s: f64,
     ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
-        spawn_request_result(FILE_OP_MODE_FLAG, request, placement, setup_timeout_s)
+        spawn_request_result(
+            FILE_OP_MODE_FLAG,
+            request,
+            placement,
+            setup_timeout_s,
+            self.max_result_bytes,
+        )
     }
 
     fn spawn_remount_overlay(
@@ -176,6 +201,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             request,
             placement,
             setup_timeout_s,
+            self.max_result_bytes,
         )
     }
 }
@@ -188,6 +214,7 @@ fn spawn_request_result(
     request: NamespaceRunnerRequest,
     placement: RunnerPlacement,
     setup_timeout_s: f64,
+    max_result_bytes: usize,
 ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
     let request_bytes = encode_request(&request)?;
     let (spawned, ()) = spawn_locked(Some(mode_flag), |command| {
@@ -203,6 +230,7 @@ fn spawn_request_result(
         &request_bytes,
         Some(mode_flag),
         setup_timeout_s,
+        max_result_bytes,
     )?))
 }
 
@@ -212,6 +240,7 @@ impl SpawnedRunner {
         request_bytes: &[u8],
         mode_flag: Option<&'static str>,
         setup_timeout_s: f64,
+        max_result_bytes: usize,
     ) -> Result<ForkRunnerChild, NamespaceExecutionError> {
         let SpawnedRunner {
             mut child,
@@ -228,6 +257,7 @@ impl SpawnedRunner {
             result_read,
             mode_flag,
             setup_timeout_s,
+            max_result_bytes,
         })
     }
 }
@@ -286,13 +316,14 @@ impl ForkRunnerChild {
     /// Wait on a request/result runner. The result fd is drained on a separate
     /// thread that starts before the child wait, so a large payload cannot fill
     /// the pipe and deadlock a child that blocks on the final write; the drain is
-    /// capped at [`MAX_RUNNER_RESULT_BYTES`].
+    /// capped at the injected [`crate::ExecutionCaps::max_runner_result_bytes`].
     fn wait_request_result(
         &mut self,
         mode_flag: &'static str,
     ) -> Result<RunResult, NamespaceExecutionError> {
         let result_read = self.result_read.try_clone().map_err(spawn_error)?;
-        let drain = thread::spawn(move || drain_result_fd(result_read, MAX_RUNNER_RESULT_BYTES));
+        let max_result_bytes = self.max_result_bytes;
+        let drain = thread::spawn(move || drain_result_fd(result_read, max_result_bytes));
         let wait = wait_for_child_with_timeout(&mut self.child, mode_flag, self.setup_timeout_s);
         let drained = drain.join().map_err(|_| {
             NamespaceExecutionError::Spawn("ns-runner result drain thread panicked".to_owned())

@@ -46,7 +46,10 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
 fn file_service() -> Arc<FileService> {
     let dir = temp_root("file-auditability");
     let _ = std::fs::remove_dir_all(&dir);
-    Arc::new(FileService::open(dir).expect("create file auditability test service"))
+    Arc::new(
+        FileService::open(dir, sandbox_runtime::FileRuntimeConfig::default())
+            .expect("create file auditability test service"),
+    )
 }
 
 fn temp_root(label: &str) -> PathBuf {
@@ -154,12 +157,16 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
                     setup_timeout_s: 1.0,
                     exit_grace_s: 0.1,
                     rfc1918_egress: Rfc1918Egress::Allow,
+                    freeze_budget_s: 0.5,
                 },
             },
             namespace_execution: NamespaceExecutionRuntimeConfig {
                 scratch_root: command_scratch_root,
+                caps: sandbox_runtime::NamespaceExecutionCaps::default(),
             },
             layerstack: sandbox_runtime::LayerstackRuntimeConfig::default(),
+            command: sandbox_runtime::CommandRuntimeConfig::default(),
+            file: sandbox_runtime::FileRuntimeConfig::default(),
             cgroup_root: None,
         },
         Observer::disabled(),

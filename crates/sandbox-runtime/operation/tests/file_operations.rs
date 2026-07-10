@@ -34,7 +34,7 @@ use support::{
     fake_workspace_runtime, workspace_handle, FakeLauncher, FakeRunnerScript, FakeWorkspaceService,
 };
 
-const MAX_OUTPUT_BYTES: usize = 256 * 1024;
+const TEST_MAX_OUTPUT_BYTES: usize = 256 * 1024;
 
 fn uniq() -> u64 {
     static C: AtomicU64 = AtomicU64::new(0);
@@ -84,7 +84,10 @@ fn env() -> Env {
     std::os::unix::fs::symlink("sub", workspace.join("linkdir")).expect("symlink dir");
 
     sandbox_runtime_layerstack::build_workspace_base(&root, &workspace, false).expect("build base");
-    let file = Arc::new(FileService::open(temp("audit")).expect("audit store"));
+    let file = Arc::new(
+        FileService::open(temp("audit"), sandbox_runtime::FileRuntimeConfig::default())
+            .expect("audit store"),
+    );
     let layerstack = Arc::new(
         LayerStackService::new(
             root,
@@ -298,7 +301,7 @@ fn sessionless_read_output_over_cap_is_output_too_large() {
     let env = env();
     match env.read(read_of("wide.txt")) {
         Err(FileOperationError::OutputTooLarge { limit, .. }) => {
-            assert_eq!(limit, MAX_OUTPUT_BYTES);
+            assert_eq!(limit, TEST_MAX_OUTPUT_BYTES);
         }
         other => panic!("expected OutputTooLarge, got {other:?}"),
     }
@@ -345,7 +348,12 @@ fn sessionless_read_symlink_parent_is_not_followed() {
     ));
     assert!(matches!(
         env.layerstack
-            .read_current_window(&layer_path("linkdir/nested.txt"), 1, 10, MAX_OUTPUT_BYTES)
+            .read_current_window(
+                &layer_path("linkdir/nested.txt"),
+                1,
+                10,
+                TEST_MAX_OUTPUT_BYTES
+            )
             .expect("read window"),
         ManifestReadWindow::Symlink
     ));
@@ -664,7 +672,7 @@ fn runtime_request(op: &str, args: serde_json::Value) -> Request {
 #[test]
 fn read_current_window_classifies_entries() {
     let env = env();
-    let cap = MAX_OUTPUT_BYTES;
+    let cap = TEST_MAX_OUTPUT_BYTES;
     assert!(matches!(
         env.layerstack
             .read_current_window(&layer_path("nope"), 1, 10, cap)
@@ -703,7 +711,7 @@ fn read_current_window_large_file_not_rejected_for_total_size() {
     // big.txt is large in total but a small window is fine.
     let window = env
         .layerstack
-        .read_current_window(&layer_path("big.txt"), 1, 3, MAX_OUTPUT_BYTES)
+        .read_current_window(&layer_path("big.txt"), 1, 3, TEST_MAX_OUTPUT_BYTES)
         .expect("read window");
     assert!(matches!(
         window,
@@ -889,8 +897,15 @@ fn file_op_launch_uses_cgroup_and_setup_timeout_overlay_uses_none() {
         },
     )));
     let spans = Arc::new(SpanRegistry::new(Observer::disabled()));
-    let engine =
-        NamespaceExecutionEngine::<()>::with_launcher(Box::new(launcher.clone()), spans, 8, 7.5);
+    let engine = NamespaceExecutionEngine::<()>::with_launcher(
+        Box::new(launcher.clone()),
+        spans,
+        sandbox_runtime_namespace_execution::ExecutionCaps {
+            max_active: 8,
+            setup_timeout_s: 7.5,
+            ..sandbox_runtime_namespace_execution::ExecutionCaps::default()
+        },
+    );
 
     let cgroup = PathBuf::from("/sys/fs/cgroup/workspace-ws-1/cgroup.procs");
     let file_op = engine

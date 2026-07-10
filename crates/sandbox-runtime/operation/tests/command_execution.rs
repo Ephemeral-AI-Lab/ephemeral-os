@@ -36,8 +36,14 @@ fn fixture(suffix: &str) -> Fixture {
         promise,
     );
     let (master, _slave) = open_pty_pair().expect("openpt pair");
-    let pty = PtyMaster::spawn(master, None, Some(transcript_path.clone()), Box::new(|| {}))
-        .expect("pty master");
+    let pty = PtyMaster::spawn(
+        master,
+        None,
+        Some(transcript_path.clone()),
+        Box::new(|| {}),
+        std::time::Duration::from_secs(2),
+    )
+    .expect("pty master");
     let exec = InteractiveExecution::new(handle, pty);
     let command = CommandExecValue::new(
         exec,
@@ -46,6 +52,7 @@ fn fixture(suffix: &str) -> Fixture {
         Instant::now(),
         "exec_command",
         Arc::new(OnceLock::<FinalizeOutcome>::new()),
+        1024 * 1024,
     );
     Fixture {
         command,

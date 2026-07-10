@@ -4,9 +4,6 @@ use crate::command::service::render::{command_output, command_status};
 use crate::command::service::CommandOperationService;
 use crate::command::{CommandExecValue, CommandOutput, CommandStatus, ReadCommandLinesInput};
 
-const DEFAULT_READ_LIMIT: usize = 200;
-const MAX_READ_LIMIT: usize = 1000;
-
 impl CommandOperationService {
     #[must_use]
     pub fn read_command_lines(&self, input: ReadCommandLinesInput) -> CommandOutput {
@@ -14,8 +11,8 @@ impl CommandOperationService {
         let start_offset = input.start_offset.unwrap_or(0);
         let limit = input
             .limit
-            .unwrap_or(DEFAULT_READ_LIMIT)
-            .clamp(1, MAX_READ_LIMIT);
+            .unwrap_or(self.config().read_lines_default)
+            .clamp(1, self.config().read_lines_max);
 
         self.engine()
             .with_value(&command_session_id, |command| {
@@ -60,7 +57,7 @@ fn read_command_window(
 
 fn empty_terminal_output(command_session_id: NamespaceExecutionId) -> CommandOutput {
     command_output(
-        transcript_window(None, 0, 1),
+        transcript_window(None, 0, 1, 0),
         Some(command_session_id),
         CommandStatus::Ok,
         None,

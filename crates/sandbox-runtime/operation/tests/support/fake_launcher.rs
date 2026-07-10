@@ -14,6 +14,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
 
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 
@@ -321,8 +322,14 @@ impl NsRunnerLauncher for FakeLauncher {
                 completion.cancel();
             }
         };
-        let pty = PtyMaster::spawn(master, script.pgid, transcript_path, Box::new(cancel))
-            .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
+        let pty = PtyMaster::spawn(
+            master,
+            script.pgid,
+            transcript_path,
+            Box::new(cancel),
+            Duration::from_secs(2),
+        )
+        .map_err(|error| NamespaceExecutionError::Spawn(error.to_string()))?;
         if let Some(result) = script.completion {
             completion.complete(result);
         }

@@ -16,8 +16,6 @@ use crate::layerstack::LayerStackService;
 use crate::workspace_crate::{FileRunnerDirEntryKind, FileRunnerOp, FileRunnerResult};
 use crate::workspace_session::WorkspaceSessionService;
 
-pub(crate) const MAX_LIST_ENTRIES: usize = 2000;
-
 impl FileService {
     /// List one directory level at `input.path` (the workspace root when
     /// omitted). With `workspace_session_id`, the listing runs inside the
@@ -48,7 +46,7 @@ impl FileService {
                     &rel_str,
                     FileRunnerOp::ListDir {
                         rel: rel_str.clone(),
-                        limit: MAX_LIST_ENTRIES,
+                        limit: self.caps().max_list_entries,
                     },
                 )
                 .map_err(|error| match error {
@@ -77,7 +75,7 @@ impl FileService {
                 let workspace_root = layerstack.workspace_root()?;
                 let rel = resolve_list_rel(&workspace_root, input.path.as_deref())?;
                 let rel_str = rel.as_ref().map_or("", |rel| rel.as_str()).to_owned();
-                match layerstack.list_current_dir(rel.as_ref(), MAX_LIST_ENTRIES)? {
+                match layerstack.list_current_dir(rel.as_ref(), self.caps().max_list_entries)? {
                     ManifestDirList::Absent => Err(FileOperationError::NotFound(rel_str)),
                     ManifestDirList::NotDirectory => Err(FileOperationError::NotDirectory(rel_str)),
                     ManifestDirList::Entries { entries, truncated } => Ok(ListOutput {

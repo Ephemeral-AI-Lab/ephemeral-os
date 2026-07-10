@@ -5,12 +5,10 @@ use crate::error::NamespaceExecutionError;
 use crate::shell::NamespaceExecutionTerminalStatus;
 use crate::types::NamespaceExecutionId;
 
-/// Default cap on retained terminal entries. Marking an entry terminal evicts
-/// the oldest terminal entry beyond the cap, dropping its value (which closes
-/// the pty master fd and releases whatever the value's own `Drop` owns). A
-/// drain against an evicted id observes a missing entry.
-pub const MAX_TERMINAL_ENTRIES: usize = 512;
-
+/// Bounded execution table. Marking an entry terminal evicts the oldest
+/// terminal entry beyond `max_terminal`, dropping its value (which closes the
+/// pty master fd and releases whatever the value's own `Drop` owns). A drain
+/// against an evicted id observes a missing entry.
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,
     max_active: usize,
@@ -39,21 +37,21 @@ impl<V> Entry<V> {
 
 impl<V> ExecutionRegistry<V> {
     #[must_use]
-    pub fn new(max_active: usize) -> Self {
+    pub fn new(max_active: usize, max_terminal: usize) -> Self {
         Self {
             inner: Mutex::new(RegistryState {
                 entries: HashMap::new(),
                 active: 0,
                 terminal_order: VecDeque::new(),
-                max_terminal: MAX_TERMINAL_ENTRIES,
+                max_terminal,
             }),
             max_active,
         }
     }
 
-    /// Override the terminal-entry retention cap (defaults to
-    /// [`MAX_TERMINAL_ENTRIES`]). An over-cap backlog is trimmed on the next
-    /// terminal transition, not immediately.
+    /// Override the terminal-entry retention cap (initialized from
+    /// [`crate::ExecutionCaps::max_terminal_entries`]). An over-cap backlog is
+    /// trimmed on the next terminal transition, not immediately.
     pub fn set_terminal_retention(&self, max_terminal: usize) {
         self.lock().max_terminal = max_terminal;
     }

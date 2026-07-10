@@ -7,11 +7,6 @@ use std::time::{Duration, Instant};
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
 
-/// Default per-session freeze budget. Measured on the supported environment:
-/// the full stop → poll-`T` → membership-recheck shape for 100 tasks takes
-/// under 4 ms, so 500 ms bounds only D-state stragglers.
-pub const DEFAULT_FREEZE_BUDGET: Duration = Duration::from_millis(500);
-
 const FREEZE_POLL: Duration = Duration::from_micros(200);
 
 /// One session's quiesce inputs, all daemon-owned facts.

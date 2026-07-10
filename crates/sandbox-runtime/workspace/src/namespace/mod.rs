@@ -5,7 +5,7 @@ mod setns_runner;
 use std::sync::Arc;
 
 use sandbox_observability::{NoopHook, Observer};
-use sandbox_runtime_namespace_execution::NamespaceExecutionEngine;
+use sandbox_runtime_namespace_execution::{ExecutionCaps, NamespaceExecutionEngine};
 
 #[cfg(target_os = "linux")]
 use crate::session::WorkspaceManagerError;
@@ -112,8 +112,11 @@ impl NamespaceRuntime {
         Self {
             engine: Arc::new(NamespaceExecutionEngine::new(
                 Arc::new(NoopHook),
-                MOUNT_MAX_ACTIVE,
-                setup_timeout_s,
+                ExecutionCaps {
+                    max_active: MOUNT_MAX_ACTIVE,
+                    setup_timeout_s,
+                    ..ExecutionCaps::default()
+                },
             )),
             obs,
         }
