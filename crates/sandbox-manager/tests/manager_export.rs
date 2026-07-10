@@ -93,6 +93,13 @@ impl ExportDaemon {
         *self.stream.lock().expect("stream lock") = Some(bytes);
     }
 
+    fn push_chunk(&self, value: Value) {
+        self.scripted_chunks
+            .lock()
+            .expect("chunks lock")
+            .push_back(value);
+    }
+
     fn invocations(&self) -> Vec<(String, Value)> {
         self.invocations.lock().expect("invocations lock").clone()
     }
@@ -171,6 +178,26 @@ fn start_value(
         value["live_workspace_sessions"] = json!(live);
     }
     value
+}
+
+fn start_value_for_stream(
+    version: i64,
+    layers: &[&str],
+    entries: (u64, u64, u64, u64),
+    stream: &[u8],
+    live_sessions: Option<&[&str]>,
+) -> Value {
+    start_value(version, layers, entries, stream.len() as u64, live_sessions)
+}
+
+fn chunk_value(bytes: &[u8], offset: u64, total: u64, eof: bool) -> Value {
+    json!({
+        "chunk": base64::engine::general_purpose::STANDARD.encode(bytes),
+        "offset": offset,
+        "len": bytes.len(),
+        "total": total,
+        "eof": eof,
+    })
 }
 
 struct Env {
@@ -415,14 +442,7 @@ fn dir_apply_reproduces_winners_deletions_and_opaque_clears() {
     std::fs::create_dir_all(dest.join("cfg")).expect("seed cfg");
     std::fs::write(dest.join("cfg/dev.yml"), "D\n").expect("seed dev.yml");
 
-    env.daemon.push_start(start_value(
-        3,
-        &["L000003-b", "L000002-a"],
-        (2, 1, 1, 1),
-        64,
-        None,
-    ));
-    env.daemon.set_stream(build_stream(|builder| {
+    let stream = build_stream(|builder| {
         add_dir(builder, "cfg/", 0o755, 1_750_000_000);
         add_marker(builder, "cfg/.wh..wh..opq");
         add_file(builder, "cfg/prod.yml", b"P2\n", 0o644, 1_750_000_200);
@@ -430,7 +450,15 @@ fn dir_apply_reproduces_winners_deletions_and_opaque_clears() {
         add_dir(builder, "src/", 0o755, 1_750_000_000);
         add_file(builder, "src/a.rs", b"v2\n", 0o640, 1_750_000_123);
         add_marker(builder, "src/.wh.b.rs");
-    }));
+    });
+    env.daemon.push_start(start_value_for_stream(
+        3,
+        &["L000003-b", "L000002-a"],
+        (2, 1, 1, 1),
+        &stream,
+        None,
+    ));
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
     assert!(result.get("error").is_none(), "export failed: {result}");
@@ -474,14 +502,20 @@ fn dotfile_winner_survives_its_directorys_opaque_clear() {
     std::fs::create_dir_all(dest.join("cfg")).expect("seed cfg");
     std::fs::write(dest.join("cfg/dev.yml"), "D\n").expect("seed dev.yml");
 
-    env.daemon
-        .push_start(start_value(2, &["L000002-a"], (2, 0, 0, 1), 64, None));
-    env.daemon.set_stream(build_stream(|builder| {
+    let stream = build_stream(|builder| {
         add_dir(builder, "cfg/", 0o755, 0);
         add_file(builder, "cfg/.env", b"E\n", 0o600, 1_750_000_001);
         add_marker(builder, "cfg/.wh..wh..opq");
         add_file(builder, "cfg/prod.yml", b"P\n", 0o644, 1_750_000_002);
-    }));
+    });
+    env.daemon.push_start(start_value_for_stream(
+        2,
+        &["L000002-a"],
+        (2, 0, 0, 1),
+        &stream,
+        None,
+    ));
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
     assert!(result.get("error").is_none(), "export failed: {result}");
@@ -498,11 +532,17 @@ fn dotfile_winner_survives_its_directorys_opaque_clear() {
 fn rerun_skips_unchanged_file_winners_and_recounts_deletions() {
     let env = env("idempotent");
     let dest = env.base.join("dest");
+    let stream = honest_delta_stream();
     for _ in 0..2 {
-        env.daemon
-            .push_start(start_value(3, &["L000002-a"], (1, 0, 1, 0), 64, None));
+        env.daemon.push_start(start_value_for_stream(
+            3,
+            &["L000002-a"],
+            (1, 0, 1, 0),
+            &stream,
+            None,
+        ));
     }
-    env.daemon.set_stream(honest_delta_stream());
+    env.daemon.set_stream(stream);
 
     let first = dispatch(&env, &export_request("sbox-1", &dest, None));
     assert!(first.get("error").is_none(), "first export failed: {first}");
@@ -529,9 +569,15 @@ fn rerun_skips_unchanged_file_winners_and_recounts_deletions() {
 fn dir_result_contract_keys_are_exact() {
     let env = env("contract");
     let dest = env.base.join("dest");
-    env.daemon
-        .push_start(start_value(3, &["L000002-a"], (1, 0, 1, 0), 64, None));
-    env.daemon.set_stream(honest_delta_stream());
+    let stream = honest_delta_stream();
+    env.daemon.push_start(start_value_for_stream(
+        3,
+        &["L000002-a"],
+        (1, 0, 1, 0),
+        &stream,
+        None,
+    ));
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
     let mut keys: Vec<&str> = result
@@ -562,14 +608,15 @@ fn dir_result_contract_keys_are_exact() {
 fn live_workspace_sessions_ride_the_result_when_reported() {
     let env = env("live-sessions");
     let dest = env.base.join("dest");
-    env.daemon.push_start(start_value(
+    let stream = honest_delta_stream();
+    env.daemon.push_start(start_value_for_stream(
         3,
         &["L000002-a"],
         (1, 0, 1, 0),
-        64,
+        &stream,
         Some(&["ws-7"]),
     ));
-    env.daemon.set_stream(honest_delta_stream());
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
     assert_eq!(result["live_workspace_sessions"], json!(["ws-7"]));
@@ -581,9 +628,10 @@ fn empty_delta_applies_as_a_clean_no_op() {
     let dest = env.base.join("dest");
     std::fs::create_dir_all(&dest).expect("dest");
     std::fs::write(dest.join("keep.txt"), "K\n").expect("seed");
+    let stream = build_stream(|_| {});
     env.daemon
-        .push_start(start_value(1, &[], (0, 0, 0, 0), 13, None));
-    env.daemon.set_stream(build_stream(|_| {}));
+        .push_start(start_value_for_stream(1, &[], (0, 0, 0, 0), &stream, None));
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
     assert!(result.get("error").is_none(), "export failed: {result}");
@@ -608,12 +656,18 @@ fn directory_winner_replaces_a_dest_symlink_without_following_it() {
     std::fs::create_dir_all(&elsewhere).expect("elsewhere");
     std::os::unix::fs::symlink(&elsewhere, dest.join("d")).expect("planted symlink");
 
-    env.daemon
-        .push_start(start_value(2, &["L000002-a"], (1, 0, 0, 0), 64, None));
-    env.daemon.set_stream(build_stream(|builder| {
+    let stream = build_stream(|builder| {
         add_dir(builder, "d/", 0o755, 0);
         add_file(builder, "d/file.txt", b"F\n", 0o644, 1_750_000_500);
-    }));
+    });
+    env.daemon.push_start(start_value_for_stream(
+        2,
+        &["L000002-a"],
+        (1, 0, 0, 0),
+        &stream,
+        None,
+    ));
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, None));
     assert!(result.get("error").is_none(), "export failed: {result}");
@@ -672,9 +726,15 @@ fn tar_archive_is_decompressed_plain_tar() {
     let env = env("tar-plain");
     let dest = env.base.join("out/delta.tar");
     std::fs::create_dir_all(dest.parent().expect("parent")).expect("mkdir out");
-    env.daemon
-        .push_start(start_value(3, &["L000002-a"], (1, 0, 1, 0), 64, None));
-    env.daemon.set_stream(honest_delta_stream());
+    let stream = honest_delta_stream();
+    env.daemon.push_start(start_value_for_stream(
+        3,
+        &["L000002-a"],
+        (1, 0, 1, 0),
+        &stream,
+        None,
+    ));
+    env.daemon.set_stream(stream);
 
     let result = dispatch(&env, &export_request("sbox-1", &dest, Some("tar")));
     assert!(result.get("error").is_none(), "export failed: {result}");
@@ -1111,12 +1171,19 @@ fn forward_loop_pages_a_multi_chunk_stream() {
 
     let invocations = env.daemon.invocations();
     assert_eq!(invocations[0].0, "export_layerstack");
-    let chunk_calls = invocations
+    let chunk_args: Vec<&Value> = invocations
         .iter()
-        .filter(|(op, _)| op == "read_export_chunk")
-        .count();
+        .filter_map(|(op, args)| (op == "read_export_chunk").then_some(args))
+        .collect();
     let expected = stream.len().div_ceil(HONEST_CHUNK_BYTES);
-    assert_eq!(chunk_calls, expected, "one forward per bounded chunk");
+    assert_eq!(chunk_args.len(), expected, "one forward per bounded chunk");
+    for (index, args) in chunk_args.iter().enumerate() {
+        assert_eq!(
+            args["offset"],
+            json!((index * HONEST_CHUNK_BYTES) as u64),
+            "page {index} starts at the exact next byte"
+        );
+    }
     assert!(
         invocations
             .iter()
@@ -1144,16 +1211,7 @@ fn stale_daemon_unknown_op_is_translated() {
     );
 }
 
-// ----------------------------------------------------------------- stream path
-// Decision 19: the sealed spool arrives over one token-gated daemon-HTTP
-// octet-stream. These tests script the HTTP side with a real listener so the
-// manager's sync client, cap, completeness gate, and fallback are all pinned.
-
-fn stream_start_value(stream_token: &str, spool_bytes: u64) -> Value {
-    let mut value = start_value(2, &["L000002-a"], (2, 0, 0, 0), spool_bytes, None);
-    value["stream_token"] = json!(stream_token);
-    value
-}
+// ------------------------------------------------------ chunk RPC delivery
 
 fn env_with_daemon_http(label: &str, port: u16) -> Env {
     let store = Arc::new(SandboxStore::new());
@@ -1184,203 +1242,22 @@ fn env_with_daemon_http(label: &str, port: u16) -> Env {
     }
 }
 
-/// One-shot scripted HTTP responder: accepts a single connection, captures
-/// the request head, writes `status`/`headers`/`body` verbatim, and returns
-/// the captured head. Writes are tolerant so cap-abort tests (client closes
-/// early) cannot panic the server thread.
-fn spawn_stream_server(
-    status: &'static str,
-    headers: Vec<String>,
-    body: Vec<u8>,
-) -> (u16, std::thread::JoinHandle<String>) {
-    use std::io::Write as _;
-
-    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind stream server");
-    let port = listener.local_addr().expect("local addr").port();
-    let handle = std::thread::spawn(move || {
-        let (mut stream, _) = listener.accept().expect("accept");
-        let mut head = Vec::new();
-        let mut buf = [0u8; 1024];
-        while !head.windows(4).any(|window| window == b"\r\n\r\n") {
-            let Ok(read) = stream.read(&mut buf) else {
-                break;
-            };
-            if read == 0 {
-                break;
-            }
-            head.extend_from_slice(&buf[..read]);
-        }
-        let mut response = format!("HTTP/1.1 {status}\r\n").into_bytes();
-        for header in &headers {
-            response.extend_from_slice(header.as_bytes());
-            response.extend_from_slice(b"\r\n");
-        }
-        response.extend_from_slice(b"\r\n");
-        response.extend_from_slice(&body);
-        let _ = stream.write_all(&response);
-        let _ = stream.flush();
-        let _ = stream.shutdown(std::net::Shutdown::Both);
-        String::from_utf8_lossy(&head).into_owned()
-    });
-    (port, handle)
-}
-
 #[test]
-fn stream_delivery_pulls_the_spool_and_skips_chunk_paging() {
+fn chunk_paging_ignores_daemon_http_and_legacy_stream_token() {
     let stream = honest_delta_stream();
-    let (port, server) = spawn_stream_server(
-        "200 OK",
-        vec![
-            "content-type: application/octet-stream".to_owned(),
-            format!("content-length: {}", stream.len()),
-        ],
-        stream.clone(),
-    );
-    let env = env_with_daemon_http("stream-happy", port);
-    env.daemon
-        .push_start(stream_start_value("tok-secret", stream.len() as u64));
-    let dest = env.base.join("dest");
-
-    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
-    assert!(
-        value.get("error").is_none(),
-        "stream export failed: {value}"
-    );
-    assert_eq!(value["files_written"], json!(1));
-    assert_eq!(value["deletes_applied"], json!(1));
-    assert_eq!(read_to_string(&dest.join("src/a.rs")), "v2\n");
-
-    let head = server.join().expect("server thread");
-    assert!(
-        head.starts_with("GET /export/exp-test HTTP/1.1\r\n"),
-        "request line: {head}"
-    );
-    assert!(
-        head.to_ascii_lowercase()
-            .contains("x-eos-export-token: tok-secret"),
-        "token header rides the claim: {head}"
-    );
-    let ops: Vec<String> = env
-        .daemon
-        .invocations()
-        .into_iter()
-        .map(|(op, _)| op)
-        .collect();
-    assert_eq!(
-        ops,
-        vec!["export_layerstack".to_owned()],
-        "no read_export_chunk forwards on the stream path"
-    );
-}
-
-#[test]
-fn stream_rejection_aborts_with_dest_untouched() {
-    let (port, _server) = spawn_stream_server(
-        "404 Not Found",
-        vec!["content-length: 25".to_owned()],
-        b"export stream unavailable".to_vec(),
-    );
-    let env = env_with_daemon_http("stream-reject", port);
-    env.daemon.push_start(stream_start_value("tok-secret", 64));
-    let dest = env.base.join("dest");
-
-    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
-    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
-    assert!(
-        error_message(&value).contains("export stream rejected"),
-        "error names the rejection: {value}"
-    );
-    assert_eq!(dir_entries(&dest), Vec::<String>::new(), "dest untouched");
-}
-
-#[test]
-fn stream_truncation_aborts_before_any_render() {
-    let stream = honest_delta_stream();
-    let (port, _server) = spawn_stream_server(
-        "200 OK",
-        vec![format!("content-length: {}", stream.len() + 100)],
-        stream,
-    );
-    let env = env_with_daemon_http("stream-truncated", port);
-    env.daemon.push_start(stream_start_value("tok-secret", 64));
-    let dest = env.base.join("delta.tar.zst");
-
-    let value = dispatch(&env, &export_request("sbox-1", &dest, Some("tar-zst")));
-    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
-    assert!(
-        error_message(&value).contains("truncated"),
-        "error names the truncation: {value}"
-    );
-    assert!(!dest.exists(), "no archive written from a truncated stream");
-    assert_eq!(
-        dir_entries(&env.base),
-        Vec::<String>::new(),
-        "no temp sibling left behind"
-    );
-}
-
-#[test]
-fn stream_overrun_beyond_content_length_is_rejected() {
-    let stream = honest_delta_stream();
-    let declared = stream.len() - 10;
-    let (port, _server) = spawn_stream_server(
-        "200 OK",
-        vec![format!("content-length: {declared}")],
-        stream,
-    );
-    let env = env_with_daemon_http("stream-overrun", port);
-    env.daemon.push_start(stream_start_value("tok-secret", 64));
-    let dest = env.base.join("dest");
-
-    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
-    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
-    assert!(
-        error_message(&value).contains("more bytes than its content-length"),
-        "error names the overrun: {value}"
-    );
-    assert_eq!(dir_entries(&dest), Vec::<String>::new(), "dest untouched");
-}
-
-#[test]
-fn stream_cap_rejects_an_oversized_content_length_before_reading() {
-    let (port, _server) = spawn_stream_server(
-        "200 OK",
-        vec![format!("content-length: {}", 2u64 * 1024 * 1024 * 1024 + 1)],
-        Vec::new(),
-    );
-    let env = env_with_daemon_http("stream-cap", port);
-    env.daemon.push_start(stream_start_value("tok-secret", 64));
-    let dest = env.base.join("dest");
-
-    let value = dispatch(&env, &export_request("sbox-1", &dest, None));
-    assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
-    assert!(
-        error_message(&value).contains("export stream cap exceeded"),
-        "error names the cap: {value}"
-    );
-    assert_eq!(dir_entries(&dest), Vec::<String>::new(), "dest untouched");
-}
-
-#[test]
-fn missing_stream_token_falls_back_to_chunk_paging() {
-    let stream = honest_delta_stream();
-    let env = env_with_daemon_http("stream-fallback", 1);
-    env.daemon.push_start(start_value(
-        2,
-        &["L000002-a"],
-        (2, 0, 0, 0),
-        stream.len() as u64,
-        None,
-    ));
+    let env = env_with_daemon_http("rpc-only", 1);
+    let mut start = start_value_for_stream(2, &["L000002-a"], (1, 0, 1, 0), &stream, None);
+    start["stream_token"] = json!("legacy-token-must-be-ignored");
+    env.daemon.push_start(start);
     env.daemon.set_stream(stream);
     let dest = env.base.join("dest");
 
     let value = dispatch(&env, &export_request("sbox-1", &dest, None));
-    assert!(
-        value.get("error").is_none(),
-        "fallback export failed: {value}"
-    );
+    assert!(value.get("error").is_none(), "RPC export failed: {value}");
+    assert_eq!(value["files_written"], json!(1));
+    assert_eq!(value["deletes_applied"], json!(1));
     assert_eq!(read_to_string(&dest.join("src/a.rs")), "v2\n");
+
     let ops: Vec<String> = env
         .daemon
         .invocations()
@@ -1388,7 +1265,221 @@ fn missing_stream_token_falls_back_to_chunk_paging() {
         .map(|(op, _)| op)
         .collect();
     assert!(
-        ops.contains(&"read_export_chunk".to_owned()),
-        "a token-less start pages chunks: {ops:?}"
+        ops.first().is_some_and(|op| op == "export_layerstack")
+            && ops.iter().skip(1).all(|op| op == "read_export_chunk"),
+        "the unusable HTTP endpoint is ignored and every byte uses RPC: {ops:?}"
     );
+}
+
+#[test]
+fn malformed_chunk_envelopes_leave_the_directory_unchanged() {
+    let cases = [
+        (
+            "missing-chunk",
+            json!({ "offset": 0, "len": 3, "total": 3, "eof": true }),
+            "chunk field",
+        ),
+        (
+            "invalid-base64",
+            json!({ "chunk": "***", "offset": 0, "len": 3, "total": 3, "eof": true }),
+            "valid base64",
+        ),
+        (
+            "missing-offset",
+            json!({ "chunk": "YWJj", "len": 3, "total": 3, "eof": true }),
+            "offset field",
+        ),
+        (
+            "offset-mismatch",
+            chunk_value(b"abc", 1, 3, true),
+            "offset mismatch",
+        ),
+        (
+            "length-mismatch",
+            json!({ "chunk": "YWJj", "offset": 0, "len": 2, "total": 3, "eof": true }),
+            "length mismatch",
+        ),
+        (
+            "total-mismatch",
+            chunk_value(b"abc", 0, 4, true),
+            "total mismatch",
+        ),
+        (
+            "missing-eof",
+            json!({ "chunk": "YWJj", "offset": 0, "len": 3, "total": 3 }),
+            "eof field",
+        ),
+        (
+            "wrong-eof-type",
+            json!({ "chunk": "YWJj", "offset": 0, "len": 3, "total": 3, "eof": "yes" }),
+            "eof field",
+        ),
+        (
+            "empty-non-final",
+            chunk_value(b"", 0, 3, false),
+            "empty non-final",
+        ),
+        (
+            "chunk-error",
+            json!({ "error": { "kind": "not_found", "message": "missing export" } }),
+            "read_export_chunk failed",
+        ),
+    ];
+
+    for (label, chunk, expected_message) in cases {
+        let env = env(label);
+        let dest = env.base.join("dest");
+        std::fs::create_dir_all(&dest).expect("dest");
+        std::fs::write(dest.join("keep.txt"), "old\n").expect("seed");
+        env.daemon
+            .push_start(start_value(2, &["L000002-a"], (1, 0, 0, 0), 3, None));
+        env.daemon.push_chunk(chunk);
+
+        let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+        assert_eq!(
+            value["error"]["kind"],
+            json!(error_kind::OPERATION_FAILED),
+            "{label}: {value}"
+        );
+        assert!(
+            error_message(&value).contains(expected_message),
+            "{label}: {value}"
+        );
+        assert_eq!(read_to_string(&dest.join("keep.txt")), "old\n");
+        assert_eq!(dir_entries(&dest), ["keep.txt"]);
+    }
+}
+
+#[test]
+fn chunk_completeness_failures_preserve_an_existing_archive() {
+    let cases = [
+        ("early-eof", chunk_value(b"a", 0, 3, true), "truncated"),
+        (
+            "overrun",
+            chunk_value(b"abcd", 0, 3, true),
+            "exceeded expected total",
+        ),
+        (
+            "missing-final-eof",
+            chunk_value(b"abc", 0, 3, false),
+            "omitted EOF",
+        ),
+    ];
+
+    for (label, chunk, expected_message) in cases {
+        let env = env(label);
+        let dest = env.base.join("delta.tar.zst");
+        std::fs::write(&dest, b"old archive").expect("seed archive");
+        env.daemon
+            .push_start(start_value(2, &["L000002-a"], (1, 0, 0, 0), 3, None));
+        env.daemon.push_chunk(chunk);
+
+        let value = dispatch(&env, &export_request("sbox-1", &dest, Some("tar-zst")));
+        assert_eq!(
+            value["error"]["kind"],
+            json!(error_kind::OPERATION_FAILED),
+            "{label}: {value}"
+        );
+        assert!(
+            error_message(&value).contains(expected_message),
+            "{label}: {value}"
+        );
+        assert_eq!(std::fs::read(&dest).expect("archive"), b"old archive");
+        assert_eq!(dir_entries(&env.base), ["delta.tar.zst"]);
+    }
+}
+
+#[test]
+fn declared_size_is_required_and_capped_before_destination_creation() {
+    let mut missing = start_value(2, &["L000002-a"], (1, 0, 0, 0), 0, None);
+    missing
+        .as_object_mut()
+        .expect("start object")
+        .remove("spool_bytes");
+    let mut malformed = start_value(2, &["L000002-a"], (1, 0, 0, 0), 0, None);
+    malformed["spool_bytes"] = json!("three");
+    let oversized = start_value(
+        2,
+        &["L000002-a"],
+        (1, 0, 0, 0),
+        2u64 * 1024 * 1024 * 1024 + 1,
+        None,
+    );
+
+    for (label, start, expected_message) in [
+        ("missing-size", missing, "no spool_bytes"),
+        ("malformed-size", malformed, "no spool_bytes"),
+        ("oversized", oversized, "stream cap exceeded"),
+    ] {
+        let env = env(label);
+        let dest = env.base.join("dest");
+        env.daemon.push_start(start);
+
+        let value = dispatch(&env, &export_request("sbox-1", &dest, None));
+        assert_eq!(value["error"]["kind"], json!(error_kind::OPERATION_FAILED));
+        assert!(
+            error_message(&value).contains(expected_message),
+            "{label}: {value}"
+        );
+        assert!(!dest.exists(), "{label}: destination was not prepared");
+        assert_eq!(
+            env.daemon
+                .invocations()
+                .iter()
+                .filter(|(op, _)| op == "read_export_chunk")
+                .count(),
+            0,
+            "{label}: no chunk read after an invalid start"
+        );
+    }
+}
+
+#[test]
+fn complete_but_invalid_archive_bytes_do_not_mutate_outputs() {
+    let invalid = b"not a zstd archive".to_vec();
+
+    let dir_env = env("invalid-dir-archive");
+    let dir_dest = dir_env.base.join("dest");
+    std::fs::create_dir_all(&dir_dest).expect("dest");
+    std::fs::write(dir_dest.join("keep.txt"), "old\n").expect("seed");
+    dir_env.daemon.push_start(start_value_for_stream(
+        2,
+        &["L000002-a"],
+        (1, 0, 0, 0),
+        &invalid,
+        None,
+    ));
+    dir_env.daemon.set_stream(invalid.clone());
+    let dir_result = dispatch(&dir_env, &export_request("sbox-1", &dir_dest, None));
+    assert_eq!(
+        dir_result["error"]["kind"],
+        json!(error_kind::OPERATION_FAILED)
+    );
+    assert_eq!(read_to_string(&dir_dest.join("keep.txt")), "old\n");
+    assert_eq!(dir_entries(&dir_dest), ["keep.txt"]);
+
+    let archive_env = env("invalid-tar-archive");
+    let archive_dest = archive_env.base.join("delta.tar");
+    std::fs::write(&archive_dest, b"old archive").expect("seed archive");
+    archive_env.daemon.push_start(start_value_for_stream(
+        2,
+        &["L000002-a"],
+        (1, 0, 0, 0),
+        &invalid,
+        None,
+    ));
+    archive_env.daemon.set_stream(invalid);
+    let archive_result = dispatch(
+        &archive_env,
+        &export_request("sbox-1", &archive_dest, Some("tar")),
+    );
+    assert_eq!(
+        archive_result["error"]["kind"],
+        json!(error_kind::OPERATION_FAILED)
+    );
+    assert_eq!(
+        std::fs::read(&archive_dest).expect("archive"),
+        b"old archive"
+    );
+    assert_eq!(dir_entries(&archive_env.base), ["delta.tar"]);
 }

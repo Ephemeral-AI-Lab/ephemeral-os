@@ -19,28 +19,25 @@ use rustix::io::Errno;
 const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
 const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
-pub(crate) const MAX_STREAM_BYTES: u64 = 2 * 1024 * 1024 * 1024;
-const DEFAULT_MAX_DECOMPRESSED_BYTES: u64 = 8 * 1024 * 1024 * 1024;
-const DEFAULT_MAX_APPLY_ENTRIES: u64 = 1_000_000;
 const DECOMPRESSED_CAP_SENTINEL: &str = "export decompressed-byte cap exceeded";
 
-fn max_decompressed_bytes() -> u64 {
-    env_cap(
-        "EOS_EXPORT_MAX_DECOMPRESSED_BYTES",
-        DEFAULT_MAX_DECOMPRESSED_BYTES,
-    )
+/// Bomb caps for the host-side apply, injected by the gateway from
+/// `manager.export`; `Default` preserves the shipped policy.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExportApplyCaps {
+    pub max_stream_bytes: u64,
+    pub max_decompressed_bytes: u64,
+    pub max_apply_entries: u64,
 }
 
-fn max_apply_entries() -> u64 {
-    env_cap("EOS_EXPORT_MAX_ENTRIES", DEFAULT_MAX_APPLY_ENTRIES)
-}
-
-fn env_cap(name: &str, default: u64) -> u64 {
-    std::env::var(name)
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .filter(|value| *value > 0)
-        .unwrap_or(default)
+impl Default for ExportApplyCaps {
+    fn default() -> Self {
+        Self {
+            max_stream_bytes: 2 * 1024 * 1024 * 1024,
+            max_decompressed_bytes: 8 * 1024 * 1024 * 1024,
+            max_apply_entries: 1_000_000,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,13 +56,11 @@ pub(crate) struct DirApplyStats {
     pub(crate) bytes_written: u64,
 }
 
-/// Apply the compressed delta arriving from `delivery` onto `dest` (an
+/// Apply the complete compressed delta from `delivery` onto `dest` (an
 /// existing directory, already canonicalized by the dest guard). The
-/// validation pass consumes the delivery stream as it arrives — the only
-/// overlap is the socket buffer filling while this single worker drains it —
-/// teeing the compressed bytes into memory for the apply pass. No filesystem
-/// mutation happens until the whole stream has been received and validated;
-/// a transport error surfaces before any write.
+/// validation pass tees the compressed bytes into memory for the apply pass.
+/// No filesystem mutation happens until the whole archive has been
+/// validated.
 pub(crate) fn apply_dir_delta(
     delivery: &mut impl Read,
     dest: &Path,
@@ -90,11 +85,10 @@ pub(crate) fn apply_dir_delta(
     Ok(stats)
 }
 
-/// Render the delivery stream as an archive file while it arrives: `TarZst`
-/// writes the bytes as received; `Tar` decompresses them (capped).
-/// Complete-or-absent via a nonce-named sibling temp file and one rename —
-/// a transport error (truncation, overrun, timeout) aborts before the
-/// rename, so a torn stream never becomes a valid-looking archive.
+/// Render the complete delivery as an archive file: `TarZst` writes the bytes
+/// as received; `Tar` decompresses them (capped). Complete-or-absent via a
+/// nonce-named sibling temp file and one rename; a rendering error removes the
+/// temporary file before the destination is replaced.
 pub(crate) fn write_archive(
     delivery: &mut impl Read,
     dest: &Path,
