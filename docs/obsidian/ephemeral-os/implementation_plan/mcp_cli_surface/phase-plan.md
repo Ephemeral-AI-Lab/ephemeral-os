@@ -37,11 +37,10 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 3. Add the MCP adapter | complete | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | complete | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | complete | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
-| 6. Enforce daemon HTTP allowlist | in progress | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
+| 6. Enforce daemon HTTP allowlist | complete | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 5 are complete. Phase 6 is in progress; Phase 7 has not
-started.
+Phases 0 through 6 are complete. Phase 7 has not started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -630,7 +629,7 @@ crates/sandbox-console/tests/console/{catalog.rs,daemon_api.rs,health.rs,proxy.r
 
 ## Phase 6 — Enforce the daemon HTTP allowlist
 
-**Status:** in progress
+**Status:** complete
 
 **Depends on:** Phases 4 and 5
 
@@ -639,19 +638,19 @@ only the documented liveness, proxying, and list surface.
 
 ### Scope and tasks
 
-- [ ] Reduce `crates/sandbox-daemon/src/http/api.rs` to bounded JSON parsing
+- [x] Reduce `crates/sandbox-daemon/src/http/api.rs` to bounded JSON parsing
   and internal `file_list` dispatch only.
-- [ ] Change `http/router.rs` to an exact allowlist: `GET /health`, exact
+- [x] Change `http/router.rs` to an exact allowlist: `GET /health`, exact
   `/files/list` handling, and `/forward/...`; all other paths are `404`.
-- [ ] Delete `crates/sandbox-daemon/src/http/export.rs` and remove its module
+- [x] Delete `crates/sandbox-daemon/src/http/export.rs` and remove its module
   wiring.
-- [ ] Remove unused export stream constants/types from `sandbox-protocol` only
+- [x] Remove unused export stream constants/types from `sandbox-protocol` only
   after a whole-workspace caller search shows no internal references remain.
-- [ ] Preserve the standalone HTTP listener and `daemon_http` record metadata
+- [x] Preserve the standalone HTTP listener and `daemon_http` record metadata
   because health, forward, and list still need them.
-- [ ] Preserve forwarding parsing/proxy semantics, including isolated live
+- [x] Preserve forwarding parsing/proxy semantics, including isolated live
   workspace resolution, timeout/status mapping, headers, and upgrades.
-- [ ] Update daemon HTTP/console route documentation to declare the breaking
+- [x] Update daemon HTTP/console route documentation to declare the breaking
   removal.
 
 ### Files expected to change
@@ -667,29 +666,60 @@ README.md
 
 ### Acceptance criteria
 
-- [ ] `GET /health` returns exact fixed `200` JSON and does not require an
+- [x] `GET /health` returns exact fixed `200` JSON and does not require an
   initialized runtime state.
-- [ ] Shared and isolated `/forward/...` routes preserve body/path/query and
+- [x] Shared and isolated `/forward/...` routes preserve body/path/query and
   have documented `400`, `403`, `404`, `502`, and `504` error mapping.
-- [ ] `POST /files/list` works for root, published snapshot, and a live
+- [x] `POST /files/list` works for root, published snapshot, and a live
   workspace session; bad JSON/body-size/method handling preserves its
   documented `400`/`405` behaviour.
-- [ ] `POST /files/read`, `/files/write`, `/files/edit`, `/files/blame`,
+- [x] `POST /files/read`, `/files/write`, `/files/edit`, `/files/blame`,
   `/observability/snapshot`, `/export/x`, and every other removed operation
   route return `404`.
-- [ ] No daemon HTTP `export` module, route prefix, token header, or spool
+- [x] No daemon HTTP `export` module, route prefix, token header, or spool
   stream claim endpoint remains.
-- [ ] `cargo test -p sandbox-daemon` and HTTP-focused integration tests pass.
+- [x] `cargo test -p sandbox-daemon` and HTTP-focused integration tests pass.
 
-### Evidence to record
+### Evidence
 
-```text
-Commit/PR:
-Commands:
-HTTP allowlist/404 test results:
-Search proving export-route removal:
-Known deviations/waivers:
-```
+- Commit/PR: implementation commit `2ee1b4240` on the repository's direct
+  `main` workflow; no PR was created.
+- Primary command: `cargo test -p sandbox-daemon` passed all 60 tests. Its
+  seven HTTP integration cases exercise the listener/router rather than
+  calling operation handlers directly.
+- Supporting commands: `cargo test -p sandbox-runtime-workspace` passed 22;
+  `cargo test -p sandbox-runtime --test service_graph --test layerstack_export
+  --test observability_snapshot` passed 9 + 5 + 3; `cargo test -p
+  sandbox-manager --test manager_export` passed 31; and `cargo test -p
+  sandbox-protocol` passed 19.
+- Static checks: `cargo clippy -p sandbox-daemon -p
+  sandbox-runtime-workspace -p sandbox-runtime -p sandbox-protocol --tests --
+  -D warnings`, `cargo fmt --all -- --check`, and `git diff --check` all
+  passed.
+- HTTP allowlist proof: a stateless health test asserted the exact fixed
+  `200` JSON without constructing runtime state. File-list tests covered the
+  root, a published layer, and a live session plus malformed, non-object,
+  oversized, and wrong-method requests (`400`/`405`). Shared and isolated
+  forwarding tests preserved method, body, path, query, response headers,
+  prefix handling, and upgrade tunnelling while directly proving `400`,
+  `403`, `404`, `502`, and a real stalled-upstream `504`.
+- Removed-route proof: table-driven requests returned `404` for file
+  read/write/edit/blame, all five observability paths, `/export/x`, and other
+  non-allowlisted paths.
+- Export-removal search: `rg -n
+  'EXPORT_STREAM_|ClaimedExportStream|claim_export_stream|x-eos-export-token|stream_token|/export/'
+  crates --glob '!**/tests/**'` exited 1 with no production matches, and
+  `test ! -e crates/sandbox-daemon/src/http/export.rs` passed. A second
+  whole-workspace search classified the remaining matches as an intentional
+  legacy-field rejection test, negative-route documentation/tests, or
+  superseded historical design notes; no caller remained.
+- Export behavior regression proof: runtime paging/EOF cleanup and manager
+  success, failure, completeness, caps, atomic-output, archive, and directory
+  delta tests remained green after removal of the HTTP claim/token path.
+- Independent route and export audits reported no blocking findings. Known
+  deviations/waivers: none. Concurrent config, benchmark, gateway, manager,
+  live-E2E, experiment, and formatting edits were preserved and excluded
+  from the commit.
 
 ## Phase 7 — Release verification and cutover
 
@@ -789,6 +819,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 6 | Completed the exact daemon HTTP allowlist, removed HTTP export/token claims, retained RPC spool paging and forwarding semantics, and updated the public route documentation. | commit `2ee1b4240`; 60 daemon tests, 89 supporting regression tests, clippy/format/search checks, listener-level status/route proofs, and two independent audits |
 | 2026-07-10 | 6 | Started the daemon HTTP allowlist enforcement after confirming the Phase 4 and Phase 5 gates and re-reading the binding route, forwarding, file-list, export-removal, and caller-search contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 5 | Completed the console operation cutover to authenticated gateway RPC, exact list-only daemon proxy, canonical public catalogs, and server-only credential boundary. | commit `f2cc10651`; 29 console tests on default and Rust 1.85 toolchains, frontend production build, JSON-array parser check, lint/format/search/dependency checks, and independent review |
 | 2026-07-10 | 5 | Started the console RPC migration after confirming the Phase 2 and Phase 4 gates and re-reading the binding console, CLI, operation, and daemon HTTP contracts. | implementation and direct acceptance proof pending |
