@@ -1,4 +1,5 @@
 import { postJson } from "@/api/http";
+import { rpc, sandboxScope } from "@/api/rpc";
 
 export type FileEntryKind = "file" | "directory" | "symlink" | "other";
 
@@ -45,7 +46,7 @@ export function fileList(
   const args: Record<string, unknown> = {};
   if (path !== "") args["path"] = path;
   if (session) args["workspace_session_id"] = session;
-  return postJson<FileListResult>(fileUrl(sandboxId, "list"), args);
+  return postJson<FileListResult>(fileUrl(sandboxId), args);
 }
 
 export function fileRead(
@@ -59,11 +60,11 @@ export function fileRead(
   if (session) args["workspace_session_id"] = session;
   if (offset !== undefined) args["offset"] = offset;
   if (limit !== undefined) args["limit"] = limit;
-  return postJson<FileReadWindow>(fileUrl(sandboxId, "read"), args);
+  return rpc<FileReadWindow>("file_read", sandboxScope(sandboxId), args);
 }
 
 export function fileBlame(sandboxId: string, path: string): Promise<BlameResult> {
-  return postJson<BlameResult>(fileUrl(sandboxId, "blame"), { path });
+  return rpc<BlameResult>("file_blame", sandboxScope(sandboxId), { path });
 }
 
 export function fileWrite(
@@ -74,11 +75,11 @@ export function fileWrite(
 ): Promise<unknown> {
   const args: Record<string, unknown> = { path, content };
   if (session) args["workspace_session_id"] = session;
-  return postJson(fileUrl(sandboxId, "write"), args);
+  return rpc("file_write", sandboxScope(sandboxId), args);
 }
 
-function fileUrl(sandboxId: string, op: string): string {
-  return `/api/sandboxes/${encodeURIComponent(sandboxId)}/files/${op}`;
+function fileUrl(sandboxId: string): string {
+  return `/api/sandboxes/${encodeURIComponent(sandboxId)}/files/list`;
 }
 
 export interface WholeFile {

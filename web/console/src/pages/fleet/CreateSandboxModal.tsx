@@ -34,7 +34,7 @@ export function CreateSandboxModal({
   const { showError } = useErrorToast();
   const queryClient = useQueryClient();
 
-  const spec = findOperation(catalogs.data?.manager, "create_sandbox");
+  const spec = findOperation(catalogs.data?.management, "create_sandbox");
 
   const submit = async () => {
     if (!spec) return;

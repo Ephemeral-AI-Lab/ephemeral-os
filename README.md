@@ -31,7 +31,7 @@ sandbox-config
 |---|---|---|---|
 | `sandbox-gateway` | bin+lib | own the public gateway listener | own manager or runtime behavior or any CLI client code |
 | `sandbox-cli` | lib + 3 bins | provide feature-free `sandbox_cli::core` plus separately feature-gated management, runtime, and observability executables | provide a combined executable/set or let one binary enumerate another authority |
-| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and per-sandbox `daemon_http` (`/api/sandboxes/:id/health`, `/api/sandboxes/:id/files/:op`, `/api/sandboxes/:id/observability/:view`, `/s/:id` preview proxy) as a client peer over `sandbox_cli::core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
+| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and the allowed per-sandbox `daemon_http` surface (`/api/sandboxes/:id/health`, exact `/api/sandboxes/:id/files/list`, `/s/:id` preview proxy) as a client peer over `sandbox_cli::core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
 | `sandbox-manager-operations` | lib | manager CLI operation specs and catalog (spec-only) | contain dispatch or service code |
 | `sandbox-runtime-operations` | lib | runtime CLI operation specs and catalog (spec-only) | contain dispatch or service code |
 | `sandbox-observability-operations` | lib | observability CLI operation specs and catalog (spec-only) | contain dispatch or service code |

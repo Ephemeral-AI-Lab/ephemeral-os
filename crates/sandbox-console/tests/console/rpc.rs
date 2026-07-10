@@ -15,17 +15,30 @@ fn rpc_body(op: &str) -> serde_json::Value {
 }
 
 #[tokio::test]
-async fn one_shot_passes_result_through_verbatim() {
+async fn one_shot_injects_credentials_server_side_and_passes_result_through() {
     let gateway =
         support::FakeGateway::spawn(|_| vec![json!({"sandboxes": [{"id": "eos-1"}]}).to_string()])
             .await;
     let console = support::spawn_console_default(gateway.addr).await;
 
-    let response = support::post_rpc(console, &rpc_body("list_sandboxes")).await;
+    let mut request = rpc_body("list_sandboxes");
+    request[GATEWAY_AUTH_FIELD] = json!("browser-supplied-token");
+    request["_stream_logs"] = json!(true);
+    let response = support::post_rpc(console, &request).await;
 
     assert_eq!(response.status(), StatusCode::OK);
+    assert!(
+        response
+            .headers()
+            .values()
+            .all(|value| !String::from_utf8_lossy(value.as_bytes())
+                .contains(support::TEST_AUTH_TOKEN))
+    );
     let body = support::body_json(response).await;
     assert_eq!(body, json!({"sandboxes": [{"id": "eos-1"}]}));
+    let rendered = body.to_string();
+    assert!(!rendered.contains(support::TEST_AUTH_TOKEN));
+    assert!(!rendered.contains("browser-supplied-token"));
 
     let seen = gateway.requests();
     assert_eq!(seen.len(), 1);
@@ -39,6 +52,79 @@ async fn one_shot_passes_result_through_verbatim() {
             .is_some_and(|id| !id.is_empty()),
         "console must inject a request_id"
     );
+}
+
+#[tokio::test]
+async fn runtime_file_call_uses_authenticated_gateway_rpc() {
+    let gateway = support::FakeGateway::spawn(|_| {
+        vec![json!({
+            "path": "src/lib.rs",
+            "content": "pub fn run() {}",
+            "start_line": 1,
+            "num_lines": 1,
+            "total_lines": 1,
+            "bytes_read": 15,
+            "total_bytes": 15,
+            "next_offset": null,
+            "truncated": false,
+        })
+        .to_string()]
+    })
+    .await;
+    let console = support::spawn_console_default(gateway.addr).await;
+    let body = json!({
+        "op": "file_read",
+        "scope": {"kind": "sandbox", "sandbox_id": "eos-files"},
+        "args": {"path": "src/lib.rs", "offset": 1, "limit": 20},
+    });
+
+    let response = support::post_rpc(console, &body).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(support::body_json(response).await["path"], "src/lib.rs");
+    let seen = gateway.requests();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0]["op"], "file_read");
+    assert_eq!(
+        seen[0]["scope"],
+        json!({"kind": "sandbox", "sandbox_id": "eos-files"})
+    );
+    assert_eq!(
+        seen[0]["args"],
+        json!({"path": "src/lib.rs", "offset": 1, "limit": 20})
+    );
+    assert_eq!(seen[0][GATEWAY_AUTH_FIELD], support::TEST_AUTH_TOKEN);
+}
+
+#[tokio::test]
+async fn scoped_observability_call_uses_authenticated_gateway_rpc() {
+    let gateway = support::FakeGateway::spawn(|_| {
+        vec![json!({"view": "cgroup", "scope": "sandbox", "series": []}).to_string()]
+    })
+    .await;
+    let console = support::spawn_console_default(gateway.addr).await;
+    let body = json!({
+        "op": "get_observability",
+        "scope": {"kind": "sandbox", "sandbox_id": "eos-observe"},
+        "args": {"view": "cgroup", "scope": "sandbox", "window_ms": 30000},
+    });
+
+    let response = support::post_rpc(console, &body).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(support::body_json(response).await["view"], "cgroup");
+    let seen = gateway.requests();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0]["op"], "get_observability");
+    assert_eq!(
+        seen[0]["scope"],
+        json!({"kind": "sandbox", "sandbox_id": "eos-observe"})
+    );
+    assert_eq!(
+        seen[0]["args"],
+        json!({"view": "cgroup", "scope": "sandbox", "window_ms": 30000})
+    );
+    assert_eq!(seen[0][GATEWAY_AUTH_FIELD], support::TEST_AUTH_TOKEN);
 }
 
 #[tokio::test]

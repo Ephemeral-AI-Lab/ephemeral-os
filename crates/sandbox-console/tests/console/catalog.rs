@@ -4,12 +4,23 @@ use serde_json::Value;
 use crate::support;
 
 fn operation_names(catalog: &Value) -> Vec<String> {
-    catalog["operations"]
+    let mut names = catalog["operations"]
         .as_array()
         .expect("operations array")
         .iter()
         .map(|spec| spec["name"].as_str().expect("operation name").to_owned())
-        .collect()
+        .collect::<Vec<_>>();
+    names.sort();
+    names
+}
+
+fn names(values: &[&str]) -> Vec<String> {
+    let mut names = values
+        .iter()
+        .map(|value| (*value).to_owned())
+        .collect::<Vec<_>>();
+    names.sort();
+    names
 }
 
 #[tokio::test]
@@ -21,21 +32,55 @@ async fn catalog_returns_all_three_execution_spaces() {
     assert_eq!(response.status(), StatusCode::OK);
     let body = support::body_json(response).await;
 
-    let manager_ops = operation_names(&body["manager"]);
-    assert!(manager_ops.contains(&"create_sandbox".to_owned()));
-    assert!(manager_ops.contains(&"list_sandboxes".to_owned()));
-    assert!(manager_ops.contains(&"squash_layerstacks".to_owned()));
+    let mut keys = body
+        .as_object()
+        .expect("catalog response object")
+        .keys()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+    keys.sort();
+    assert_eq!(keys, ["management", "observability", "runtime"]);
 
-    let runtime_ops = operation_names(&body["runtime"]);
-    assert!(runtime_ops.contains(&"exec_command".to_owned()));
-    assert!(runtime_ops.contains(&"read_command_lines".to_owned()));
-    assert!(runtime_ops.contains(&"file_read".to_owned()));
-    assert!(!runtime_ops.contains(&"file_list".to_owned()));
-
-    let observability_ops = operation_names(&body["observability"]);
-    assert!(observability_ops.contains(&"snapshot".to_owned()));
-    assert!(observability_ops.contains(&"trace".to_owned()));
-    assert!(observability_ops.contains(&"layerstack".to_owned()));
+    assert_eq!(
+        operation_names(&body["management"]),
+        names(&[
+            "create_sandbox",
+            "destroy_sandbox",
+            "list_sandboxes",
+            "inspect_sandbox",
+            "squash_layerstacks",
+            "export_changes",
+        ])
+    );
+    assert_eq!(
+        operation_names(&body["runtime"]),
+        names(&[
+            "exec_command",
+            "write_command_stdin",
+            "read_command_lines",
+            "file_read",
+            "file_write",
+            "file_edit",
+            "file_blame",
+        ])
+    );
+    assert_eq!(
+        operation_names(&body["observability"]),
+        names(&["snapshot", "trace", "events", "cgroup", "layerstack"])
+    );
+    let file_edit = body["runtime"]["operations"]
+        .as_array()
+        .expect("runtime operations")
+        .iter()
+        .find(|operation| operation["name"] == "file_edit")
+        .expect("file_edit operation");
+    let edits = file_edit["args"]
+        .as_array()
+        .expect("file_edit arguments")
+        .iter()
+        .find(|arg| arg["name"] == "edits")
+        .expect("file_edit edits argument");
+    assert_eq!(edits["kind"], "json_array");
 
     assert_eq!(gateway.request_count(), 0, "catalog never hits the gateway");
 }

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-export type ArgKind = "string" | "integer" | "float" | "path";
+export type ArgKind = "string" | "integer" | "float" | "path" | "json_array";
 
 export interface ArgSpecDoc {
   name: string;
@@ -26,7 +26,7 @@ export interface CatalogDoc {
 }
 
 export interface Catalogs {
-  manager: CatalogDoc;
+  management: CatalogDoc;
   runtime: CatalogDoc;
   observability: CatalogDoc;
 }
@@ -80,6 +80,18 @@ export function parseArgValue(
       const parsed = Number(trimmed);
       if (!Number.isFinite(parsed)) {
         return { error: `${spec.name} must be a finite number` };
+      }
+      return { value: parsed };
+    }
+    case "json_array": {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        return { error: `${spec.name} must be a JSON array` };
+      }
+      if (!Array.isArray(parsed)) {
+        return { error: `${spec.name} must be a JSON array` };
       }
       return { value: parsed };
     }

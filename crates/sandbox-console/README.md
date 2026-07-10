@@ -13,10 +13,9 @@ RPC endpoint directly, never expose the gateway auth token to the browser.
 ```text
 POST /api/rpc                                  one-shot operation dispatch
 POST /api/rpc   (Accept: text/event-stream)    same, streaming _stream_logs as SSE
-GET  /api/catalog                              manager+runtime+observability catalogs
+GET  /api/catalog                              management+runtime+observability catalogs
 GET  /api/sandboxes/<id>/health                daemon_http /health probe
-POST /api/sandboxes/<id>/files/<op>            daemon_http file operation
-POST /api/sandboxes/<id>/observability/<view>  daemon_http observability view
+POST /api/sandboxes/<id>/files/list            daemon_http directory listing
 ANY  /s/<id>/shared/<port>/...                 preview proxy (prefix swap to /forward)
 ANY  /s/<id>/isolated=<ws-id>/<port>/...       preview proxy, isolated workspace
 GET  /*                                        SPA assets + client-route fallback

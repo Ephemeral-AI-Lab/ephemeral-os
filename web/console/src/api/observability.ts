@@ -1,5 +1,4 @@
-import { postJson } from "@/api/http";
-import { rpc, systemScope } from "@/api/rpc";
+import { rpc, sandboxScope, systemScope } from "@/api/rpc";
 
 export interface ResourceSample {
   ts: number;
@@ -60,11 +59,7 @@ export function fetchObservabilityView<T = unknown>(
   view: string,
   args: Record<string, unknown> = {},
 ): Promise<T> {
-  return postJson<T>(observabilityUrl(sandboxId, view), args);
-}
-
-function observabilityUrl(sandboxId: string, view: string): string {
-  return `/api/sandboxes/${encodeURIComponent(sandboxId)}/observability/${view}`;
+  return rpc<T>("get_observability", sandboxScope(sandboxId), { ...args, view });
 }
 
 export function inFlightCount(snapshot: SandboxSnapshot): number {

@@ -17,37 +17,20 @@ pub async fn handle(
         Ok(endpoint) => endpoint,
         Err(error) => return error.into_response(),
     };
-    proxy::forward_to_endpoint(&endpoint, &route.target, req).await
+    proxy::forward_to_endpoint(&endpoint, "/files/list", req).await
 }
 
 pub struct Route {
     sandbox_id: String,
-    target: String,
 }
 
 pub fn route(path: &str) -> Option<Route> {
     let rest = path.strip_prefix("/api/sandboxes/")?;
-    let (sandbox_id, rest) = rest.split_once('/')?;
-    if sandbox_id.is_empty() {
+    let sandbox_id = rest.strip_suffix("/files/list")?;
+    if sandbox_id.is_empty() || sandbox_id.contains('/') {
         return None;
     }
-    let target = match (
-        rest.strip_prefix("files/"),
-        rest.strip_prefix("observability/"),
-    ) {
-        (Some(op), None) => format!("/files/{}", segment(op)?),
-        (None, Some(view)) => format!("/observability/{}", segment(view)?),
-        _ => return None,
-    };
     Some(Route {
         sandbox_id: sandbox_id.to_owned(),
-        target,
     })
-}
-
-fn segment(value: &str) -> Option<&str> {
-    if value.is_empty() || value.contains('/') {
-        return None;
-    }
-    Some(value)
 }
