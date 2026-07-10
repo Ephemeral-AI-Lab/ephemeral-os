@@ -13,10 +13,9 @@ aliases:
 
 # MCP public surface and implementation design
 
-> **Ownership-layout note (operation-layout exempt, 2026-07-11):** The public
-> MCP behavior in this document remains applicable. Package names, source
-> paths, and ownership/dependency sections describing the pre-migration
-> implementation are historical and superseded by `operation-migration/spec.md`.
+> **Ownership-layout note (2026-07-11):** The public MCP behavior and current
+> implementation ownership in this document reflect the completed operation
+> migration.
 
 This document is the detailed design for the MCP boundary. It is the
 authoritative public-tool contract after the cutover. The sibling documents
@@ -88,8 +87,8 @@ roots, server-specific RPC methods, or a fourth all-operations server.
 
 - Tool names are exactly the public operation names below, in `snake_case`.
 - Tool descriptions, requiredness, argument names, defaults, and scalar types
-  are generated from the existing `CliOperationSpec` / `ArgSpec` catalog
-  crates. MCP does not define a second business-operation registry.
+  are generated from the merged catalog's `OperationSpec` / `ArgSpec`
+  declarations. MCP does not define a second business-operation registry.
 - JSON Schema uses `type: string` for `ArgKind::String` and `ArgKind::Path`,
   `type: integer`, `minimum: 0` for `ArgKind::Integer`, and `type: number` for
   `ArgKind::Float`. Operation-specific enum/range validation occurs in the
@@ -341,11 +340,11 @@ mechanics only. They must be absent from every MCP `tools/list` result:
 | `export_layerstack` | starts internal published-delta spool/chunk composition |
 | `read_export_chunk` | reads internal export chunks |
 
-## Target implementation structure
+## Current implementation structure
 
-`sandbox-mcp` is a new small workspace package. It imports catalogs and shared
-client/request-building functionality; it must not import the manager, daemon,
-or runtime-engine implementation crates.
+`sandbox-mcp` is a small workspace package. It imports the merged semantic
+catalog, shared operation client, and operation contract; it must not import
+CLI, manager, daemon, or runtime-engine implementation crates.
 
 ```text
 crates/
@@ -355,36 +354,35 @@ crates/
 │   │   ├── main.rs                 # Tokio entry point; parse fixed --set
 │   │   ├── lib.rs                  # public server start/run boundary
 │   │   ├── config.rs               # selected set + gateway config discovery
-│   │   ├── catalog.rs              # set -> exact catalog document
-│   │   ├── schema.rs               # ArgSpec -> MCP input JSON Schema
+│   │   ├── catalog.rs              # set -> exact semantic catalog document
+│   │   ├── schema.rs               # argument documents -> MCP input JSON Schema
 │   │   ├── server.rs               # initialize/ping/tools/list/tools/call
 │   │   └── tools.rs                # tool validation, scope mapping, gateway call
 │   └── tests/
 │       └── server.rs               # stdio contract tests with fake gateway
-├── sandbox-cli/
-│   └── src/core/request_builder.rs # shared value-based validation/request build
-├── sandbox-manager-operations/     # management catalog source
-├── sandbox-runtime-operations/     # runtime catalog source
-└── sandbox-observability-operations/ # observability catalog source
+└── sandbox-operations/
+    ├── catalog/                     # one feature-gated semantic catalog
+    ├── client/                      # request validation and gateway transport
+    └── contract/                    # adapter-neutral operation vocabulary
 ```
 
 The exact file split inside `sandbox-mcp/src/` may be compacted, but these
 responsibilities must remain separate: set selection/catalog access, schema
 projection, and gateway dispatch must not become duplicated operation logic.
 
-### Required implementation changes by location
+### Current implementation ownership by location
 
-| Location | Change |
+| Location | Ownership |
 | --- | --- |
-| workspace `Cargo.toml` | add `crates/sandbox-mcp`; add the maintained Rust MCP stdio-server dependency once at workspace scope if it is shared |
-| `crates/sandbox-mcp/Cargo.toml` | depend on `sandbox-cli` with **no** set feature, all three operation-catalog crates, `sandbox-protocol`, serde/JSON, Tokio, and the MCP library; do not depend on manager/runtime/daemon engines |
+| workspace `Cargo.toml` | registers `crates/sandbox-mcp` and the shared Rust MCP stdio-server dependency |
+| `crates/sandbox-mcp/Cargo.toml` | depends on `sandbox-operation-catalog` with all three domain features, `sandbox-operation-client`, `sandbox-operation-contract`, serde/JSON, Tokio, and the MCP library; it does not depend on adapters or application crates |
 | `crates/sandbox-mcp/src/config.rs` | require exactly one `--set management|runtime|observability`; accept normal `--gateway-socket` / `--gateway-auth-token` overrides and use existing config discovery |
-| `crates/sandbox-mcp/src/catalog.rs` | map the selected set to the existing catalog and cache its owned `CliOperationCatalogDocument`; no hand-maintained tool list |
+| `crates/sandbox-mcp/src/catalog.rs` | map the selected set to its merged-catalog domain and produce an owned `OperationCatalogDocument`; no hand-maintained tool list |
 | `crates/sandbox-mcp/src/schema.rs` | generate descriptions, required arrays, defaults, types, and `sandbox_id` additions from catalog data; reject internal/unlisted entries |
-| `crates/sandbox-mcp/src/tools.rs` | add value-object validation via `sandbox_cli::core`; mint request id; construct scope; send the validated concrete operation through `GatewayClient` |
+| `crates/sandbox-mcp/src/tools.rs` | resolve public routes, call value-based validation from `sandbox-operation-client`, construct scope, and send the validated concrete operation through `GatewayClient` |
 | `crates/sandbox-mcp/src/server.rs` | expose only MCP lifecycle/tool protocol handlers and turn result/error JSON into structured MCP content |
-| `crates/sandbox-cli/src/core/request_builder.rs` | add a value-based sibling of argv parsing so CLI and MCP share coercion, defaults, requiredness, operation lookup, scope construction, and error shape |
-| operation catalog crates | align the public squash spec with `squash_layerstacks`; remove workspace lifecycle specs from the runtime public catalog; move canonical `snapshot` ownership to observability catalog |
+| `crates/sandbox-operations/client/src/request.rs` | own adapter-neutral value validation, defaults, requiredness, scope construction, request ids, size enforcement, and error envelopes |
+| `crates/sandbox-operations/catalog/` | own all three semantic domains and public/internal route declarations, with per-domain features and cross-domain integrity tests |
 
 ### Tool-call sequence
 
@@ -392,14 +390,14 @@ projection, and gateway dispatch must not become duplicated operation logic.
 sequenceDiagram
     participant Client as MCP client
     participant MCP as sandbox-mcp (--set X)
-    participant Core as sandbox_cli::core
+    participant Shared as operation client
     participant Gateway as authenticated gateway
     participant Target as manager or daemon
 
     Client->>MCP: tools/call(name, arguments)
     MCP->>MCP: reject tool not in selected set
-    MCP->>Core: validate catalog-derived values + build request
-    Core-->>MCP: Request(op, request_id, scope, args)
+    MCP->>Shared: validate catalog-derived values + build request
+    Shared-->>MCP: OperationRequest(op, request_id, scope, args)
     MCP->>Gateway: authenticated JSON-line RPC
     Gateway->>Target: route system or sandbox request
     Target-->>Gateway: result or error envelope

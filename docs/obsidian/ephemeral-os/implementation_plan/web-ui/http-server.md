@@ -64,7 +64,7 @@ GET  /*                                        SPA assets + route fallback
 }
 ```
 
-The `scope` value is the protocol's `CliOperationScope` wire shape verbatim:
+The `scope` value is the merged contract's `OperationScope` wire shape verbatim:
 `{ "kind": "system" }` for manager/aggregate operations, `{ "kind":
 "sandbox", "sandbox_id": "..." }` for sandbox-scoped ones. A client-supplied
 `request_id` passes through; otherwise the console mints one.

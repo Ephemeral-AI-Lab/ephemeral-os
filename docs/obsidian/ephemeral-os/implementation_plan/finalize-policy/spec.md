@@ -443,12 +443,15 @@ crates/sandbox-runtime/operation/src/
 │           ├── run_file_op.rs                      40 →  ~45   (resolve through with_gated_session)
 │           ├── remount_session.rs                 155 → ~160   (resolve through with_gated_session)
 │           └── capture_session_changes.rs          29 →    0   (deleted; folded into finalize_session.rs as private capture — sole caller was the finalize path)
-├── cli_definition/
-│   ├── command_operations.rs                      390 → ~405   (+15: description rewrite, response fields incl. publish_rejected)
+├── operations/registry/
+│   ├── command_operations.rs                      390 → ~400   (+10: response fields incl. publish_rejected)
 │   └── workspace_session_operations.rs            209 → ~225   (+16: finalize_policy response field, dispatch retarget; NO --finalize-policy flag, NO rejection rename)
 ├── observability.rs                                 — →  +1    (RuntimeWorkspaceSnapshot.finalize_policy)
 └── services.rs                                      — →  ±10   (wiring: layerstack into WorkspaceSessionService; construction reorder file → base → layerstack → workspace_session → command)
 
+crates/sandbox-operations/catalog/src/runtime/command.rs  — → +5   (semantic description rewrite; contract remains projection-independent)
+crates/sandbox-operations/catalog/src/internal/runtime.rs — → ±0   (internal workspace-session routes remain non-public)
+crates/sandbox-cli/src/projection/runtime.rs               — → ±0   (NO --finalize-policy flag)
 crates/sandbox-runtime/namespace-execution/src/registry.rs   — → +~35  (MAX_TERMINAL_ENTRIES cap, oldest-terminal eviction dropping values)
 crates/sandbox-runtime/workspace/src/model.rs       485 →  485  (doc reword only at :103)
 crates/sandbox-observability/primitives/src/record.rs — →  +6   (finalize span/event names; attr doc reword :58,:60,:113)
@@ -648,8 +651,8 @@ classDiagram
    `with_gated_session`.
 5. Registry `MAX_TERMINAL_ENTRIES` retention (eviction drops values; value `Drop` closes pty
    and removes scratch dir).
-6. CLI specs + descriptions (no new flags); observability names/attrs; snapshot field; gate
-   doc correction.
+6. Merged catalog semantics + CLI projection (no new flags); observability
+   names/attrs; snapshot field; gate doc correction.
 7. Tests per §5; `cargo clippy --all-targets` + `cargo fmt` clean.
 
 ## 8. Acceptance criteria

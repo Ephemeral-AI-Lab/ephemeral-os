@@ -358,9 +358,12 @@ IO buffer sizes: 64 KiB drain buffers, 16 KiB HTTP head buffer
 Contracts: protocol op names, schema versions, RPC field names,
 handshake tokens, file modes (archive.rs 0o755/0o644), HTTP status
 codes, cgroup fs root, whiteout/opaque marker names.
-CLI catalog argument bounds (cli_definition/file_operations.rs:17
-READ_LIMIT_MAX): part of the operation contract surface, not runtime
-policy — the service-side cap is the configurable one.
+Operation argument bounds
+(`crates/sandbox-runtime/operation/src/operations/registry/file_operations.rs`,
+`READ_LIMIT_MAX`): the runtime registry enforces the bound described by the
+merged operation catalog; CLI spelling stays in the separate projection. This
+is contract surface, not runtime policy — the service-side cap is the
+configurable one.
 Diagnostics capture (engine.rs:30-31 log tail 200 / 8 KiB): deferred,
 revisit if container-failure triage ever needs more.
 LATEST_SAMPLE_WINDOW_MS (i64::MAX/4): internal sentinel, not a window.

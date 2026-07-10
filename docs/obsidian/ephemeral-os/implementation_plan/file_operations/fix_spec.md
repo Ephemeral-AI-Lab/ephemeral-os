@@ -66,7 +66,8 @@ operations-graph builder in
 
 ### P0-1 — `limit` range validation (0 / >2000 ⇒ `invalid_request`)
 
-- **Why:** the check exists at `cli_definition/file_operations.rs:278`
+- **Why:** the check exists in
+  `crates/sandbox-runtime/operation/src/operations/registry/file_operations.rs::parse_read_input`
   (`limit must be between 1 and 2000`) but every integration test constructs
   `ReadInput` directly and bypasses `parse_read_input`, so it is never
   exercised.

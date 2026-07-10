@@ -13,10 +13,10 @@ aliases:
 
 # CLI public surface and implementation design
 
-> **Ownership-layout note (operation-layout exempt, 2026-07-11):** The public
-> CLI behavior in this document remains applicable. Package names, source
-> paths, and ownership/dependency sections describing the pre-migration
-> implementation are historical and superseded by `operation-migration/spec.md`.
+> **Ownership-layout note (2026-07-11):** The public CLI behavior and current
+> implementation ownership in this document reflect the completed operation
+> migration. The bounded historical map below records only the replaced
+> pre-migration layout.
 
 This document defines the target command-line API and its implementation. The
 same public operation definitions project into MCP in [[mcp]]. Direct daemon
@@ -31,9 +31,9 @@ HTTP has a deliberately smaller allowlist in [[http]].
 
 | Set | Executable | Required selector | Operation catalog | Authority |
 | --- | --- | --- | --- | --- |
-| management | `sandbox-manager-cli` | none; individual operations accept an id where required | `sandbox-manager-operations` | host sandbox lifecycle, compaction, and published-delta export |
-| runtime | `sandbox-runtime-cli` | global `--sandbox-id ID` on every invocation | `sandbox-runtime-operations` | commands/files for exactly one sandbox |
-| observability | `sandbox-observability-cli` | `--sandbox-id ID` except aggregate `snapshot` | `sandbox-observability-operations` | read-only diagnostics |
+| management | `sandbox-manager-cli` | none; individual operations accept an id where required | `sandbox-operation-catalog` with `manager` | host sandbox lifecycle, compaction, and published-delta export |
+| runtime | `sandbox-runtime-cli` | global `--sandbox-id ID` on every invocation | `sandbox-operation-catalog` with `runtime` | commands/files for exactly one sandbox |
+| observability | `sandbox-observability-cli` | `--sandbox-id ID` except aggregate `snapshot` | `sandbox-operation-catalog` with `observability` | read-only diagnostics |
 
 The old command path `sandbox-manager-cli observability ...` is removed. The
 new `sandbox-observability-cli` is intentionally a separate executable so it
@@ -244,7 +244,7 @@ The public single-sandbox snapshot object has stable top-level fields
 `{ ts, sample_delta_ms, metrics, deltas }`; event/span/layer records preserve
 their daemon serialized form.
 
-## Target implementation structure
+## Current implementation structure
 
 The package owns presentation and gateway-client code only. All service
 behaviour stays in `sandbox-manager`, `sandbox-runtime`, and
@@ -255,11 +255,15 @@ crates/sandbox-cli/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs
-│   ├── core/
-│   │   ├── mod.rs                  # config types and common public core API
-│   │   ├── client.rs               # authenticated gateway JSON-line client
-│   │   ├── output.rs               # help, JSON output/error/progress rendering
-│   │   └── request_builder.rs      # catalog argv/value parsing + request scope
+│   ├── help.rs                     # catalog/projection-derived help rendering
+│   ├── input.rs                    # CLI argv parsing and request inputs
+│   ├── output.rs                   # JSON output/error/progress rendering
+│   ├── projection/
+│   │   ├── mod.rs                  # CLI-only projection types
+│   │   ├── document.rs             # compatibility catalog document
+│   │   ├── manager.rs              # manager flags, usage, and examples
+│   │   ├── runtime.rs              # runtime flags, usage, and examples
+│   │   └── observability.rs        # observability flags, usage, and examples
 │   ├── manager.rs                  # `sandbox-manager-cli` adapter
 │   ├── runtime.rs                  # `sandbox-runtime-cli` adapter
 │   ├── observability.rs            # `sandbox-observability-cli` adapter
@@ -268,19 +272,23 @@ crates/sandbox-cli/
 │       ├── sandbox-runtime-cli.rs  # thin Tokio main -> runtime::run_cli
 │       └── sandbox-observability-cli.rs # thin Tokio main -> observability::run_cli
 └── tests/
+    ├── compatibility.rs
+    ├── projection_integrity.rs
+    ├── request_builder.rs
     ├── manager.rs
     ├── runtime.rs
     └── observability.rs
 ```
 
-`Cargo.toml` has the package features and binaries below. Each adapter’s
-catalog dependency is optional and enabled only in its matching binary.
+`Cargo.toml` has the package features and binaries below. Each adapter feature
+forwards only its matching domain feature to the merged catalog.
 
 ```toml
 [features]
-manager = ["dep:sandbox-manager-operations"]
-runtime = ["dep:sandbox-runtime-operations"]
-observability = ["dep:sandbox-observability-operations"]
+default = []
+manager = ["dep:clap", "sandbox-operation-catalog/manager"]
+runtime = ["dep:clap", "sandbox-operation-catalog/runtime"]
+observability = ["dep:clap", "sandbox-operation-catalog/observability"]
 
 [[bin]]
 name = "sandbox-manager-cli"
@@ -298,9 +306,17 @@ path = "src/bin/sandbox-observability-cli.rs"
 required-features = ["observability"]
 ```
 
-`sandbox-mcp` and the browser console may depend on `sandbox-cli::core` with
-no set feature. They must not import the `manager`, `runtime`, or
-`observability` adapter module merely to build a request.
+Shared request construction and gateway transport belong to
+`sandbox-operation-client`; semantic types belong to
+`sandbox-operation-contract`. MCP and the browser console depend directly on
+those packages and the merged catalog. They do not depend on this CLI adapter.
+
+## Historical pre-migration implementation map
+
+> **Historical implementation map (operation-layout exempt, 2026-07-11):**
+> These tables record the replaced source layout and the relocation decisions
+> that produced the current structure above. They are evidence, not current
+> ownership guidance.
 
 ### Current-to-target file migration
 

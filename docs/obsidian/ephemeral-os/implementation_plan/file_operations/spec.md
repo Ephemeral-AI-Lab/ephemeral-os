@@ -703,12 +703,15 @@ Read-window output cap failures map to `OutputTooLarge`; they are not evidence
 that the source file itself is too large. `truncated` is only line-window
 pagination state, not byte-cap truncation.
 
-## CLI Definitions
+## Operation catalog, CLI projection, and runtime registry
 
-Add three specs and dispatchers to
-`crates/sandbox-runtime/operation/src/cli_definition/file_operations.rs`, and
-register them in `OPERATIONS`. Refresh the family `description` (blame is no
-longer the only member).
+The merged semantic catalog owns the three `OperationSpec` values and the
+expanded `file` family in
+`crates/sandbox-operations/catalog/src/runtime/file.rs`. The CLI argument
+spellings and usage live in
+`crates/sandbox-cli/src/projection/runtime.rs`. Runtime dispatchers are wired
+through
+`crates/sandbox-runtime/operation/src/operations/registry/file_operations.rs`.
 
 ```text
 sandbox-runtime-cli --sandbox-id ID file_read  --path FILE [--offset N] [--limit N] [--workspace-session-id ID]
@@ -718,13 +721,18 @@ sandbox-runtime-cli --sandbox-id ID file_edit  --path FILE --edits JSON   [--wor
 
 The protocol/request field is `path`; `--path` maps directly to it.
 
-`ArgKind` has no array variant, so `edits` is declared as a string in the spec
-and the dispatcher accepts **both** a real JSON array (the programmatic agent
-path, `request.args.edits`) and a JSON string (CLI ergonomics). `request_id` is
-read from `request.request_id`; `workspace_session_id` is parsed exactly as
+The merged contract declares `edits` as `ArgKind::JsonArray`; the registry
+accepts **both** a real JSON array (the programmatic agent path,
+`request.args.edits`) and a JSON string (CLI ergonomics). `request_id` is read
+from `request.request_id`; `workspace_session_id` is parsed exactly as
 `exec_command` does (empty ⇒ `None`).
 
 ## File-by-File Change Plan
+
+> **Historical landed change plan (operation-layout exempt, 2026-07-11):**
+> Service and namespace paths below record the implementation footprint at
+> landing time. Operation ownership is translated to the current merged
+> catalog/projection/registry layout.
 
 ```text
 EDIT sandbox-runtime-layerstack              LayerStack::amend_path (exclusive-lock read→transform→publish); expose classified projection read-window + bounded file read
@@ -755,7 +763,9 @@ EDIT sandbox-daemon      runner/mod.rs             Run -> Shell; add --shell/--f
 EDIT workspace          NamespaceRuntime + WorkspaceRuntimeService  file-op launch (peer of mount_overlay)
 NEW  workspace_session  service/impls/run_file_op.rs  resolve entry, delegate to workspace runtime
 EDIT services.rs                             no FileService::open signature change
-EDIT cli_definition/file_operations.rs       FILE_READ/WRITE/EDIT specs + dispatch + register
+EDIT crates/sandbox-operations/catalog/src/runtime/file.rs                  FILE_READ/WRITE/EDIT semantic specs + routes
+EDIT crates/sandbox-cli/src/projection/runtime.rs                           FILE_READ/WRITE/EDIT CLI projection
+EDIT crates/sandbox-runtime/operation/src/operations/registry/file_operations.rs dispatch + register
 
 NEW  crates/sandbox-runtime/operation/tests/file_operations.rs  four-quadrant coverage (see Verification)
 ```

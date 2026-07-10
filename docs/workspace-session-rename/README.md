@@ -1,11 +1,16 @@
 # Spec: `sandbox-runtime-workspace` profile-vocabulary rename + cleanup
 
-Status: **approved** — ready to implement
+Status: **completed and archived** — retained as rename-history evidence
 Scope: `crates/sandbox-runtime/workspace/src` + cross-crate call sites in
 `operation`, `daemon`, `observability`.
 Depends on: commit `10b70de64` (`NetworkProfile` / `shared` rename)
 Behavior change: **none** — renames, dead-code/duplicate removal, and an
 append-only DB column rename that preserves existing data.
+
+> Paths, line numbers, and imperative wording below record the completed
+> rename as it was planned and landed. Operation-ownership references are
+> translated to the current registry; the rest is historical evidence, not
+> current ownership guidance.
 
 ## Overview
 
@@ -159,7 +164,7 @@ outside `workspace/src`:
 | `operation/src/services.rs:6,34` | `profile::WorkspaceProfileManager` → `session::WorkspaceManager` (import + ctor) |
 | `operation/src/observability.rs:16` | `RuntimeWorkspaceSnapshot.profile: NetworkProfile` → `network` (typed field); `snapshot.rs:32` build reads `session.handle.network` (see DB-migration section) |
 | `operation/src/command/service/core.rs:131` | `CreateWorkspaceRequest { profile: … }` → `network:` |
-| `operation/src/cli_definition/workspace_session_operations.rs:138-143` | builds `CreateWorkspaceRequest` → `network:` |
+| `operation/src/operations/registry/workspace_session_operations.rs` | builds `CreateSessionRequest` → `network:` |
 | `operation/tests/*`, `daemon/tests/unit/observability.rs:758` | `WorkspaceHandle`/`CreateWorkspaceRequest` `profile:` literals → `network:` (~50 sites) |
 | `workspace/tests/unit/service.rs:9,101` | `session::{ResourceCaps, WorkspaceManager}` + ctor + `CreateWorkspaceRequest.network` |
 | `workspace/tests/unit/model.rs:13,27-28,42,…` | `session::{HolderNsFds, MountedWorkspace}` + `.network` literals |

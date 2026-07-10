@@ -430,13 +430,19 @@ $ blame logo.png
 
 ## 11.1 The `file` operation domain (blame)
 
-Blame is exposed as a runtime CLI operation in a new `file` domain, mirroring
-`workspace_session` and the `cli_definition` structure. **Only `blame` ships
-now**; `read`/`write`/`edit` plug into the same `FileService` + store later.
+> **Landed-history note (2026-07-11):** Blame was the only `file` operation in
+> this phase. `read`/`write`/`edit` subsequently landed against the same
+> `FileService`; the ownership map below reflects the current merged
+> contract/catalog/projection/registry architecture.
 
-**Location & files** (`crates/sandbox-runtime/operation/src/file/`) — **5 files**
-(one op does not warrant the template's `model.rs`/`impls/` split; add them when
-read/write/edit land):
+Blame is exposed as a runtime CLI operation in the `file` domain. The merged
+catalog owns its semantic `OperationSpec` and route, the CLI projection owns
+its spelling, and the runtime registry owns dispatch.
+
+**Historical service footprint for this phase**
+(`crates/sandbox-runtime/operation/src/file/`) — **5 files** (one op did not
+warrant the template's `model.rs`/`impls/` split; those operations landed
+later):
 ```
 file/
   mod.rs                pub use error::FileError, service::FileService
@@ -444,14 +450,13 @@ file/
   service.rs            mod core, store; pub use core::FileService
   service/core.rs       FileService { store }; blame(&str) -> Result<Vec<BlameRange>, FileError>; BlameRange
   service/store.rs      FileAuditabilityStore (ndjson + in-memory index): append, latest
-cli_definition/file_operations.rs   FILE_FAMILY + FILE_BLAME_SPEC + dispatch_file_blame
 ```
 
 **CLI:** `sandbox-runtime-cli --sandbox-id ID file_blame --path FILE`. The op **name is one token**
-(`file_blame`) and the cli path is `["runtime", "file_blame"]` — the gateway
+(`file_blame`) and the CLI path is `["runtime", "file_blame"]` — the gateway
 dispatches by op name and a **family is never a path segment** (e.g.
-`create_workspace_session` is in family `workspace_session` but its path is
-`["runtime","create_workspace_session"]`). A 3-segment `["runtime","file","blame"]`
+`exec_command` is in family `command` but its path is
+`["runtime","exec_command"]`). A 3-segment `["runtime","file","blame"]`
 **cannot route.** Output:
 `{ "path": "<file>", "ranges": [ { "start_line", "line_count", "owner" } ] }`.
 
@@ -477,13 +482,15 @@ verification/reconcile only and is **not** on blame's path.
 `LayerPath::parse` the audit key uses (`model/mod.rs` strips `./`, `\`, trailing
 `/`), or `./src/x` misses an event keyed `src/x` → false `NotFound`.
 
-**Wiring (compatibility — verified against the code):**
-- `cli_definition/mod.rs`: `pub(crate) mod file_operations;`.
-- `operation.rs`: add `&file_operations::FILE_FAMILY` to `CLI_FAMILIES`; add
-  `file_operations::operation_entries()` to `operation_entry_groups`, and **change
-  its return type `[&'static [OperationEntry]; 2]` → the slice
-  `&'static [&'static [OperationEntry]]`** (matching `CLI_FAMILIES`) so future
-  families are a 1-line append, not an arity bump.
+**Wiring (current ownership — verified against the code):**
+- `crates/sandbox-operations/catalog/src/runtime/file.rs` owns `FILE_FAMILY`,
+  `FILE_BLAME_SPEC`, and the runtime-owned route; the merged runtime catalog
+  aggregates it.
+- `crates/sandbox-cli/src/projection/runtime.rs` owns the public command path, usage,
+  examples, and `--path` binding.
+- `crates/sandbox-runtime/operation/src/operations/registry/file_operations.rs` binds
+  `FILE_BLAME_SPEC` to `dispatch_file_blame`; `operations/registry/mod.rs`
+  includes its public entry group.
 - `services.rs`: `SandboxRuntimeOperations` gains `pub file: Arc<FileService>`;
   `new()` takes a 4th arg. Update the **6 `::new(` call sites** in `tests/`:
   `exec_command.rs:408`, `workspace_session.rs:388` & `:557`,

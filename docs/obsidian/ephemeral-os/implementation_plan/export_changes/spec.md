@@ -71,9 +71,10 @@ already owns the base bytes.
 Policy:
 
 ```text
-Export is manager-owned. The daemon halves register cli: None (the
-squash_layerstack precedent): dispatchable by name, invisible to the
-runtime CLI catalog. The runtime surface gains nothing.
+Export is manager-owned. The daemon halves are canonical internal runtime
+routes (the squash-layerstack precedent): absent from the public catalog and
+CLI projection, rejected by the public manager router, and invoked only by
+manager-owned direct daemon forwarding. The runtime CLI surface gains nothing.
 Export is read-only on layer-stack storage: no staging, no manifest change,
 no sidecars; the spool lives under scratch and dies with the export.
 Export exports the published state; live session upperdirs are invisible.
@@ -134,8 +135,10 @@ format      optional, String, default "dir".
                                tar-zst  write the stream as received
 ```
 
+The merged catalog owns semantics and routing independently of CLI spelling:
+
 ```rust
-pub const EXPORT_CHANGES_SPEC: CliOperationSpec = CliOperationSpec {
+pub const EXPORT_CHANGES_SPEC: OperationSpec = OperationSpec {
     name: "export_changes",
     family: "management",
     summary: "Export a sandbox's published changes to a host path.",
@@ -146,14 +149,6 @@ pub const EXPORT_CHANGES_SPEC: CliOperationSpec = CliOperationSpec {
                   export_layerstack and read_export_chunk requests to the \
                   sandbox daemon.",
     args: EXPORT_CHANGES_ARGS,
-    cli: Some(CliSpec {
-        path: &["manager", "export_changes"],
-        usage: "sandbox-manager-cli export_changes --sandbox-id ID --dest PATH [--format dir|tar|tar-zst]",
-        examples: &[
-            "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /home/me/myproject",
-            "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /tmp/delta.tar.zst --format tar-zst",
-        ],
-    }),
     related: &["inspect_sandbox", "squash_layerstacks"],
 };
 
@@ -162,22 +157,35 @@ const EXPORT_CHANGES_ARGS: &[ArgSpec] = &[
         "sandbox_id",
         ArgKind::String,
         "Sandbox id.",
-        Some(ArgCliSpec { flag: Some("--sandbox-id"), positional: None }),
     ),
     ArgSpec::required(
         "dest",
         ArgKind::Path,
         "Absolute host destination: directory for dir format, archive file for tar formats.",
-        Some(ArgCliSpec { flag: Some("--dest"), positional: None }),
     ),
     ArgSpec::optional(
         "format",
         ArgKind::String,
         "Output format: dir, tar, or tar-zst.",
         Some("dir"),
-        Some(ArgCliSpec { flag: Some("--format"), positional: None }),
     ),
 ];
+```
+
+The manager CLI projection separately binds those semantic argument names to
+flags while preserving the public syntax:
+
+```rust
+OperationProjection {
+    name: "export_changes",
+    path: &["manager", "export_changes"],
+    usage: "sandbox-manager-cli export_changes --sandbox-id ID --dest PATH [--format dir|tar|tar-zst]",
+    examples: &[
+        "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /home/me/myproject",
+        "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /tmp/delta.tar.zst --format tar-zst",
+    ],
+    arguments: EXPORT_CHANGES_ARGUMENTS,
+}
 ```
 
 The manager CLI stays a pure catalog client: it builds this one request and
@@ -247,15 +255,17 @@ content, and writes a full compressed spool — a strictly heavier call.
 Scope and trace follow the `squash_layerstacks` idiom exactly: the manager CLI
 op arrives system-scoped with `sandbox_id` in args, and the dispatcher
 rebuilds each forwarded runtime request sandbox-scoped
-(`CliOperationScope::sandbox(...)`). Every forward — start and all chunks —
+(`OperationScope::sandbox(...)`). Every forward — start and all chunks —
 reuses the manager request's `request_id`, so the whole export is one trace
 across manager and daemon spans.
 
-### Daemon operations (runtime side, both `cli: None`)
+### Daemon operations (runtime side, both internal-only)
 
-Two daemon-local runtime ops back the manager operation, registered like
-`squash_layerstack` — dispatch-by-name entries in the layerstack group, no
-catalog spec, no runtime CLI visibility, no new entry mechanism.
+Two daemon-local runtime ops back the manager operation. The merged catalog
+registers them as internal runtime routes, the runtime registry supplies their
+dispatch-by-name entries in the layerstack group, and the CLI projection omits
+them. They have no public `OperationSpec`, no CLI visibility, and no new entry
+mechanism.
 
 **`export_layerstack`** (no args): singleflight per layerstack root.
 Acquire an `acquire_snapshot` lease → winner fold → emit the tar-zst spool
@@ -476,21 +486,20 @@ Invariants:
    (same axis as the file-operations sessionless backend).
 6. **The detach stays; the manager is the only host writer** — export never
    mounts, binds, or re-attaches anything host-visible in the daemon.
-   `export_layerstack`/`read_export_chunk` are `cli: None`, so the runtime
-   CLI catalog rejects them client-side (`request_builder.rs:280-289`; test
-   in `sandbox-runtime-cli/tests/smoke.rs`), but the daemon dispatches by
-   name across all registered ops regardless of `cli` (`operation.rs:59-70`)
-   and the gateway does no catalog validation — so anyone who can reach the
-   gateway can invoke them by name. This does not weaken the invariant: both
-   ops only WRITE under scratch and only DELIVER bytes to their caller;
-   neither has a host-visible write path. The worst a name-dispatch caller
-   gets is a spool under scratch (a nuisance the boot reap and `export_id`
-   keying bound) and its own bytes back. The daemon-HTTP stream route obeys
-   the same law: it writes nothing host-visible, unlinks only its own spool
-   under scratch, and hands spool bytes solely to the caller holding the
-   single-use token that only the authenticated start forward can mint —
-   an HTTP caller without the token gets a uniform 404 and nothing else.
-   Delivery to the host filesystem happens only in the manager, full stop.
+   `export_layerstack`/`read_export_chunk` are internal routes, absent from
+   public catalog documents and CLI projections. The public manager router
+   rejects their canonical names; the manager-owned export dispatcher reaches
+   the daemon through the direct forwarding port and the daemon registry then
+   resolves them by name. This does not weaken the invariant: both ops only
+   WRITE under scratch and only DELIVER bytes to their trusted caller; neither
+   has a host-visible write path. A malformed internal call can at worst leave
+   a spool under scratch, bounded by boot reap and `export_id` keying. The
+   daemon-HTTP stream route obeys the same law: it writes nothing host-visible,
+   unlinks only its own spool under scratch, and hands spool bytes solely to
+   the caller holding the single-use token that only the authenticated start
+   forward can mint — an HTTP caller without the token gets a uniform 404 and
+   nothing else. Delivery to the host filesystem happens only in the manager,
+   full stop.
 7. **Archive atomicity** — a tar-format dest is complete-or-absent:
    manager-side temp + one rename, so a manager crash mid-apply leaves the
    nonce-named `.tmp` sibling (never a half-written dest) for the operator
@@ -537,9 +546,10 @@ Invariants:
 ## A. Expected file/folder structure with LoC change
 
 > **Historical implementation estimate (operation-layout exempt, 2026-07-11):**
-> The paths and package names in this estimated footprint describe the tree in
-> which export originally landed. They are retained as design-history evidence,
-> not current ownership guidance.
+> Service paths in this estimated footprint describe the tree in which export
+> originally landed. Operation package labels are translated to the current
+> merged catalog/registry layout so this archived estimate does not imply stale
+> ownership.
 
 `(new ~N)` = new file with estimated LoC; `(+N)` = lines added to existing
 file. Calibrated against existing module sizes (`projection/apply.rs` 157,
@@ -560,10 +570,10 @@ crates/sandbox-runtime/layerstack/
 
 crates/sandbox-runtime/operation/
 ├── src/layerstack/service/impls/export.rs  (new ~130)  export_layerstack + read_export_chunk
-│                                                       daemon ops, BOTH cli: None (squash
-│                                                       precedent — rejected by the runtime CLI
-│                                                       catalog, still name-dispatchable at the
-│                                                       daemon, inv. 6): singleflight per root
+│                                                       daemon ops, BOTH internal-only routes
+│                                                       (squash precedent — absent from public
+│                                                       catalog/projection, name-dispatchable at
+│                                                       the daemon, inv. 6): singleflight per root
 │                                                       (begin_flight precedent, second fold
 │                                                       rejected), lease scope (fold → spool),
 │                                                       in-memory spool registry {export_id →
@@ -576,24 +586,21 @@ crates/sandbox-runtime/operation/
 │                                                       <scratch_root>/.export/ on daemon start
 │                                                       (the session reap never walks scratch —
 │                                                       H1); wired beside boot_reap_then_sweep
-├── src/operation.rs                        (+4)        two entries join the layerstack group
+├── src/operations/registry/mod.rs          (+4)        two entries join the layerstack group
 └── tests/layerstack_export.rs (new ~180)   daemon-op dispatch: spool + paging to eof, empty
                                             delta, singleflight, spool replacement
 
-crates/sandbox-operations/manager/
-└── src/lib.rs                              (+55)       EXPORT_CHANGES_SPEC + args + CLI under
-                                                        the existing "management" family; joins
-                                                        SPECS (spec-only crate — dispatch stays
-                                                        in sandbox-manager); checkpoint_squash's
-                                                        related list gains "export_changes".
-                                                        MUST land in the SAME change as the
-                                                        dispatcher entry (no SPECS↔OPERATIONS
-                                                        parity test exists today, and
-                                                        OBSERVABILITY_SNAPSHOT already drifts —
-                                                        H6); the parity test lands with it
+crates/sandbox-operations/catalog/
+└── src/manager.rs                          (+55)       EXPORT_CHANGES_SPEC + args under the
+                                                        existing "management" family; joins the
+                                                        merged semantic catalog and route set
+                                                        (dispatch stays in sandbox-manager).
+                                                        The related list gains "export_changes";
+                                                        catalog↔registry parity is gated in the
+                                                        same change (H6)
 
 crates/sandbox-manager/
-├── src/operation/management/service/impls/export_changes.rs (new ~80)
+├── src/operations/management/service/impls/export_changes.rs (new ~80)
 │                                                       the manager transaction
 │                                                       (checkpoint_squash.rs is the template):
 │                                                       parse sandbox_id/dest/format, absolute-
@@ -609,12 +616,12 @@ crates/sandbox-manager/
 │                                                       (ensure-dir, skip-unchanged, mtime stamp,
 │                                                       .wh./.opq application) or archive write
 │                                                       (temp + rename)
-├── src/operation/cli_definition/management_operations.rs (+3)
+├── src/operations/registry/management_operations.rs (+3)
 │                                                       import + ManagerOperationEntry::new(
 │                                                       &EXPORT_CHANGES_SPEC,
 │                                                       dispatch_export_changes) in OPERATIONS
-│                                                       (lands with the catalog spec — H6)
-├── src/operation/management/mod.rs         (+1)        re-export dispatch_export_changes
+│                                                       (lands with the catalog route — H6)
+├── src/operations/management/mod.rs        (+1)        re-export dispatch_export_changes
 ├── Cargo.toml                              (+3)        tar.workspace, zstd.workspace, base64
 └── tests/manager_export.rs (new ~280)      catalog + forward loop against a fake AND a
                                             HOSTILE daemon; apply semantics: winners,
@@ -623,7 +630,7 @@ crates/sandbox-manager/
                                             archive atomicity; security: reject `..`/absolute/
                                             hardlink entries and symlink-then-traverse, dest
                                             deny-list, decompression + entry-count caps (inv.
-                                            9); SPECS↔OPERATIONS parity assertion (H6)
+                                            9); catalog↔registry parity assertion (H6)
 
 crates/sandbox-observability/
 └── src/record.rs                           (+3)        LAYERSTACK_EXPORT
@@ -635,7 +642,7 @@ Cargo.toml (workspace)                      (+1)        zstd — NET-NEW (`tar` 
                                                         also gains base64.workspace (it does not
                                                         depend on base64 today; the runner does)
 
-sandbox-runtime-cli / sandbox-runtime-operations         (+0)
+sandbox-runtime-cli / runtime catalog domain             (+0)
 sandbox-protocol / sandbox-daemon / sandbox-gateway / sandbox-config   (+0)
 ```
 

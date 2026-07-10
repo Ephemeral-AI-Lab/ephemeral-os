@@ -98,6 +98,10 @@ docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	639	134	immutable-evidence	sandbox-observability-operations
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	639	168	immutable-evidence	sandbox_cli::core
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	639	187	immutable-evidence	cli-operation-e2e-live-test
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	84	immutable-evidence	cli-operation-e2e-live-test
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	208	immutable-evidence	internal/migration
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	230	immutable-evidence	crates/sandbox-manager/src/operation
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	267	immutable-evidence	crates/sandbox-cli/src/core
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	42	4	before-state	crates/sandbox-operation-core
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	42	39	before-state	crates/sandbox-operation-adapters
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	93	128	before-state	operation vocabulary + sandbox-protocol
