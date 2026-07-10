@@ -599,7 +599,7 @@ one commit.
 - [x] Verify the freshness watch covers
   `crates/sandbox-operations/{contract,catalog}` and
   `crates/sandbox-observability/{primitives,application}`.
-- [ ] Repoint E2E source assertions
+- [x] Repoint E2E source assertions
   (`e2e/manager/management/squash/helpers.py`) to
   `crates/sandbox-operations/catalog/src/manager.rs` and
   `crates/sandbox-manager/src/operations/registry/...`.
@@ -630,6 +630,7 @@ one commit.
 | 2026-07-11 | Ownership-language audit follow-up | `cargo test -p sandbox-cli -p sandbox-console -p sandbox-operation-contract -p sandbox-operation-catalog --all-features`; `! git diff --name-only -z --diff-filter=ACMRT \| xargs -0 rg -n 'sandbox-manager-operations\|sandbox-runtime-operations\|sandbox-observability-operations\|sandbox_cli::core\|cli-operation-e2e-live-test\|crates/sandbox-operations/(manager\|runtime\|observability)\|crates/sandbox-manager/src/operation/\|get_observability\|Services::from_config\|--workspace-root\|Build a wire request'`; `python3 -m py_compile e2e/core/config.py e2e/runtime/daemon_http/test_daemon_http.py`; `cargo fmt --all -- --check`; `git diff --check` | CLI compatibility 2/2, help 3/3, manager 14/14, observability 10/10, projection 2/2, request builder 6/6, and runtime 10/10 passed; console 39/39, catalog integrity 4/4 plus domain tests 6/6, and contract 12/12 passed. The current-file stale scan returned no match; Python compilation, formatting, and diff checks passed. | None. |
 | 2026-07-11 | Script and CI package selectors | `! rg -n --pcre2 'cargo[^\n]*(?:-p\|--package)(?:=\|\s+)sandbox-(?:manager\|runtime\|observability)-operations' --hidden --glob '!docs/**' --glob '!target/**' --glob '!.git/**' --glob '!**/__pycache__/**' .` | No executable script, CI file, manifest, or source file selects a deleted per-domain operation package. | None. |
 | 2026-07-11 | Gateway freshness watch | `rg -n 'crates/sandbox-operations/(contract\|catalog)\|crates/sandbox-observability/(primitives\|application)' bin/start-sandbox-docker-gateway` | Lines 127–130 watch all four required source trees: operation contract, operation catalog, observability primitives, and observability application. | None. |
+| 2026-07-11 | E2E source-assertion cutover | `bin/start-sandbox-docker-gateway --rebuild-binary`; `cd e2e && E2E_REBUILD_BINARY=0 python3 -m pytest manager/management/squash/test_squash_smoke.py -k SMK-05 -q -s` | The gateway rebuild packaged `sandbox-daemon-linux-arm64` with SHA-256 `47986ca25a0a582cc47439f20af02b0560680089eaf82cfeeaa43d0e782577e2` and restarted successfully. `SMK-05` resolved the merged manager catalog, CLI projection, manager registry, runtime handler, and internal catalog sources and passed: 1 passed, 9 deselected. | None. |
 
 ---
 
