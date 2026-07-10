@@ -48,17 +48,21 @@ injection pattern. It lands in **phase 2** with `ProtocolLimits`, not phase
 
 ## Global definition of done (applies to every phase, in addition to its own criteria)
 
-- [ ] `cargo build` succeeds
-- [ ] `cargo test` (whole workspace) passes
-- [ ] `cargo clippy --all-targets` passes with no new violations
-- [ ] `cargo fmt` produces no diff
-- [ ] No inline comments added to production code; no test code under any `src/`
-- [ ] `git diff config/prd.yml` is empty
-- [ ] Crate boundaries hold: no leaf crate (`sandbox-protocol`,
+Verified per phase (see each phase's "Global definition of done checked"
+line for the phase-scoped evidence); final state after phase 4:
+
+- [x] `cargo build` succeeds
+- [x] `cargo test` (whole workspace) passes — 109 ok-suites / 0 failures
+- [x] `cargo clippy --all-targets` passes with no new violations — 0
+- [x] `cargo fmt` produces no diff — `cargo fmt --check` clean
+- [x] No inline comments added to production code; no test code under any `src/`
+- [x] `git diff config/prd.yml` is empty
+- [x] Crate boundaries hold: no leaf crate (`sandbox-protocol`,
       `sandbox-observability`, `sandbox-runtime/layerstack`,
       `namespace-execution`) gains a `sandbox-config` dependency
       (`grep -l sandbox-config crates/{sandbox-protocol,sandbox-observability}/Cargo.toml crates/sandbox-runtime/{layerstack,namespace-execution}/Cargo.toml` → empty)
-- [ ] Phase committed to `main`
+- [x] Phase committed to `main` — `7994fca50`, `593200001`, `c02181c39`,
+      `955d7a8be`
 
 ---
 
@@ -556,10 +560,19 @@ gateway bring-up and the whole suite exercise these paths.
 
 ## Cross-phase completion checklist (the plan is done when)
 
-- [ ] All four consolidation phases + phase 0 committed to `main`, each gated
-- [ ] `test_phase_knobs.py` contains zero skip markers
-- [ ] The maximal YAML shape in `spec.md` loads through `sandbox-config` in
+- [x] All four consolidation phases + phase 0 committed to `main`, each gated
+      — phase 0 (pre-plan), 1 `7994fca50`, 2 `593200001`, 3 `c02181c39`,
+      4 `955d7a8be`, each with its acceptance boxes evidenced above
+- [x] `test_phase_knobs.py` contains zero skip markers —
+      `grep -c "skip" config/test_phase_knobs.py` → 0 (all three phase
+      classes implemented; 32-test config lane green)
+- [x] The maximal YAML shape in `spec.md` loads through `sandbox-config` in
       one piece (a final schema test deserializes the full example document)
-- [ ] `spec.md` and `cli-e2e-test-spec.md` statuses flipped from
+      — `lib_tests::maximal_config_shape_loads_through_every_section_schema`
+      deserializes and validates all seven sections (minus the decision-11
+      drift: no `daemon.http.export`, no `token_ttl_s`)
+- [x] `spec.md` and `cli-e2e-test-spec.md` statuses flipped from
       `implementation_plan` to done/landed, with any drift between spec and
-      landed reality recorded in their decision logs
+      landed reality recorded in their decision logs — both frontmatters now
+      `status: landed`; spec.md decision 12 records the phases 2-4 deltas,
+      cli-e2e-test-spec.md gained a phases 2-4 landed-reality log

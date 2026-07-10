@@ -5,7 +5,7 @@ tags:
   - config
   - e2e-test
   - implementation-plan
-status: implementation_plan
+status: landed
 updated: 2026-07-10
 ---
 
@@ -372,3 +372,21 @@ Drift between this spec and what landed, per the plan's cross-phase rule:
    pattern with baseline restore), so the case carries the `config` marker
    and runs serially with this family; it no longer reads ambient operator
    env.
+
+## Decision log — phases 2-4 landed reality (2026-07-10)
+
+1. **P2-F2 probes the layerstack delta view through the authenticated
+   internal call** (`get_observability {"view": "layerstack", ...}`) against
+   a materialized layer id (ids not prefixed `B`), since the base layer
+   answers no delta and the public CLI carries no delta-limit argument.
+2. **TestPhase3 adaptations** (detailed in the plan's phase-3 drift note):
+   `file_read`/`file_list` service defaults are probed via internal calls
+   because the CLI fills catalog argument defaults client-side; terminal
+   retention eviction is pinned as the *empty terminal read* on the evicted
+   id; the admission case drives `max_active: 1` with a yielded sleep.
+3. **Phase 4 stayed out of this family as designed** — its exclusion
+   rationale held: the family's own gateway bring-up exercised the enlarged
+   manager schema plus the (absent → defaults) `gateway` section live, and
+   the console got a scripted smoke recorded in the plan instead of a
+   sandbox-cli case. `test_phase_knobs.py` carries zero skip markers; the
+   config lane runs 32 tests green.

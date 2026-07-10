@@ -1,11 +1,11 @@
 """B — consolidation-phase knobs, keyed to the config consolidation spec.
 
-Skip-marked placeholders that activate per phase: landing a phase includes
-unskipping its class and implementing the contracts named in each docstring.
-Phase 4 (gateway/console sections) is intentionally absent: gateway bind/PID
-knobs are exercised implicitly by this family's own gateway bring-up,
-max_concurrent_connections has no deterministic CLI observable, and the
-console is outside this suite's sandbox-cli charter.
+All three phase classes are live (phases 1-3 landed); each test names its
+contract in its docstring. Phase 4 (gateway/console sections) is
+intentionally absent: gateway bind/PID knobs are exercised implicitly by
+this family's own gateway bring-up, max_concurrent_connections has no
+deterministic CLI observable, and the console is outside this suite's
+sandbox-cli charter.
 """
 
 import hashlib

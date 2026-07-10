@@ -4,7 +4,7 @@ tags:
   - ephemeral-os
   - config
   - implementation-plan
-status: implementation_plan
+status: landed
 updated: 2026-07-10
 ---
 
@@ -430,3 +430,21 @@ correct by construction for published container ports.
     additionally enforced against the daemon-declared `spool_bytes` before
     the first page. The maximal `prd.yml` shape above still shows the
     pre-drift `daemon.http` subsection — read it minus decision 11.
+12. **Phases 2-4 landed (2026-07-10); spec status flipped to landed.** All
+    four tiers shipped per the implementation plan, whose per-phase drift
+    notes are the detailed record. Deltas from this spec worth naming: the
+    leaf `namespace-execution` consumes one `ExecutionCaps` value type
+    (engine/registry/pty/launcher take injected caps; the freeze budget
+    rides workspace `ResourceCaps` into `QuiesceSpec`); the CLI fills
+    catalog argument defaults client-side, so `read_lines_default` knobs
+    govern the raw operation surface (e2e probes them via authenticated
+    internal calls); `gateway.auth_token` is `#[serde(skip)]` so the secret
+    can never ride YAML; gateway socket precedence is flag > env
+    (`SANDBOX_GATEWAY_SOCKET`) > YAML > default, the pre-existing env
+    override retained; `manager.local_daemon` lands as schema plus an
+    injectable `LocalDaemonTimeouts` — `LocalSandboxDaemonInstaller` has no
+    production constructor today, so no live wiring path exists to it; the
+    installer's per-probe `READINESS_IO_TIMEOUT` stays a const (only the
+    poll cadence and stop timeout are knobs). The full maximal shape (minus
+    decision 11) is pinned by the schema test
+    `maximal_config_shape_loads_through_every_section_schema`.
