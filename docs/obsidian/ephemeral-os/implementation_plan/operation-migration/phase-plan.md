@@ -55,7 +55,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | approved | 2026-07-11 | 2026-07-11 | Codex |
 | 7 | Update documentation, scripts, law statements | approved | 2026-07-11 | 2026-07-11 | Codex |
-| 8 | Enforce boundaries and cut over | blocked | — | — | — |
+| 8 | Enforce boundaries and cut over | in progress | 2026-07-11 | — | — |
 
 ## Standing gate (every phase)
 
@@ -704,7 +704,7 @@ one commit.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
-| | | | | |
+| 2026-07-11 | Phase 8 started | Dashboard entry criteria and Phase 7 acceptance checklist; post-approval `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-cli --all-features && cargo test -p sandbox-console --all-features && cargo test -p sandbox-operation-contract --all-features && cargo test -p sandbox-operation-catalog --all-features` | Phase 7 is approved and every Phase 7 acceptance item is checked. The post-approval workspace check passed; CLI passed 47/47, console 39/39, contract 12/12, and catalog 10/10. Phase 8 is unblocked. | None. |
 
 ---
 
