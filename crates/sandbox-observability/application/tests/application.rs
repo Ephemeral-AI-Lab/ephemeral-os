@@ -321,6 +321,18 @@ fn configured_queries_fold_cgroup_events_and_trace_records() {
         trace["spans"][0]["children"][0]["children"][0]["events"][0]["event"]["name"],
         "lease.released"
     );
+
+    let old_trace = dispatch_operation(
+        &input,
+        &request("trace", json!({ "trace_id": "req-old" })),
+    )
+    .into_json_value();
+    assert_eq!(old_trace["trace"], "req-old");
+    assert_eq!(old_trace["spans"][0]["span"]["span"], "old-root");
+    assert_eq!(
+        old_trace["spans"][0]["events"][1]["event"]["attrs"]["revision"],
+        "r4"
+    );
 }
 
 #[test]
