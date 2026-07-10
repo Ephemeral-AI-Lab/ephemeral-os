@@ -8,8 +8,9 @@ use sandbox_operation_contract::{
 };
 use serde_json::{Map, Number, Value};
 
-use crate::projection::document::{operation_projection, CatalogDocument};
-use crate::projection::{ArgumentProjection, OperationProjection};
+use crate::projection::document::{
+    operation_projection, ArgumentProjectionDocument, CatalogDocument, OperationProjectionDocument,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildRequestInput {
@@ -85,7 +86,7 @@ fn projected_operation<'a>(
 ) -> Result<
     (
         &'a OperationSpecDocument,
-        &'a OperationProjection,
+        &'a OperationProjectionDocument,
         OperationScopePolicy,
     ),
     RequestBuildError,
@@ -169,7 +170,7 @@ pub fn resolve_runtime_sandbox_id(sandbox_id: Option<String>) -> Result<String, 
 
 fn build_args(
     spec: &OperationSpecDocument,
-    projection: &OperationProjection,
+    projection: &OperationProjectionDocument,
     argv: &[String],
 ) -> Result<Value, RequestBuildError> {
     let mut values = Map::new();
@@ -211,7 +212,7 @@ fn build_args(
 
 fn require_cli_args(
     spec: &OperationSpecDocument,
-    projection: &OperationProjection,
+    projection: &OperationProjectionDocument,
     values: &Map<String, Value>,
 ) -> Result<(), RequestBuildError> {
     for arg in &spec.args {
@@ -233,7 +234,7 @@ fn require_cli_args(
 fn insert_arg_value(
     values: &mut Map<String, Value>,
     arg: &ArgSpecDocument,
-    projection: &ArgumentProjection,
+    projection: &ArgumentProjectionDocument,
     value: &str,
 ) -> Result<(), RequestBuildError> {
     if values.contains_key(&arg.name) {
@@ -298,9 +299,9 @@ fn validate_arg_value(
 }
 
 fn find_flag_arg<'a>(
-    projection: &'a OperationProjection,
+    projection: &'a OperationProjectionDocument,
     flag: &str,
-) -> Result<&'a ArgumentProjection, RequestBuildError> {
+) -> Result<&'a ArgumentProjectionDocument, RequestBuildError> {
     projection
         .arguments
         .iter()
@@ -310,7 +311,7 @@ fn find_flag_arg<'a>(
 
 fn semantic_argument<'a>(
     spec: &'a OperationSpecDocument,
-    projection: &ArgumentProjection,
+    projection: &ArgumentProjectionDocument,
 ) -> Result<&'a ArgSpecDocument, RequestBuildError> {
     spec.args
         .iter()
@@ -325,10 +326,15 @@ fn semantic_argument<'a>(
 
 fn cli_arg_name<'a>(
     arg: &'a ArgSpecDocument,
-    projection: Option<&'a ArgumentProjection>,
+    projection: Option<&'a ArgumentProjectionDocument>,
 ) -> &'a str {
     projection
-        .and_then(|projection| projection.flag.or(projection.positional))
+        .and_then(|projection| {
+            projection
+                .flag
+                .as_deref()
+                .or(projection.positional.as_deref())
+        })
         .unwrap_or(&arg.name)
 }
 

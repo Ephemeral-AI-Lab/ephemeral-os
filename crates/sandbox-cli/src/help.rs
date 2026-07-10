@@ -4,8 +4,10 @@ use sandbox_operation_contract::{
     OperationSpecDocument,
 };
 
-use crate::projection::document::{argument_projection, operation_projection, CatalogDocument};
-use crate::projection::{ArgumentProjection, OperationProjection};
+use crate::projection::document::{
+    argument_projection, operation_projection, ArgumentProjectionDocument, CatalogDocument,
+    OperationProjectionDocument,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperationSearchResult {
@@ -128,7 +130,7 @@ pub fn search_operation_help(catalog: &CatalogDocument, query: &str) -> Vec<Oper
 fn render_operation_page(
     family: Option<&OperationFamilyDocument>,
     spec: &OperationSpecDocument,
-    cli: &OperationProjection,
+    cli: &OperationProjectionDocument,
 ) -> String {
     let mut output = String::new();
     output.push_str(&spec.name);
@@ -147,7 +149,7 @@ fn render_operation_page(
     output.push('\n');
 
     output.push_str("Usage\n");
-    push_indented_line(&mut output, 2, cli.usage);
+    push_indented_line(&mut output, 2, &cli.usage);
     output.push('\n');
 
     output.push_str("Arguments\n");
@@ -162,7 +164,7 @@ fn render_operation_page(
 
     if !cli.examples.is_empty() {
         output.push_str("Examples\n");
-        for example in cli.examples {
+        for example in &cli.examples {
             push_indented_line(&mut output, 2, example);
         }
         output.push('\n');
@@ -179,7 +181,11 @@ fn render_operation_page(
     trim_trailing_blank_lines(output)
 }
 
-fn push_argument(output: &mut String, arg: &ArgSpecDocument, cli: Option<&ArgumentProjection>) {
+fn push_argument(
+    output: &mut String,
+    arg: &ArgSpecDocument,
+    cli: Option<&ArgumentProjectionDocument>,
+) {
     push_indented_line(
         output,
         2,
@@ -246,8 +252,11 @@ fn catalog_title(operation_execution_space: OperationDomain) -> &'static str {
     }
 }
 
-fn cli_arg_name<'a>(arg: &'a ArgSpecDocument, cli: Option<&'a ArgumentProjection>) -> &'a str {
-    cli.and_then(|cli| cli.flag.or(cli.positional))
+fn cli_arg_name<'a>(
+    arg: &'a ArgSpecDocument,
+    cli: Option<&'a ArgumentProjectionDocument>,
+) -> &'a str {
+    cli.and_then(|cli| cli.flag.as_deref().or(cli.positional.as_deref()))
         .unwrap_or(&arg.name)
 }
 
