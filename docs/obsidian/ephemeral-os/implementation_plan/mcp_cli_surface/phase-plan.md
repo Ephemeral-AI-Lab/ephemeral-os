@@ -34,14 +34,13 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | 0. Contract baseline | complete | none | public surface, architecture, and migration constraints documented |
 | 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
 | 2. Consolidate the CLI package | complete | 1 | one package, three separately grantable binaries |
-| 3. Add the MCP adapter | in progress | 1, 2 | one set-configured stdio server with three registrations |
+| 3. Add the MCP adapter | complete | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | not started | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | not started | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 through 2 are complete. Phase 3 is in progress; no later phase has
-started.
+Phases 0 through 3 are complete. No later phase has started.
 
 ## Fixed decisions and non-negotiable invariants
 
@@ -326,7 +325,7 @@ deleted: crates/sandbox-runtime-cli/
 
 ## Phase 3 — Add the MCP adapter
 
-**Status:** in progress
+**Status:** complete
 
 **Depends on:** Phases 1 and 2
 
@@ -335,25 +334,25 @@ stdio server without duplicating operation semantics.
 
 ### Scope and tasks
 
-- [ ] Add `crates/sandbox-mcp` to the workspace with a maintained Rust MCP
+- [x] Add `crates/sandbox-mcp` to the workspace with a maintained Rust MCP
   stdio-server library.
-- [ ] Implement `--set management|runtime|observability`; reject absent,
+- [x] Implement `--set management|runtime|observability`; reject absent,
   unknown, or caller-supplied per-request set selection.
-- [ ] Implement only MCP `initialize`, `notifications/initialized`, `ping`,
+- [x] Implement only MCP `initialize`, `notifications/initialized`, `ping`,
   `tools/list`, and `tools/call`.
-- [ ] Select exactly one existing catalog for each process; do not create an
+- [x] Select exactly one existing catalog for each process; do not create an
   MCP-specific business-operation list.
-- [ ] Generate tool descriptions and JSON schemas from `ArgSpec`; add required
+- [x] Generate tool descriptions and JSON schemas from `ArgSpec`; add required
   runtime `sandbox_id` and optional observability `snapshot` sandbox selector
   according to [[mcp]].
-- [ ] Add value-object request construction in `sandbox-cli::core` so MCP and
+- [x] Add value-object request construction in `sandbox-cli::core` so MCP and
   CLI share defaults, validation, operation lookup, and scope construction.
-- [ ] Route management/system, runtime/sandbox, aggregate snapshot, and
+- [x] Route management/system, runtime/sandbox, aggregate snapshot, and
   sandbox-scoped observability exactly as specified; keep internal `view`
   hidden.
-- [ ] Preserve gateway failure `kind`, `message`, and `details` in structured
+- [x] Preserve gateway failure `kind`, `message`, and `details` in structured
   MCP tool errors.
-- [ ] Add fake-gateway stdio contract tests for all three server registrations.
+- [x] Add fake-gateway stdio contract tests for all three server registrations.
 
 ### Files expected to change
 
@@ -367,34 +366,92 @@ crates/sandbox-cli/src/core/request_builder.rs
 
 ### Acceptance criteria
 
-- [ ] `sandbox-mcp --set management`, `--set runtime`, and
+- [x] `sandbox-mcp --set management`, `--set runtime`, and
   `--set observability` each start a valid stdio MCP server; an invalid set
   fails before it reads tool calls.
-- [ ] `tools/list` outputs the exact Phase 1 operation names for the selected
+- [x] `tools/list` outputs the exact Phase 1 operation names for the selected
   set and no names from another set.
-- [ ] Runtime MCP schemas require `sandbox_id`; observability schemas require
+- [x] Runtime MCP schemas require `sandbox_id`; observability schemas require
   it except for aggregate `snapshot`; no schema contains request id, gateway
   token, scope, daemon endpoint, `view`, or export token.
-- [ ] MCP tools omit `file_list`, `create_workspace_session`, and
+- [x] MCP tools omit `file_list`, `create_workspace_session`, and
   `destroy_workspace_session`.
-- [ ] A fake-gateway `tools/call` proves correct wire request operation and
+- [x] A fake-gateway `tools/call` proves correct wire request operation and
   scope for management, runtime, aggregate snapshot, and one scoped
   observability view.
-- [ ] Invalid values are rejected before gateway dispatch and return the
+- [x] Invalid values are rejected before gateway dispatch and return the
   standard structured error envelope.
-- [ ] Gateway operation failures preserve original error `kind`, `message`,
+- [x] Gateway operation failures preserve original error `kind`, `message`,
   and `details` in MCP tool-error content.
-- [ ] `cargo test -p sandbox-mcp` passes.
+- [x] `cargo test -p sandbox-mcp` passes.
 
 ### Evidence to record
 
-```text
-Commit/PR:
-Commands:
-tools/list fixtures:
-tools/call routing fixtures:
-Known deviations/waivers:
-```
+- Commits: `7bee540ca` (workspace package, shared value request builder,
+  catalog-derived schemas, fixed-set server, and initial stdio coverage) and
+  `e15839cda` (structured-content, hidden-schema, and startup-exit hardening).
+  PR: not applicable; this repository's `CLAUDE.md` requires direct work on
+  `main`.
+- MCP compatibility proof: `rmcp = 0.11.0` is pinned as the newest maintained
+  release that compiles on the workspace's Rust 1.85 MSRV. A real
+  `cargo +1.85.0 check -p sandbox-mcp` passed. Releases from `0.12.0` onward
+  require newer Rust or contain syntax unavailable on 1.85. The server
+  explicitly advertises MCP `2025-06-18`, the version that defines structured
+  tool content, and advertises only the `tools` capability.
+- Stdio contract proof: `cargo test -p sandbox-mcp` passed all 7 integration
+  tests. Real child processes completed initialize/initialized and ping;
+  accepted each fixed set; returned exact schemas and set-local tools; rejected
+  absent, unknown, and combined sets with exit `2` while stdin remained open;
+  returned `-32601` for completion, prompt, and resource methods; and kept tool
+  `content` empty with one object in `structuredContent`.
+- `tools/list` fixtures: management returned exactly `create_sandbox`,
+  `destroy_sandbox`, `list_sandboxes`, `inspect_sandbox`,
+  `squash_layerstacks`, `export_changes`; runtime returned exactly
+  `exec_command`, `write_command_stdin`, `read_command_lines`, `file_read`,
+  `file_write`, `file_edit`, `file_blame`; observability returned exactly
+  `snapshot`, `trace`, `events`, `cgroup`, `layerstack`. Every schema was
+  compared with its selected catalog for description, properties,
+  requiredness, native defaults, and types, with `additionalProperties: false`
+  and a recursive hidden-field assertion. The public observability
+  `cgroup.scope` argument is the documented semantic selector, not protocol
+  routing scope.
+- `tools/call` routing fixtures: management `create_sandbox` became
+  `op=create_sandbox`, system scope, with catalog default `count=1`; runtime
+  `exec_command` became sandbox scope with caller `sandbox_id` removed from
+  args; aggregate `snapshot` remained `op=snapshot`, system scope; scoped
+  `trace` became internal `op=get_observability`, sandbox scope, with hidden
+  `view=trace`; and `file_edit` retained a native JSON edit array. Each request
+  contained a generated UUID and gateway authentication outside the tool
+  schema.
+- Validation/error proof: missing and wrong-typed selectors, wrong scalar
+  types, unknown/hidden arguments, cross-set tools, `file_list`, workspace
+  lifecycle, and internal observability names all returned a structured
+  `invalid_request` envelope without a fake-gateway connection. Gateway
+  operation errors were returned as the unchanged object with original `kind`,
+  `message`, and `details`; connection, malformed JSON, and non-object response
+  cases returned structured `connection_error` or `protocol_error` envelopes.
+- Shared-core/catalog regressions: `cargo test -p sandbox-cli --all-features`
+  passed all 42 integration tests, including 8 value-builder tests; `cargo test
+  -p sandbox-protocol -p sandbox-manager-operations -p
+  sandbox-runtime-operations -p sandbox-observability-operations` passed all
+  26 focused tests. This includes the catalog-owned native `JsonArray` type for
+  `file_edit.edits`; item-shape validation remains in the canonical runtime
+  operation adapter as required by [[mcp]].
+- Boundary/quality proof: a Cargo metadata/tree assertion passed for one
+  `sandbox-mcp` binary, exact catalog/core dependencies, and no manager,
+  runtime, daemon, or observability engine dependency. `cargo +1.85.0 clippy
+  -p sandbox-mcp -p sandbox-cli -p sandbox-protocol -p
+  sandbox-manager-operations -p sandbox-runtime-operations -p
+  sandbox-observability-operations --all-targets --all-features -- -D
+  warnings`, `cargo fmt --all -- --check`, and `git diff --check` passed. An
+  independent contract/security review reported no remaining actionable
+  findings.
+- Known deviations/waivers: none. The mandatory Docker gateway binary rebuild
+  remains reserved for Phase 7. Scope note: `7bee540ca` was created
+  concurrently and also captured separately authored configuration-plan and
+  squash-report changes already present in the shared worktree. Repository
+  preservation rules prohibit rewriting that concurrent history; the changes
+  were retained and are not Phase 3 evidence.
 
 ## Phase 4 — Replace export HTTP streaming with gateway RPC chunks
 
@@ -666,6 +723,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 3 | Completed the fixed-set catalog-driven MCP adapter, shared value request construction, structured error/result boundary, and real stdio/fake-gateway coverage for all three registrations. | commits `7bee540ca`, `e15839cda`; 75 focused tests, Rust 1.85 check, exact fixture/routing assertions, lint, formatting, and dependency-boundary proof |
 | 2026-07-10 | 3 | Started the fixed-set MCP adapter after confirming the Phase 1 and 2 gates and re-reading all binding MCP, CLI, HTTP, operation, and implementation contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 2 | Completed one core-only CLI package with three feature-isolated binaries, exact set help/routing, migrated consumers/tests, and removal of all legacy CLI packages. | commits `73e5fa612`, `2fa2943fc`, `7aab1e035`; 67 focused tests, three isolated artifact/tree checks, wrapper/launcher, lint, formatting, and dependency-audit proof |
 | 2026-07-10 | 2 | Started CLI package consolidation after confirming the Phase 1 catalog/visibility gate and re-reading the binding CLI, operation, and implementation contracts. | implementation and direct acceptance proof pending |
