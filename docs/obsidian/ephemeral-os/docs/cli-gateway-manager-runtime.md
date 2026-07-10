@@ -210,7 +210,7 @@ Implementation paths:
 - `crates/sandbox-manager/src/daemon_client.rs`
 - `crates/sandbox-daemon/src/server/dispatch.rs`
 - `crates/sandbox-runtime/operation/src/services.rs`
-- `crates/sandbox-runtime/operation/src/cli_definition/command_operations.rs`
+- `crates/sandbox-runtime/operation/src/operation_adapter/command_operations.rs`
 
 ## Minimal Commands
 

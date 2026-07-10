@@ -24,7 +24,7 @@ import uuid
 
 import pytest
 
-from core.cli import cli, manager, runtime
+from core.cli import cli, internal_runtime, manager, runtime
 
 IMAGE = "ubuntu:24.04"
 
@@ -80,7 +80,7 @@ def _publish(sandbox_id, name):
 
 
 def _create_session(sandbox_id):
-    result = runtime(sandbox_id, "create_workspace_session")
+    result = internal_runtime(sandbox_id, "create_workspace_session")
     session = result.get("workspace_session_id")
     assert session, f"create_workspace_session failed: {result}"
     return session
@@ -137,7 +137,11 @@ def test_squash_empty_and_idle_contract(squash_sandbox):
     session = _create_session(container)
     read = _read(container, session, ["a.txt", "b.txt", "c.txt"])
     assert read.get("output") == "a\nb\nc", read
-    runtime(container, "destroy_workspace_session", "--workspace-session-id", session)
+    internal_runtime(
+        container,
+        "destroy_workspace_session",
+        {"workspace_session_id": session},
+    )
 
     # S layer carries no .digest sidecar (only the accepted observability
     # .bytes self-heal may appear).
@@ -193,8 +197,10 @@ def test_live_migration_shortens_idle_chain(squash_sandbox):
     assert len(post_ids) < pre_len, f"chain did not shorten: {pre_ids} -> {post_ids}"
 
     # Teardown: destroy the session, assert no leaked leases.
-    destroyed = runtime(
-        container, "destroy_workspace_session", "--workspace-session-id", session
+    destroyed = internal_runtime(
+        container,
+        "destroy_workspace_session",
+        {"workspace_session_id": session},
     )
     assert destroyed.get("destroyed") is True, destroyed
     assert destroyed.get("active_leases_after") in (None, 0), destroyed
@@ -242,7 +248,11 @@ def test_cwd_pinned_session_stays_leased(squash_sandbox):
     read = _read(container, session, ["p1.txt"])
     assert read.get("output") == "p1", read
 
-    runtime(container, "destroy_workspace_session", "--workspace-session-id", session)
+    internal_runtime(
+        container,
+        "destroy_workspace_session",
+        {"workspace_session_id": session},
+    )
 
 
 # --- G3 / E10: boot reap-then-sweep recovers, holders die with the daemon ---

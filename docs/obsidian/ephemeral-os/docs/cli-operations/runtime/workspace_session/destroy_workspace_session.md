@@ -2,39 +2,30 @@
 title: destroy_workspace_session
 tags:
   - ephemeral-os
-  - cli
   - runtime
+  - internal
   - workspace_session
-status: ready
+status: internal
 ---
 
 # destroy_workspace_session
 
-**Execution space:** `runtime` (sandbox scope) · **Family:** `workspace_session`
+**Visibility:** daemon-internal · **Execution space:** `runtime` (sandbox scope)
 
-Destroy a runtime workspace session.
+Internal primitive for destroying a runtime workspace session.
 
 ## Manual
 
-Destroy a user-owned runtime workspace session by `workspace_session_id` when no commands are active in that session. If any command sessions are still active, the operation is rejected and lists them so the caller can finish or terminate them first.
+This operation is retained for daemon-side composition and recovery. It is not
+present in the public runtime CLI or MCP catalog. If command sessions are
+still active, the internal operation rejects the request and lists them.
 
 | Argument | Flag | Kind | Required | Default | Description |
 |---|---|---|---|---|---|
 | `workspace_session_id` | `--workspace-session-id` | string | yes | — | Workspace session id to destroy. |
 | `grace_s` | `--grace-s` | float | no | — | Optional process teardown grace period in seconds (must be non-negative). |
 
-**Usage**
-
-```
-sandbox-cli runtime destroy_workspace_session --workspace-session-id ID [--grace-s SECONDS]
-```
-
-**Examples**
-
-```sh
-sandbox-cli runtime destroy_workspace_session --workspace-session-id ws-1
-sandbox-cli runtime destroy_workspace_session --workspace-session-id ws-1 --grace-s 2.5
-```
+There is no public CLI/MCP usage for this operation.
 
 ## Expected output
 

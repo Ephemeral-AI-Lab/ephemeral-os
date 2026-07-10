@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from core.cli import cli, is_error, manager, observability, runtime
+from core.cli import cli, internal_runtime, is_error, manager, observability, runtime
 from core.config import REPO_ROOT, SANDBOX_RUNTIME_CLI
 
 
@@ -236,10 +236,10 @@ atexit.register(_atexit_summary)
 
 
 def create_session(sandbox_id, *, network_profile=None):
-    args = []
+    args = {}
     if network_profile is not None:
-        args += ["--network-profile", network_profile]
-    result = runtime(sandbox_id, "create_workspace_session", *args)
+        args["network_profile"] = network_profile
+    result = internal_runtime(sandbox_id, "create_workspace_session", args)
     assert_ok(result)
     assert result["workspace_session_id"], result
     assert result["finalize_policy"] == "no_op", result
@@ -289,10 +289,15 @@ def file_write(sandbox_id, path, content, *, workspace_session_id=None, timeout=
 
 
 def destroy_session(sandbox_id, workspace_session_id, *, grace_s=None, timeout=180):
-    args = ["--workspace-session-id", workspace_session_id]
+    args = {"workspace_session_id": workspace_session_id}
     if grace_s is not None:
-        args += ["--grace-s", str(grace_s)]
-    return runtime(sandbox_id, "destroy_workspace_session", *args, timeout=timeout)
+        args["grace_s"] = grace_s
+    return internal_runtime(
+        sandbox_id,
+        "destroy_workspace_session",
+        args,
+        timeout=timeout,
+    )
 
 
 def write_command_stdin(
@@ -378,9 +383,12 @@ def snapshot(sandbox_id):
     return observability("snapshot", "--sandbox-id", sandbox_id)
 
 
-def runtime_help(operation):
+def runtime_help(operation=None):
+    args = [str(SANDBOX_RUNTIME_CLI)]
+    if operation is not None:
+        args += ["help", operation]
     proc = subprocess.run(
-        [str(SANDBOX_RUNTIME_CLI), "help", operation],
+        args,
         cwd=str(REPO_ROOT),
         capture_output=True,
         text=True,
@@ -389,14 +397,12 @@ def runtime_help(operation):
     return {"returncode": proc.returncode, "stdout": proc.stdout, "stderr": proc.stderr}
 
 
-def create_with_finalize_policy_flag(sandbox_id):
+def invoke_public_lifecycle_command(sandbox_id, operation):
     return cli(
         "runtime",
         "--sandbox-id",
         sandbox_id,
-        "create_workspace_session",
-        "--finalize-policy",
-        "no_op",
+        operation,
         timeout=30,
     )
 

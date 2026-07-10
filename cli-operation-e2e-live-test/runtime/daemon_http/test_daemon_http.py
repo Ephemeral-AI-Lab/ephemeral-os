@@ -24,7 +24,7 @@ import time
 import urllib.error
 import urllib.request
 
-from core.cli import is_error, runtime
+from core.cli import internal_runtime, is_error, runtime
 from core.config import IMAGE
 from manager.management import helpers as mgmt
 
@@ -175,8 +175,10 @@ def test_forward_isolated_arbitrary_port(tmp_path):
         assert sandbox_id, f"create_sandbox failed: {created}"
         host, daemon_port = daemon_http_endpoint(created, sandbox_id)
 
-        session = runtime(
-            sandbox_id, "create_workspace_session", "--network-profile", "isolated"
+        session = internal_runtime(
+            sandbox_id,
+            "create_workspace_session",
+            {"network_profile": "isolated"},
         )
         assert not is_error(session), session
         workspace_id = session["workspace_session_id"]
@@ -210,13 +212,10 @@ def test_forward_isolated_arbitrary_port(tmp_path):
         if sandbox_id:
             stop_command(sandbox_id, command_id)
             if workspace_id:
-                runtime(
+                internal_runtime(
                     sandbox_id,
                     "destroy_workspace_session",
-                    "--workspace-session-id",
-                    workspace_id,
-                    "--grace-s",
-                    "1",
+                    {"workspace_session_id": workspace_id, "grace_s": 1},
                 )
             mgmt.destroy_sandbox(sandbox_id)
 

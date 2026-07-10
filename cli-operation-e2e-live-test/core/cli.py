@@ -20,9 +20,13 @@ the ``e2e.cli`` logger as they arrive, while still parsing the final JSON line.
 
 import json
 import logging
+import os
+import socket
 import subprocess
 import threading
 import time
+import uuid
+from pathlib import Path
 
 from .config import PROGRESS, REPO_ROOT, SANDBOX_MANAGER_CLI, SANDBOX_RUNTIME_CLI
 
@@ -33,6 +37,23 @@ _timing_records = []
 
 class CliError(Exception):
     """The CLI produced output that was not a JSON line."""
+
+
+class InternalGatewayResult:
+    """Raw-result shape for daemon-internal E2E gateway calls."""
+
+    def __init__(self, operation, args, response, elapsed_ms):
+        self.args = [operation, args]
+        self.json = response
+        self.elapsed_ms = elapsed_ms
+        self.returncode = 1 if is_error(response) else 0
+        encoded = json.dumps(response, sort_keys=True)
+        self.stdout = encoded if self.returncode == 0 else ""
+        self.stderr = encoded if self.returncode != 0 else ""
+
+    @property
+    def ok(self):
+        return self.returncode == 0
 
 
 def route_cli(args):
@@ -227,6 +248,93 @@ def runtime(sandbox_id, operation, *args, **kwargs):
     The ``--sandbox-id`` flag must precede the operation name.
     """
     return cli("runtime", "--sandbox-id", sandbox_id, operation, *args, **kwargs)
+
+
+def internal_runtime(sandbox_id, operation, args=None, *, timeout=180):
+    """Call a daemon-internal runtime operation through the authenticated gateway."""
+    return internal_runtime_result(
+        sandbox_id,
+        operation,
+        args,
+        timeout=timeout,
+    ).json
+
+
+def internal_runtime_result(
+    sandbox_id,
+    operation,
+    args=None,
+    *,
+    timeout=180,
+    recorder=None,
+):
+    """Return a raw-result-shaped internal gateway response for report suites."""
+    request_args = dict(args or {})
+    request = {
+        "op": operation,
+        "request_id": f"e2e-internal-{uuid.uuid4()}",
+        "scope": {"kind": "sandbox", "sandbox_id": sandbox_id},
+        "args": request_args,
+        "_stream_logs": False,
+    }
+    token = _gateway_auth_token()
+    if token is not None:
+        request["_sandbox_gateway_auth_token"] = token
+
+    started = time.monotonic()
+    host, port = _gateway_endpoint()
+    with socket.create_connection((host, port), timeout=timeout) as stream:
+        stream.settimeout(timeout)
+        stream.sendall(json.dumps(request, separators=(",", ":")).encode() + b"\n")
+        stream.shutdown(socket.SHUT_WR)
+        with stream.makefile("rb") as reader:
+            response_line = reader.readline()
+    elapsed_ms = round((time.monotonic() - started) * 1000.0, 3)
+    if not response_line.endswith(b"\n"):
+        raise CliError("internal gateway response was not newline terminated")
+    try:
+        response = json.loads(response_line)
+    except json.JSONDecodeError as exc:
+        raise CliError(f"non-JSON internal gateway output: {response_line!r}") from exc
+
+    result = InternalGatewayResult(operation, request_args, response, elapsed_ms)
+    if recorder is not None:
+        recorder.add_command(
+            {
+                "cmd": ["internal-runtime", operation, json.dumps(request_args, sort_keys=True)],
+                "exit_code": result.returncode,
+                "elapsed_ms": elapsed_ms,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "parsed_json": response,
+            }
+        )
+    return result
+
+
+def _gateway_endpoint():
+    address = os.environ.get("SANDBOX_GATEWAY_SOCKET", "127.0.0.1:7878")
+    if address.startswith("["):
+        host, separator, port = address[1:].partition("]:")
+    else:
+        host, separator, port = address.rpartition(":")
+    if not separator or not host or not port:
+        raise CliError(f"invalid SANDBOX_GATEWAY_SOCKET: {address!r}")
+    try:
+        return host, int(port)
+    except ValueError as exc:
+        raise CliError(f"invalid SANDBOX_GATEWAY_SOCKET port: {address!r}") from exc
+
+
+def _gateway_auth_token():
+    token = os.environ.get("SANDBOX_GATEWAY_AUTH_TOKEN")
+    if token:
+        return token
+    token_file = Path(os.environ.get("SANDBOX_GATEWAY_TOKEN_FILE", "/tmp/eos-gateway.token"))
+    if not token_file.is_file():
+        return None
+    token = token_file.read_text(encoding="utf-8").strip()
+    return token or None
 
 
 def observability(operation, *args, **kwargs):

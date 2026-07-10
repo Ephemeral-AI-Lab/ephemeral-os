@@ -1,4 +1,4 @@
-"""create_workspace_session finalize-policy live coverage."""
+"""Internal workspace lifecycle and public exec finalization live coverage."""
 
 import pytest
 
@@ -9,13 +9,13 @@ from runtime.workspace_session.helpers import (
     assert_ok,
     assert_output,
     assert_teardown_clean,
-    create_with_finalize_policy_flag,
     destroy_session,
     exec_bare,
     exec_in,
     file_read,
     file_write,
     interrupt,
+    invoke_public_lifecycle_command,
     record_case,
     runtime_help,
     snapshot,
@@ -113,18 +113,19 @@ def test_WS_04_destroy_discards_and_sync_op_loses_cleanly(sandbox, workspace_tra
 
 
 @pytest.mark.medium
-def test_WS_05_no_finalize_policy_flag_exists(sandbox, workspace_tracker):
+def test_WS_05_workspace_lifecycle_is_not_public(sandbox, workspace_tracker):
     with record_case("WS-05") as rec:
-        bad = create_with_finalize_policy_flag(sandbox)
-        assert_error(bad, "invalid_request", "unknown flag for create_workspace_session: --finalize-policy")
+        for operation in ("create_workspace_session", "destroy_workspace_session"):
+            bad = invoke_public_lifecycle_command(sandbox, operation)
+            assert_error(bad, "invalid_request", f"unknown operation: {operation}")
 
-        help_result = runtime_help("create_workspace_session")
-        rec.add_artifact("create-help.json", help_result)
+        help_result = runtime_help()
+        rec.add_artifact("runtime-help.json", help_result)
         assert help_result["returncode"] == 0, help_result
-        assert "--network-profile" in help_result["stdout"], help_result
-        assert "--finalize-policy" not in help_result["stdout"], help_result
+        assert "create_workspace_session" not in help_result["stdout"], help_result
+        assert "destroy_workspace_session" not in help_result["stdout"], help_result
 
-        rec.axis("correctness", True, "bad flag rejected and runtime help omits finalize policy")
+        rec.axis("correctness", True, "runtime CLI rejects and omits lifecycle operations")
         assert_teardown_clean(rec, sandbox, workspace_tracker)
 
 

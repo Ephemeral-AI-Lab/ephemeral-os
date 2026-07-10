@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 
 from core import cleanup
-from core.cli import route_cli
+from core.cli import internal_runtime_result, route_cli
 from core.config import IMAGE, REPO_ROOT
 
 SUITE_DIR = Path(__file__).resolve().parent
@@ -326,21 +326,22 @@ def _wait_command(rec, sandbox_id, command_session_id, *, timeout_s=60):
 
 
 def create_session(rec, sandbox_id):
-    result = runtime(rec, sandbox_id, "create_workspace_session")
+    result = internal_runtime_result(
+        sandbox_id,
+        "create_workspace_session",
+        recorder=rec,
+    )
     assert result.ok, result.json or result.stderr
     return result.json["workspace_session_id"]
 
 
 def destroy_session(rec, sandbox_id, session_id):
-    result = runtime(
-        rec,
+    result = internal_runtime_result(
         sandbox_id,
         "destroy_workspace_session",
-        "--workspace-session-id",
-        session_id,
-        "--grace-s",
-        "1",
+        {"workspace_session_id": session_id, "grace_s": 1},
         timeout=60,
+        recorder=rec,
     )
     return result.json
 

@@ -39,7 +39,7 @@ async fn observability_bare_prints_observability_catalog_help() {
 }
 
 #[tokio::test]
-async fn observability_operation_help_uses_subcommand_program_name() {
+async fn observability_operation_help_uses_future_standalone_program_name() {
     let (code, stdout, _) = run(&["sandbox-manager-cli", "observability", "help", "trace"]).await;
     assert_eq!(code, 0);
     assert!(stdout.contains("Usage\n  sandbox-observability-cli trace"));

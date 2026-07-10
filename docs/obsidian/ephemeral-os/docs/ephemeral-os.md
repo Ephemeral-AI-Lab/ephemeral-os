@@ -71,11 +71,10 @@ supplied:
   shared-network workspace, runs the command, publishes its changes back to the
   layerstack when the command reaches a terminal state, and tears the workspace
   down. Stateless and self-cleaning; the unit of "apply a change."
-- **Session (with session id)** — the command runs inside a caller-owned
-  workspace created by `create_workspace_session` and destroyed by
-  `destroy_workspace_session`. The overlay persists across commands, so the
-  session is a living environment for multi-step work: start a server, run a
-  test loop, experiment under an `isolated` network profile.
+- **Session (with session id)** — the command runs inside a live workspace
+  created by daemon-internal orchestration. The overlay persists across
+  commands. Workspace lifecycle operations are not public CLI/MCP commands;
+  callers normally omit the id and use automatic publish-then-destroy.
 
 A long-running command returns a `command_session_id`. Callers stream output
 with `read_command_lines` (stable line offsets) and drive stdin — including
@@ -133,12 +132,15 @@ the overlay scratch root at `/eos/workspace` on a per-sandbox named volume.
 | `management` | `create_sandbox` | Create the sandbox, build the layerstack base, start its daemon |
 | `management` | `destroy_sandbox` | Stop the daemon, destroy the runtime sandbox, drop the record |
 | `management` | `list_sandboxes` / `inspect_sandbox` | Enumerate / inspect sandbox records and daemon endpoints |
-| `management` | `snapshot` | Aggregate daemon-local observability snapshots |
+| `management` | `squash_layerstacks` / `export_changes` | Compact layer history / export a published-layer delta |
 | `command` | `exec_command` | Run a command one-shot or inside a session |
 | `command` | `read_command_lines` | Read command output by stable line offset |
 | `command` | `write_command_stdin` | Write stdin (incl. Ctrl-C / Ctrl-D) to a running command |
-| `workspace_session` | `create_workspace_session` | Create a caller-owned session (`shared` / `isolated`) |
-| `workspace_session` | `destroy_workspace_session` | Destroy a session when no commands are active |
+| `file` | `file_read` / `file_write` / `file_edit` / `file_blame` | Read and mutate files or inspect blame metadata |
+| `observability` | `snapshot` / `trace` / `events` / `cgroup` / `layerstack` | Inspect aggregate or sandbox-scoped runtime state |
+
+`create_workspace_session`, `destroy_workspace_session`, and `file_list` are
+internal/non-public operations and are intentionally absent from this table.
 
 ## Status
 

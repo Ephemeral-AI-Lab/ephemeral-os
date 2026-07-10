@@ -3,7 +3,7 @@ import subprocess
 import textwrap
 import time
 
-from core.cli import is_error, runtime
+from core.cli import internal_runtime, is_error, runtime
 from core.config import IMAGE
 from manager.management import helpers as mgmt
 
@@ -97,11 +97,10 @@ def test_isolated_workspace_sessions_cannot_reach_each_other_on_same_port(tmp_pa
         assert sandbox_id, f"create_sandbox failed: {created}"
 
         for _ in range(3):
-            result = runtime(
+            result = internal_runtime(
                 sandbox_id,
                 "create_workspace_session",
-                "--network-profile",
-                "isolated",
+                {"network_profile": "isolated"},
             )
             assert not is_error(result), result
             workspace_ids.append(result["workspace_session_id"])
@@ -151,13 +150,10 @@ def test_isolated_workspace_sessions_cannot_reach_each_other_on_same_port(tmp_pa
         if sandbox_id:
             stop_commands(sandbox_id, command_ids)
             for workspace_id in workspace_ids:
-                runtime(
+                internal_runtime(
                     sandbox_id,
                     "destroy_workspace_session",
-                    "--workspace-session-id",
-                    workspace_id,
-                    "--grace-s",
-                    "1",
+                    {"workspace_session_id": workspace_id, "grace_s": 1},
                 )
             mgmt.destroy_sandbox(sandbox_id)
 

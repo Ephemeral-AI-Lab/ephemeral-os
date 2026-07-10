@@ -15,17 +15,19 @@ This spec covers two things:
    `manager/management/squash/test_spec.md`
    (`test-reports/<RUN_ID>/<CASE_ID>/verdict.json` per executed case).
 
-## 1. What changed at the CLI surface
+## 1. What changed at the runtime surface
 
-Flags are unchanged on all three operations. Responses and semantics changed:
+Workspace lifecycle is daemon-internal and is exercised through the test
+harness's authenticated internal gateway path. `exec_command` remains public.
+Responses and semantics changed:
 
 | Operation | Change | Kind |
 | --- | --- | --- |
-| `create_workspace_session` | response gains `finalize_policy: "no_op"` (always `no_op` for CLI-created sessions; there is **no** `--finalize-policy` flag) | additive |
+| `create_workspace_session` | internal response gains `finalize_policy: "no_op"`; the operation has no public CLI/MCP command | visibility + additive |
 | `exec_command` | response gains `workspace_session_id` on every yield (running and terminal, all drain paths) | additive |
 | `exec_command` | terminal response gains `publish_rejected: true` + `publish_reject_class` when this command's completion ran a finalize whose publish was rejected; the unpublished changes are discarded and the destroy still happens | additive |
 | `exec_command` (bare) | still implicitly creates a session, now named policy `publish_then_destroy`; the session id **escapes** in the response, so progress-check riders (`exec_command --workspace-session-id <id>` while the first command runs) are a supported pattern; a rider defers finalization until the last running command completes | semantic |
-| `destroy_workspace_session` | refusal contract unchanged (`error.details.active_command_session_ids`), but the check is now the session's own command ledger; sessions whose finalization failed (`finalize_failed` / stuck-`finalizing`) are **destroyable** through this op — it is the documented recovery path | semantic |
+| `destroy_workspace_session` | remains an internal recovery primitive; refusal contract is unchanged (`error.details.active_command_session_ids`), but the check is now the session's own command ledger | visibility + semantic |
 | file ops / remounts | never extend or trigger the session lifecycle; one racing the last command completion or a destroy now loses cleanly with `operation_failed` (“workspace session not found”) instead of running against a torn-down session | semantic |
 | command drains | completed commands are retained up to 512 terminal entries per daemon; a drain (`read_command_lines` / `write_command_stdin`) against an evicted id returns `command not found` | semantic |
 | observability snapshot | each workspace in the daemon snapshot JSON gains `finalize_policy` | additive |
@@ -43,7 +45,7 @@ Verified against the current tree (grep for `exec_command`,
 
 | File | Verdict | Required update |
 | --- | --- | --- |
-| `runtime/file/helpers.py` | compatible | `create_workspace_session()` returns only the id today; extend it to also assert `finalize_policy == "no_op"` (one line). Add an `exec_command` docstring note that the response now carries `workspace_session_id`. |
+| `runtime/file/helpers.py` | compatible | Route lifecycle setup/teardown through the authenticated internal gateway helper and assert `finalize_policy == "no_op"`. |
 | `runtime/file/**/test_*.py` (smoke, correctness, file_exec, blame, concurrent) | compatible | none — they assert by field lookup. Optional hardening: sessionless `file_exec` tests may assert the implicit exec response's `workspace_session_id` is present and no longer resolvable after terminal status (see EX-03). |
 | `runtime/command/test_exec_command_layer_depth_benchmark.py` | compatible | none — it never drains more than 512 completed commands per daemon. Add a comment noting the retention cap so future depth extensions know drains of old command ids expire. |
 | `runtime/test_squash_remount.py` | compatible | `_publish` uses a bare exec to publish a layer — that is exactly the implicit `publish_then_destroy` path and keeps working. No change. |
@@ -62,12 +64,13 @@ WS-04/EX-06 below pin the behavior at the e2e level.
 
 Layout per the suite README: `runtime/workspace_session/{__init__.py,
 helpers.py, test_workspace_session.py, test_exec_finalize.py}` plus this spec.
-Helpers wrap only `sandbox-cli runtime …` operations and return parsed JSON;
+Helpers use the public runtime CLI for catalog operations and the authenticated
+internal gateway helper for workspace lifecycle, and return parsed JSON;
 every case writes `test-reports/<RUN_ID>/<CASE_ID>/verdict.json` with
 `correctness` / `teardown` axes (timing axis only where noted).
 
-Policy availability constraint: the CLI cannot create a
-`publish_then_destroy` session (**no** `--finalize-policy` flag by design), so
+Policy availability constraint: the public CLI cannot create any explicit
+workspace session. The internal test setup creates `no_op` sessions, so
 the e2e policy matrix is: explicit create ⇒ `no_op`; bare `exec_command` ⇒
 implicit `publish_then_destroy`. Both rows are covered below.
 
@@ -79,7 +82,7 @@ implicit `publish_then_destroy`. Both rows are covered below.
 | WS-02 | smoke | no_op session survives command completion | create → `exec_command --workspace-session-id … 'echo hi'` to terminal → session still usable (second exec + `file_read` succeed) → explicit destroy succeeds. |
 | WS-03 | smoke | destroy refuses while a command runs | create → start `sleep 30` with `--yield-time-ms 0` → destroy returns `operation_failed` with `error.details.active_command_session_ids == [<command id>]` → Ctrl-C via `write_command_stdin` → destroy succeeds. |
 | WS-04 | medium | destroy always discards; sync op racing destroy loses cleanly | create → `file_write` a change → destroy → new implicit exec `cat` shows the change is **absent** (no publish on explicit destroy); a `file_read` issued immediately after destroy returns `operation_failed` not-found, never stale content. |
-| WS-05 | medium | no `--finalize-policy` flag exists | `sandbox-cli runtime create_workspace_session --finalize-policy no_op` fails argument parsing; CLI catalog (`sandbox-cli help`) shows no such flag. |
+| WS-05 | medium | lifecycle is not public | the runtime CLI rejects `create_workspace_session` and `destroy_workspace_session` as unknown operations; top-level help omits both. |
 | WS-06 | medium | destroyed id stays dead | after WS-02's destroy, `exec_command --workspace-session-id <id>`, `file_read`, and a second destroy all return `operation_failed` not-found (and the daemon does not wedge — a fresh create still works). |
 
 ### exec_command (EX)
@@ -99,7 +102,7 @@ implicit `publish_then_destroy`. Both rows are covered below.
 
 | Case | Tier | Title | Assertions |
 | --- | --- | --- | --- |
-| FP-01 | medium | remount sweep cannot finalize an idle implicit session | start a bare long-running exec (its session is `publish_then_destroy`, ledger non-empty) and an idle `no_op` session; run `manager checkpoint_squash` (post-squash sweep remounts every live session) → both sessions survive the sweep (exec still drains; `no_op` session still resolves); then finish the command → only the implicit session finalizes. |
+| FP-01 | medium | remount sweep cannot finalize an idle implicit session | start a bare long-running exec (its session is `publish_then_destroy`, ledger non-empty) and an idle `no_op` session; run `squash_layerstacks` (post-squash sweep remounts every live session) → both sessions survive the sweep (exec still drains; `no_op` session still resolves); then finish the command → only the implicit session finalizes. |
 | FP-02 | medium | empty capture skips publish | snapshot the manifest version (observability layerstack view) → bare `exec_command 'true'` (no writes) → manifest version unchanged (no empty layer, no no-op publish), session destroyed. |
 | FP-03 | medium | back-to-back implicit execs are independent sessions | two sequential bare execs return different `workspace_session_id`s; writes from the first are visible to the second (published layer), not via a shared live session. |
 | FP-04 | hard | finalize-vs-destroy interleave storm | N=8 threads alternating bare execs and explicit create/exec/destroy cycles for 60 s; verdict: zero daemon faults, zero leaked sessions in the observability snapshot at the end, every explicit destroy either succeeds or reports `active_command_session_ids`. |

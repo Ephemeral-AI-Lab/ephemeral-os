@@ -75,8 +75,8 @@ Allowed skips, matching section 5.3:
 
 ## Measurement Kit
 
-Each case creates one live Docker sandbox, drives `sandbox-cli manager
-checkpoint_squash` through structured JSON, records S0-S3 disk snapshots where
+Each case creates one live Docker sandbox, drives `sandbox-manager-cli
+squash_layerstacks` through structured JSON, records S0-S3 disk snapshots where
 applicable, captures `T_squash`, `T_quiesce`, `T_remount`, and `T_e2e` timers,
 checks correctness/space/time axes, and writes teardown evidence for an empty
 lease registry, no `.remount-*` residue, empty `staging/`, and strict unmount
