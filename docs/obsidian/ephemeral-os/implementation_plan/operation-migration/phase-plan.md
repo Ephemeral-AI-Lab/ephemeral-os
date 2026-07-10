@@ -241,30 +241,30 @@ repointing are one commit.
 
 ### Change list
 
-- [ ] Create `crates/sandbox-operations/catalog/` named
+- [x] Create `crates/sandbox-operations/catalog/` named
   `sandbox-operation-catalog` with features `manager`, `runtime`,
   `observability` (no defaults); move the three catalog crates into
   feature-gated domain modules; delete the three legacy sibling packages
   (`manager/`, `runtime/`, `observability/`), retaining the
   `crates/sandbox-operations/` namespace root; update workspace
   dependencies, callers, fixtures, and `Cargo.lock`.
-- [ ] Separate public declarations from canonical internal identifiers
+- [x] Separate public declarations from canonical internal identifiers
   (`internal/runtime.rs`: `create_workspace_session`,
   `destroy_workspace_session`, `squash_layerstack`,
   `export_layerstack`, `read_export_chunk`; `internal/observability.rs`)
   and from the CLI-owned projection; keep `file_list` in
   `internal/runtime.rs` as the separate HTTP-only exception; `internal`
   is always compiled.
-- [ ] Build the route manifest
+- [x] Build the route manifest
   (`OperationRouteSpec { operation, scope_policy, scope_kind,
   execution_owner, visibility }`) with per-domain slices and the
   all-features unified manifest.
-- [ ] Add the migration-only `(Sandbox, get_observability)` declaration and
+- [x] Add the migration-only `(Sandbox, get_observability)` declaration and
   semantic resolver under `internal::migration`; excluded from the public
   document; no CLI metadata.
-- [ ] Replace cross-catalog disjointness tests with cross-domain
+- [x] Replace cross-catalog disjointness tests with cross-domain
   route-uniqueness tests gated on all three features.
-- [ ] In `sandbox-cli`: add bidirectional projection-integrity tests and the
+- [x] In `sandbox-cli`: add bidirectional projection-integrity tests and the
   compatibility-JSON fixture; forward CLI features to catalog domain
   features (`manager = ["dep:clap", "sandbox-operation-catalog/manager"]`,
   etc.).
@@ -296,6 +296,7 @@ repointing are one commit.
 
 | Date | Item | Command / evidence | Result | Deviations |
 | --- | --- | --- | --- | --- |
+| 2026-07-10 | Atomic catalog merge (changes 1–6) | `git show --stat --oneline 509022ea3`; `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-operation-contract -p sandbox-operation-catalog --all-features`; `cargo test -p sandbox-cli --all-features --test compatibility --test projection_integrity --test help --test request_builder` | Commit `509022ea3` merged all three catalogs and deleted/repointed all legacy packages in one change; the post-commit workspace check passed; contract 12/12, catalog integrity 5/5 plus all domain suites, compatibility 2/2, projection 1/1, help 3/3, and request-builder 9/9 passed. | None. |
 | | | | | |
 
 ---
