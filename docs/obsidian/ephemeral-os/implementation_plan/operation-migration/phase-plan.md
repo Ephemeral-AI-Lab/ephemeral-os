@@ -451,16 +451,16 @@ repointing are one commit.
 - [x] Rename `operation_adapter` to `operations/registry`.
 - [x] Replace protocol request/response imports with contract types
   (should already hold from Phase 1; verify and finish stragglers).
-- [ ] Split the public registry from the exact canonical internal set
+- [x] Split the public registry from the exact canonical internal set
   (`create_workspace_session`, `destroy_workspace_session`,
   `squash_layerstack`, `export_layerstack`, `read_export_chunk`); retain
   `file_list` separately as the HTTP-only exception; key every registry by
   `(scope kind, name)`.
-- [ ] Import canonical runtime internal identifiers from
+- [x] Import canonical runtime internal identifiers from
   `sandbox_operation_catalog::internal::runtime` in runtime dispatch (and
   confirm manager forwarding and daemon HTTP `file_list` use the same
   identifiers).
-- [ ] Add route-subset/handler bijection and internal-exclusion tests.
+- [x] Add route-subset/handler bijection and internal-exclusion tests.
 
 ### Acceptance criteria
 
@@ -485,6 +485,9 @@ repointing are one commit.
 | 2026-07-10 | Phase 5 started | Dashboard entry criteria and Phase 4 acceptance checklist | Phase 4 is approved and every Phase 4 acceptance item is checked; Phase 5 is unblocked. | None. |
 | 2026-07-10 | Runtime registry rename | `test ! -e crates/sandbox-runtime/operation/src/operation_adapter`; `test -d crates/sandbox-runtime/operation/src/operations/registry`; `rg -n 'operation_adapter' crates/sandbox-runtime/operation`; `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-runtime --all-features` | The old tree is absent, the new registry tree exists, the source search returned no matches (exit 1), workspace check passed, and all runtime tests passed. | None. |
 | 2026-07-10 | Contract envelope verification | `rg -n 'sandbox_protocol|sandbox-protocol' crates/sandbox-runtime/operation/src crates/sandbox-runtime/operation/Cargo.toml`; contract import scan under `crates/sandbox-runtime/operation/src/{operations,layerstack/service/impls}` | The forbidden protocol scan returned no matches (exit 1); dispatch, registry, squash, and export bindings import `OperationRequest` and `OperationResponse` from `sandbox_operation_contract`. | None. |
+| 2026-07-10 | Scoped runtime registry partitions | `cargo test -p sandbox-runtime --test operation_registry --all-features`; `cargo test -p sandbox-runtime --test file_operations dispatch_rejects_a_runtime_operation_under_the_wrong_scope_kind --all-features` | All 3 registry tests passed: public and internal route/handler bijections hold and public, internal, and HTTP-only keys are unique and disjoint. The wrong-scope test passed, proving a system-scoped runtime operation is rejected while the sandbox-scoped form dispatches. | None. |
+| 2026-07-10 | Catalog-owned runtime identifiers | `rg -n 'sandbox_operation_catalog::internal::runtime' crates/sandbox-runtime/operation/src crates/sandbox-manager/src crates/sandbox-daemon/src/http/api.rs`; identifier-use scan for `CREATE_WORKSPACE_SESSION`, `DESTROY_WORKSPACE_SESSION`, `SQUASH_LAYERSTACK`, `EXPORT_LAYERSTACK`, `READ_EXPORT_CHUNK`, and `FILE_LIST` | Runtime lifecycle, squash, export, chunk, and HTTP-only bindings import the canonical catalog identifiers; manager squash/export forwarding and daemon HTTP `file_list` use the same owner. | None. |
+| 2026-07-10 | Registry bijection and exclusion tests | `cargo test -p sandbox-runtime --test operation_registry --all-features` | `public_runtime_routes_and_handlers_are_bijective`, `canonical_internal_routes_and_handlers_are_bijective`, and `runtime_registry_partitions_are_unique_and_disjoint` all passed. | None. |
 
 ---
 
