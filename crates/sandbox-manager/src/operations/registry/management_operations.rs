@@ -5,7 +5,7 @@ use sandbox_operation_catalog::manager::{
     LIST_SANDBOXES_SPEC, SQUASH_LAYERSTACKS_SPEC,
 };
 use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
-use sandbox_operation_contract::{OperationRequest, OperationResponse};
+use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScopeKind};
 use serde_json::{json, Value};
 
 use crate::operations::dispatch::ManagerOperationEntry;
@@ -20,13 +20,41 @@ use crate::{
 };
 
 const OPERATIONS: &[ManagerOperationEntry] = &[
-    ManagerOperationEntry::new(&CREATE_SANDBOX_SPEC, dispatch_create_sandbox),
-    ManagerOperationEntry::new(&DESTROY_SANDBOX_SPEC, dispatch_destroy_sandbox),
-    ManagerOperationEntry::new(&SNAPSHOT_SPEC, dispatch_observability_snapshot),
-    ManagerOperationEntry::new(&LIST_SANDBOXES_SPEC, dispatch_list_sandboxes),
-    ManagerOperationEntry::new(&INSPECT_SANDBOX_SPEC, dispatch_inspect_sandbox),
-    ManagerOperationEntry::new(&SQUASH_LAYERSTACKS_SPEC, dispatch_squash_layerstacks),
-    ManagerOperationEntry::new(&EXPORT_CHANGES_SPEC, dispatch_export_changes),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &CREATE_SANDBOX_SPEC,
+        dispatch_create_sandbox,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &DESTROY_SANDBOX_SPEC,
+        dispatch_destroy_sandbox,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &SNAPSHOT_SPEC,
+        dispatch_observability_snapshot,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &LIST_SANDBOXES_SPEC,
+        dispatch_list_sandboxes,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &INSPECT_SANDBOX_SPEC,
+        dispatch_inspect_sandbox,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &SQUASH_LAYERSTACKS_SPEC,
+        dispatch_squash_layerstacks,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &EXPORT_CHANGES_SPEC,
+        dispatch_export_changes,
+    ),
 ];
 
 pub(crate) fn operation_entries() -> &'static [ManagerOperationEntry] {

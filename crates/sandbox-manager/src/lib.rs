@@ -20,8 +20,8 @@ pub use model::{
     SharedBaseMount,
 };
 pub use operations::{
-    dispatch_operation, dispatch_operation_with_progress, operation_catalog, operation_families,
-    operation_specs, ManagerServices, ObservabilitySnapshotLimits,
+    dispatch_operation, dispatch_operation_with_progress, manager_handler_keys, operation_catalog,
+    operation_families, operation_specs, ManagerServices, ObservabilitySnapshotLimits,
 };
 pub use progress::ProgressSink;
 pub use router::SandboxManagerRouter;

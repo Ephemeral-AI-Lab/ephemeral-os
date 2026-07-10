@@ -3,11 +3,15 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use sandbox_manager::{
-    CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
-    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
-    SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
+    manager_handler_keys, CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices,
+    ProgressSink, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId,
+    SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
-use sandbox_operation_contract::{error, OperationRequest, OperationResponse, OperationScope};
+use sandbox_operation_catalog::{internal, observability::SNAPSHOT_SPEC, routes};
+use sandbox_operation_contract::{
+    error, OperationExecutionOwner, OperationRequest, OperationResponse, OperationScope,
+    OperationScopeKind, OperationVisibility,
+};
 use serde_json::{json, Value};
 
 struct FakeRuntime;
@@ -120,6 +124,21 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
     }
 }
 
+fn ready_router() -> (SandboxManagerRouter, Arc<RecordingDaemonClient>) {
+    let (services, store, daemon_client) = services();
+    store
+        .insert(ready_record(
+            "sbox-1",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-1",
+            )),
+        ))
+        .expect("insert sandbox");
+    (router(services), daemon_client)
+}
+
 #[tokio::test]
 async fn manager_router_dispatches_system_manager_operation_locally() {
     let (services, _store, _daemon_client) = services();
@@ -133,20 +152,52 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
     assert_eq!(response["sandboxes"], json!([]));
 }
 
+#[test]
+fn manager_public_routes_and_handler_keys_are_bijective() {
+    let expected = routes::manager_routes()
+        .iter()
+        .chain(routes::observability_routes())
+        .filter(|route| {
+            route.execution_owner == OperationExecutionOwner::Manager
+                && route.visibility == OperationVisibility::Public
+        })
+        .map(|route| (route.scope_kind, route.operation))
+        .collect::<Vec<_>>();
+    let actual = manager_handler_keys().collect::<Vec<_>>();
+
+    assert!(expected
+        .iter()
+        .all(|(scope_kind, _)| *scope_kind == OperationScopeKind::System));
+    assert_eq!(actual.len(), expected.len());
+    for (scope_kind, operation) in &expected {
+        assert_eq!(
+            actual
+                .iter()
+                .filter(|(actual_scope, actual_operation)| {
+                    actual_scope == scope_kind && actual_operation == operation
+                })
+                .count(),
+            1,
+            "public manager route ({scope_kind:?}, {operation}) must have one handler"
+        );
+    }
+    for (scope_kind, operation) in &actual {
+        assert_eq!(
+            expected
+                .iter()
+                .filter(|(expected_scope, expected_operation)| {
+                    expected_scope == scope_kind && expected_operation == operation
+                })
+                .count(),
+            1,
+            "manager handler ({scope_kind:?}, {operation}) must have one public route"
+        );
+    }
+}
+
 #[tokio::test]
 async fn manager_router_dispatches_hidden_observability_snapshot_locally() {
-    let (services, store, daemon_client) = services();
-    store
-        .insert(ready_record(
-            "sbox-1",
-            Some(SandboxDaemonEndpoint::new(
-                "127.0.0.1",
-                7000,
-                "token-sbox-1",
-            )),
-        ))
-        .expect("insert sandbox");
-    let router = router(services);
+    let (router, daemon_client) = ready_router();
 
     let response = router
         .dispatch_request(request("snapshot", OperationScope::System, json!({})))
@@ -178,6 +229,97 @@ async fn manager_router_rejects_manager_operation_with_sandbox_scope() {
 }
 
 #[tokio::test]
+async fn manager_router_forwards_sandbox_snapshot_instead_of_using_system_handler() {
+    let (router, daemon_client) = ready_router();
+
+    let response = router
+        .dispatch_request_with_progress(
+            request(
+                SNAPSHOT_SPEC.name,
+                OperationScope::sandbox("sbox-1"),
+                json!({}),
+            ),
+            ProgressSink::noop(),
+        )
+        .await
+        .into_json_value();
+
+    assert_eq!(response["forwarded"], true);
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, SNAPSHOT_SPEC.name);
+}
+
+#[tokio::test]
+async fn manager_router_forwards_the_exact_observability_migration_route() {
+    let (router, daemon_client) = ready_router();
+
+    let response = router
+        .dispatch_request(request(
+            internal::migration::ROUTE.operation,
+            OperationScope::sandbox("sbox-1"),
+            json!({"view": "snapshot"}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["forwarded"], true);
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, internal::migration::ROUTE.operation);
+}
+
+#[tokio::test]
+async fn manager_router_rejects_every_canonical_internal_route_before_forwarding() {
+    let (router, daemon_client) = ready_router();
+
+    for route in internal::runtime::ROUTES {
+        assert_eq!(route.visibility, OperationVisibility::Internal);
+        let scope = match route.scope_kind {
+            OperationScopeKind::System => OperationScope::System,
+            OperationScopeKind::Sandbox => OperationScope::sandbox("sbox-1"),
+        };
+        let response = router
+            .dispatch_request(request(route.operation, scope, json!({})))
+            .await
+            .into_json_value();
+        assert_eq!(
+            response["error"]["kind"],
+            error::INVALID_REQUEST,
+            "{} must be rejected",
+            route.operation
+        );
+    }
+
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+}
+
+#[tokio::test]
+async fn manager_router_rejects_file_list_gateway_rpc_before_forwarding() {
+    let (router, daemon_client) = ready_router();
+
+    let response = router
+        .dispatch_request(request(
+            internal::runtime::FILE_LIST,
+            OperationScope::sandbox("sbox-1"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["error"]["kind"], error::INVALID_REQUEST);
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+}
+
+#[tokio::test]
 async fn manager_router_unknown_system_operation_returns_unknown_op() {
     let (services, _store, _daemon_client) = services();
     let router = router(services);
@@ -192,18 +334,7 @@ async fn manager_router_unknown_system_operation_returns_unknown_op() {
 
 #[tokio::test]
 async fn manager_router_forwards_sandbox_scoped_unknown_to_daemon_client() {
-    let (services, store, daemon_client) = services();
-    store
-        .insert(ready_record(
-            "sbox-1",
-            Some(SandboxDaemonEndpoint::new(
-                "127.0.0.1",
-                7000,
-                "token-sbox-1",
-            )),
-        ))
-        .expect("insert sandbox");
-    let router = router(services);
+    let (router, daemon_client) = ready_router();
 
     let response = router
         .dispatch_request(request(
