@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use sandbox_observability::{sample_layerstack, LayerBytes, LayerStackBytes};
+use sandbox_observability::{sample_layerstack, LayerBytes, LayerStackBytes, WalkBudget};
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -77,7 +77,7 @@ fn sidecar_size_is_used_without_walking() -> TestResult {
     // so a 5000-byte result proves the sidecar was used.
     storage.write_sidecar("L1", 5000)?;
 
-    let observed = sample_layerstack(storage.root());
+    let observed = sample_layerstack(storage.root(), WalkBudget::default());
 
     assert_eq!(
         observed,
@@ -102,7 +102,7 @@ fn missing_sidecar_walks_and_repopulates() -> TestResult {
         "sidecar absent before sample"
     );
 
-    let observed = sample_layerstack(storage.root());
+    let observed = sample_layerstack(storage.root(), WalkBudget::default());
 
     assert_eq!(observed.total_bytes, 10);
     assert_eq!(
@@ -126,13 +126,13 @@ fn cached_sidecar_keeps_layer_sized_once() -> TestResult {
     storage.write_manifest(&["L3"])?;
     storage.write_layer_file("L3", "a.txt", &[0_u8; 10])?;
 
-    let first = sample_layerstack(storage.root());
+    let first = sample_layerstack(storage.root(), WalkBudget::default());
     assert_eq!(first.total_bytes, 10);
 
     // Grow the layer on disk; the cached sidecar must still win, so the layer is
     // sized exactly once.
     storage.write_layer_file("L3", "b.txt", &[0_u8; 90])?;
-    let second = sample_layerstack(storage.root());
+    let second = sample_layerstack(storage.root(), WalkBudget::default());
     assert_eq!(second.total_bytes, 10);
     Ok(())
 }
@@ -142,7 +142,7 @@ fn half_written_manifest_is_skipped_without_panic() -> TestResult {
     let storage = TempStorage::new("half-written")?;
     fs::write(storage.root().join("manifest.json"), "{\"layers\":[ {\"lay")?;
 
-    let observed = sample_layerstack(storage.root());
+    let observed = sample_layerstack(storage.root(), WalkBudget::default());
 
     assert_eq!(observed, LayerStackBytes::default());
     Ok(())
@@ -152,7 +152,7 @@ fn half_written_manifest_is_skipped_without_panic() -> TestResult {
 fn missing_manifest_is_empty() -> TestResult {
     let storage = TempStorage::new("missing-manifest")?;
 
-    let observed = sample_layerstack(storage.root());
+    let observed = sample_layerstack(storage.root(), WalkBudget::default());
 
     assert_eq!(observed, LayerStackBytes::default());
     Ok(())

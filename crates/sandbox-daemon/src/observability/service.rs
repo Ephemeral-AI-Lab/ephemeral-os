@@ -5,11 +5,12 @@
 
 use std::sync::{Mutex, PoisonError};
 
+use sandbox_config::configs::observability::ViewsConfig;
 use sandbox_observability::collect::cgroup::CgroupSample;
 use sandbox_observability::collect::disk;
 use sandbox_observability::{
     record, sample_layerstack, Event, ObservabilityPaths, Observer, ObserverConfig, RawFilter,
-    Reader, SampleDelta, Sink, SpanNode,
+    Reader, SampleDelta, Sink, SpanNode, WalkBudget,
 };
 use sandbox_runtime::{
     RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
@@ -32,6 +33,8 @@ pub struct DaemonObservability {
     paths: ObservabilityPaths,
     observer: Observer,
     max_file_bytes: u64,
+    pub(crate) sampling: WalkBudget,
+    pub(crate) views: ViewsConfig,
     rotate_lock: Mutex<()>,
 }
 
@@ -48,13 +51,21 @@ impl DaemonObservability {
                 proc: record::proc::DAEMON,
                 enabled: config.observability.enabled,
             },
-            Sink::new(paths.log_path().to_path_buf()),
+            Sink::new(
+                paths.log_path().to_path_buf(),
+                config.observability.max_line_bytes,
+            ),
         );
         Some(Self {
             sandbox_id,
             paths,
             observer,
             max_file_bytes: config.observability.max_file_bytes,
+            sampling: WalkBudget {
+                max_nodes: config.observability.sampling.max_walk_nodes,
+                max_depth: config.observability.sampling.max_walk_depth,
+            },
+            views: config.observability.views,
             rotate_lock: Mutex::new(()),
         })
     }
@@ -86,7 +97,8 @@ impl DaemonObservability {
             if scope.is_empty() {
                 continue;
             }
-            self.observer.sample(scope, workspace_metrics(workspace));
+            self.observer
+                .sample(scope, workspace_metrics(workspace, self.sampling));
         }
     }
 
@@ -94,7 +106,7 @@ impl DaemonObservability {
         let Ok(observation) = operations.observe_layerstack() else {
             return;
         };
-        let bytes = sample_layerstack(operations.layer_stack_root());
+        let bytes = sample_layerstack(operations.layer_stack_root(), self.sampling);
         self.observer.sample(
             "stack",
             json!({
@@ -284,14 +296,14 @@ fn sandbox_metrics(cgroup: &CgroupSample) -> Value {
     Value::Object(metrics)
 }
 
-fn workspace_metrics(workspace: &RuntimeWorkspaceSnapshot) -> Value {
+fn workspace_metrics(workspace: &RuntimeWorkspaceSnapshot, sampling: WalkBudget) -> Value {
     let cgroup = match workspace.cgroup_path.as_deref() {
         Some(cgroup_path) => CgroupSample::read(cgroup_path),
         None => CgroupSample::unavailable("workspace cgroup unavailable"),
     };
     let mut metrics = cgroup_metrics(&cgroup);
     if let Some(upperdir) = workspace.upperdir.as_deref() {
-        let disk = disk::sample_upperdir(upperdir);
+        let disk = disk::sample_upperdir(upperdir, sampling);
         if let Some(bytes) = disk.upperdir_bytes {
             metrics.insert("disk_bytes".to_owned(), json!(bytes));
         }

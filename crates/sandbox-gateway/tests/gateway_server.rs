@@ -11,7 +11,7 @@ use sandbox_manager::{
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxManagerRouter, SandboxRecord,
     SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
 };
-use sandbox_protocol::{error_kind, CliOperationScope, Request, Response, MAX_REQUEST_BYTES};
+use sandbox_protocol::{error_kind, CliOperationScope, ProtocolLimits, Request, Response};
 use serde_json::{json, Value};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
@@ -320,12 +320,15 @@ async fn gateway_connection_rejects_oversized_request() -> TestResult {
         8,
         CancellationToken::new(),
     );
-    let oversized = vec![b'a'; MAX_REQUEST_BYTES + 1];
+    let oversized = vec![b'a'; ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES + 1];
 
     let response = send_raw(&server, &oversized).await;
 
     assert_eq!(response["error"]["kind"], error_kind::REQUEST_TOO_LARGE);
-    assert_eq!(response["error"]["details"]["limit"], MAX_REQUEST_BYTES);
+    assert_eq!(
+        response["error"]["details"]["limit"],
+        ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES
+    );
     Ok(())
 }
 

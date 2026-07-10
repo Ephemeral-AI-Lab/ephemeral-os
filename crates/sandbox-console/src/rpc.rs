@@ -12,9 +12,7 @@ use http::header::{HeaderValue, ACCEPT, CACHE_CONTROL, CONTENT_TYPE};
 use http::{HeaderMap, Request as HttpRequest, Response, StatusCode};
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
-use sandbox_protocol::{
-    error_response_with_details, CliOperationScope, Request, MAX_REQUEST_BYTES,
-};
+use sandbox_protocol::{error_response_with_details, CliOperationScope, ProtocolLimits, Request};
 use serde_json::{json, Value};
 
 use crate::response::{self, BoxBody};
@@ -79,7 +77,8 @@ fn stream(state: Arc<AppState>, request: Request) -> Response<BoxBody> {
 }
 
 async fn read_request(req: HttpRequest<Incoming>) -> Result<Request, Response<BoxBody>> {
-    let body = http_body_util::Limited::new(req.into_body(), MAX_REQUEST_BYTES);
+    let body =
+        http_body_util::Limited::new(req.into_body(), ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES);
     let bytes = match body.collect().await {
         Ok(collected) => collected.to_bytes(),
         Err(_) => {

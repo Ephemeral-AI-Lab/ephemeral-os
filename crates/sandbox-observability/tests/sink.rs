@@ -30,7 +30,7 @@ fn attrs(value: Value) -> Attrs {
 #[test]
 fn concurrent_appends_keep_every_line_intact() {
     let path = temp_log("concurrent");
-    let sink = Arc::new(Sink::new(path.clone()));
+    let sink = Arc::new(Sink::new(path.clone(), MAX_LINE_BYTES));
     let threads = 8;
     let per_thread = 64;
 
@@ -63,7 +63,7 @@ fn concurrent_appends_keep_every_line_intact() {
 #[test]
 fn over_cap_span_truncates_attrs_in_place() {
     let path = temp_log("trunc-span");
-    let sink = Sink::new(path.clone());
+    let sink = Sink::new(path.clone(), MAX_LINE_BYTES);
     let blob = "x".repeat(MAX_LINE_BYTES);
     sink.append(&Record::Span(Span {
         ts: 1,
@@ -97,7 +97,7 @@ fn over_cap_span_truncates_attrs_in_place() {
 #[test]
 fn over_cap_sample_truncates_metrics_at_top_level() {
     let path = temp_log("trunc-sample");
-    let sink = Sink::new(path.clone());
+    let sink = Sink::new(path.clone(), MAX_LINE_BYTES);
     let blob = "x".repeat(MAX_LINE_BYTES);
     sink.append(&Record::Sample(Sample {
         ts: 1,

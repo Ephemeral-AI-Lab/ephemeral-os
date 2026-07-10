@@ -7,7 +7,7 @@ use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
-const MAX_RESPONSE_BYTES: usize = sandbox_protocol::MAX_REQUEST_BYTES;
+const MAX_RESPONSE_BYTES: usize = sandbox_protocol::ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES;
 
 pub trait SandboxDaemonClient: Send + Sync {
     fn invoke_with_timeout(
@@ -154,12 +154,9 @@ fn request_line(
     let mut line = serde_json::to_vec(&value).map_err(|error| ManagerError::ForwardingFailed {
         message: format!("encode daemon request failed: {error}"),
     })?;
-    if line.len().saturating_add(1) > sandbox_protocol::MAX_REQUEST_BYTES {
+    if line.len().saturating_add(1) > MAX_RESPONSE_BYTES {
         return Err(ManagerError::ForwardingFailed {
-            message: format!(
-                "daemon request exceeds {} byte limit",
-                sandbox_protocol::MAX_REQUEST_BYTES
-            ),
+            message: format!("daemon request exceeds {MAX_RESPONSE_BYTES} byte limit"),
         });
     }
     line.push(b'\n');

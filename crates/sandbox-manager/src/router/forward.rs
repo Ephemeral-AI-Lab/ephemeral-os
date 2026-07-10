@@ -13,7 +13,7 @@ pub(crate) fn forward_sandbox_request(
     services.daemon_client.invoke_with_timeout(
         &endpoint,
         request,
-        Duration::from_secs_f64(sandbox_protocol::REQUEST_READ_TIMEOUT_S),
+        Duration::from_secs_f64(sandbox_protocol::ProtocolLimits::DEFAULT_REQUEST_READ_TIMEOUT_S),
     )
 }
 

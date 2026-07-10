@@ -10,7 +10,7 @@ use std::sync::Arc;
 use sandbox_observability::record::proc;
 use sandbox_observability::{
     NoopHook, Observer, ObserverConfig, RawFilter, Reader, Sink, Span, SpanRegistry, SpanStatus,
-    TerminalHook, TraceContext,
+    TerminalHook, TraceContext, MAX_LINE_BYTES,
 };
 use serde_json::{json, Value};
 
@@ -35,7 +35,7 @@ fn observer(path: &Path) -> Observer {
             proc: proc::DAEMON,
             enabled: true,
         },
-        Sink::new(path.to_path_buf()),
+        Sink::new(path.to_path_buf(), MAX_LINE_BYTES),
     )
 }
 
@@ -206,7 +206,7 @@ fn disabled_registry_parks_nothing() {
             proc: proc::DAEMON,
             enabled: false,
         },
-        Sink::new(path.clone()),
+        Sink::new(path.clone(), MAX_LINE_BYTES),
     );
     let registry = SpanRegistry::<FakeId>::new(observer);
     let id = FakeId("e".to_owned());

@@ -1,9 +1,9 @@
-use sandbox_protocol::{Request, GATEWAY_AUTH_FIELD, MAX_REQUEST_BYTES};
+use sandbox_protocol::{ProtocolLimits, Request, GATEWAY_AUTH_FIELD};
 use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 
-const MAX_RESPONSE_BYTES: usize = MAX_REQUEST_BYTES;
+const MAX_RESPONSE_BYTES: usize = ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES;
 
 #[derive(Debug)]
 pub struct GatewayClient {

@@ -19,7 +19,7 @@ pub(super) fn snapshot_view_response(
     if let (Ok(observation), Value::Object(object)) =
         (operations.observe_layerstack(), &mut snapshot)
     {
-        let bytes = sample_layerstack(operations.layer_stack_root());
+        let bytes = sample_layerstack(operations.layer_stack_root(), observability.sampling);
         object.insert(
             "stack".to_owned(),
             stack_summary_value(&observation, &bytes),

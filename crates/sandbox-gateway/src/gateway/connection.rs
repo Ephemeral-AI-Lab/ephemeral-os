@@ -102,14 +102,15 @@ where
 {
     let mut buf = Vec::new();
     let read = async {
-        let limit = u64::try_from(sandbox_protocol::MAX_REQUEST_BYTES)
+        let max_request_bytes = sandbox_protocol::ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES;
+        let limit = u64::try_from(max_request_bytes)
             .unwrap_or(u64::MAX)
             .saturating_add(1);
         let mut limited = BufReader::new(reader.take(limit));
         limited.read_until(b'\n', &mut buf).await?;
-        if buf.len() > sandbox_protocol::MAX_REQUEST_BYTES {
+        if buf.len() > max_request_bytes {
             return Err(GatewayError::RequestTooLarge {
-                limit: sandbox_protocol::MAX_REQUEST_BYTES,
+                limit: max_request_bytes,
             });
         }
         if !buf.ends_with(b"\n") {
@@ -118,7 +119,7 @@ where
         Ok::<(), GatewayError>(())
     };
     timeout(
-        Duration::from_secs_f64(sandbox_protocol::REQUEST_READ_TIMEOUT_S),
+        Duration::from_secs_f64(sandbox_protocol::ProtocolLimits::DEFAULT_REQUEST_READ_TIMEOUT_S),
         read,
     )
     .await

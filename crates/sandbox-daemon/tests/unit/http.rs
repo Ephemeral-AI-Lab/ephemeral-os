@@ -6,7 +6,8 @@ use std::sync::Arc;
 use http_body_util::BodyExt as _;
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability::Observer;
-use sandbox_protocol::MAX_REQUEST_BYTES;
+use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
+use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService};
 use sandbox_runtime::file::FileService;
 use sandbox_runtime::layerstack::LayerStackService;
@@ -164,7 +165,7 @@ async fn file_list_preserves_root_published_live_and_transport_contracts() -> Te
     let non_object = send_request(server.addr, "POST", "/files/list", &[], b"[]").await?;
     assert_transport_error(&non_object, "invalid_request")?;
 
-    let oversized = vec![b'x'; MAX_REQUEST_BYTES + 1];
+    let oversized = vec![b'x'; ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES + 1];
     let oversized = send_request(server.addr, "POST", "/files/list", &[], &oversized).await?;
     assert_transport_error(&oversized, "request_too_large")?;
 
@@ -503,7 +504,12 @@ fn server_config(root: &Path) -> ServerConfig {
         sandbox_id: Some("sandbox-http-test".to_owned()),
         cgroup_root: None,
         observability: ObservabilityConfig::default(),
-        forward_response_timeout: Duration::from_millis(100),
+        limits: ProtocolLimits::default(),
+        max_concurrent_connections: 256,
+        forward: DaemonHttpForwardConfig {
+            connect_timeout_s: 10.0,
+            response_timeout_s: 0.1,
+        },
     }
 }
 

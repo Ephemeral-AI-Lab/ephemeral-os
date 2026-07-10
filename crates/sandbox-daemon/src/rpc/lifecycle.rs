@@ -23,9 +23,7 @@ impl SandboxDaemonServer {
     pub async fn serve(self) -> Result<(), SandboxDaemonError> {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
-        let connection_permits = Arc::new(Semaphore::new(
-            server.config.max_concurrent_connections,
-        ));
+        let connection_permits = Arc::new(Semaphore::new(server.config.max_concurrent_connections));
         let connection_tasks = TaskTracker::new();
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -53,7 +51,10 @@ impl SandboxDaemonServer {
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
                             let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                connection_tasks.spawn(reject_overloaded_connection(stream));
+                                connection_tasks.spawn(reject_overloaded_connection(
+                                    stream,
+                                    server.config.max_concurrent_connections,
+                                ));
                                 continue;
                             };
                             let server = Arc::clone(&server);
@@ -96,7 +97,10 @@ impl SandboxDaemonServer {
                             accepted = listener.accept() => {
                                 let (stream, peer_addr) = accepted?;
                                 let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                    connection_tasks.spawn(reject_overloaded_connection(stream));
+                                    connection_tasks.spawn(reject_overloaded_connection(
+                                        stream,
+                                        server.config.max_concurrent_connections,
+                                    ));
                                     continue;
                                 };
                                 let local_addr = stream.local_addr().ok();
@@ -175,14 +179,14 @@ impl SandboxDaemonServer {
     }
 }
 
-async fn reject_overloaded_connection<S>(mut stream: S)
+async fn reject_overloaded_connection<S>(mut stream: S, max_concurrent_connections: usize)
 where
     S: AsyncWrite + Unpin,
 {
     let response = super::error_response(
         "server_busy",
         "daemon is at connection capacity",
-        serde_json::json!({"max_concurrent_connections": MAX_CONCURRENT_CONNECTIONS}),
+        serde_json::json!({"max_concurrent_connections": max_concurrent_connections}),
     );
     let mut framed = serde_json::to_vec(&response).expect("daemon overload response serializes");
     framed.push(b'\n');

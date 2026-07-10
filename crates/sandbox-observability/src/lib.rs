@@ -11,7 +11,7 @@ mod observer;
 mod reader;
 mod sink;
 
-pub use collect::{sample_layerstack, LayerBytes, LayerStackBytes};
+pub use collect::{sample_layerstack, LayerBytes, LayerStackBytes, WalkBudget};
 pub use observer::{
     NoopHook, Observer, ObserverConfig, SpanGuard, SpanRegistry, TerminalHook, TraceContext,
 };

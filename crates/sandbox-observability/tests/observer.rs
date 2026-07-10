@@ -10,6 +10,7 @@ use std::sync::Arc;
 use sandbox_observability::record::proc;
 use sandbox_observability::{
     Observer, ObserverConfig, RawFilter, Reader, Sink, Span, SpanStatus, TraceContext,
+    MAX_LINE_BYTES,
 };
 use serde_json::{json, Value};
 
@@ -31,7 +32,7 @@ fn observer(path: &Path, proc_token: &'static str, enabled: bool) -> Observer {
             proc: proc_token,
             enabled,
         },
-        Sink::new(path.to_path_buf()),
+        Sink::new(path.to_path_buf(), MAX_LINE_BYTES),
     )
 }
 

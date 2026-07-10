@@ -19,7 +19,7 @@ pub(crate) async fn handle(state: Arc<HttpState>, req: HttpRequest<Incoming>) ->
 }
 
 async fn handle_file_list(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> Response<BoxBody> {
-    let args = match read_args(req).await {
+    let args = match read_args(req, state.config.limits.max_request_bytes).await {
         Ok(args) => args,
         Err(response) => return response,
     };
@@ -51,8 +51,11 @@ async fn handle_file_list(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> 
     }
 }
 
-async fn read_args(req: HttpRequest<Incoming>) -> Result<Map<String, Value>, Response<BoxBody>> {
-    let body = http_body_util::Limited::new(req.into_body(), state.config.limits.max_request_bytes);
+async fn read_args(
+    req: HttpRequest<Incoming>,
+    max_request_bytes: usize,
+) -> Result<Map<String, Value>, Response<BoxBody>> {
+    let body = http_body_util::Limited::new(req.into_body(), max_request_bytes);
     let bytes = match body.collect().await {
         Ok(collected) => collected.to_bytes(),
         Err(_) => {

@@ -2,27 +2,54 @@ use tokio::io::AsyncReadExt as _;
 use tokio_util::task::TaskTracker;
 
 use crate::rpc::SandboxDaemonError;
-use crate::MAX_REQUEST_BYTES;
+use sandbox_protocol::ProtocolLimits;
+
+fn limits(max_request_bytes: usize, request_read_timeout_s: f64) -> ProtocolLimits {
+    ProtocolLimits {
+        max_request_bytes,
+        request_read_timeout_s,
+    }
+}
 
 #[tokio::test]
 async fn read_request_line_rejects_oversized_payloads() {
+    // A lowered injected cap rejects an envelope one byte past it.
+    let max_request_bytes = 64 * 1024;
     let mut reader = tokio::io::repeat(b'x').take(
-        u64::try_from(MAX_REQUEST_BYTES)
+        u64::try_from(max_request_bytes)
             .expect("max request bytes fits u64")
             .saturating_add(1),
     );
-    let err = read_request_line_with_timeout(&mut reader, 0.1)
+    let err = read_request_line_with_limits(&mut reader, limits(max_request_bytes, 0.5))
         .await
         .expect_err("oversized request rejected");
-    assert!(matches!(err, SandboxDaemonError::RequestTooLarge { .. }));
+    assert!(
+        matches!(err, SandboxDaemonError::RequestTooLarge { limit } if limit == max_request_bytes)
+    );
+}
+
+#[tokio::test]
+async fn read_request_line_accepts_within_lowered_cap() {
+    // The same lowered cap still accepts a request that fits.
+    let (mut writer, mut reader) = tokio::io::duplex(256);
+    tokio::io::AsyncWriteExt::write_all(&mut writer, b"{\"op\":\"ping\"}\n")
+        .await
+        .expect("write request line");
+    let line = read_request_line_with_limits(&mut reader, limits(64 * 1024, 0.5))
+        .await
+        .expect("request within cap accepted");
+    assert!(line.ends_with(b"\n"));
 }
 
 #[tokio::test]
 async fn read_request_line_times_out_waiting_for_line() {
     let (_writer, mut reader) = tokio::io::duplex(64);
-    let err = read_request_line_with_timeout(&mut reader, 0.1)
-        .await
-        .expect_err("hanging request times out");
+    let err = read_request_line_with_limits(
+        &mut reader,
+        limits(ProtocolLimits::DEFAULT_MAX_REQUEST_BYTES, 0.1),
+    )
+    .await
+    .expect_err("hanging request times out");
     assert!(
         matches!(err, SandboxDaemonError::Io(ref source) if source.kind() == std::io::ErrorKind::TimedOut),
         "{err:?}"

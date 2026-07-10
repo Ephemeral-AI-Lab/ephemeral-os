@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use sandbox_observability::collect::cgroup::CgroupSample;
 use sandbox_observability::collect::disk::sample_upperdir;
+use sandbox_observability::WalkBudget;
 
 fn fixture(label: &str) -> PathBuf {
     static NEXT: AtomicU64 = AtomicU64::new(0);
@@ -106,7 +107,7 @@ fn disk_sample_totals_bytes_and_counts() {
     std::fs::create_dir_all(dir.join("nested")).expect("nested dir");
     write_file(&dir.join("nested"), "three.txt", "f");
 
-    let sample = sample_upperdir(&dir);
+    let sample = sample_upperdir(&dir, WalkBudget::default());
 
     assert_eq!(sample.upperdir_bytes, Some(6), "3 + 2 + 1 bytes");
     assert_eq!(sample.file_count, Some(3));

@@ -126,7 +126,7 @@ fn spawn_child(
             proc: record::proc::NAMESPACE_PROCESS,
             enabled: true,
         },
-        Sink::new(path),
+        Sink::new(path, record::MAX_LINE_BYTES),
     );
     obs.with_context(ctx, || {
         obs.scope(record::names::NAMESPACE_RUNNER_SPAWN_CHILD, |_| {

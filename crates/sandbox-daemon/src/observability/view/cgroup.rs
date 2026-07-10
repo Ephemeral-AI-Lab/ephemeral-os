@@ -1,7 +1,7 @@
 use sandbox_protocol::{Request, Response};
 use serde_json::json;
 
-use crate::observability::{DaemonObservability, MAX_RESOURCE_WINDOW_MS};
+use crate::observability::DaemonObservability;
 
 pub(super) fn cgroup_view_response(
     observability: Option<&DaemonObservability>,
@@ -11,12 +11,13 @@ pub(super) fn cgroup_view_response(
         Ok(scope) => scope.unwrap_or_else(|| "sandbox".to_owned()),
         Err(response) => return response,
     };
-    let window_ms = match super::resource_window_ms(request) {
-        Ok(window_ms) => window_ms.unwrap_or(MAX_RESOURCE_WINDOW_MS),
-        Err(response) => return response,
-    };
     let Some(observability) = observability else {
         return super::observability_unconfigured();
+    };
+    let max_window_ms = observability.views.resource_window_ms;
+    let window_ms = match super::resource_window_ms(request, max_window_ms) {
+        Ok(window_ms) => window_ms.unwrap_or(max_window_ms),
+        Err(response) => return response,
     };
     Response::ok(json!({
         "view": "cgroup",

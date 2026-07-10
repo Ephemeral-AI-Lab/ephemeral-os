@@ -47,7 +47,12 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
         sandbox_id: config.sandbox_id,
         cgroup_root: cgroup_root.clone(),
         observability: observability_config,
-        forward_response_timeout: sandbox_daemon::ServerConfig::DEFAULT_FORWARD_RESPONSE_TIMEOUT,
+        limits: sandbox_protocol::ProtocolLimits {
+            max_request_bytes: daemon_config.server.max_request_bytes,
+            request_read_timeout_s: daemon_config.server.request_read_timeout_s,
+        },
+        max_concurrent_connections: daemon_config.server.max_concurrent_connections,
+        forward: daemon_config.http.forward,
     };
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(daemon_worker_threads(
@@ -123,6 +128,9 @@ pub(crate) fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
     let observability = doc
         .section::<ObservabilityConfig>("observability")
         .unwrap_or_default();
+    observability
+        .validate()
+        .context("validate observability config")?;
     Ok(DaemonRuntimeConfig {
         daemon,
         runtime,

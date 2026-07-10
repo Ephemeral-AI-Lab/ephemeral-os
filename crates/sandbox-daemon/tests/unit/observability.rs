@@ -450,7 +450,9 @@ fn server_config(root: &Path, sandbox_id: Option<&str>) -> ServerConfig {
         sandbox_id: sandbox_id.map(str::to_owned),
         cgroup_root: None,
         observability: ObservabilityConfig::default(),
-        forward_response_timeout: ServerConfig::DEFAULT_FORWARD_RESPONSE_TIMEOUT,
+        limits: sandbox_protocol::ProtocolLimits::default(),
+        max_concurrent_connections: 256,
+        forward: Default::default(),
     }
 }
 

@@ -6,6 +6,12 @@
 )]
 #[path = "../src/cgroup_setup.rs"]
 pub(crate) mod cgroup_setup;
+#[allow(
+    dead_code,
+    reason = "rpc lifecycle references crate::http; the harness includes it to resolve that path"
+)]
+#[path = "../src/http/mod.rs"]
+pub(crate) mod http;
 #[path = "../src/observability/mod.rs"]
 pub(crate) mod observability;
 #[allow(
@@ -27,19 +33,12 @@ mod runner_cli;
 )]
 #[path = "../src/serve.rs"]
 mod serve_cli;
-pub(crate) use rpc::MAX_REQUEST_BYTES;
-#[allow(
-    dead_code,
-    reason = "rpc lifecycle references crate::http; the harness includes it to resolve that path"
-)]
-#[path = "../src/http/mod.rs"]
-pub(crate) mod http;
 
 #[path = "unit/dependency_guard.rs"]
 mod dependency_guard_tests;
 
 mod connection_tests {
-    pub(crate) use crate::rpc::connection::read_request_line_with_timeout;
+    pub(crate) use crate::rpc::connection::read_request_line_with_limits;
     pub(crate) use crate::rpc::lifecycle::drain_connection_tasks;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),

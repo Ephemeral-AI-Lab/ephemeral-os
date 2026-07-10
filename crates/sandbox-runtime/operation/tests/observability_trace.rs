@@ -333,7 +333,7 @@ fn sink_error_does_not_surface_to_command_result() {
             proc: proc::DAEMON,
             enabled: true,
         },
-        Sink::new(wedged),
+        Sink::new(wedged, sandbox_observability::record::MAX_LINE_BYTES),
     );
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
@@ -375,7 +375,10 @@ fn enabled_observer(path: &Path) -> Observer {
             proc: proc::DAEMON,
             enabled: true,
         },
-        Sink::new(path.to_path_buf()),
+        Sink::new(
+            path.to_path_buf(),
+            sandbox_observability::record::MAX_LINE_BYTES,
+        ),
     )
 }
 

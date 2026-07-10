@@ -36,9 +36,10 @@ def _tree_digest(root):
 class TestPhase1:
     """runtime.layerstack, manager.export, daemon.http.export (phase 1).
 
-    Lane A methods run first (definition order): the Lane B arms below them
-    replace the module's family gateway, so a Lane A test after them would
-    rewrite a daemon YAML no running gateway points at.
+    Lane A methods run first (definition order), and every Lane B arm
+    restores the module's family gateway on exit: later Lane A tests (also
+    TestPhase2/3 below) rewrite the module's daemon YAML, which only that
+    gateway reads.
     """
 
     def test_sweep_width_squash_invariance(self, lane_a_daemon_yaml):
@@ -127,64 +128,20 @@ class TestPhase1:
         )
 
     @pytest.mark.slow
-    def test_export_stream_cap_error(self, tmp_path, config_family_custody):
+    def test_export_stream_cap_error(self, lane_a_daemon_yaml, tmp_path):
         """P1-F2 — manager.export.max_stream_bytes: 4096 fails an export of a
         larger delta with the cap error; a generous-cap (baseline) arm accepts
-        the same payload."""
+        the same payload. Restores the module's family gateway on exit."""
         payload_command = "head -c 65536 /dev/urandom > payload.bin"
-        capped_yaml = helpers.make_config(
-            {"manager": {"export": {"max_stream_bytes": 4096}}},
-            tmp_path / "gateway-stream-cap.yml",
-        )
-        helpers.start_gateway(capped_yaml)
-        with helpers.sandbox() as sandbox_id:
-            helpers.exec_output(sandbox_id, payload_command)
-            dest = tmp_path / "capped.tar.zst"
-            result = climod.manager(
-                "export_changes",
-                "--sandbox-id",
-                sandbox_id,
-                "--dest",
-                str(dest),
-                "--format",
-                "tar-zst",
+        try:
+            capped_yaml = helpers.make_config(
+                {"manager": {"export": {"max_stream_bytes": 4096}}},
+                tmp_path / "gateway-stream-cap.yml",
             )
-            error = helpers.error_text(result)
-            assert "export stream cap exceeded" in error, error
-            assert not dest.exists(), "a capped export must not materialize the archive"
-
-        generous_yaml = helpers.make_config({}, tmp_path / "gateway-generous.yml")
-        helpers.start_gateway(generous_yaml)
-        with helpers.sandbox() as sandbox_id:
-            helpers.exec_output(sandbox_id, payload_command)
-            dest = tmp_path / "generous.tar.zst"
-            result = climod.manager(
-                "export_changes",
-                "--sandbox-id",
-                sandbox_id,
-                "--dest",
-                str(dest),
-                "--format",
-                "tar-zst",
-            )
-            assert not climod.is_error(result), f"generous arm export failed: {result}"
-            assert dest.exists() and dest.stat().st_size > 4096
-
-    @pytest.mark.slow
-    def test_export_apply_entry_cap_error(self, tmp_path, config_family_custody):
-        """P1-F3 — manager.export.max_apply_entries: 1 fails a dir-mode export
-        of a two-file delta with the entry-cap error, with zero writes into
-        the destination."""
-        capped_yaml = helpers.make_config(
-            {"manager": {"export": {"max_apply_entries": 1}}},
-            tmp_path / "gateway-entry-cap.yml",
-        )
-        with helpers.gateway_with_config(capped_yaml):
+            helpers.start_gateway(capped_yaml)
             with helpers.sandbox() as sandbox_id:
-                helpers.exec_output(
-                    sandbox_id, "printf one > entry-a.txt && printf two > entry-b.txt"
-                )
-                dest = tmp_path / "entry-capped-dest"
+                helpers.exec_output(sandbox_id, payload_command)
+                dest = tmp_path / "capped.tar.zst"
                 result = climod.manager(
                     "export_changes",
                     "--sandbox-id",
@@ -192,29 +149,152 @@ class TestPhase1:
                     "--dest",
                     str(dest),
                     "--format",
-                    "dir",
+                    "tar-zst",
                 )
                 error = helpers.error_text(result)
-                assert "entry-count cap exceeded" in error, error
-                assert not dest.exists() or not any(dest.iterdir()), (
-                    "a capped dir export must not write into dest"
+                assert "export stream cap exceeded" in error, error
+                assert not dest.exists(), (
+                    "a capped export must not materialize the archive"
                 )
 
+            generous_yaml = helpers.make_config({}, tmp_path / "gateway-generous.yml")
+            helpers.start_gateway(generous_yaml)
+            with helpers.sandbox() as sandbox_id:
+                helpers.exec_output(sandbox_id, payload_command)
+                dest = tmp_path / "generous.tar.zst"
+                result = climod.manager(
+                    "export_changes",
+                    "--sandbox-id",
+                    sandbox_id,
+                    "--dest",
+                    str(dest),
+                    "--format",
+                    "tar-zst",
+                )
+                assert not climod.is_error(result), (
+                    f"generous arm export failed: {result}"
+                )
+                assert dest.exists() and dest.stat().st_size > 4096
+        finally:
+            helpers.start_gateway(lane_a_daemon_yaml.parent / "gateway.yml")
 
-@pytest.mark.skip(reason="config consolidation phase 2 not landed")
+    @pytest.mark.slow
+    def test_export_apply_entry_cap_error(self, lane_a_daemon_yaml, tmp_path):
+        """P1-F3 — manager.export.max_apply_entries: 1 fails a dir-mode export
+        of a two-file delta with the entry-cap error, with zero writes into
+        the destination. Restores the module's family gateway on exit."""
+        capped_yaml = helpers.make_config(
+            {"manager": {"export": {"max_apply_entries": 1}}},
+            tmp_path / "gateway-entry-cap.yml",
+        )
+        try:
+            with helpers.gateway_with_config(capped_yaml):
+                with helpers.sandbox() as sandbox_id:
+                    helpers.exec_output(
+                        sandbox_id,
+                        "printf one > entry-a.txt && printf two > entry-b.txt",
+                    )
+                    dest = tmp_path / "entry-capped-dest"
+                    result = climod.manager(
+                        "export_changes",
+                        "--sandbox-id",
+                        sandbox_id,
+                        "--dest",
+                        str(dest),
+                        "--format",
+                        "dir",
+                    )
+                    error = helpers.error_text(result)
+                    assert "entry-count cap exceeded" in error, error
+                    assert not dest.exists() or not any(dest.iterdir()), (
+                        "a capped dir export must not write into dest"
+                    )
+        finally:
+            helpers.start_gateway(lane_a_daemon_yaml.parent / "gateway.yml")
+
+
 class TestPhase2:
-    """daemon.server limits, observability.views."""
+    """daemon.server limits, observability.views (phase 2). Lane A only."""
 
-    def test_request_cap_rejects_oversized_write(self):
-        """P2-F1 — daemon.server.max_request_bytes: 65536 rejects a write_file
-        payload over 64 KiB with the request-too-large error; the default arm
-        accepts it."""
-        raise NotImplementedError
+    def test_request_cap_rejects_oversized_write(self, lane_a_daemon_yaml):
+        """P2-F1 — daemon.server.max_request_bytes: 65536 rejects a file_write
+        whose request envelope exceeds 64 KiB with the daemon's
+        request-too-large error; the default arm accepts the same payload."""
+        payload = "x" * (96 * 1024)
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml, {"daemon": {"server": {"max_request_bytes": 65536}}}
+        )
+        with helpers.sandbox() as sandbox_id:
+            result = climod.runtime(
+                sandbox_id, "file_write", "--path", "cap.txt", "--content", payload
+            )
+            error = helpers.error_text(result)
+            assert "exceeds" in error and "byte limit" in error, error
 
-    def test_layer_delta_view_honors_default_limit(self):
-        """P2-F2 — observability.views.layer_delta_default_limit: 3 returns at
-        most 3 deltas for a sandbox with more than 3 published layers."""
-        raise NotImplementedError
+        helpers.rewrite_daemon_yaml(lane_a_daemon_yaml)
+        with helpers.sandbox() as sandbox_id:
+            result = climod.runtime(
+                sandbox_id, "file_write", "--path", "cap.txt", "--content", payload
+            )
+            assert isinstance(result, dict) and not climod.is_error(result), (
+                f"default arm must accept the payload: {result}"
+            )
+
+    def test_layer_delta_view_honors_default_limit(self, lane_a_daemon_yaml):
+        """P2-F2 — observability.views.layer_delta_default_limit: 3 caps the
+        layer-delta view at 3 entries for a layer carrying more, with the
+        truncation flag set; an explicit limit above layer_delta_max_limit is
+        rejected. The layer_id/limit args ride the authenticated internal
+        gateway call — the CLI catalog exposes only the inventory shape."""
+        from core.cli import internal_runtime
+
+        helpers.rewrite_daemon_yaml(
+            lane_a_daemon_yaml,
+            {
+                "observability": {
+                    "views": {
+                        "layer_delta_default_limit": 3,
+                        "layer_delta_max_limit": 10,
+                    }
+                }
+            },
+        )
+        with helpers.sandbox() as sandbox_id:
+            helpers.exec_output(
+                sandbox_id,
+                "mkdir -p delta && for i in 1 2 3 4 5 6; do echo $i > delta/f$i.txt; done",
+            )
+            inventory = internal_runtime(
+                sandbox_id, "get_observability", {"view": "layerstack"}
+            )
+            layers = inventory.get("layers")
+            assert layers, f"layerstack inventory must list layers: {inventory}"
+            published = [
+                layer["layer_id"]
+                for layer in layers
+                if not layer["layer_id"].startswith("B")
+            ]
+            assert published, f"the exec must have published a delta layer: {layers}"
+            delta_layer = published[0]
+
+            view = internal_runtime(
+                sandbox_id,
+                "get_observability",
+                {"view": "layerstack", "layer_id": delta_layer},
+            )
+            entries = view.get("entries")
+            assert entries is not None and len(entries) == 3, (
+                f"default limit 3 must cap the delta entries: {view}"
+            )
+            assert view.get("truncated") is True, view
+
+            rejected = internal_runtime(
+                sandbox_id,
+                "get_observability",
+                {"view": "layerstack", "layer_id": delta_layer, "limit": 50},
+            )
+            error = helpers.error_text(rejected)
+            assert "limit exceeds max" in error, error
 
 
 @pytest.mark.skip(reason="config consolidation phase 3 not landed")

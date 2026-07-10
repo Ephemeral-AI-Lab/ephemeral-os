@@ -12,8 +12,7 @@ const ACTIVE_MANIFEST_FILE: &str = "manifest.json";
 const LAYERS_DIR: &str = "layers";
 const LAYER_METADATA_DIR: &str = ".layer-metadata";
 
-const MAX_LAYER_WALK_NODES: usize = 1024;
-const MAX_LAYER_WALK_DEPTH: usize = 64;
+use super::WalkBudget;
 
 /// Disk byte size of a single layer, keyed by its id.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,14 +38,14 @@ pub struct LayerStackBytes {
 /// sidecar triggers a budgeted directory walk of `layers/<id>` that repopulates
 /// the sidecar so the size is computed at most once per layer.
 #[must_use]
-pub fn sample_layerstack(storage_root: &Path) -> LayerStackBytes {
+pub fn sample_layerstack(storage_root: &Path, budget: WalkBudget) -> LayerStackBytes {
     let Some(layer_ids) = read_manifest_layer_ids(storage_root) else {
         return LayerStackBytes::default();
     };
     let mut layers = Vec::with_capacity(layer_ids.len());
     let mut total_bytes = 0_u64;
     for layer_id in layer_ids {
-        let bytes = layer_bytes(storage_root, &layer_id);
+        let bytes = layer_bytes(storage_root, &layer_id, budget);
         total_bytes = total_bytes.saturating_add(bytes);
         layers.push(LayerBytes { layer_id, bytes });
     }
@@ -67,11 +66,11 @@ fn read_manifest_layer_ids(storage_root: &Path) -> Option<Vec<String>> {
     Some(ids)
 }
 
-fn layer_bytes(storage_root: &Path, layer_id: &str) -> u64 {
+fn layer_bytes(storage_root: &Path, layer_id: &str, budget: WalkBudget) -> u64 {
     if let Some(bytes) = read_bytes_sidecar(storage_root, layer_id) {
         return bytes;
     }
-    let bytes = walk_layer_bytes(&storage_root.join(LAYERS_DIR).join(layer_id));
+    let bytes = walk_layer_bytes(&storage_root.join(LAYERS_DIR).join(layer_id), budget);
     let _ = write_bytes_sidecar(storage_root, layer_id, bytes);
     bytes
 }
@@ -96,12 +95,12 @@ fn write_bytes_sidecar(storage_root: &Path, layer_id: &str, bytes: u64) -> std::
     fs::write(dir.join(format!("{layer_id}.bytes")), bytes.to_string())
 }
 
-fn walk_layer_bytes(root: &Path) -> u64 {
+fn walk_layer_bytes(root: &Path, budget: WalkBudget) -> u64 {
     let mut total = 0_u64;
     let mut stack = vec![(root.to_path_buf(), 0_usize)];
     let mut visited = 0_usize;
     while let Some((current, depth)) = stack.pop() {
-        if visited >= MAX_LAYER_WALK_NODES {
+        if visited >= budget.max_nodes {
             break;
         }
         visited += 1;
@@ -111,12 +110,12 @@ fn walk_layer_bytes(root: &Path) -> u64 {
         let file_type = metadata.file_type();
         if file_type.is_file() {
             total = total.saturating_add(metadata.len());
-        } else if file_type.is_dir() && depth < MAX_LAYER_WALK_DEPTH {
+        } else if file_type.is_dir() && depth < budget.max_depth {
             let Ok(entries) = fs::read_dir(&current) else {
                 continue;
             };
             for entry in entries.flatten() {
-                if visited.saturating_add(stack.len()) >= MAX_LAYER_WALK_NODES {
+                if visited.saturating_add(stack.len()) >= budget.max_nodes {
                     break;
                 }
                 stack.push((entry.path(), depth.saturating_add(1)));

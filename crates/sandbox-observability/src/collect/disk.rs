@@ -4,8 +4,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const MAX_DISK_SAMPLE_NODES: usize = 1024;
-const MAX_DISK_SAMPLE_DEPTH: usize = 64;
+use super::WalkBudget;
 
 /// Byte/entry-count totals of an upperdir walk, with budget-truncation and the
 /// first read error encountered.
@@ -29,23 +28,7 @@ impl DiskSample {
 
 /// Walk `path` (budgeted DFS) and total its bytes and entry counts.
 #[must_use]
-pub fn sample_upperdir(path: &Path) -> DiskSample {
-    sample_upperdir_with_budget(
-        path,
-        DiskSampleBudget {
-            max_nodes: MAX_DISK_SAMPLE_NODES,
-            max_depth: MAX_DISK_SAMPLE_DEPTH,
-        },
-    )
-}
-
-#[derive(Debug, Clone, Copy)]
-struct DiskSampleBudget {
-    max_nodes: usize,
-    max_depth: usize,
-}
-
-fn sample_upperdir_with_budget(path: &Path, budget: DiskSampleBudget) -> DiskSample {
+pub fn sample_upperdir(path: &Path, budget: WalkBudget) -> DiskSample {
     let mut sample = DiskSample {
         upperdir_bytes: Some(0),
         file_count: Some(0),

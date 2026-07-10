@@ -42,8 +42,8 @@ injection pattern. It lands in **phase 2** with `ProtocolLimits`, not phase
 | --- | --- | --- | --- |
 | 0 | e2e config family — harness + present-day coverage | — | done |
 | 1 | bench-path knobs + env-var retirement | 0 | done |
-| 2 | daemon service limits + injection patterns | 1 | in progress |
-| 3 | runtime operation caps | 2 | blocked |
+| 2 | daemon service limits + injection patterns | 1 | done |
+| 3 | runtime operation caps | 2 | in progress |
 | 4 | host-side surfaces (gateway, console, docker timing) | 3 | blocked |
 
 ## Global definition of done (applies to every phase, in addition to its own criteria)
@@ -269,57 +269,93 @@ here, per the spec's own no-dead-schema policy:
 `spec.md` tier 2. Establishes the two injection patterns (protocol value
 type, leaf observability mapping) that phase 3 reuses.
 
+### Phase 2 drift note (2026-07-10, recorded while landing)
+
+- `daemon.http.export.token_ttl_s` and "export token TTL from config" are
+  **void**: the token machinery died with the export stream (phase-1 drift
+  note). `daemon.http` returns to the schema carrying `forward` only; the
+  schema test pinning `daemon.http.export` as an unknown key replaces the
+  phase-1 whole-`http` pin.
+- `ProtocolLimits` carries the shipped defaults as associated consts
+  (`DEFAULT_MAX_REQUEST_BYTES`, `DEFAULT_REQUEST_READ_TIMEOUT_S`) because
+  pure clients (CLI, manager forward deadline, gateway read path, console
+  body cap) consume them in const contexts; the daemon alone injects
+  configured values.
+- The `max_line_bytes` injection covers the daemon-side `Sink`; the
+  namespace-process runner (config-free leaf, its own process) keeps the
+  shipped `MAX_LINE_BYTES` default for np-* records.
+- The forward deadlines ride `ServerConfig::forward`
+  (`DaemonHttpForwardConfig`) into `proxy::run` — this also replaced the
+  interim `forward_response_timeout` seam introduced while fixing a
+  concurrent `#[cfg(test)]` policy violation; the daemon http test now
+  injects its 100 ms deadline through the same config field.
+
 ### Work items
 
-- [ ] Schema: `configs/daemon.rs` — `daemon.server` gains
+- [x] Schema: `configs/daemon.rs` — `daemon.server` gains
       `max_concurrent_connections >= 1`, `max_request_bytes >= 65536`,
-      `request_read_timeout_s > 0`; `daemon.http.export` gains
-      `token_ttl_s >= 1`; new `daemon.http.forward`
+      `request_read_timeout_s > 0`; ~~`daemon.http.export` `token_ttl_s`~~
+      void per drift note; new `daemon.http.forward`
       (`connect_timeout_s`, `response_timeout_s`, both `> 0`)
-- [ ] Schema: `configs/observability.rs` — `max_line_bytes`, new `sampling`
+- [x] Schema: `configs/observability.rs` — `max_line_bytes`, new `sampling`
       (`max_walk_nodes >= 1`, `max_walk_depth >= 1`) and `views`
       (`resource_window_ms >= 1`, `layer_delta_default_limit >= 1`,
-      `layer_delta_max_limit >= 1`, cross-field default ≤ max)
-- [ ] `sandbox-protocol/src/limits.rs` — `ProtocolLimits` value type
+      `layer_delta_max_limit >= 1`, cross-field default ≤ max);
+      `ObservabilityConfig::validate()` now runs in the daemon's config load
+- [x] `sandbox-protocol/src/limits.rs` — `ProtocolLimits` value type
       (`max_request_bytes`, `request_read_timeout_s`) with `Default`
-      preserving today's constants; export-stream token TTL moved to the
-      same pattern; protocol crate gains no config dependency
-- [ ] Daemon wiring: `serve.rs` constructs `ProtocolLimits` from
-      `daemon.server` and threads it down the request read path; RPC
-      connection semaphore takes the config value
-      (`rpc/lifecycle.rs` const deleted); forward proxy timeouts as
-      constructor params; export token TTL from config
-- [ ] Observability wiring: daemon's `ObserverConfig` mapping extended with
-      `max_line_bytes` and the two sampling budgets; leaf consts in
-      `record.rs`, `collect/disk.rs`, `collect/layerstack.rs` replaced by
-      injected values (one shared budget for both walks, decision 8)
-- [ ] Views wiring: `observability/mod.rs` window cap and
-      `view/layerstack.rs` delta limits from config
-- [ ] Schema tests: defaults, rejections, cross-field rule
-- [ ] Unskip + adapt `TestPhase2` (P2-F1 request cap, P2-F2 view limit)
+      preserving today's constants; protocol crate gains no config
+      dependency; bare consts deleted (clients use the associated defaults)
+- [x] Daemon wiring: `serve.rs` constructs `ProtocolLimits` from
+      `daemon.server` and threads it down both listeners' read paths and the
+      HTTP API body cap; RPC connection semaphore takes the config value
+      (`rpc/lifecycle.rs` const deleted); forward proxy deadlines injected
+      via `ServerConfig::forward`; ~~export token TTL~~ void
+- [x] Observability wiring: the daemon's leaf mapping extended —
+      `max_line_bytes` into `Sink::new`, the shared sampling budget as a
+      leaf-owned `WalkBudget` into `sample_upperdir`/`sample_layerstack`;
+      leaf consts in `collect/disk.rs`, `collect/layerstack.rs` replaced by
+      the injected budget (one budget for both walks, decision 8)
+- [x] Views wiring: `observability/mod.rs` window cap and
+      `view/layerstack.rs` delta limits from `observability.views` (held on
+      `DaemonObservability`)
+- [x] Schema tests: defaults, rejections, cross-field rule (52 config tests)
+- [x] Unskip + adapt `TestPhase2` (P2-F1 request cap via `file_write`;
+      P2-F2 layer-delta limit via the authenticated internal
+      `get_observability` call — the CLI catalog exposes only the inventory
+      shape)
 
 ### Acceptance criteria
 
-- [ ] `grep -rn "const MAX_CONCURRENT_CONNECTIONS\|const MAX_REQUEST_BYTES\|const REQUEST_READ_TIMEOUT_S\|const EXPORT_STREAM_TOKEN_TTL_S" crates/sandbox-daemon/src crates/sandbox-protocol/src` shows only the `ProtocolLimits`
-      `Default` impl values, no call-site consts
-- [ ] `sandbox-protocol/Cargo.toml` and `sandbox-observability/Cargo.toml`
-      unchanged w.r.t. dependencies (no `sandbox-config` edge)
-- [ ] `cargo test -p sandbox-config` passes: new fields default to today's
-      values (256, 16 MiB, 30.0, 30, 10.0, 30.0, 16 KiB, 1024, 64, 600000,
-      500, 5000); `layer_delta_default_limit > layer_delta_max_limit`
-      rejected
-- [ ] `cargo test -p sandbox-daemon -p sandbox-protocol` passes, including a
-      test that a daemon config with a lowered `max_request_bytes` rejects
-      an oversized request envelope
-- [ ] `pytest -m config` fully green including unskipped `TestPhase2`:
-      P2-F1 64 KiB request cap rejects an oversized `write_file` while the
+- [x] `grep -rn "const MAX_CONCURRENT_CONNECTIONS\|const MAX_REQUEST_BYTES\|const REQUEST_READ_TIMEOUT_S\|const EXPORT_STREAM_TOKEN_TTL_S" crates/sandbox-daemon/src crates/sandbox-protocol/src` → empty (2026-07-10); the shipped defaults live as
+      `ProtocolLimits` associated consts, no call-site consts
+- [x] `sandbox-protocol/Cargo.toml` and `sandbox-observability/Cargo.toml`
+      unchanged w.r.t. dependencies (no `sandbox-config` edge; leaf grep
+      empty 2026-07-10)
+- [x] `cargo test -p sandbox-config` passes: new fields default to today's
+      values (256, 16 MiB, 30.0, 10.0, 30.0, 16 KiB, 1024, 64, 600000,
+      500, 5000 — the TTL `30` is void per the drift note);
+      `layer_delta_default_limit > layer_delta_max_limit` rejected —
+      evidence: 52 passed
+- [x] `cargo test -p sandbox-daemon -p sandbox-protocol` passes, including
+      `read_request_line_rejects_oversized_payloads` — a lowered injected
+      64 KiB `max_request_bytes` rejects a one-byte-over envelope (and its
+      companion accepts within the cap) — within the whole-workspace run:
+      108 suites ok, 0 failures (2026-07-10)
+- [x] `pytest -m config` fully green including unskipped `TestPhase2`:
+      P2-F1 64 KiB request cap rejects an oversized `file_write` while the
       default arm accepts it; P2-F2 layer-delta view honors a lowered
-      default limit
-- [ ] Observability e2e regression: phase 0's `test_observability_toggle`
-      still green (mapping extension didn't break enable/disable)
-- [ ] Export e2e regression: token-gated export stream suite passes with the
-      default TTL (existing export tests) — TTL now flowing through config
-- [ ] Global definition of done checked
+      default limit (3 entries + truncated) and rejects a request above the
+      lowered max — evidence: `27 passed, 5 skipped, 331 deselected in
+      129.56s` (2026-07-10; the 5 skips are the TestPhase3 placeholders)
+- [x] Observability e2e regression: phase 0's `test_observability_toggle`
+      green inside the same family run
+- [x] ~~Export e2e regression: token-gated export stream TTL~~ void per the
+      drift note (token machinery removed with the stream); the export
+      regressions ran in phase 1 against the RPC paging path
+- [x] Global definition of done checked — build green, workspace test 108
+      suites ok / 0 failures, clippy 0, fmt clean, `git diff config/prd.yml`
+      empty, leaf-crate grep empty, committed to `main` (2026-07-10)
 
 ---
 

@@ -1,3 +1,4 @@
+use sandbox_config::configs::observability::ViewsConfig;
 use sandbox_observability::sample_layerstack;
 use sandbox_protocol::{error_kind, Request, Response};
 use sandbox_runtime::SandboxRuntimeOperations;
@@ -7,9 +8,6 @@ use crate::observability::layerstack::{
     layer_delta_value, layerstack_view_value, workspace_layerstack_value,
 };
 use crate::observability::DaemonObservability;
-
-const DEFAULT_LAYER_DELTA_LIMIT: usize = 500;
-const MAX_LAYER_DELTA_LIMIT: usize = 5_000;
 
 pub(super) fn layerstack_view_response(
     operations: &SandboxRuntimeOperations,
@@ -30,8 +28,10 @@ pub(super) fn layerstack_view_response(
             "layerstack request cannot include both workspace_id and layer_id".to_owned(),
         );
     }
+    let views =
+        observability.map_or_else(ViewsConfig::default, |observability| observability.views);
     if let Some(layer) = layer {
-        return layer_view_response(operations, request, layer.trim());
+        return layer_view_response(operations, request, layer.trim(), views);
     }
     if let Some(workspace) = workspace {
         return workspace_view_response(operations, observability, workspace.trim());
@@ -45,9 +45,11 @@ pub(super) fn layerstack_view_response(
             )
         }
     };
-    let bytes = sample_layerstack(operations.layer_stack_root());
+    let sampling =
+        observability.map_or_else(Default::default, |observability| observability.sampling);
+    let bytes = sample_layerstack(operations.layer_stack_root(), sampling);
     let mut view = layerstack_view_value(&observation, &bytes);
-    let window_ms = match super::resource_window_ms(request) {
+    let window_ms = match super::resource_window_ms(request, views.resource_window_ms) {
         Ok(window_ms) => window_ms,
         Err(response) => return response,
     };
@@ -66,8 +68,9 @@ fn layer_view_response(
     operations: &SandboxRuntimeOperations,
     request: &Request,
     layer_id: &str,
+    views: ViewsConfig,
 ) -> Response {
-    let limit = match layer_delta_limit(request) {
+    let limit = match layer_delta_limit(request, views) {
         Ok(limit) => limit,
         Err(response) => return response,
     };
@@ -121,14 +124,14 @@ fn workspace_view_response(
     }
 }
 
-fn layer_delta_limit(request: &Request) -> Result<usize, Response> {
+fn layer_delta_limit(request: &Request, views: ViewsConfig) -> Result<usize, Response> {
     let limit = request
         .optional_usize("limit")?
-        .unwrap_or(DEFAULT_LAYER_DELTA_LIMIT);
-    if limit > MAX_LAYER_DELTA_LIMIT {
+        .unwrap_or(views.layer_delta_default_limit);
+    if limit > views.layer_delta_max_limit {
         return Err(Response::fault(
             error_kind::INVALID_REQUEST,
-            format!("limit exceeds max ({MAX_LAYER_DELTA_LIMIT})"),
+            format!("limit exceeds max ({})", views.layer_delta_max_limit),
         ));
     }
     Ok(limit)

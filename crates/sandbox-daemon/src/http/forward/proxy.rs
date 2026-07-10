@@ -12,14 +12,13 @@ use http::{Method, Request, Response, StatusCode, Uri};
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
 use hyper_util::rt::TokioIo;
+use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 
 use super::route::ForwardRoute;
 use super::{ForwardError, ForwardTarget};
 use crate::http::response::{self, BoxBody};
-
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 
 const HOP_BY_HOP: [&str; 7] = [
     "connection",
@@ -32,16 +31,17 @@ const HOP_BY_HOP: [&str; 7] = [
 ];
 
 /// Forward one request to `target`, returning the upstream response (body
-/// streamed) or a connect/timeout failure. The caller injects the upstream
-/// `response_timeout` (`ServerConfig::forward_response_timeout`).
+/// streamed) or a connect/timeout failure. The caller injects both deadlines
+/// (`daemon.http.forward` via `ServerConfig::forward`).
 pub(crate) async fn run(
     target: &ForwardTarget,
     route: &ForwardRoute,
     req: Request<Incoming>,
-    response_timeout: Duration,
+    deadlines: DaemonHttpForwardConfig,
 ) -> Result<Response<BoxBody>, ForwardError> {
+    let response_timeout = Duration::from_secs_f64(deadlines.response_timeout_s);
     let stream = match timeout(
-        CONNECT_TIMEOUT,
+        Duration::from_secs_f64(deadlines.connect_timeout_s),
         TcpStream::connect((target.host.as_str(), target.port)),
     )
     .await

@@ -42,14 +42,18 @@ pub(crate) fn observability_view_response(
 }
 
 /// Parse the bounded `window_ms` lookback shared by the `cgroup` and
-/// `layerstack` views, rejecting values past the configured ceiling.
-pub(super) fn resource_window_ms(request: &Request) -> Result<Option<u64>, Response> {
+/// `layerstack` views, rejecting values past the configured ceiling
+/// (`observability.views.resource_window_ms`).
+pub(super) fn resource_window_ms(
+    request: &Request,
+    max_window_ms: u64,
+) -> Result<Option<u64>, Response> {
     let window_ms = request.optional_u64("window_ms")?;
     if let Some(window_ms) = window_ms {
-        if window_ms > super::MAX_RESOURCE_WINDOW_MS {
+        if window_ms > max_window_ms {
             return Err(Response::fault(
                 error_kind::INVALID_REQUEST,
-                format!("window_ms exceeds max ({})", super::MAX_RESOURCE_WINDOW_MS),
+                format!("window_ms exceeds max ({max_window_ms})"),
             ));
         }
     }

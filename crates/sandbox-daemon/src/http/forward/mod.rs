@@ -101,7 +101,7 @@ async fn forward(state: &HttpState, req: Request<Incoming>) -> (Response<BoxBody
             )
         }
     };
-    match proxy::run(&target, &route, req, state.config.forward_response_timeout).await {
+    match proxy::run(&target, &route, req, state.config.forward).await {
         Ok(response) => {
             let status = response.status().as_u16();
             let bytes_out = content_length(response.headers());

@@ -9,25 +9,30 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use crate::record::{Attrs, Event, Record, Sample, Span, MAX_LINE_BYTES, TRUNCATED_KEY};
+use crate::record::{Attrs, Event, Record, Sample, Span, TRUNCATED_KEY};
 
 /// Append-only sink over one log file. The parent directory is created once at
 /// construction; each append opens an `O_APPEND` fd, robust to the daemon
 /// renaming the file at rotation.
 pub struct Sink {
     path: PathBuf,
+    max_line_bytes: usize,
 }
 
 impl Sink {
-    /// Open a sink over `path`, creating its parent directory once. Directory
-    /// creation is best-effort — a real failure surfaces (and is swallowed) at
-    /// the first `append`.
+    /// Open a sink over `path` with a per-line byte cap (the daemon injects
+    /// `observability.max_line_bytes`), creating the parent directory once.
+    /// Directory creation is best-effort — a real failure surfaces (and is
+    /// swallowed) at the first `append`.
     #[must_use]
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf, max_line_bytes: usize) -> Self {
         if let Some(parent) = path.parent() {
             let _ = fs::create_dir_all(parent);
         }
-        Self { path }
+        Self {
+            path,
+            max_line_bytes,
+        }
     }
 
     #[must_use]
@@ -36,13 +41,13 @@ impl Sink {
     }
 
     /// Append one record as a single newline-delimited line. The whole line is
-    /// serialized once; if it exceeds `MAX_LINE_BYTES`, `attrs`/`metrics` are
+    /// serialized once; if it exceeds the line cap, `attrs`/`metrics` are
     /// replaced with a `{"_truncated": <original_line_bytes>}` marker and the
     /// record is re-serialized exactly once — entries are never dropped
     /// piecemeal and the loop never repeats.
     pub fn append(&self, record: &Record) -> std::io::Result<()> {
         let mut line = serde_json::to_vec(record)?;
-        if line.len() > MAX_LINE_BYTES {
+        if line.len() > self.max_line_bytes {
             let original_len = line.len();
             line = serde_json::to_vec(&truncate(record, original_len))?;
         }

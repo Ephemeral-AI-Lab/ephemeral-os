@@ -74,7 +74,7 @@ impl Observer {
                 proc: crate::record::proc::DAEMON,
                 enabled: false,
             },
-            Sink::new(std::path::PathBuf::new()),
+            Sink::new(std::path::PathBuf::new(), crate::record::MAX_LINE_BYTES),
         )
     }
 
