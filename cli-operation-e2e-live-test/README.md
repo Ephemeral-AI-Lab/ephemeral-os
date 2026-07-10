@@ -25,10 +25,22 @@ cli-operation-e2e-live-test/
 │   └── management/            # family: management
 │       ├── helpers.py
 │       └── test_management.py # create -> inspect -> list -> destroy
+├── config/                    # family: config (YAML knobs end to end; pytest -m config)
+│   ├── conftest.py            # family gateway custody + baseline restore
+│   ├── helpers.py             # make_config (generated YAML under pytest tmp), gateway_with_config
+│   ├── test_daemon_reload.py  # Lane A: per-create daemon YAML reload + behavior knobs
+│   ├── test_validation.py     # invalid config rejection on both lanes
+│   ├── test_manager_section.py# Lane B: gateway-start manager.docker knobs
+│   └── test_phase_knobs.py    # consolidation phases 1–3 (skip-marked until landed)
 ├── runtime/                   # placeholder (empty; tests not implemented yet)
 └── observability/             # placeholder (see observability/README.md)
     └── test_observability.py
 ```
+
+The `config` family owns the shared gateway while it runs (it restarts the
+gateway against generated YAMLs, then restores the baseline `config/prd.yml`
+gateway in its package finalizer), so it is serial — deselect it with
+`-m "not config"` in parallel lanes and run it with `pytest -m config`.
 
 Each **family** owns a folder with its own `helpers.py` (thin wrappers over the
 family's `sandbox-cli` operations) and its `test_*.py`. `core/` holds only

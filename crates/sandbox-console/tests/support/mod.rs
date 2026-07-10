@@ -9,7 +9,7 @@ use http_body_util::{BodyExt as _, Full};
 use hyper::body::Incoming;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
-use sandbox_cli_core::GatewayConfig;
+use sandbox_cli::core::GatewayConfig;
 use sandbox_console::config::ConsoleConfig;
 use sandbox_console::server;
 use sandbox_console::state::AppState;

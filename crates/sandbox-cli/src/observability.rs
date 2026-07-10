@@ -1,9 +1,4 @@
-//! Agent CLI: drive exactly one sandbox (commands, workspace sessions, files).
-//!
-//! A thin protocol client over [`sandbox_cli_core`]. It links only the runtime
-//! spec catalog — never a manager/runtime engine — and stamps sandbox scope. A
-//! `--sandbox-id` is required on every operation; there is no env or config
-//! fallback.
+//! Read-only CLI for aggregate and sandbox-scoped observability views.
 #![forbid(unsafe_code)]
 
 use std::ffi::OsString;
@@ -14,31 +9,26 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 
-use sandbox_cli_core::client::GatewayClient;
-use sandbox_cli_core::output::{
-    discover_config, operation_requires_args, render_help_command, render_request_error,
+use crate::core::client::GatewayClient;
+use crate::core::output::{
+    discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
 };
-use sandbox_cli_core::request_builder::{
-    catalog_document, resolve_runtime_sandbox_id, BuildRequestInput,
-};
-use sandbox_cli_core::GatewayConfigOverrides;
+use crate::core::request_builder::{catalog_document, BuildRequestInput};
+use crate::core::GatewayConfigOverrides;
 use sandbox_protocol::CliOperationExecutionSpace;
 
-const PROGRAM: &str = "sandbox-runtime-cli --sandbox-id ID";
+const PROGRAM: &str = "sandbox-observability-cli";
 const HELP_OP: &str = "help";
 
 #[derive(Debug, Parser)]
-#[command(name = "sandbox-runtime-cli", disable_help_subcommand = true)]
+#[command(name = "sandbox-observability-cli", disable_help_subcommand = true)]
 struct Cli {
     #[arg(long = "gateway-socket", value_name = "HOST:PORT", global = true)]
     gateway_socket_path: Option<PathBuf>,
 
     #[arg(long = "gateway-auth-token", value_name = "TOKEN", global = true)]
     gateway_auth_token: Option<String>,
-
-    #[arg(long = "sandbox-id", value_name = "SANDBOX_ID", global = true)]
-    sandbox_id: Option<String>,
 
     operation: Option<String>,
 
@@ -77,12 +67,13 @@ where
                 let _ = write!(stdout, "{error}");
                 return EXIT_SUCCESS;
             }
-            let _ = write!(stderr, "{error}");
+            let _ = render_error("invalid_request", error.to_string(), stderr);
             return EXIT_USAGE;
         }
     };
 
-    let catalog = match catalog_document(sandbox_runtime_operations::runtime_catalog()) {
+    let catalog = match catalog_document(sandbox_observability_operations::observability_catalog())
+    {
         Ok(catalog) => catalog,
         Err(error) => {
             let _ = render_request_error(&error, stderr);
@@ -96,17 +87,6 @@ where
     if operation == HELP_OP {
         return render_help_command(&catalog, &cli.operation_argv, PROGRAM, stdout, stderr);
     }
-    if cli.operation_argv.is_empty() && operation_requires_args(&catalog, &operation) {
-        return render_help_command(&catalog, &[operation], PROGRAM, stdout, stderr);
-    }
-
-    let sandbox_id = match resolve_runtime_sandbox_id(cli.sandbox_id) {
-        Ok(sandbox_id) => sandbox_id,
-        Err(error) => {
-            let _ = render_request_error(&error, stderr);
-            return EXIT_USAGE;
-        }
-    };
 
     let overrides = GatewayConfigOverrides {
         gateway_socket_path: cli.gateway_socket_path,
@@ -116,10 +96,10 @@ where
         return EXIT_USAGE;
     };
     let request_input = BuildRequestInput {
-        execution_space: CliOperationExecutionSpace::Runtime,
+        execution_space: CliOperationExecutionSpace::Observability,
         operation,
         operation_argv: cli.operation_argv,
-        sandbox_id: Some(sandbox_id),
+        sandbox_id: None,
     };
     run_request_from_catalog(&client, request_input, &catalog, false, stdout, stderr).await
 }

@@ -6,8 +6,8 @@ use serde_json::{json, Value};
 use sandbox_config::configs::cli::{GatewayConfig, GatewayConfigOverrides};
 use sandbox_protocol::{render_catalog_help, render_operation_help, CliOperationCatalogDocument};
 
-use crate::client::GatewayClient;
-use crate::request_builder::{build_request_from_catalog, BuildRequestInput, RequestBuildError};
+use super::client::GatewayClient;
+use super::request_builder::{build_request_from_catalog, BuildRequestInput, RequestBuildError};
 
 pub const EXIT_SUCCESS: u8 = 0;
 pub const EXIT_FAILURE: u8 = 1;
@@ -48,7 +48,11 @@ where
         [] => Ok(render_catalog_help(catalog, program)),
         [operation] => render_operation_help(catalog, operation, program),
         _ => {
-            let _ = writeln!(stderr, "help accepts at most one operation");
+            let _ = render_error(
+                "invalid_request",
+                "help accepts at most one operation",
+                stderr,
+            );
             return EXIT_USAGE;
         }
     };
@@ -59,19 +63,10 @@ where
             EXIT_SUCCESS
         }
         Err(error) => {
-            let _ = writeln!(stderr, "{error}");
+            let _ = render_error("invalid_request", error.to_string(), stderr);
             EXIT_USAGE
         }
     }
-}
-
-#[must_use]
-pub fn operation_requires_args(catalog: &CliOperationCatalogDocument, operation: &str) -> bool {
-    catalog
-        .operations
-        .iter()
-        .find(|spec| spec.name == operation)
-        .is_some_and(|spec| spec.args.iter().any(|arg| arg.required))
 }
 
 pub fn take_progress_flag(argv: &mut Vec<String>) -> bool {

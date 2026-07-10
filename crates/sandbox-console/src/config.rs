@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use sandbox_cli_core::{ConfigError, GatewayConfig, GatewayConfigOverrides};
+use sandbox_cli::core::{ConfigError, GatewayConfig, GatewayConfigOverrides};
 
 pub const SANDBOX_CONSOLE_BIND_ENV: &str = "SANDBOX_CONSOLE_BIND";
 pub const SANDBOX_CONSOLE_ASSETS_ENV: &str = "SANDBOX_CONSOLE_ASSETS";

@@ -14,6 +14,7 @@ BIN_DIR = REPO_ROOT / "bin"
 
 SANDBOX_MANAGER_CLI = BIN_DIR / "sandbox-manager-cli"
 SANDBOX_RUNTIME_CLI = BIN_DIR / "sandbox-runtime-cli"
+SANDBOX_OBSERVABILITY_CLI = BIN_DIR / "sandbox-observability-cli"
 START_GATEWAY = BIN_DIR / "start-sandbox-docker-gateway"
 
 # Docker image used for every sandbox (manager create_sandbox --image).
@@ -45,5 +46,5 @@ REBUILD_BINARY = os.environ.get("E2E_REBUILD_BINARY", "1")
 
 # "1" -> pass the manager CLI's global --progress flag and stream daemon-side
 # progress lines (e.g. workspace base copy/hash) live. Off by default. Runtime
-# operations have no --progress flag, so they never stream.
+# and observability operations have no --progress flag, so they never stream.
 PROGRESS = os.environ.get("E2E_PROGRESS", "0") == "1"

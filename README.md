@@ -5,7 +5,8 @@ human-facing gateway CLI, in-sandbox daemon, and separated runtime packages.
 
 ```text
 operator or agent
-   | sandbox-manager-cli / sandbox-runtime-cli or newline-delimited JSON protocol
+   | sandbox-manager-cli / sandbox-runtime-cli / sandbox-observability-cli
+   | or newline-delimited JSON protocol
    v
 sandbox-gateway / sandbox-protocol
    v
@@ -29,12 +30,11 @@ sandbox-config
 | Component | Kind | Job | Must never |
 |---|---|---|---|
 | `sandbox-gateway` | bin+lib | own the public gateway listener | own manager or runtime behavior or any CLI client code |
-| `sandbox-cli-core` | lib | the gateway client, CLI config discovery, catalog-driven request building, and response/error/help rendering shared by the CLI binaries | know any concrete operation or space policy |
-| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and per-sandbox `daemon_http` (`/api/sandboxes/:id/health`, `/api/sandboxes/:id/files/:op`, `/api/sandboxes/:id/observability/:view`, `/s/:id` preview proxy) as a client peer over `sandbox-cli-core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
-| `sandbox-manager-cli` | bin | operator CLI: manager + observability catalogs, system-scope requests, `--progress` | depend on manager/runtime/daemon/provider implementation crates |
-| `sandbox-runtime-cli` | bin | agent CLI: runtime catalog, sandbox-scope requests, required `--sandbox-id` | depend on manager/runtime/daemon/provider implementation crates |
+| `sandbox-cli` | lib + 3 bins | provide feature-free `sandbox_cli::core` plus separately feature-gated management, runtime, and observability executables | provide a combined executable/set or let one binary enumerate another authority |
+| `sandbox-console` | bin | web console: serve the SPA and bridge the browser to the gateway protocol (`/api/rpc`) and per-sandbox `daemon_http` (`/api/sandboxes/:id/health`, `/api/sandboxes/:id/files/:op`, `/api/sandboxes/:id/observability/:view`, `/s/:id` preview proxy) as a client peer over `sandbox_cli::core` | define operation vocabulary, contact the daemon RPC endpoint directly, or expose the gateway auth token to the browser |
 | `sandbox-manager-operations` | lib | manager CLI operation specs and catalog (spec-only) | contain dispatch or service code |
 | `sandbox-runtime-operations` | lib | runtime CLI operation specs and catalog (spec-only) | contain dispatch or service code |
+| `sandbox-observability-operations` | lib | observability CLI operation specs and catalog (spec-only) | contain dispatch or service code |
 | `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, and manager operations | implement runtime command/workspace semantics |
 | `sandbox-protocol` | lib | own request/response DTOs, framing, catalog, and help metadata | depend on manager, daemon, or runtime implementation crates |
 | `sandbox-daemon` | bin+lib | bind daemon transport and dispatch runtime requests | know about Docker fleets |
@@ -59,9 +59,9 @@ CAS fixtures live with `sandbox-runtime-layerstack`.
 - `crates/sandbox-runtime/layerstack/tests/fixtures/` - runtime-owned CAS
   fixtures.
 - `crates/` - the workspace: `sandbox-daemon`, `sandbox-protocol`,
-  `sandbox-manager`, `sandbox-gateway`, `sandbox-cli-core`,
-  `sandbox-manager-cli`, `sandbox-runtime-cli`, `sandbox-manager-operations`,
-  `sandbox-runtime-operations`, `sandbox-runtime/operation`,
+  `sandbox-manager`, `sandbox-gateway`, `sandbox-cli`,
+  `sandbox-manager-operations`, `sandbox-runtime-operations`,
+  `sandbox-observability-operations`, `sandbox-runtime/operation`,
   `sandbox-runtime/workspace`, `sandbox-runtime/namespace-execution`,
   `sandbox-runtime/namespace-process`, `sandbox-runtime/layerstack`,
   `sandbox-runtime/overlay`, and `sandbox-config`.
@@ -84,6 +84,7 @@ start-sandbox-console-stack        # then open http://127.0.0.1:7880
 # in another shell, use the gateway clients directly
 sandbox-manager-cli list_sandboxes
 sandbox-runtime-cli --sandbox-id eos-abc exec_command pwd
+sandbox-observability-cli snapshot --sandbox-id eos-abc
 
 # one-time per machine: bootstrap the musl cross toolchain (zig + cargo-zigbuild)
 setup-musl-cross

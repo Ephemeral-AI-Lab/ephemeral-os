@@ -1,0 +1,132 @@
+//! Agent CLI: drive exactly one sandbox (commands, workspace sessions, files).
+//!
+//! A thin protocol client over [`crate::core`]. It links only the runtime
+//! spec catalog — never a manager/runtime engine — and stamps sandbox scope. A
+//! `--sandbox-id` is required on every operation; there is no env or config
+//! fallback.
+#![forbid(unsafe_code)]
+
+use std::ffi::OsString;
+use std::io::{self, Write};
+use std::path::PathBuf;
+use std::process::ExitCode;
+
+use clap::error::ErrorKind;
+use clap::Parser;
+
+use crate::core::client::GatewayClient;
+use crate::core::output::{
+    discover_config, render_error, render_help_command, render_request_error,
+    run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
+};
+use crate::core::request_builder::{
+    catalog_document, resolve_runtime_sandbox_id, BuildRequestInput,
+};
+use crate::core::GatewayConfigOverrides;
+use sandbox_protocol::CliOperationExecutionSpace;
+
+const PROGRAM: &str = "sandbox-runtime-cli --sandbox-id ID";
+const HELP_OP: &str = "help";
+
+#[derive(Debug, Parser)]
+#[command(name = "sandbox-runtime-cli", disable_help_subcommand = true)]
+struct Cli {
+    #[arg(long = "gateway-socket", value_name = "HOST:PORT", global = true)]
+    gateway_socket_path: Option<PathBuf>,
+
+    #[arg(long = "gateway-auth-token", value_name = "TOKEN", global = true)]
+    gateway_auth_token: Option<String>,
+
+    #[arg(long = "sandbox-id", value_name = "SANDBOX_ID", global = true)]
+    sandbox_id: Option<String>,
+
+    operation: Option<String>,
+
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    operation_argv: Vec<String>,
+}
+
+pub async fn run_cli<I, T>(args: I) -> ExitCode
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString> + Clone,
+{
+    let mut stdout = io::stdout().lock();
+    let mut stderr = io::stderr().lock();
+    ExitCode::from(run_cli_with_writers(args, &mut stdout, &mut stderr).await)
+}
+
+pub async fn run_cli_with_writers<I, T, WOut, WErr>(
+    args: I,
+    stdout: &mut WOut,
+    stderr: &mut WErr,
+) -> u8
+where
+    I: IntoIterator<Item = T>,
+    T: Into<OsString> + Clone,
+    WOut: Write,
+    WErr: Write,
+{
+    let cli = match Cli::try_parse_from(args) {
+        Ok(cli) => cli,
+        Err(error) => {
+            if matches!(
+                error.kind(),
+                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion
+            ) {
+                let _ = write!(stdout, "{error}");
+                return EXIT_SUCCESS;
+            }
+            let _ = render_error("invalid_request", error.to_string(), stderr);
+            return EXIT_USAGE;
+        }
+    };
+
+    let catalog = match catalog_document(sandbox_runtime_operations::runtime_catalog()) {
+        Ok(catalog) => catalog,
+        Err(error) => {
+            let _ = render_request_error(&error, stderr);
+            return EXIT_USAGE;
+        }
+    };
+
+    let Some(operation) = cli.operation else {
+        return render_help_command(&catalog, &[], PROGRAM, stdout, stderr);
+    };
+    if operation == HELP_OP {
+        return render_help_command(&catalog, &cli.operation_argv, PROGRAM, stdout, stderr);
+    }
+    let sandbox_id = match resolve_runtime_sandbox_id(cli.sandbox_id) {
+        Ok(sandbox_id) => sandbox_id,
+        Err(error) => {
+            let _ = render_request_error(&error, stderr);
+            return EXIT_USAGE;
+        }
+    };
+
+    let overrides = GatewayConfigOverrides {
+        gateway_socket_path: cli.gateway_socket_path,
+        gateway_auth_token: cli.gateway_auth_token,
+    };
+    let Some(client) = client_from(overrides, stderr) else {
+        return EXIT_USAGE;
+    };
+    let request_input = BuildRequestInput {
+        execution_space: CliOperationExecutionSpace::Runtime,
+        operation,
+        operation_argv: cli.operation_argv,
+        sandbox_id: Some(sandbox_id),
+    };
+    run_request_from_catalog(&client, request_input, &catalog, false, stdout, stderr).await
+}
+
+fn client_from<WErr>(overrides: GatewayConfigOverrides, stderr: &mut WErr) -> Option<GatewayClient>
+where
+    WErr: Write,
+{
+    let config = discover_config(overrides, stderr).ok()?;
+    Some(GatewayClient::new(
+        config.gateway_socket_path.to_string_lossy().into_owned(),
+        config.gateway_auth_token.clone(),
+    ))
+}

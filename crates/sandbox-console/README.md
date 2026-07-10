@@ -2,8 +2,8 @@
 
 The web console's HTTP server: one same-origin surface the browser talks to
 for the operations plane, app preview, daemon health, and the SPA assets.
-It is a **client peer** of `sandbox-manager-cli` and `sandbox-runtime-cli`,
-built on `sandbox-cli-core`'s `GatewayClient`.
+It is a **client peer** of the three `sandbox-cli` binaries, built on
+`sandbox_cli::core::GatewayClient`.
 
 Boundary law: never define operation vocabulary, never contact the daemon
 RPC endpoint directly, never expose the gateway auth token to the browser.

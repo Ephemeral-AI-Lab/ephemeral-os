@@ -6,7 +6,7 @@ use std::process::ExitCode;
 
 use clap::Parser;
 
-use sandbox_cli_core::GatewayConfigOverrides;
+use sandbox_cli::core::GatewayConfigOverrides;
 use sandbox_console::config::{ConsoleConfig, ConsoleConfigOverrides};
 use sandbox_console::server;
 use sandbox_console::state::AppState;

@@ -9,10 +9,8 @@ members = [
     "crates/sandbox-observability",
     "crates/sandbox-observability-operations",
     "crates/sandbox-runtime-operations",
-    "crates/sandbox-cli-core",
+    "crates/sandbox-cli",
     "crates/sandbox-console",
-    "crates/sandbox-manager-cli",
-    "crates/sandbox-runtime-cli",
     "crates/sandbox-gateway",
     "crates/sandbox-protocol",
     "crates/sandbox-runtime/workspace",
@@ -83,10 +81,8 @@ sandbox-manager-operations = { path = "crates/sandbox-manager-operations" }
 sandbox-observability = { path = "crates/sandbox-observability" }
 sandbox-observability-operations = { path = "crates/sandbox-observability-operations" }
 sandbox-runtime-operations = { path = "crates/sandbox-runtime-operations" }
-sandbox-cli-core = { path = "crates/sandbox-cli-core" }
+sandbox-cli = { path = "crates/sandbox-cli" }
 sandbox-console = { path = "crates/sandbox-console" }
-sandbox-manager-cli = { path = "crates/sandbox-manager-cli" }
-sandbox-runtime-cli = { path = "crates/sandbox-runtime-cli" }
 sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }

@@ -1,7 +1,7 @@
 //! Shared per-request state: the gateway client, the endpoint-resolution
 //! cache, and the resolved console configuration every route handler reads.
 
-use sandbox_cli_core::client::GatewayClient;
+use sandbox_cli::core::client::GatewayClient;
 
 use crate::config::ConsoleConfig;
 use crate::endpoint::EndpointCache;

@@ -314,6 +314,7 @@ def raw_cli(rec, *args, timeout=180):
     env = os.environ.copy()
     env["PATH"] = f"{REPO_ROOT / 'bin'}:{env.get('PATH', '')}"
     binary, argv, _ = route_cli(args)
+    command = [binary.name, *map(str, argv)]
     proc = subprocess.run(
         [str(binary), *argv],
         cwd=str(REPO_ROOT),
@@ -323,11 +324,11 @@ def raw_cli(rec, *args, timeout=180):
         env=env,
     )
     elapsed = measure.monotonic_ms(started)
-    result = RawResult(args, proc.returncode, proc.stdout, proc.stderr, elapsed)
+    result = RawResult(command, proc.returncode, proc.stdout, proc.stderr, elapsed)
     if rec is not None:
         rec.add_command(
             {
-                "cmd": ["sandbox-cli", *map(str, args)],
+                "cmd": command,
                 "exit_code": proc.returncode,
                 "elapsed_ms": elapsed,
                 "stdout": proc.stdout,
@@ -727,7 +728,7 @@ def _publish_small_files_concurrent(rec, sandbox_id, names, *, kib=0, workers=No
             name, result = future.result()
             rec.add_command(
                 {
-                    "cmd": ["sandbox-cli", *map(str, result.args)],
+                    "cmd": list(map(str, result.args)),
                     "exit_code": result.returncode,
                     "elapsed_ms": result.elapsed_ms,
                     "stdout": result.stdout,

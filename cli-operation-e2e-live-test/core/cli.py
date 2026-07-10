@@ -2,20 +2,23 @@
 
 Operations are addressed with a leading *space* token — ``manager``,
 ``observability``, or ``runtime`` — which :func:`route_cli` maps to the right
-purpose-built binary (``sandbox-manager-cli`` for manager + observability,
-``sandbox-runtime-cli`` for runtime) and rewrites into that binary's argv. This
-keeps every caller and the timing classifier space-addressed while the two
-binaries stay dependency-isolated.
+purpose-built binary (``sandbox-manager-cli`` for manager,
+``sandbox-runtime-cli`` for runtime, and ``sandbox-observability-cli`` for
+observability) and rewrites into that binary's argv. This keeps every caller
+and the timing classifier space-addressed while the three binaries stay
+dependency-isolated.
 
-Each CLI writes its result as a single JSON line — to stdout on success (exit 0)
-and to stderr on error (exit 1). We capture both and parse whichever carries the
-JSON, so error responses come back as ``{"error": {...}}`` dicts rather than
-exceptions. Tests assert on the structured result; they never read logs.
+Each CLI writes its result as a single JSON line — to stdout on success (exit
+0) and to stderr on operation or usage errors (exit 1 or 2). We capture both
+and parse whichever carries the JSON, so error responses come back as
+``{"error": {...}}`` dicts rather than exceptions. Tests assert on the
+structured result; they never read logs.
 
 With ``E2E_PROGRESS=1`` we add the manager CLI's global ``--progress`` flag and
 stream the daemon-side progress lines (e.g. workspace base copy/hash) live to
 the ``e2e.cli`` logger as they arrive, while still parsing the final JSON line.
-``--progress`` is manager-only, so runtime operations never stream.
+``--progress`` is manager-only, so runtime and observability operations never
+stream.
 """
 
 import json
@@ -28,7 +31,13 @@ import time
 import uuid
 from pathlib import Path
 
-from .config import PROGRESS, REPO_ROOT, SANDBOX_MANAGER_CLI, SANDBOX_RUNTIME_CLI
+from .config import (
+    PROGRESS,
+    REPO_ROOT,
+    SANDBOX_MANAGER_CLI,
+    SANDBOX_OBSERVABILITY_CLI,
+    SANDBOX_RUNTIME_CLI,
+)
 
 _log = logging.getLogger("e2e.cli")
 _timing_lock = threading.Lock()
@@ -59,16 +68,16 @@ class InternalGatewayResult:
 def route_cli(args):
     """Map space-prefixed ``args`` to ``(binary, argv, supports_progress)``.
 
-    ``manager`` / ``observability`` route to ``sandbox-manager-cli`` (the latter
-    as an ``observability`` subcommand); ``runtime`` routes to
-    ``sandbox-runtime-cli`` with its ``--sandbox-id …`` prefix carried through.
+    Each space routes to its independently grantable binary. Runtime keeps its
+    global ``--sandbox-id …`` prefix; observability keeps ``--sandbox-id`` in
+    the operation argv because aggregate ``snapshot`` may omit it.
     """
     argv = [str(arg) for arg in args]
     if not argv:
         return SANDBOX_MANAGER_CLI, [], True
     space, rest = argv[0], argv[1:]
     if space == "observability":
-        return SANDBOX_MANAGER_CLI, ["observability", *rest], True
+        return SANDBOX_OBSERVABILITY_CLI, rest, False
     if space == "runtime":
         return SANDBOX_RUNTIME_CLI, rest, False
     if space == "manager":

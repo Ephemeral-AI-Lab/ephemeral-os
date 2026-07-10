@@ -79,6 +79,7 @@ def raw_cli(rec, *args, timeout=180):
     env = os.environ.copy()
     env["PATH"] = f"{REPO_ROOT / 'bin'}:{env.get('PATH', '')}"
     binary, argv, _ = route_cli(args)
+    command = [binary.name, *map(str, argv)]
     proc = subprocess.run(
         [str(binary), *argv],
         cwd=str(REPO_ROOT),
@@ -88,11 +89,11 @@ def raw_cli(rec, *args, timeout=180):
         env=env,
     )
     elapsed = round((time.monotonic() - started) * 1000.0, 3)
-    result = RawResult(args, proc.returncode, proc.stdout, proc.stderr, elapsed)
+    result = RawResult(command, proc.returncode, proc.stdout, proc.stderr, elapsed)
     if rec is not None:
         rec.add_command(
             {
-                "cmd": ["sandbox-cli", *map(str, args)],
+                "cmd": command,
                 "exit_code": proc.returncode,
                 "elapsed_ms": elapsed,
                 "stdout": proc.stdout,

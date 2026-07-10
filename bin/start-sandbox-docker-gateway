@@ -20,6 +20,7 @@ git_toolchain_dir=${SANDBOX_GIT_TOOLCHAIN_DIR:-$repo_root/dist/git}
 gateway_bin=$target_dir/debug/sandbox-gateway
 manager_cli_bin=$target_dir/debug/sandbox-manager-cli
 runtime_cli_bin=$target_dir/debug/sandbox-runtime-cli
+observability_cli_bin=$target_dir/debug/sandbox-observability-cli
 xtask_bin=$target_dir/debug/xtask
 rebuild_binary=0
 show_help=0
@@ -75,10 +76,12 @@ done
 printf 'building host binaries\n'
 cargo build --quiet --manifest-path "$repo_root/Cargo.toml" \
     -p sandbox-gateway --bin sandbox-gateway \
-    -p sandbox-manager-cli --bin sandbox-manager-cli \
-    -p sandbox-runtime-cli --bin sandbox-runtime-cli \
+    -p sandbox-cli --features sandbox-cli/manager,sandbox-cli/runtime,sandbox-cli/observability \
+    --bin sandbox-manager-cli \
+    --bin sandbox-runtime-cli \
+    --bin sandbox-observability-cli \
     -p xtask --bin xtask
-for host_bin in "$gateway_bin" "$manager_cli_bin" "$runtime_cli_bin" "$xtask_bin"; do
+for host_bin in "$gateway_bin" "$manager_cli_bin" "$runtime_cli_bin" "$observability_cli_bin" "$xtask_bin"; do
     if [ ! -x "$host_bin" ]; then
         printf 'built host binary not found at %s\n' "$host_bin" >&2
         exit 1
@@ -255,4 +258,4 @@ printf 'pid file: %s\n' "$pid_file"
 printf 'address: %s\n' "$socket_path"
 printf 'auth token: %s (also written to %s)\n' "$auth_token" "$token_file"
 printf 'log: %s\n' "$log_file"
-printf 'bin/sandbox-manager-cli and bin/sandbox-runtime-cli read %s automatically; or: export SANDBOX_GATEWAY_AUTH_TOKEN=%s\n' "$token_file" "$auth_token"
+printf 'all three bin/sandbox-*-cli wrappers read %s automatically; or: export SANDBOX_GATEWAY_AUTH_TOKEN=%s\n' "$token_file" "$auth_token"

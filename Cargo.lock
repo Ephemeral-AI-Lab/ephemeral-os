@@ -1403,11 +1403,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandbox-cli-core"
+name = "sandbox-cli"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "sandbox-config",
+ "sandbox-manager-operations",
+ "sandbox-observability-operations",
  "sandbox-protocol",
+ "sandbox-runtime-operations",
  "serde_json",
  "tokio",
  "uuid",
@@ -1433,7 +1437,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
- "sandbox-cli-core",
+ "sandbox-cli",
  "sandbox-manager-operations",
  "sandbox-observability-operations",
  "sandbox-protocol",
@@ -1499,18 +1503,6 @@ dependencies = [
  "tokio",
  "uuid",
  "zstd",
-]
-
-[[package]]
-name = "sandbox-manager-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "sandbox-cli-core",
- "sandbox-manager-operations",
- "sandbox-observability-operations",
- "sandbox-protocol",
- "tokio",
 ]
 
 [[package]]
@@ -1583,17 +1575,6 @@ dependencies = [
  "thiserror 2.0.18",
  "uuid",
  "zstd",
-]
-
-[[package]]
-name = "sandbox-runtime-cli"
-version = "0.1.0"
-dependencies = [
- "clap",
- "sandbox-cli-core",
- "sandbox-protocol",
- "sandbox-runtime-operations",
- "tokio",
 ]
 
 [[package]]

@@ -1,10 +1,7 @@
-//! Operator CLI: fleet lifecycle (manager operations) plus observability views.
+//! Operator CLI for fleet lifecycle management.
 //!
-//! A thin protocol client over [`sandbox_cli_core`]. It links the manager and
-//! observability spec catalogs only — never a manager/runtime engine — and
-//! stamps system scope for manager operations. Observability views retain the
-//! server-side dual routing (aggregate `snapshot` without `--sandbox-id`, daemon
-//! `get_observability` with it) via the shared core request builder.
+//! A thin protocol client over [`crate::core`]. It links only the management
+//! catalog, never a manager/runtime engine, and stamps system scope.
 #![forbid(unsafe_code)]
 
 use std::ffi::OsString;
@@ -15,18 +12,16 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 
-use sandbox_cli_core::client::GatewayClient;
-use sandbox_cli_core::output::{
-    discover_config, operation_requires_args, render_help_command, render_request_error,
+use crate::core::client::GatewayClient;
+use crate::core::output::{
+    discover_config, render_error, render_help_command, render_request_error,
     run_request_from_catalog, take_progress_flag, EXIT_SUCCESS, EXIT_USAGE,
 };
-use sandbox_cli_core::request_builder::{catalog_document, BuildRequestInput, RequestBuildError};
-use sandbox_cli_core::GatewayConfigOverrides;
+use crate::core::request_builder::{catalog_document, BuildRequestInput, RequestBuildError};
+use crate::core::GatewayConfigOverrides;
 use sandbox_protocol::{CliOperationCatalogDocument, CliOperationExecutionSpace};
 
 const PROGRAM: &str = "sandbox-manager-cli";
-const OBSERVABILITY_SUBCOMMAND: &str = "observability";
-const OBSERVABILITY_PROGRAM: &str = "sandbox-manager-cli observability";
 const HELP_OP: &str = "help";
 const CREATE_SANDBOX_OP: &str = "create_sandbox";
 
@@ -79,7 +74,7 @@ where
                 let _ = write!(stdout, "{error}");
                 return EXIT_SUCCESS;
             }
-            let _ = write!(stderr, "{error}");
+            let _ = render_error("invalid_request", error.to_string(), stderr);
             return EXIT_USAGE;
         }
     };
@@ -96,17 +91,6 @@ where
             Err(exit) => exit,
         };
     };
-
-    if operation == OBSERVABILITY_SUBCOMMAND {
-        return run_observability(
-            cli.operation_argv,
-            overrides,
-            global_progress,
-            stdout,
-            stderr,
-        )
-        .await;
-    }
 
     run_manager(
         operation,
@@ -140,9 +124,6 @@ where
     }
     let progress = global_progress
         || (operation == CREATE_SANDBOX_OP && take_progress_flag(&mut operation_argv));
-    if operation_argv.is_empty() && operation_requires_args(&catalog, &operation) {
-        return render_help_command(&catalog, &[operation], PROGRAM, stdout, stderr);
-    }
     let Some(client) = client_from(overrides, stderr) else {
         return EXIT_USAGE;
     };
@@ -155,74 +136,12 @@ where
     run_request_from_catalog(&client, request_input, &catalog, progress, stdout, stderr).await
 }
 
-async fn run_observability<WOut, WErr>(
-    observability_argv: Vec<String>,
-    overrides: GatewayConfigOverrides,
-    global_progress: bool,
-    stdout: &mut WOut,
-    stderr: &mut WErr,
-) -> u8
-where
-    WOut: Write,
-    WErr: Write,
-{
-    let catalog = match observability_catalog(stderr) {
-        Ok(catalog) => catalog,
-        Err(exit) => return exit,
-    };
-    let Some((operation, rest)) = observability_argv.split_first() else {
-        return render_help_command(&catalog, &[], OBSERVABILITY_PROGRAM, stdout, stderr);
-    };
-    let operation = operation.clone();
-    let rest = rest.to_vec();
-    if operation == HELP_OP {
-        return render_help_command(&catalog, &rest, OBSERVABILITY_PROGRAM, stdout, stderr);
-    }
-    if rest.is_empty() && operation_requires_args(&catalog, &operation) {
-        return render_help_command(
-            &catalog,
-            &[operation],
-            OBSERVABILITY_PROGRAM,
-            stdout,
-            stderr,
-        );
-    }
-    let Some(client) = client_from(overrides, stderr) else {
-        return EXIT_USAGE;
-    };
-    let request_input = BuildRequestInput {
-        execution_space: CliOperationExecutionSpace::Observability,
-        operation,
-        operation_argv: rest,
-        sandbox_id: None,
-    };
-    run_request_from_catalog(
-        &client,
-        request_input,
-        &catalog,
-        global_progress,
-        stdout,
-        stderr,
-    )
-    .await
-}
-
 fn manager_catalog<WErr>(stderr: &mut WErr) -> Result<CliOperationCatalogDocument, u8>
 where
     WErr: Write,
 {
     catalog_or_usage_error(
         catalog_document(sandbox_manager_operations::manager_catalog()),
-        stderr,
-    )
-}
-
-fn observability_catalog<WErr>(stderr: &mut WErr) -> Result<CliOperationCatalogDocument, u8>
-where
-    WErr: Write,
-{
-    catalog_or_usage_error(
-        catalog_document(sandbox_observability_operations::observability_catalog()),
         stderr,
     )
 }

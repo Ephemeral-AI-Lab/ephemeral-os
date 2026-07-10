@@ -15,4 +15,4 @@ if [ -x "$local_cli" ]; then
     exec "$local_cli" "$@"
 fi
 
-exec cargo run --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-manager-cli --bin sandbox-manager-cli -- "$@"
+exec cargo run --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-cli --features manager --bin sandbox-manager-cli -- "$@"
