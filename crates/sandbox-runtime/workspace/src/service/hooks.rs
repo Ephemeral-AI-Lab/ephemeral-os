@@ -5,10 +5,20 @@ use crate::error::WorkspaceError;
 use crate::model::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
     DestroyWorkspaceRequest, DestroyWorkspaceResult, ReadonlySnapshotHandle, WorkspaceHandle,
+    WorkspaceSessionId,
 };
 
 #[doc(hidden)]
 pub struct WorkspaceRuntimeHooks {
+    #[expect(
+        clippy::type_complexity,
+        reason = "hook signatures stay explicit by policy"
+    )]
+    pub isolated_ip: Box<
+        dyn Fn(&WorkspaceSessionId) -> Result<Option<std::net::Ipv4Addr>, WorkspaceError>
+            + Send
+            + Sync,
+    >,
     #[expect(
         clippy::type_complexity,
         reason = "hook signatures stay explicit by policy"

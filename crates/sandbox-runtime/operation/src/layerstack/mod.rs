@@ -5,6 +5,6 @@ pub(crate) use service::{export_operation_entries, squash_operation_entries};
 
 pub use error::LayerStackServiceError;
 pub use service::{
-    AmendError, AmendOutcome, ClaimedExportStream, LayerStackRevision, LayerStackService,
-    ManifestReadWindow, PublishChangesRequest, PublishChangesResult,
+    AmendError, AmendOutcome, LayerStackRevision, LayerStackService, ManifestReadWindow,
+    PublishChangesRequest, PublishChangesResult,
 };

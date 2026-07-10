@@ -10,7 +10,6 @@ pub mod auth;
 pub mod catalog;
 pub mod cli_operation_spec;
 pub mod error_kind;
-pub mod export_stream;
 mod framing;
 pub mod help;
 pub mod limits;
@@ -27,10 +26,6 @@ pub use catalog::{
 };
 pub use cli_operation_spec::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationFamilySpec, CliOperationSpec, CliSpec,
-};
-pub use export_stream::{
-    EXPORT_STREAM_PATH_PREFIX, EXPORT_STREAM_TOKEN_FIELD, EXPORT_STREAM_TOKEN_HEADER,
-    EXPORT_STREAM_TOKEN_TTL_S,
 };
 pub use help::{
     render_catalog_help, render_operation_help, search_operation_help, CliOperationSearchResult,

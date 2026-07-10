@@ -1,6 +1,25 @@
-/goal Implement daemon HTTP v0 exactly as specified in `docs/daemon-http/README.md`. That doc is the source of truth — don't relitigate its decisions. Also read repo-root `README.md` and `CLAUDE.md`.
+# Archived Daemon HTTP v0 Implementation Prompt
 
-## Scope (v0 only)
+> **Archived:** This prompt records the original daemon HTTP v0 build scope.
+> It is not the current implementation or review contract. The MCP/CLI cutover
+> subsequently added the sole HTTP-only operation `POST /files/list` and made
+> the router an exact allowlist: `GET /health`, both `/forward/...` forms, and
+> `POST /files/list`. All other operation paths, including `/files/read`,
+> `/observability/*`, and `/export/*`, must return `404`. Use
+> [`README.md`](README.md) and the binding
+> [`mcp_cli_surface/http.md`](../obsidian/ephemeral-os/implementation_plan/mcp_cli_surface/http.md)
+> for current work.
+
+The remainder is retained as historical context for the initial listener and
+forwarding implementation. Its old three-route inventory is not a complete
+description of the current surface.
+
+## Historical goal
+
+Implement the original daemon HTTP v0 as it was specified at the time. Also
+read repo-root `README.md` and `CLAUDE.md`.
+
+## Historical scope (v0 only)
 - Add `daemon_http_port` to `manager.docker` config (default 7001); validate `1..=65535`.
 - Publish the container daemon HTTP port to a random `127.0.0.1` host port. Factor ONE small multi-port publish helper shared with `daemon_port`; don't duplicate Docker port logic.
 - Expose `daemon_http` `{host, port}` in the sandbox manager record beside `daemon`.

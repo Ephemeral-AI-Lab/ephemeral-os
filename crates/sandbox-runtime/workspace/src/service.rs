@@ -65,7 +65,7 @@ impl WorkspaceRuntimeService {
             WorkspaceRuntimeBackend::Runtime(_) => {
                 Ok(self.lock_state()?.manager.isolated_ip(workspace_id))
             }
-            WorkspaceRuntimeBackend::Hooks(_) => Ok(None),
+            WorkspaceRuntimeBackend::Hooks(hooks) => (hooks.isolated_ip)(workspace_id),
         }
     }
 

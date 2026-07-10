@@ -316,6 +316,7 @@ pub(crate) fn fake_workspace_runtime(
 ) -> Arc<WorkspaceRuntimeService> {
     Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
         WorkspaceRuntimeHooks {
+            isolated_ip: Box::new(|_| Ok(None)),
             create_workspace: Box::new({
                 let fake = Arc::clone(&fake);
                 move |request| fake.create_workspace(request)

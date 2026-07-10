@@ -1,6 +1,7 @@
-//! Top-level HTTP routing: dispatch `/health` and `/forward/...` to their
-//! responders, and everything else to `404`. Route *parsing* lives in
-//! `forward::route`; this module only chooses the responder by path.
+//! Top-level HTTP routing: dispatch exact `/health`, exact `/files/list`, and
+//! `/forward/...` to their responders, and everything else to `404`. Route
+//! *parsing* lives in `forward::route`; this module only chooses the responder
+//! by path.
 
 use std::sync::Arc;
 
@@ -9,7 +10,7 @@ use hyper::body::Incoming;
 
 use super::response::{self, BoxBody};
 use super::server::HttpState;
-use super::{api, export, forward, health};
+use super::{api, forward, health};
 
 /// Dispatch one request to its responder.
 pub(crate) async fn route(state: Arc<HttpState>, req: Request<Incoming>) -> Response<BoxBody> {
@@ -17,11 +18,8 @@ pub(crate) async fn route(state: Arc<HttpState>, req: Request<Incoming>) -> Resp
     if req.method() == Method::GET && path == "/health" {
         return health::respond();
     }
-    if path.starts_with("/files/") || path.starts_with("/observability/") {
+    if path == "/files/list" {
         return api::handle(state, req).await;
-    }
-    if path.starts_with(sandbox_protocol::EXPORT_STREAM_PATH_PREFIX) {
-        return export::handle(state, req).await;
     }
     if path.starts_with("/forward/") {
         return forward::handle(state, req).await;

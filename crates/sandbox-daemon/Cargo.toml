@@ -31,6 +31,7 @@ uuid.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-layerstack.workspace = true
+sandbox-runtime-workspace.workspace = true
 
 [lints]
 workspace = true

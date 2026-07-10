@@ -1,97 +1,36 @@
 # Daemon HTTP
 
-## Goal
+The per-sandbox daemon HTTP listener has a deliberately small public surface.
+It provides liveness, application traffic forwarding, and one read-only file
+listing operation. Management, runtime, and observability operations use the
+authenticated gateway through the three CLI executables, the corresponding
+MCP registrations, or the console's authenticated `/api/rpc` bridge.
 
-Expose HTTP services running inside a sandbox through one Docker-published
-loopback host port, without publishing arbitrary service ports directly.
+The daemon HTTP listener is separate from the daemon's authenticated
+JSON-line RPC listener. The two protocols are never sniffed or multiplexed on
+one port.
 
-The public host endpoint is the sandbox record's `daemon_http` endpoint:
+## Exact Public Surface
 
-```text
-http://127.0.0.1:<daemon_http_host_port>
-```
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | fixed HTTP-listener liveness response |
+| any supported HTTP/1.1 method | `/forward/shared/<port>/...` | forward application traffic to `127.0.0.1:<port>` in the shared network namespace |
+| any supported HTTP/1.1 method | `/forward/isolated=<workspace_id>/<port>/...` | forward application traffic to a live isolated workspace's resolved IP and port |
+| `POST` | `/files/list` | one-level, read-only listing of a published snapshot or live workspace session |
 
-Runtime services are reached through the `/forward` namespace:
+Every other path returns `404 not found`. In particular, there are no direct
+daemon HTTP routes for file read/write/edit/blame, observability, management,
+runtime command execution, or export streaming.
 
-```text
-/forward/shared/<port>/...
-/forward/isolated=<workspace_id>/<port>/...
-```
+`POST /files/list` is the sole operation endpoint that remains on daemon HTTP.
+It is intentionally absent from the runtime CLI and MCP tool catalogs.
 
-## Non-Goals
+## Endpoint Discovery
 
-- Do not mix HTTP forwarding with the existing daemon JSON-line RPC listener.
-- Do not publish every sandbox service port through Docker.
-- Do not add TLS, host-based routing, HTML rewriting, or isolated loopback
-  relays in v0.
-
-## Public Routes
-
-```text
-GET /health
-ANY /forward/shared/<port>/...
-ANY /forward/isolated=<workspace_id>/<port>/...
-```
-
-`/health` returns JSON:
-
-```json
-{
-  "status": "ok",
-  "service": "daemon_http"
-}
-```
-
-Future daemon HTTP routes reserve their own top-level namespaces:
-
-```text
-/metrics
-/observability
-```
-
-## Forwarding Semantics
-
-Shared workspace routing:
-
-```text
-/forward/shared/5173/
-  -> http://127.0.0.1:5173/
-
-/forward/shared/5173/assets/app.js
-  -> http://127.0.0.1:5173/assets/app.js
-```
-
-Isolated workspace routing:
-
-```text
-/forward/isolated=ws-abc/3000/
-  -> http://<workspace_isolated_ip>:3000/
-```
-
-Forwarding strips only the route prefix and preserves the remaining path and
-query string.
-
-## Configuration
-
-Docker-backed sandboxes expose two container-side daemon ports:
-
-```yaml
-manager:
-  docker:
-    daemon_port: 7000
-    daemon_http_port: 7001
-```
-
-Docker publishes both to random loopback host ports:
-
-```text
-7000/tcp -> 127.0.0.1:<daemon_rpc_host_port>
-7001/tcp -> 127.0.0.1:<daemon_http_host_port>
-```
-
-## Manager Record
-
-Sandbox records expose both endpoints:
+The manager publishes the daemon's container-side HTTP port to a random host
+loopback port. A sandbox record exposes the resulting endpoint separately from
+the daemon RPC endpoint:
 
 ```json
 {
@@ -106,355 +45,209 @@ Sandbox records expose both endpoints:
 }
 ```
 
-`daemon` remains the authenticated JSON-line RPC endpoint. `daemon_http` is the
-HTTP daemon surface.
+`daemon` is the authenticated JSON-line RPC endpoint. `daemon_http` is the
+limited HTTP listener documented here. Docker-backed installations configure
+their separate container ports with `manager.docker.daemon_port` and
+`manager.docker.daemon_http_port`; both are published to random
+`127.0.0.1` host ports.
 
-## Daemon Design
+## `GET /health`
 
-`sandbox-daemon` owns the HTTP listener because it already owns runtime state,
-workspace session resolution, and observability.
+The health handler does not read sandbox, workspace, or runtime state. It is a
+pure liveness signal for the HTTP listener.
 
-```text
-sandbox-daemon
-  rpc listener         JSON-line protocol
-  http listener        daemon_http health + forwarding
+```http
+GET /health HTTP/1.1
+Host: 127.0.0.1
 ```
 
-The listeners are separate. The RPC protocol is not sniffed or multiplexed with
-browser HTTP traffic.
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
 
-## Canonical Module Structure
-
-The current daemon RPC implementation lives in `src/server/`. When adding
-daemon HTTP, rename that folder to `src/rpc/` so the transport surfaces sit
-beside each other clearly:
-
-```text
-crates/sandbox-daemon/src/
-  rpc/
-    mod.rs
-    server.rs
-    connection.rs
-    dispatch.rs
-    error.rs
-    lifecycle.rs
-    runtime.rs
-
-  http/
-    mod.rs
-    server.rs
-    router.rs
-    response.rs
-    health.rs
-
-    forward/
-      mod.rs
-      route.rs
-      proxy.rs
-
-    metrics/
-      mod.rs
-
-    observability/
-      mod.rs
+{"status":"ok","service":"daemon_http"}
 ```
 
-Each daemon HTTP capability owns one module: a file when it is a single
-responder (like `health`), a folder when it has multiple parts (like
-`forward`):
+A method other than `GET` on `/health` is not an allowed route and returns
+`404`.
+
+## Forwarding
+
+### Shared network
 
 ```text
-crates/sandbox-daemon/src/http/
-  mod.rs
-  server.rs
-  router.rs
-  response.rs
+/forward/shared/5173/
+  -> http://127.0.0.1:5173/
 
-  health.rs
-
-  forward/
-    mod.rs
-    route.rs
-    proxy.rs
-
-  metrics/
-    mod.rs
-
-  observability/
-    mod.rs
+/forward/shared/5173/assets/app.js?v=7
+  -> http://127.0.0.1:5173/assets/app.js?v=7
 ```
 
-Only create capability modules when they exist. V0 should create:
+`<port>` must be a decimal value in `1..=65535`.
+
+### Isolated workspace network
 
 ```text
-crates/sandbox-daemon/src/http/
-  mod.rs
-  server.rs
-  router.rs
-  response.rs
+/forward/isolated=ws-abc/3000/
+  -> http://<resolved-workspace-ip>:3000/
 
-  health.rs
-
-  forward/
-    mod.rs
-    route.rs
-    proxy.rs
+/forward/isolated=ws-abc/3000/api/health?verbose=1
+  -> http://<resolved-workspace-ip>:3000/api/health?verbose=1
 ```
 
-## Route Model
+The workspace id must identify a live isolated workspace session with a
+reachable IP. The route does not create a session. A service in that namespace
+must listen on `0.0.0.0:<port>` or the workspace IP; isolated loopback
+forwarding is not provided.
 
-The route parser produces a small typed route:
+### Proxy contract
 
-```rust
-enum ForwardRoute {
-    Shared {
-        port: u16,
-        path_and_query: String,
-    },
-    Isolated {
-        workspace_id: WorkspaceSessionId,
-        port: u16,
-        path_and_query: String,
-    },
+Both route forms share one HTTP/1.1 forwarding flow:
+
+- The method, request body, remaining path, and query string are preserved.
+- The `/forward/shared/<port>` or
+  `/forward/isolated=<workspace_id>/<port>` prefix is removed upstream.
+- Normal end-to-end request and response headers are preserved. Hop-by-hop
+  headers are removed for ordinary requests.
+- `X-Forwarded-Host`, `X-Forwarded-Proto: http`, and the matching
+  `X-Forwarded-Prefix` are sent upstream.
+- Request and response bodies are streamed.
+- A successful HTTP upgrade is tunneled after the rewritten handshake.
+
+The daemon emits one `daemon_http.forward` observability span for every
+forwarding request. Forwarding itself is application traffic proxying, not an
+operation RPC surface.
+
+### Forwarding errors
+
+| Condition | Status | Response text |
+| --- | ---: | --- |
+| invalid `/forward/...` form | `400` | `invalid forward route` |
+| missing, zero, non-numeric, or out-of-range port | `400` | `invalid forward port` |
+| unknown or no-longer-live isolated workspace | `404` | `unknown isolated workspace` |
+| isolated workspace has no reachable IP | `403` | `isolated workspace has no reachable IP` |
+| target connection or HTTP handshake fails | `502` | `target connection failed` |
+| target connection or first response times out | `504` | `target timed out` |
+
+A path that does not begin with `/forward/` is a normal `404`, not a forward
+route parsing error.
+
+## `POST /files/list`
+
+`/files/list` performs a one-level, read-only directory listing. An empty body
+is equivalent to `{}` and lists the workspace root from the latest published
+snapshot.
+
+```http
+POST /files/list HTTP/1.1
+Host: 127.0.0.1
+Content-Type: application/json
+
+{"path":"src","workspace_session_id":"ws-1"}
+```
+
+| JSON field | Required | Meaning |
+| --- | --- | --- |
+| `path` | no | repository-relative or workspace-root-absolute directory; empty or omitted means the root |
+| `workspace_session_id` | no | existing live session to list; omitted means the latest published snapshot |
+
+The body must be a JSON object within the normal protocol request-size limit.
+The daemon creates the request id and sandbox scope internally; callers cannot
+inject either of those values or gateway credentials.
+
+A successful result has the normal operation response shape:
+
+```json
+{
+  "path": "src",
+  "entries": [
+    {"name": "lib.rs", "kind": "file", "size": 324},
+    {"name": "bin", "kind": "directory", "size": 0}
+  ],
+  "truncated": false
 }
 ```
 
-The target resolver maps a route to a network destination. Both route kinds
-forward to a TCP `host:port`, so the destination is a plain struct, not an
-enum:
+Transport errors are handled as follows:
 
-```rust
-struct ForwardTarget {
-    host: String,
-    port: u16,
-}
-```
+| Condition | Response |
+| --- | --- |
+| non-`POST` method on the exact `/files/list` path | `405 Method Not Allowed` with `use POST` |
+| malformed JSON, non-object JSON, or an oversized body | `400` with the protocol JSON error envelope |
+| runtime validation or list failure | `200` with the normal operation JSON error envelope |
+| `/files/list/...` or any other `/files/*` path | `404` |
 
-Resolution only chooses the destination host and port; it never copies the
-request. `path_and_query` stays on the `ForwardRoute`, and the proxy reads it
-from there.
+Returning operation failures in a `200` response preserves the daemon
+operation responder contract; malformed HTTP transport input still receives a
+`400` or `405`.
 
-Shared targets resolve to `127.0.0.1:<port>`.
+## Removed Operation Routes
 
-Isolated targets resolve through the runtime's workspace session state to the
-workspace isolated IP and requested port.
+The MCP/CLI cutover intentionally removed the daemon HTTP compatibility routes
+below. Direct requests receive `404`.
 
-## Proxy Behavior
+| Removed path | Supported replacement |
+| --- | --- |
+| `/files/read` | runtime `file_read` through `sandbox-runtime-cli`, runtime MCP, or console `/api/rpc` |
+| `/files/write` | runtime `file_write` through CLI, MCP, or console `/api/rpc` |
+| `/files/edit` | runtime `file_edit` through CLI, MCP, or console `/api/rpc` |
+| `/files/blame` | runtime `file_blame` through CLI, MCP, or console `/api/rpc` |
+| `/observability/{snapshot,trace,events,cgroup,layerstack}` | `sandbox-observability-cli`, observability MCP, or console `/api/rpc` |
+| `/export/*` | management `export_changes` through `sandbox-manager-cli` or management MCP |
 
-V0 supports HTTP/1.1 forwarding:
+`export_changes` pages the authenticated internal `read_export_chunk` RPC. It
+exports the published-layer delta, not the full workspace, and never obtains a
+daemon HTTP export token or URL.
 
-- Preserve method, headers, body, and query string.
-- Strip `/forward/shared/<port>` or
-  `/forward/isolated=<workspace_id>/<port>` before forwarding.
-- Stream request and response bodies.
-- Tunnel WebSocket and other HTTP upgrade requests after sending the rewritten
-  initial request.
-- Add or append forwarding headers:
-  - `X-Forwarded-Host`
-  - `X-Forwarded-Proto: http`
-  - `X-Forwarded-Prefix`
+The console retains only the exact
+`/api/sandboxes/:id/files/list` daemon proxy alongside its health and preview
+forwarding proxies. All other browser operations go through the console's
+authenticated `/api/rpc`; gateway credentials are never exposed to browser
+code.
 
-## Validation
+## Implementation Boundary
 
-Reject invalid requests with HTTP errors:
-
-```text
-400 invalid route
-400 invalid port
-404 unknown isolated workspace
-403 isolated workspace has no reachable IP
-502 target connection failed
-504 target timed out
-```
-
-Ports must be in `1..=65535`.
-
-## Isolated Workspace Caveat
-
-`/forward/isolated=<workspace_id>/<port>` works when the server inside the
-isolated workspace listens on `0.0.0.0:<port>` or the workspace IP.
-
-If the server listens only on `127.0.0.1:<port>` inside the isolated network
-namespace, the daemon cannot reach it through the veth IP. Supporting that
-requires a setns relay and is out of scope for v0.
-
-## Observability
-
-Emit one span per forwarded request:
+The allowlist lives in `crates/sandbox-daemon/src/http/router.rs`:
 
 ```text
-span: daemon_http.forward
-attrs:
-  route_kind: shared | isolated
-  workspace_id: optional
-  target_host
-  target_port
-  method
-  path_prefix
-  status_code
-  duration_ms
-  bytes_in
-  bytes_out
-  error_kind
+crates/sandbox-daemon/src/http/
+├── mod.rs
+├── server.rs
+├── router.rs
+├── response.rs
+├── health.rs
+├── api.rs                 # bounded POST /files/list handling only
+└── forward/
+    ├── mod.rs
+    ├── route.rs
+    └── proxy.rs
 ```
 
-The span should use the existing `sandbox-observability` pipeline. No new
-metrics backend is required for v0.
+There is no HTTP export module and no generic files or observability route
+dispatcher. Runtime request-to-service parsing remains in
+`crates/sandbox-runtime/operation`; public operation definitions remain in the
+management, runtime, and observability catalogs used by CLI and MCP.
 
-## E2E Test Cases
+## Contract Checks
 
-Add live Docker E2E coverage under:
+Changes to daemon HTTP must directly prove:
 
-```text
-cli-operation-e2e-live-test/runtime/daemon_http/test_daemon_http.py
-```
+1. exact `GET /health` output without runtime state;
+2. shared and isolated forwarding, including method/body/path/query and
+   forwarding headers;
+3. the documented `400`, `403`, `404`, `502`, and `504` mappings;
+4. root, published-snapshot, and live-session file listings plus method, body,
+   and size validation;
+5. `404` for read/write/edit/blame, observability, export, and arbitrary
+   unlisted routes.
 
-The tests must create real sandboxes through `sandbox-cli manager`, run real
-servers through `sandbox-cli runtime exec_command`, call `daemon_http` from the
-host, and clean up every sandbox, workspace session, and running command.
+## Related Contracts
 
-### Health
-
-`test_daemon_http_health`
-
-Flow:
-
-1. Create a sandbox.
-2. Read `daemon_http.host` and `daemon_http.port` from the create or inspect
-   response.
-3. Request `http://<host>:<port>/health` from the host.
-4. Assert:
-
-```text
-status code == 200
-content-type contains application/json
-body.status == "ok"
-body.service == "daemon_http"
-```
-
-5. Destroy the sandbox.
-
-### Shared Forward
-
-`test_forward_shared_arbitrary_port`
-
-Flow:
-
-1. Create a sandbox.
-2. Start a long-running HTTP server with `exec_command` in the shared network.
-3. The server must bind port `0`, print the assigned port, and return a body
-   containing:
-
-```text
-route=shared
-path=<request path>
-query=<request query>
-```
-
-4. Request from the host:
-
-```text
-http://<daemon_http_host>:<daemon_http_host_port>/forward/shared/<assigned_port>/nested/path?hello=world
-```
-
-5. Assert:
-
-```text
-status code == 200
-body contains route=shared
-body contains path=/nested/path
-body contains query=hello=world
-```
-
-6. Stop the command and destroy the sandbox.
-
-This test must not hardcode `3000`; it must use the port assigned by the server.
-
-### Isolated Forward
-
-`test_forward_isolated_arbitrary_port`
-
-Flow:
-
-1. Create a sandbox.
-2. Create one workspace session with `--network-profile isolated`.
-3. Start a long-running HTTP server in that workspace session.
-4. The server must bind `0.0.0.0:0`, print the assigned port, and return a body
-   containing:
-
-```text
-route=isolated
-workspace=<workspace_id>
-path=<request path>
-query=<request query>
-```
-
-5. Request from the host:
-
-```text
-http://<daemon_http_host>:<daemon_http_host_port>/forward/isolated=<workspace_id>/<assigned_port>/nested/path?hello=isolated
-```
-
-6. Assert:
-
-```text
-status code == 200
-body contains route=isolated
-body contains workspace=<workspace_id>
-body contains path=/nested/path
-body contains query=hello=isolated
-```
-
-7. Stop the command, destroy the workspace session, and destroy the sandbox.
-
-This test covers the v0 isolated contract: the server listens on `0.0.0.0` or
-the workspace IP, not isolated loopback.
-
-### Forward Errors
-
-`test_forward_rejects_invalid_routes`
-
-Flow:
-
-1. Create a sandbox.
-2. Request invalid routes from the host.
-3. Assert:
-
-```text
-/forward/shared/not-a-port/        -> 400
-/forward/shared/0/                 -> 400
-/forward/isolated=missing/3000/    -> 404
-/not-forward/shared/3000/          -> 404
-```
-
-4. Destroy the sandbox.
-
-## Implementation Scope
-
-V0:
-
-- Add `daemon_http_port` manager Docker config.
-- Publish `daemon_http_port` to a random host loopback port.
-- Expose `daemon_http` in sandbox records.
-- Add daemon HTTP listener.
-- Add `/health`.
-- Add `/forward/shared/<port>/...`.
-- Add `/forward/isolated=<workspace_id>/<port>/...` for isolated workspace IP
-  listeners.
-- Add forwarding spans.
-
-Later:
-
-- `/metrics`
-- `/observability`
-- isolated `127.0.0.1` setns relay
-- HTML/path rewrite support
-- host-based routing
-- TLS
-
-## Expected Size
-
-Shared-only v0 is expected to be about 300-500 production LOC.
-
-Shared plus isolated-IP forwarding and observability is expected to be about
-550-900 production LOC, plus focused tests.
+- [`http.md`](../obsidian/ephemeral-os/implementation_plan/mcp_cli_surface/http.md)
+  is the binding cutover design.
+- [`cli.md`](../obsidian/ephemeral-os/implementation_plan/mcp_cli_surface/cli.md)
+  defines the three command-line surfaces.
+- [`mcp.md`](../obsidian/ephemeral-os/implementation_plan/mcp_cli_surface/mcp.md)
+  defines the three independently granted MCP sets.
+- [`operation-contract.md`](../obsidian/ephemeral-os/implementation_plan/mcp_cli_surface/operation-contract.md)
+  lists the cross-boundary operation contract.

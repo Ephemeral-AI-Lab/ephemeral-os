@@ -1,11 +1,10 @@
-//! Daemon HTTP transport: health, `/forward` reverse proxying, and the
-//! token-gated `/export` spool stream over a loopback listener that is
-//! separate from the JSON-line RPC transport.
+//! Daemon HTTP transport: liveness, `/forward` reverse proxying, and the
+//! read-only `/files/list` exception over a listener that is separate from
+//! the authenticated JSON-line RPC transport.
 
 mod api;
-mod export;
 mod forward;
-mod health;
+pub(crate) mod health;
 mod response;
 mod router;
 mod server;

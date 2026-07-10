@@ -11,11 +11,9 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
-use std::time::Instant;
 
 use base64::Engine as _;
 use sandbox_observability::record::names;
-use sandbox_protocol::EXPORT_STREAM_TOKEN_FIELD;
 use sandbox_runtime_layerstack::{
     emit_delta_stream, fold_delta_winners, DeltaStreamStats, LayerRef, LayerStack,
 };
@@ -95,14 +93,7 @@ fn run_export_layerstack(
             let spool_bytes = std::fs::metadata(&spool_path)
                 .map_err(|error| error.to_string())?
                 .len();
-            let stream_token = mint_stream_token();
-            register_spool(
-                operations,
-                &export_id,
-                &spool_path,
-                spool_bytes,
-                &stream_token,
-            )?;
+            register_spool(operations, &export_id, &spool_path, spool_bytes)?;
             span.attr("manifest_version", lease.manifest.version);
             span.attr("layers_exported", delta_layers.len());
             span.attr("spool_bytes", spool_bytes);
@@ -122,7 +113,6 @@ fn run_export_layerstack(
                 },
                 "spool_bytes": spool_bytes,
             });
-            result[EXPORT_STREAM_TOKEN_FIELD] = json!(stream_token);
             if !live_sessions.is_empty() {
                 result["live_workspace_sessions"] = json!(live_sessions
                     .iter()
@@ -169,7 +159,6 @@ fn register_spool(
     export_id: &str,
     spool_path: &Path,
     total: u64,
-    stream_token: &str,
 ) -> Result<(), String> {
     let mut spools = operations
         .layerstack
@@ -181,21 +170,9 @@ fn register_spool(
         ExportSpool {
             path: spool_path.to_path_buf(),
             total,
-            stream_token: stream_token.to_owned(),
-            minted_at: Instant::now(),
         },
     );
     Ok(())
-}
-
-/// Single-use stream token: ≥ 244 bits of CSPRNG entropy, minted only inside
-/// the authenticated start forward and never logged (spec decision 19).
-fn mint_stream_token() -> String {
-    format!(
-        "{}{}",
-        uuid::Uuid::new_v4().simple(),
-        uuid::Uuid::new_v4().simple()
-    )
 }
 
 fn dispatch_read_export_chunk(

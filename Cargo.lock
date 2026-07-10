@@ -1558,6 +1558,7 @@ dependencies = [
  "sandbox-runtime",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-process",
+ "sandbox-runtime-workspace",
  "serde_json",
  "thiserror 2.0.18",
  "tokio",
@@ -1683,7 +1684,6 @@ dependencies = [
  "sha2",
  "tar",
  "thiserror 2.0.18",
- "uuid",
  "zstd",
 ]
 

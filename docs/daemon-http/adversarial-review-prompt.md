@@ -1,7 +1,7 @@
 # Daemon HTTP Adversarial Review Prompt
 
-Use this prompt to review the daemon HTTP design and implementation after the
-first implementation lands. The review is intentionally skeptical and scoped to:
+Use this prompt to review the current daemon HTTP allowlist and implementation.
+The review is intentionally skeptical and scoped to:
 
 1. design, implementation cleanness, and simplicity;
 2. file and folder structure;
@@ -21,7 +21,13 @@ too tangled, too spread out, or misleadingly named.
 
 ## Source of Truth
 
-Primary spec:
+Binding contract:
+
+```text
+docs/obsidian/ephemeral-os/implementation_plan/mcp_cli_surface/http.md
+```
+
+Current user-facing reference:
 
 ```text
 docs/daemon-http/README.md
@@ -33,9 +39,12 @@ Primary implementation areas:
 crates/sandbox-daemon/src/rpc/
 crates/sandbox-daemon/src/http/
 crates/sandbox-daemon/src/serve.rs
+crates/sandbox-runtime/operation/src/operation_adapter/
+crates/sandbox-manager/src/operation/management/service/impls/export_changes.rs
+crates/sandbox-protocol/src/
+crates/sandbox-console/src/
 crates/sandbox-config/src/configs/manager.rs
 crates/sandbox-manager/src/model.rs
-crates/sandbox-manager/src/operation/cli_definition/management_operations.rs
 crates/sandbox-provider-docker/src/engine.rs
 crates/sandbox-provider-docker/src/installer.rs
 crates/sandbox-provider-docker/src/launch.rs
@@ -55,18 +64,26 @@ impossible or clearly expensive:
 - The JSON-line daemon RPC listener and daemon HTTP listener are separate.
 - `daemon_http` is a real daemon surface, not a "preview" feature.
 - Public forwarding routes live under `/forward`.
-- V0 routes are:
+- The exact public HTTP surface is:
 
 ```text
 GET /health
 ANY /forward/shared/<port>/...
 ANY /forward/isolated=<workspace_id>/<port>/...
+POST /files/list
 ```
+
+- `POST /files/list` is the sole HTTP operation endpoint and remains absent
+  from runtime CLI and MCP.
+- `/files/read`, `/files/write`, `/files/edit`, `/files/blame`,
+  `/observability/*`, `/export/*`, and every other unlisted path return `404`.
+- Management, runtime, and observability operations use authenticated gateway
+  RPC through CLI, MCP, or the console `/api/rpc` bridge.
 
 - Docker publishes a single daemon HTTP container port to one random host
   loopback port.
-- The gateway-level sandbox route is future work, not v0.
-- Isolated loopback forwarding through setns is future work, not v0.
+- Gateway-level sandbox routing is outside the daemon HTTP contract.
+- Isolated loopback forwarding through setns is outside the current contract.
 - HTTP capabilities may use dedicated folders.
 
 ## Review Lenses
@@ -79,9 +96,8 @@ Walk the request path end to end:
 host HTTP client
   -> daemon_http listener
   -> http router
-  -> health or forward handler
-  -> forward target resolver
-  -> sandbox service
+  -> health, forward, or file-list handler
+  -> fixed response, forwarded sandbox service, or internal file_list dispatch
 ```
 
 Find complexity that does not earn its place:
@@ -104,8 +120,14 @@ Required questions:
 - Can shared and isolated forwarding share one flow with only target resolution
   differing?
 - Does `/health` avoid depending on runtime state?
+- Is the router an exact allowlist rather than a generic `/files/*` or
+  `/observability/*` dispatcher?
+- Does `/files/list` accept only bounded JSON objects, construct request id and
+  scope internally, and reject other methods with `405`?
+- Is daemon HTTP export code and token/path vocabulary absent after the caller
+  audit, while manager export still pages authenticated `read_export_chunk`?
 - Are errors mapped once, consistently, and close to the HTTP boundary?
-- Does v0 avoid implementing future-only concerns such as TLS, HTML rewriting,
+- Does the implementation avoid unrelated concerns such as TLS, HTML rewriting,
   gateway routing, or isolated loopback setns relays?
 
 ### L2: File and Folder Structure
@@ -130,22 +152,21 @@ crates/sandbox-daemon/src/
     server.rs
     router.rs
     response.rs
-
-    health/
-      mod.rs
+    health.rs
+    api.rs
 
     forward/
       mod.rs
       route.rs
-      target.rs
       proxy.rs
 ```
 
-Future-only folders should not exist until they contain real code:
+Disallowed operation-route modules should not exist:
 
 ```text
 http/metrics/
 http/observability/
+http/export.rs
 ```
 
 Findings to look for:
@@ -155,6 +176,9 @@ Findings to look for:
 - Route folders contain only one tiny file and should be a file instead.
 - Cross-cutting HTTP helpers live inside `forward/` and are reused by `health/`.
 - Forward-specific route parsing leaks into `router.rs`.
+- Generic file-operation or observability dispatch survives in `api.rs`.
+- An export module, route prefix, stream token, or spool claim remains reachable
+  from daemon HTTP.
 - Response helpers duplicate status/header formatting across handlers.
 - Docker provider files get broader instead of factoring one small
   multi-port-publish helper.
@@ -181,6 +205,7 @@ daemon_http_port
 /health
 /forward/shared/<port>/...
 /forward/isolated=<workspace_id>/<port>/...
+/files/list
 ```
 
 Expected implementation vocabulary:
@@ -227,6 +252,10 @@ Inspect the real E2E tests. They must prove:
 /forward/shared/<assigned_port>/... works from the host
 /forward/isolated=<workspace_id>/<assigned_port>/... works from the host
 invalid forward routes return the specified HTTP errors
+POST /files/list covers root, published-snapshot, and live-session listings
+file-list bad method/body/size cases return the specified transport errors
+/files/read, /files/write, /files/edit, /files/blame,
+  /observability/snapshot, and /export/x return 404
 ```
 
 The shared and isolated tests must bind port `0` and use the assigned port. A

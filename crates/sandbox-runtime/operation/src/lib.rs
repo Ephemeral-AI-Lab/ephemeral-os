@@ -13,7 +13,7 @@ mod services;
 pub mod workspace_session;
 
 pub use command::CommandOperationService;
-pub use layerstack::{ClaimedExportStream, LayerStackService};
+pub use layerstack::LayerStackService;
 pub use namespace_execution::{
     NamespaceExecutionId, NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };

@@ -61,6 +61,7 @@ fn temp_root(label: &str) -> PathBuf {
 fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
     Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
         WorkspaceRuntimeHooks {
+            isolated_ip: Box::new(|_| Ok(None)),
             create_workspace: Box::new(|_request: CreateWorkspaceRequest| {
                 Err(WorkspaceError::Setup {
                     step: "not configured".to_owned(),

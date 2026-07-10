@@ -20,7 +20,10 @@ use super::{ForwardError, ForwardTarget};
 use crate::http::response::{self, BoxBody};
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+#[cfg(not(test))]
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
+#[cfg(test)]
+const RESPONSE_TIMEOUT: Duration = Duration::from_millis(100);
 
 const HOP_BY_HOP: [&str; 7] = [
     "connection",
