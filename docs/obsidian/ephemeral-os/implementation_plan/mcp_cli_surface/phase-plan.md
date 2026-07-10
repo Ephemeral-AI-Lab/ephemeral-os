@@ -33,14 +33,14 @@ verifiable phases. The detailed target contracts are [[mcp]], [[cli]], and
 | --- | --- | --- | --- |
 | 0. Contract baseline | complete | none | public surface, architecture, and migration constraints documented |
 | 1. Catalog and visibility boundary | complete | 0 | one canonical public catalog with correct names/visibility |
-| 2. Consolidate the CLI package | not started | 1 | one package, three separately grantable binaries |
+| 2. Consolidate the CLI package | in progress | 1 | one package, three separately grantable binaries |
 | 3. Add the MCP adapter | not started | 1, 2 | one set-configured stdio server with three registrations |
 | 4. Replace export HTTP streaming | not started | 1 | `export_changes` uses authenticated RPC chunk paging only |
 | 5. Move console operation callers | not started | 2, 4 | console uses gateway RPC for operations and narrow daemon proxies |
 | 6. Enforce daemon HTTP allowlist | not started | 4, 5 | only health, forward, and file list remain direct daemon HTTP |
 | 7. Release verification and cutover | not started | 1–6 | end-to-end proof, documentation, and release-ready boundary |
 
-Phases 0 and 1 are complete. Phase 2 is the next eligible phase and has not
+Phases 0 and 1 are complete. Phase 2 is in progress; no later phase has
 started.
 
 ## Fixed decisions and non-negotiable invariants
@@ -205,7 +205,7 @@ relevant catalog/operation tests
 
 ## Phase 2 — Consolidate the CLI package
 
-**Status:** not started
+**Status:** in progress
 
 **Depends on:** Phase 1
 
@@ -620,6 +620,7 @@ When work lands, update only the relevant phase in this file:
 
 | Date | Phase | Update | Evidence |
 | --- | --- | --- | --- |
+| 2026-07-10 | 2 | Started CLI package consolidation after confirming the Phase 1 catalog/visibility gate and re-reading the binding CLI, operation, and implementation contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 1 | Completed exact public catalogs, visibility boundaries, canonical snapshot ownership, runtime adapter rename, and caller cleanup without starting Phase 2. | commits `4bda5df70`, `0217248e5`; 201 focused Rust tests, fake-gateway, formatting, compile, and boundary-search proof |
 | 2026-07-10 | 1 | Started the catalog and visibility boundary after confirming Phase 0 complete and reading all companion contracts. | implementation and direct acceptance proof pending |
 | 2026-07-10 | 0 | Created the phase-gated execution tracker from the approved design contracts. | documentation only |
