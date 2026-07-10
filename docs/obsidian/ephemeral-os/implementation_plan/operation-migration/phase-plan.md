@@ -53,7 +53,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 3 | Extract the shared gateway client | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 4 | Clean the manager application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
-| 6 | Extract observability application, remove multiplexing | in progress | 2026-07-11 | — | — |
+| 6 | Extract observability application, remove multiplexing | gate review | 2026-07-11 | — | — |
 | 7 | Update documentation, scripts, law statements | blocked | — | — | — |
 | 8 | Enforce boundaries and cut over | blocked | — | — | — |
 
@@ -538,26 +538,26 @@ one commit.
 
 ### Acceptance criteria
 
-- [ ] `crates/sandbox-observability/` contains exactly `primitives/` and
+- [x] `crates/sandbox-observability/` contains exactly `primitives/` and
   `application/`; the workspace builds with the relocated path.
   *Evidence: `ls` + `cargo metadata`.*
-- [ ] Observability application workspace dependencies are exactly:
+- [x] Observability application workspace dependencies are exactly:
   contract, catalog, `sandbox-observability`, `sandbox-runtime-layerstack`.
   *Evidence: `cargo metadata`.*
-- [ ] `rg 'get_observability'` across `crates/`, `web/console/src`, and
+- [x] `rg 'get_observability'` across `crates/`, `web/console/src`, and
   `e2e/` returns nothing; `rg '"view"'` shows no synthetic observability
   routing.
-- [ ] All six routes are served under their concrete names end-to-end;
+- [x] All six routes are served under their concrete names end-to-end;
   the shadowing test passes. *Evidence:
   `cargo test -p sandbox-observability-application -p sandbox-daemon -p sandbox-manager`.*
-- [ ] Console `/api/rpc` envelope unchanged; observability `op` values are
+- [x] Console `/api/rpc` envelope unchanged; observability `op` values are
   concrete; validation is public-only. *Evidence: console tests +
   comparison against Phase 0 fixtures.*
-- [ ] Outward behavior matches the Phase 0 characterization baseline modulo
+- [x] Outward behavior matches the Phase 0 characterization baseline modulo
   the approved behavior changes. *Evidence: fixture diff.*
-- [ ] `bin/start-sandbox-docker-gateway --rebuild-binary` succeeds with the
+- [x] `bin/start-sandbox-docker-gateway --rebuild-binary` succeeds with the
   updated freshness watch.
-- [ ] Standing gate passed.
+- [x] Standing gate passed.
 
 ### Progress log
 
@@ -575,6 +575,7 @@ one commit.
 | 2026-07-11 | Acceptance evidence: rebuilt Docker gateway | `bin/start-sandbox-docker-gateway --rebuild-binary` | Exit 0; `sandbox-daemon` was rebuilt with the namespace/application freshness inputs, packaged for `aarch64-unknown-linux-musl`, and the gateway restarted on `127.0.0.1:7878`. | None. |
 | 2026-07-11 | Phase 6 ownership compliance repair | `cargo metadata --format-version 1 --no-deps \| jq -r '.packages[] \| select(.name == "xtask") \| .dependencies[] \| select(.source == null) \| .name' \| sort`; `if rg -n 'gen-console-api\|api/gen/operations' README.md xtask web/console/src; then exit 1; else echo 'no generator framework references'; fi`; `git ls-files 'web/console/src/api/gen/**'`; `cargo test -p sandbox-cli --all-features --test projection_integrity`; `npm --prefix web/console run build`; post-commit `cargo check --workspace --all-targets --all-features`; post-commit focused Phase 6 package suite | Commit `9db736337` removed the out-of-scope generator, tracked generated binding, and illegal `xtask` workspace dependencies; restored explicit, exact CLI projection ownership; and retained the valid merged-catalog route declaration. The `xtask` workspace-dependency and tracked generated-file commands printed nothing, the generator scan printed only `no generator framework references`, projection integrity passed 2/2 including `missing_public_operation_projection_is_rejected`, the console build passed, the workspace check passed, and the focused suite passed (CLI 47/47, catalog 10/10, console 39/39, daemon 51/51, manager 63/63, MCP 9/9, application 8/8). | None. |
 | 2026-07-11 | Phase 6 standing gate and final gateway candidate | `cargo check --workspace --all-targets --all-features`; `cargo test --workspace --all-features`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo fmt --all -- --check`; `bin/start-sandbox-docker-gateway --rebuild-binary` | All five commands exited 0. Workspace check finished cleanly; the complete all-feature workspace unit, integration, binary, and doc-test run passed; strict clippy completed every workspace package with no warning; formatting was clean; and the rebuilt `sandbox-daemon-linux-arm64` (`sha256=47986ca25a0a582cc47439f20af02b0560680089eaf82cfeeaa43d0e782577e2`) restarted the gateway on `127.0.0.1:7878`. | None. |
+| 2026-07-11 | Phase 6 gate review | Phase 6 acceptance checklist; committed evidence through `aeaa342d5`; post-commit `cargo check --workspace --all-targets --all-features`; `cargo test -p sandbox-observability-application -p sandbox-daemon -p sandbox-manager --all-features` | All eight acceptance items are checked from prior command evidence; the evidence checkpoint's post-commit workspace check passed, and the focused application 8/8, daemon 51/51, and manager 63/63 suites passed. Dashboard status advanced to `gate review`. | None. |
 
 ---
 
