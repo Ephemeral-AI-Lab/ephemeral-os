@@ -204,7 +204,7 @@ async fn cgroup_view_dispatch_returns_series() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
+                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
                 "req-cgroup",
                 json!({ "view": "cgroup", "scope": "sandbox" }),
             )?,
@@ -285,7 +285,7 @@ async fn events_view_dispatch_returns_parsed_events_by_name() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
+                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
                 "req-events",
                 json!({ "view": "events", "name": "lease.released" }),
             )?,
@@ -319,7 +319,7 @@ async fn trace_view_dispatch_folds_log_into_span_forest() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
+                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
                 "req-trace",
                 json!({ "view": "trace", "trace_id": "req-7f3" }),
             )?,
@@ -357,7 +357,7 @@ async fn events_view_dispatch_last_n_keeps_newest_matched() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
+                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
                 "req-last-n",
                 json!({ "view": "events", "last_n": 2 }),
             )?,
@@ -389,7 +389,7 @@ async fn trace_view_dispatch_last_resolves_most_recent_root() -> TestResult {
     let response = server
         .dispatch_bytes(
             request_bytes(
-                crate::rpc::dispatch::PRIVATE_OBSERVABILITY_OP,
+                sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
                 "req-trace-last",
                 json!({ "view": "trace", "trace_id": "last" }),
             )?,

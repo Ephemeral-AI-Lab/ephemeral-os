@@ -10,7 +10,7 @@ use serde_json::json;
 
 fn manager_catalog_document() -> CatalogDocument {
     catalog_document(
-        sandbox_manager_operations::manager_catalog(),
+        sandbox_operation_catalog::manager::manager_catalog(),
         sandbox_cli::projection::manager::catalog_projection(),
     )
     .expect("manager catalog")
@@ -18,7 +18,7 @@ fn manager_catalog_document() -> CatalogDocument {
 
 fn runtime_catalog_document() -> CatalogDocument {
     catalog_document(
-        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_operation_catalog::runtime::runtime_catalog(),
         sandbox_cli::projection::runtime::catalog_projection(),
     )
     .expect("runtime catalog")
@@ -26,7 +26,7 @@ fn runtime_catalog_document() -> CatalogDocument {
 
 fn observability_catalog_document() -> CatalogDocument {
     catalog_document(
-        sandbox_observability_operations::observability_catalog(),
+        sandbox_operation_catalog::observability::observability_catalog(),
         sandbox_cli::projection::observability::catalog_projection(),
     )
     .expect("observability catalog")

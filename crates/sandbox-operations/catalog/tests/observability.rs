@@ -1,4 +1,6 @@
-use sandbox_observability_operations::{observability_catalog, SNAPSHOT_SPEC};
+#![cfg(feature = "observability")]
+
+use sandbox_operation_catalog::observability::{observability_catalog, SNAPSHOT_SPEC};
 use sandbox_operation_contract::{catalog_to_value, OperationDomain};
 
 #[test]
@@ -44,29 +46,5 @@ fn snapshot_is_canonical_and_only_aggregate_capable_operation() {
             operation.name != "snapshot",
             "only snapshot supports aggregate routing"
         );
-    }
-}
-
-#[test]
-fn public_operation_sets_are_pairwise_disjoint() {
-    let catalogs = [
-        ("management", sandbox_manager_operations::manager_catalog()),
-        ("runtime", sandbox_runtime_operations::runtime_catalog()),
-        ("observability", observability_catalog()),
-    ];
-
-    for (left_index, (left_name, left)) in catalogs.iter().enumerate() {
-        for (right_name, right) in &catalogs[left_index + 1..] {
-            for operation in left.operations {
-                assert!(
-                    !right
-                        .operations
-                        .iter()
-                        .any(|candidate| candidate.name == operation.name),
-                    "{} appears in both {left_name} and {right_name}",
-                    operation.name
-                );
-            }
-        }
     }
 }

@@ -9,8 +9,10 @@ use crate::config::OperationSet;
 /// Returns an error when the selected source catalog is invalid.
 pub fn selected_catalog(set: OperationSet) -> Result<OperationCatalogDocument, RequestBuildError> {
     catalog_document(match set {
-        OperationSet::Management => sandbox_manager_operations::manager_catalog(),
-        OperationSet::Runtime => sandbox_runtime_operations::runtime_catalog(),
-        OperationSet::Observability => sandbox_observability_operations::observability_catalog(),
+        OperationSet::Management => sandbox_operation_catalog::manager::manager_catalog(),
+        OperationSet::Runtime => sandbox_operation_catalog::runtime::runtime_catalog(),
+        OperationSet::Observability => {
+            sandbox_operation_catalog::observability::observability_catalog()
+        }
     })
 }

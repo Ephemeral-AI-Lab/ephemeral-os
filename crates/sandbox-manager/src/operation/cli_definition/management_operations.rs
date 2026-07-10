@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use sandbox_manager_operations::{
+use sandbox_operation_catalog::manager::{
     CREATE_SANDBOX_SPEC, DESTROY_SANDBOX_SPEC, EXPORT_CHANGES_SPEC, INSPECT_SANDBOX_SPEC,
     LIST_SANDBOXES_SPEC, SQUASH_LAYERSTACKS_SPEC,
 };
-use sandbox_observability_operations::SNAPSHOT_SPEC;
+use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
 use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use serde_json::{json, Value};
 

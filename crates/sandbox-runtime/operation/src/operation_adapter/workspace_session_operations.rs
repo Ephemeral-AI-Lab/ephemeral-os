@@ -6,20 +6,26 @@ use crate::workspace_session::{
     CreateSessionRequest, FinalizePolicy, WorkspaceSessionError, WorkspaceSessionHandler,
 };
 use crate::SandboxRuntimeOperations;
+use sandbox_operation_catalog::internal::runtime::{
+    CREATE_WORKSPACE_SESSION, DESTROY_WORKSPACE_SESSION,
+};
 use sandbox_operation_contract::{OperationRequest, OperationResponse};
 
-const CREATE_WORKSPACE_SESSION: OperationEntry = OperationEntry {
-    name: "create_workspace_session",
+const CREATE_WORKSPACE_SESSION_ENTRY: OperationEntry = OperationEntry {
+    name: CREATE_WORKSPACE_SESSION,
     spec: None,
     dispatch: dispatch_create_workspace_session,
 };
-const DESTROY_WORKSPACE_SESSION: OperationEntry = OperationEntry {
-    name: "destroy_workspace_session",
+const DESTROY_WORKSPACE_SESSION_ENTRY: OperationEntry = OperationEntry {
+    name: DESTROY_WORKSPACE_SESSION,
     spec: None,
     dispatch: dispatch_destroy_workspace_session,
 };
 
-const OPERATIONS: &[OperationEntry] = &[CREATE_WORKSPACE_SESSION, DESTROY_WORKSPACE_SESSION];
+const OPERATIONS: &[OperationEntry] = &[
+    CREATE_WORKSPACE_SESSION_ENTRY,
+    DESTROY_WORKSPACE_SESSION_ENTRY,
+];
 
 pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS

@@ -2,14 +2,12 @@
 resolver = "2"
 members = [
     "crates/sandbox-operations/contract",
+    "crates/sandbox-operations/catalog",
     "crates/sandbox-runtime/operation",
     "crates/sandbox-config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
-    "crates/sandbox-operations/manager",
     "crates/sandbox-observability",
-    "crates/sandbox-operations/observability",
-    "crates/sandbox-operations/runtime",
     "crates/sandbox-cli",
     "crates/sandbox-mcp",
     "crates/sandbox-console",
@@ -74,6 +72,7 @@ rmcp = { version = "=0.11.0", features = ["transport-io"] }
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-operation-contract = { path = "crates/sandbox-operations/contract" }
+sandbox-operation-catalog = { path = "crates/sandbox-operations/catalog", default-features = false }
 sandbox-config = { path = "crates/sandbox-config" }
 sandbox-runtime-layerstack = { path = "crates/sandbox-runtime/layerstack" }
 sandbox-runtime-namespace-process = { path = "crates/sandbox-runtime/namespace-process" }
@@ -81,10 +80,7 @@ sandbox-runtime-namespace-execution = { path = "crates/sandbox-runtime/namespace
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
-sandbox-manager-operations = { path = "crates/sandbox-operations/manager" }
 sandbox-observability = { path = "crates/sandbox-observability" }
-sandbox-observability-operations = { path = "crates/sandbox-operations/observability" }
-sandbox-runtime-operations = { path = "crates/sandbox-operations/runtime" }
 sandbox-cli = { path = "crates/sandbox-cli" }
 sandbox-mcp = { path = "crates/sandbox-mcp" }
 sandbox-console = { path = "crates/sandbox-console" }

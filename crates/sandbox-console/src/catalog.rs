@@ -29,17 +29,17 @@ pub fn handle() -> Response<BoxBody> {
 
 fn catalogs() -> Result<Value, String> {
     let management = catalog_document(
-        sandbox_manager_operations::manager_catalog(),
+        sandbox_operation_catalog::manager::manager_catalog(),
         sandbox_cli::projection::manager::catalog_projection(),
     )
     .map_err(|error| error.to_string())?;
     let runtime = catalog_document(
-        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_operation_catalog::runtime::runtime_catalog(),
         sandbox_cli::projection::runtime::catalog_projection(),
     )
     .map_err(|error| error.to_string())?;
     let observability = catalog_document(
-        sandbox_observability_operations::observability_catalog(),
+        sandbox_operation_catalog::observability::observability_catalog(),
         sandbox_cli::projection::observability::catalog_projection(),
     )
     .map_err(|error| error.to_string())?;

@@ -143,7 +143,7 @@ where
 {
     catalog_or_usage_error(
         catalog_document(
-            sandbox_manager_operations::manager_catalog(),
+            sandbox_operation_catalog::manager::manager_catalog(),
             crate::projection::manager::catalog_projection(),
         )
         .map_err(RequestBuildError::from),

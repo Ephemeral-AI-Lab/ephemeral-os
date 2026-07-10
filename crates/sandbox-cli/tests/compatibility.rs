@@ -8,17 +8,17 @@ use serde_json::{json, Value};
 #[test]
 fn all_feature_compatibility_catalog_matches_phase_zero_fixture() {
     let management = catalog_document(
-        sandbox_manager_operations::manager_catalog(),
+        sandbox_operation_catalog::manager::manager_catalog(),
         sandbox_cli::projection::manager::catalog_projection(),
     )
     .expect("management projection");
     let runtime = catalog_document(
-        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_operation_catalog::runtime::runtime_catalog(),
         sandbox_cli::projection::runtime::catalog_projection(),
     )
     .expect("runtime projection");
     let observability = catalog_document(
-        sandbox_observability_operations::observability_catalog(),
+        sandbox_operation_catalog::observability::observability_catalog(),
         sandbox_cli::projection::observability::catalog_projection(),
     )
     .expect("observability projection");

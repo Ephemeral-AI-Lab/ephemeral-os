@@ -1,17 +1,16 @@
 //! Runtime operation catalog.
-#![forbid(unsafe_code)]
 
 mod command;
 mod file;
 
 pub use command::{COMMAND_FAMILY, EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};
-pub use file::{
-    FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_FAMILY, FILE_LIST_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC,
-};
+pub use file::{FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_FAMILY, FILE_READ_SPEC, FILE_WRITE_SPEC};
 
 use sandbox_operation_contract::{
     OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
 };
+
+use crate::routes;
 
 const FAMILIES: &[&OperationFamilySpec] = &[&COMMAND_FAMILY, &FILE_FAMILY];
 
@@ -37,5 +36,10 @@ pub const fn operation_specs() -> &'static [&'static OperationSpec] {
 
 #[must_use]
 pub const fn runtime_catalog() -> OperationCatalog {
-    OperationCatalog::new(OperationDomain::Runtime, FAMILIES, SPECS)
+    OperationCatalog::new(
+        OperationDomain::Runtime,
+        FAMILIES,
+        SPECS,
+        routes::runtime_routes(),
+    )
 }

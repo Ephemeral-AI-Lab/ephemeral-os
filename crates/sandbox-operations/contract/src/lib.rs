@@ -14,7 +14,8 @@ pub mod scope;
 pub use argument::{ArgKind, ArgSpec};
 pub use document::{
     catalog_from_value, catalog_to_value, ArgSpecDocument, CatalogDecodeError, OperationCatalog,
-    OperationCatalogDocument, OperationFamilyDocument, OperationSpecDocument,
+    OperationCatalogDocument, OperationFamilyDocument, OperationRouteDocument,
+    OperationSpecDocument,
 };
 pub use domain::{operation_domain_name, OperationDomain};
 pub use error::{error_response_with_details, OperationError};
@@ -23,6 +24,7 @@ pub use operation::OperationSpec;
 pub use request::OperationRequest;
 pub use response::OperationResponse;
 pub use route::{
-    OperationExecutionOwner, OperationRouteSpec, OperationScopePolicy, OperationVisibility,
+    OperationDispatchArgument, OperationDispatchTarget, OperationExecutionOwner,
+    OperationRouteSpec, OperationScopePolicy, OperationVisibility,
 };
 pub use scope::{OperationScope, OperationScopeKind};

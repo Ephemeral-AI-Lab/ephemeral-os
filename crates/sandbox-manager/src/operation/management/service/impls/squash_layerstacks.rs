@@ -1,10 +1,9 @@
+use sandbox_operation_catalog::internal::runtime::SQUASH_LAYERSTACK;
 use sandbox_operation_contract::{error, OperationRequest, OperationResponse, OperationScope};
 use serde_json::{json, Value};
 
 use crate::operation::ManagerServices;
 use crate::router::forward_sandbox_request;
-
-const RUNTIME_SQUASH_OP: &str = "squash_layerstack";
 
 pub(crate) fn dispatch_squash_layerstacks(
     services: &ManagerServices,
@@ -15,7 +14,7 @@ pub(crate) fn dispatch_squash_layerstacks(
         Err(response) => return response,
     };
     let runtime_request = OperationRequest::new(
-        RUNTIME_SQUASH_OP,
+        SQUASH_LAYERSTACK,
         request.request_id.clone(),
         OperationScope::sandbox(sandbox_id),
         json!({}),
@@ -32,7 +31,7 @@ fn translate_stale_daemon_response(response: OperationResponse) -> OperationResp
         return OperationResponse::fault_with_details(
             error::OPERATION_FAILED,
             "sandbox daemon does not support squash_layerstacks; recreate the sandbox so it uses the current daemon binary",
-            json!({ "daemon_op": RUNTIME_SQUASH_OP }),
+            json!({ "daemon_op": SQUASH_LAYERSTACK }),
         );
     }
     OperationResponse::ok(value)

@@ -63,7 +63,7 @@ fn squash_layerstack_registers_with_cli_none() {
         sandbox_runtime::known_operation_name("squash_layerstack"),
         Some("squash_layerstack")
     );
-    let catalog = sandbox_runtime_operations::runtime_catalog();
+    let catalog = sandbox_operation_catalog::runtime::runtime_catalog();
     let encoded = sandbox_operation_contract::catalog_to_value(catalog).to_string();
     assert!(
         !encoded.contains("squash_layerstack"),

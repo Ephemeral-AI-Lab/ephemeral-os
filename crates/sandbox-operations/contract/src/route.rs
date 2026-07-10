@@ -28,3 +28,15 @@ pub struct OperationRouteSpec {
     pub execution_owner: OperationExecutionOwner,
     pub visibility: OperationVisibility,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OperationDispatchArgument {
+    pub name: &'static str,
+    pub value: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct OperationDispatchTarget {
+    pub operation: &'static str,
+    pub arguments: &'static [OperationDispatchArgument],
+}

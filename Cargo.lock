@@ -1503,11 +1503,9 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "sandbox-config",
- "sandbox-manager-operations",
- "sandbox-observability-operations",
+ "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-protocol",
- "sandbox-runtime-operations",
  "serde_json",
  "tokio",
  "uuid",
@@ -1535,11 +1533,9 @@ dependencies = [
  "hyper-util",
  "sandbox-cli",
  "sandbox-config",
- "sandbox-manager-operations",
- "sandbox-observability-operations",
+ "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-protocol",
- "sandbox-runtime-operations",
  "serde_json",
  "tokio",
  "uuid",
@@ -1557,6 +1553,7 @@ dependencies = [
  "hyper-util",
  "sandbox-config",
  "sandbox-observability",
+ "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-protocol",
  "sandbox-runtime",
@@ -1594,8 +1591,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "rustix 0.38.44",
- "sandbox-manager-operations",
- "sandbox-observability-operations",
+ "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-runtime-layerstack",
  "serde",
@@ -1607,24 +1603,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandbox-manager-operations"
-version = "0.1.0"
-dependencies = [
- "sandbox-operation-contract",
-]
-
-[[package]]
 name = "sandbox-mcp"
 version = "0.1.0"
 dependencies = [
  "clap",
  "rmcp",
  "sandbox-cli",
- "sandbox-manager-operations",
- "sandbox-observability-operations",
+ "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-protocol",
- "sandbox-runtime-operations",
  "serde_json",
  "tokio",
 ]
@@ -1639,12 +1626,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandbox-observability-operations"
+name = "sandbox-operation-catalog"
 version = "0.1.0"
 dependencies = [
- "sandbox-manager-operations",
  "sandbox-operation-contract",
- "sandbox-runtime-operations",
 ]
 
 [[package]]
@@ -1689,11 +1674,11 @@ dependencies = [
  "base64",
  "rustix 0.38.44",
  "sandbox-observability",
+ "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-execution",
  "sandbox-runtime-namespace-process",
- "sandbox-runtime-operations",
  "sandbox-runtime-workspace",
  "serde_json",
  "sha2",
@@ -1746,13 +1731,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "sandbox-runtime-operations"
-version = "0.1.0"
-dependencies = [
- "sandbox-operation-contract",
 ]
 
 [[package]]

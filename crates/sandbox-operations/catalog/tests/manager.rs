@@ -1,4 +1,6 @@
-use sandbox_manager_operations::manager_catalog;
+#![cfg(feature = "manager")]
+
+use sandbox_operation_catalog::manager::manager_catalog;
 use sandbox_operation_contract::{catalog_to_value, OperationDomain};
 
 #[test]

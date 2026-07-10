@@ -390,14 +390,14 @@ fn dir_entries(path: &Path) -> Vec<String> {
 
 #[test]
 fn export_changes_spec_is_in_the_catalog() {
-    let spec = sandbox_manager_operations::operation_specs()
+    let spec = sandbox_operation_catalog::manager::operation_specs()
         .iter()
         .find(|spec| spec.name == "export_changes")
         .expect("export_changes spec");
     assert_eq!(spec.family, "management");
     let arg_names: Vec<&str> = spec.args.iter().map(|arg| arg.name).collect();
     assert_eq!(arg_names, ["sandbox_id", "dest", "format"]);
-    let squash = sandbox_manager_operations::operation_specs()
+    let squash = sandbox_operation_catalog::manager::operation_specs()
         .iter()
         .find(|spec| spec.name == "squash_layerstacks")
         .expect("squash_layerstacks spec");
@@ -412,7 +412,7 @@ fn export_changes_spec_is_in_the_catalog() {
 #[test]
 fn every_catalog_spec_has_a_dispatcher() {
     let env = env("parity");
-    for spec in sandbox_manager_operations::operation_specs() {
+    for spec in sandbox_operation_catalog::manager::operation_specs() {
         let response = dispatch(
             &env,
             &OperationRequest::new(spec.name, "req-parity", OperationScope::System, json!({})),

@@ -5,7 +5,7 @@ use sandbox_cli::projection::document::catalog_document;
 
 fn runtime_catalog() -> sandbox_cli::projection::document::CatalogDocument {
     catalog_document(
-        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_operation_catalog::runtime::runtime_catalog(),
         sandbox_cli::projection::runtime::catalog_projection(),
     )
     .expect("runtime catalog projection")

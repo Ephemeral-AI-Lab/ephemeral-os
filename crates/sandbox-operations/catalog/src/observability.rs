@@ -11,6 +11,8 @@ use sandbox_operation_contract::{
     ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
 };
 
+use crate::routes;
+
 const OBSERVABILITY_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "observability",
     title: "Observability",
@@ -37,5 +39,10 @@ const SPECS: &[&OperationSpec] = &[
 
 #[must_use]
 pub const fn observability_catalog() -> OperationCatalog {
-    OperationCatalog::new(OperationDomain::Observability, FAMILIES, SPECS)
+    OperationCatalog::new(
+        OperationDomain::Observability,
+        FAMILIES,
+        SPECS,
+        routes::observability_routes(),
+    )
 }

@@ -180,7 +180,7 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
 
 #[test]
 fn runtime_operation_catalog_exports_only_public_runtime_operations() {
-    let catalog = sandbox_runtime_operations::runtime_catalog();
+    let catalog = sandbox_operation_catalog::runtime::runtime_catalog();
     let names = catalog
         .operations
         .iter()
@@ -212,7 +212,7 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
 
 #[test]
 fn service_graph_catalog_families_match_public_operations() {
-    let catalog = sandbox_runtime_operations::runtime_catalog();
+    let catalog = sandbox_operation_catalog::runtime::runtime_catalog();
     let families = catalog
         .families
         .iter()
@@ -233,7 +233,7 @@ fn service_graph_catalog_families_match_public_operations() {
 
 #[test]
 fn service_graph_catalog_keeps_internal_helpers_out() {
-    let catalog = sandbox_runtime_operations::runtime_catalog();
+    let catalog = sandbox_operation_catalog::runtime::runtime_catalog();
     let names = catalog
         .operations
         .iter()

@@ -133,7 +133,7 @@ fn export_operations_register_with_cli_none() {
         sandbox_runtime::known_operation_name("read_export_chunk"),
         Some("read_export_chunk")
     );
-    let catalog = sandbox_runtime_operations::runtime_catalog();
+    let catalog = sandbox_operation_catalog::runtime::runtime_catalog();
     let encoded = sandbox_operation_contract::catalog_to_value(catalog).to_string();
     assert!(
         !encoded.contains("export_layerstack") && !encoded.contains("read_export_chunk"),

@@ -82,7 +82,7 @@ where
     };
 
     let catalog = match catalog_document(
-        sandbox_runtime_operations::runtime_catalog(),
+        sandbox_operation_catalog::runtime::runtime_catalog(),
         crate::projection::runtime::catalog_projection(),
     ) {
         Ok(catalog) => catalog,

@@ -14,6 +14,7 @@ use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use base64::Engine as _;
 use sandbox_observability::record::names;
+use sandbox_operation_catalog::internal::runtime::{EXPORT_LAYERSTACK, READ_EXPORT_CHUNK};
 use sandbox_runtime_layerstack::{
     emit_delta_stream, fold_delta_winners, DeltaStreamStats, LayerRef, LayerStack,
 };
@@ -23,19 +24,19 @@ use crate::layerstack::service::core::ExportSpool;
 use crate::operation::OperationEntry;
 use crate::services::SandboxRuntimeOperations;
 
-const EXPORT_LAYERSTACK: OperationEntry = OperationEntry {
-    name: "export_layerstack",
+const EXPORT_LAYERSTACK_ENTRY: OperationEntry = OperationEntry {
+    name: EXPORT_LAYERSTACK,
     spec: None,
     dispatch: dispatch_export_layerstack,
 };
 
-const READ_EXPORT_CHUNK: OperationEntry = OperationEntry {
-    name: "read_export_chunk",
+const READ_EXPORT_CHUNK_ENTRY: OperationEntry = OperationEntry {
+    name: READ_EXPORT_CHUNK,
     spec: None,
     dispatch: dispatch_read_export_chunk,
 };
 
-const OPERATIONS: &[OperationEntry] = &[EXPORT_LAYERSTACK, READ_EXPORT_CHUNK];
+const OPERATIONS: &[OperationEntry] = &[EXPORT_LAYERSTACK_ENTRY, READ_EXPORT_CHUNK_ENTRY];
 
 pub(crate) const fn operation_entries() -> &'static [OperationEntry] {
     OPERATIONS

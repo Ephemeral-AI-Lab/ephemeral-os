@@ -22,30 +22,6 @@ const FILE_BLAME_ARGS: &[ArgSpec] = &[ArgSpec::required(
     "Repository-relative path to blame.",
 )];
 
-pub const FILE_LIST_SPEC: OperationSpec = OperationSpec {
-    name: "file_list",
-    family: "file",
-    summary: "List one directory level from the snapshot or a session.",
-    description: "List the entries of a repository-relative or workspace-root-absolute directory (name, kind, size). With workspace_session_id the listing reads that live session's mounted workspace; without it the listing projects the latest published snapshot. Omit path to list the workspace root.",
-    args: FILE_LIST_ARGS,
-    related: &["file_read", "file_write", "file_blame"],
-};
-
-const FILE_LIST_ARGS: &[ArgSpec] = &[
-    ArgSpec::optional(
-        "path",
-        ArgKind::String,
-        "Repository-relative or workspace-root-absolute directory to list. Omit for the workspace root.",
-        None,
-    ),
-    ArgSpec::optional(
-        "workspace_session_id",
-        ArgKind::String,
-        "Existing workspace session id to list inside. Omit to list the snapshot.",
-        None,
-    ),
-];
-
 pub const FILE_READ_SPEC: OperationSpec = OperationSpec {
     name: "file_read",
     family: "file",

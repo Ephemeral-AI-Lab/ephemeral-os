@@ -1,9 +1,15 @@
 [package]
-name = "sandbox-runtime-operations"
+name = "sandbox-operation-catalog"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+
+[features]
+default = []
+manager = []
+runtime = []
+observability = []
 
 [dependencies]
 sandbox-operation-contract.workspace = true

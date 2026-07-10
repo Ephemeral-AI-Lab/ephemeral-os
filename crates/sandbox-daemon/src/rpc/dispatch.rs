@@ -10,7 +10,6 @@ use sandbox_protocol::{
 };
 use serde_json::{Map, Value};
 
-pub(crate) const PRIVATE_OBSERVABILITY_OP: &str = "get_observability";
 const DAEMON_NAME: &str = "sandbox-daemon";
 
 impl SandboxDaemonServer {
@@ -52,7 +51,7 @@ impl SandboxDaemonServer {
         if request.op == DAEMON_READINESS_OPERATION {
             return daemon_readiness_response(self.config.sandbox_id.as_deref(), &request);
         }
-        if request.op == PRIVATE_OBSERVABILITY_OP {
+        if request.op == sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY {
             return self.dispatch_private_observability(request).await;
         }
         let operations = Arc::clone(&self.operations);

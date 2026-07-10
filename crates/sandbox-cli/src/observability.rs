@@ -74,7 +74,7 @@ where
     };
 
     let catalog = match catalog_document(
-        sandbox_observability_operations::observability_catalog(),
+        sandbox_operation_catalog::observability::observability_catalog(),
         crate::projection::observability::catalog_projection(),
     ) {
         Ok(catalog) => catalog,

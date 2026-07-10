@@ -9,6 +9,7 @@ use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
 use base64::Engine as _;
+use sandbox_operation_catalog::internal::runtime::{EXPORT_LAYERSTACK, READ_EXPORT_CHUNK};
 use sandbox_operation_contract::{
     error, error_response_with_details, OperationRequest, OperationResponse, OperationScope,
 };
@@ -21,8 +22,6 @@ use crate::operation::ManagerServices;
 use crate::router::forward_sandbox_request;
 use crate::ManagerError;
 
-const RUNTIME_EXPORT_OP: &str = "export_layerstack";
-const RUNTIME_CHUNK_OP: &str = "read_export_chunk";
 const EXPORT_SPOOL_DIR: &str = ".export";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,7 +86,7 @@ fn run_export_changes(
     format: ExportFormat,
 ) -> Result<Value, OperationResponse> {
     let normalized = guard_dest(services, dest, format).map_err(ManagerError::into_response)?;
-    let start = forward(services, request, sandbox_id, RUNTIME_EXPORT_OP, json!({}))?;
+    let start = forward(services, request, sandbox_id, EXPORT_LAYERSTACK, json!({}))?;
     let start = translate_stale_start(start);
     if start.get("error").is_some() {
         return Err(OperationResponse::ok(start));
@@ -175,7 +174,7 @@ fn page_stream(
     loop {
         let requested_offset = compressed.len() as u64;
         let args = json!({ "export_id": export_id, "offset": requested_offset });
-        let value = forward(services, request, sandbox_id, RUNTIME_CHUNK_OP, args)?;
+        let value = forward(services, request, sandbox_id, READ_EXPORT_CHUNK, args)?;
         if let Some(error) = value.get("error") {
             let message = error["message"].as_str().unwrap_or("daemon fault");
             return Err(
@@ -409,7 +408,7 @@ fn translate_stale_start(value: Value) -> Value {
         return error_response_with_details(
             error::OPERATION_FAILED,
             "sandbox daemon does not support export_changes; recreate the sandbox so it uses the current daemon binary",
-            json!({ "daemon_op": RUNTIME_EXPORT_OP }),
+            json!({ "daemon_op": EXPORT_LAYERSTACK }),
         );
     }
     value

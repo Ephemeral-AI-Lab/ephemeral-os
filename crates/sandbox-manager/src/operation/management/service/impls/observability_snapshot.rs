@@ -11,7 +11,6 @@ use crate::{
 };
 
 const MAX_NODE_ERROR_BYTES: usize = 4_096;
-const PRIVATE_DAEMON_OBSERVABILITY_OP: &str = "get_observability";
 
 #[derive(Clone, Debug)]
 pub(crate) struct SnapshotOptions {
@@ -114,7 +113,7 @@ fn private_snapshot_request(record: &SandboxRecord, request_id: &str) -> Operati
     let mut args = Map::new();
     args.insert("view".to_owned(), json!("snapshot"));
     OperationRequest::new(
-        PRIVATE_DAEMON_OBSERVABILITY_OP,
+        sandbox_operation_catalog::internal::migration::GET_OBSERVABILITY,
         format!(
             "{}:{}:observability_snapshot",
             request_id,

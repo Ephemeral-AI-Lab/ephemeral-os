@@ -1105,16 +1105,19 @@ def _scenario_contract(case, rec, sandbox_factory):
 def _scenario_catalog(case, rec, sandbox_factory):
     help_result = raw_cli(rec, "manager", "--help", timeout=30)
     assert help_result.returncode == 0, help_result.stderr
-    # The manager CLI spec catalog is now a spec-only crate; the dispatch table
-    # in management_operations.rs imports the spec by name.
-    spec_source = (REPO_ROOT / "crates/sandbox-operations/manager/src/lib.rs").read_text()
+    # The manager semantic catalog and CLI projection are intentionally split;
+    # the dispatch table imports the semantic spec by name.
+    spec_source = (REPO_ROOT / "crates/sandbox-operations/catalog/src/manager.rs").read_text()
+    projection_source = (REPO_ROOT / "crates/sandbox-cli/src/projection/manager.rs").read_text()
     dispatch_source = (REPO_ROOT / "crates/sandbox-manager/src/operation/cli_definition/management_operations.rs").read_text()
     runtime_source = (REPO_ROOT / "crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs").read_text()
+    internal_source = (REPO_ROOT / "crates/sandbox-operations/catalog/src/internal/runtime.rs").read_text()
     assert 'name: "squash_layerstacks"' in spec_source
-    assert "SQUASH_LAYERSTACKS_SPEC" in spec_source and "--sandbox-id" in spec_source
+    assert "SQUASH_LAYERSTACKS_SPEC" in spec_source and "--sandbox-id" in projection_source
     assert "SQUASH_LAYERSTACKS_SPEC" in dispatch_source
-    assert 'name: "squash_layerstack"' in runtime_source and "cli: None" in runtime_source
-    assert "--progress" not in spec_source[spec_source.index("const SQUASH_LAYERSTACKS_ARGS"):spec_source.index("const SQUASH_LAYERSTACKS_CLI")]
+    assert "name: SQUASH_LAYERSTACK" in runtime_source and "spec: None" in runtime_source
+    assert 'pub const SQUASH_LAYERSTACK: &str = "squash_layerstack";' in internal_source
+    assert "--progress" not in spec_source and "--progress" not in projection_source
     rec.axis("correctness", True, "manager catalog source exposes squash_layerstacks only")
     rec.axis("space", True, "n/a", n_a=True)
     rec.axis("time", True, "n/a", n_a=True)

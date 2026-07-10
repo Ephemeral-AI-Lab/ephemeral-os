@@ -1,9 +1,10 @@
 //! Manager operation catalog.
-#![forbid(unsafe_code)]
 
 use sandbox_operation_contract::{
     ArgKind, ArgSpec, OperationCatalog, OperationDomain, OperationFamilySpec, OperationSpec,
 };
+
+use crate::routes;
 
 pub const MANAGEMENT_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "management",
@@ -147,5 +148,10 @@ pub const fn operation_specs() -> &'static [&'static OperationSpec] {
 
 #[must_use]
 pub const fn manager_catalog() -> OperationCatalog {
-    OperationCatalog::new(OperationDomain::Manager, FAMILIES, SPECS)
+    OperationCatalog::new(
+        OperationDomain::Manager,
+        FAMILIES,
+        SPECS,
+        routes::manager_routes(),
+    )
 }

@@ -7,9 +7,9 @@ use crate::command::{
 use crate::operation::OperationEntry;
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::SandboxRuntimeOperations;
+use sandbox_operation_catalog::runtime::{EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};
 use sandbox_operation_contract::{OperationRequest, OperationResponse};
 use sandbox_runtime_namespace_execution::NamespaceExecutionId;
-use sandbox_runtime_operations::{EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};
 
 const EXEC_COMMAND: OperationEntry =
     OperationEntry::public(&EXEC_COMMAND_SPEC, dispatch_exec_command);

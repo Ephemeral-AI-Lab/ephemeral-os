@@ -87,7 +87,7 @@ async fn read_args(
 
 fn protocol_request(state: &HttpState, args: Value) -> OperationRequest {
     OperationRequest::new(
-        "file_list",
+        sandbox_operation_catalog::internal::runtime::FILE_LIST,
         uuid::Uuid::new_v4().to_string(),
         OperationScope::sandbox(state.sandbox_id()),
         args,

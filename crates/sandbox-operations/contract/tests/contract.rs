@@ -1,6 +1,7 @@
 use sandbox_operation_contract::{
     catalog_from_value, catalog_to_value, ArgKind, ArgSpec, OperationCatalog, OperationDomain,
-    OperationFamilySpec, OperationResponse, OperationScope, OperationScopeKind, OperationSpec,
+    OperationExecutionOwner, OperationFamilySpec, OperationResponse, OperationRouteSpec,
+    OperationScope, OperationScopeKind, OperationScopePolicy, OperationSpec, OperationVisibility,
 };
 use serde_json::{json, Value};
 
@@ -27,6 +28,13 @@ static TEST_SPEC: OperationSpec = OperationSpec {
 
 static TEST_FAMILIES: &[&OperationFamilySpec] = &[&TEST_FAMILY];
 static TEST_SPECS: &[&OperationSpec] = &[&TEST_SPEC];
+static TEST_ROUTES: &[OperationRouteSpec] = &[OperationRouteSpec {
+    operation: "create_sandbox",
+    scope_policy: OperationScopePolicy::System,
+    scope_kind: OperationScopeKind::System,
+    execution_owner: OperationExecutionOwner::Manager,
+    visibility: OperationVisibility::Public,
+}];
 
 #[test]
 fn responses_preserve_payload_owned_shape() {
@@ -60,11 +68,14 @@ fn catalog_serializes_only_semantic_fields() {
         OperationDomain::Manager,
         TEST_FAMILIES,
         TEST_SPECS,
+        TEST_ROUTES,
     ));
 
     assert_eq!(value["operation_execution_space"], "manager");
     assert_eq!(value["operations"][0]["name"], "create_sandbox");
     assert_eq!(value["operations"][0]["args"][0]["kind"], "string");
+    assert_eq!(value["routes"][0]["scope_policy"], "system");
+    assert_eq!(value["routes"][0]["execution_owner"], "manager");
     assert!(value["operations"][0].get("cli").is_none());
     assert!(value["operations"][0]["args"][0].get("cli").is_none());
 }
@@ -75,6 +86,11 @@ fn catalog_decodes_semantic_document() {
 
     assert_eq!(catalog.operation_execution_space, OperationDomain::Runtime);
     assert_eq!(catalog.operations[0].args[0].kind, ArgKind::JsonArray);
+    assert_eq!(catalog.routes[0].operation, "file_edit");
+    assert_eq!(
+        catalog.routes[0].scope_policy,
+        OperationScopePolicy::SandboxRequired
+    );
 }
 
 #[test]
@@ -153,6 +169,39 @@ fn catalog_rejects_unknown_related_operation() {
     );
 }
 
+#[test]
+fn catalog_rejects_incomplete_system_or_sandbox_routes() {
+    let mut value = catalog_value();
+    value["routes"][0]["scope_policy"] = json!("system_or_sandbox");
+
+    let error = catalog_from_value(&value).expect_err("incomplete route expansion rejected");
+
+    assert_eq!(
+        error.message(),
+        "operation route expansion does not match scope policy: file_edit"
+    );
+}
+
+#[test]
+fn catalog_rejects_mixed_scope_policies() {
+    let mut value = catalog_value();
+    value["routes"][0]["scope_policy"] = json!("system_or_sandbox");
+    let mut system_route = value["routes"][0].clone();
+    system_route["scope_policy"] = json!("system");
+    system_route["scope_kind"] = json!("system");
+    value["routes"]
+        .as_array_mut()
+        .expect("routes array")
+        .push(system_route);
+
+    let error = catalog_from_value(&value).expect_err("mixed route policies rejected");
+
+    assert_eq!(
+        error.message(),
+        "operation routes use mixed scope policies: file_edit"
+    );
+}
+
 fn catalog_value() -> Value {
     json!({
         "operation_execution_space": "runtime",
@@ -170,6 +219,13 @@ fn catalog_value() -> Value {
                 "default": null
             }],
             "related": []
+        }],
+        "routes": [{
+            "operation": "file_edit",
+            "scope_policy": "sandbox_required",
+            "scope_kind": "sandbox",
+            "execution_owner": "runtime",
+            "visibility": "public"
         }]
     })
 }
