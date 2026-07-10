@@ -2,20 +2,16 @@
 
 pub(crate) extern crate sandbox_runtime_workspace as workspace_crate;
 
-mod cli_definition;
 pub mod command;
 pub mod file;
 pub mod layerstack;
 mod namespace_execution;
 mod observability;
 mod operation;
+mod operation_adapter;
 mod services;
 pub mod workspace_session;
 
-pub use cli_definition::{
-    ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
-    CliOperationFamilySpec, CliOperationSpec, CliSpec,
-};
 pub use command::CommandOperationService;
 pub use layerstack::{ClaimedExportStream, LayerStackService};
 pub use namespace_execution::{
@@ -32,25 +28,6 @@ pub use services::{
 };
 pub use workspace_crate::{NetworkProfile, WorkspaceSessionId};
 pub use workspace_session::WorkspaceSessionService;
-
-#[must_use]
-pub fn cli_operation_specs() -> &'static [&'static CliOperationSpec] {
-    operation::cli_operation_specs()
-}
-
-#[must_use]
-pub fn cli_operation_families() -> &'static [&'static CliOperationFamilySpec] {
-    operation::cli_operation_families()
-}
-
-#[must_use]
-pub fn cli_operation_catalog() -> CliOperationCatalog {
-    CliOperationCatalog::new(
-        CliOperationExecutionSpace::Runtime,
-        cli_operation_families(),
-        cli_operation_specs(),
-    )
-}
 
 #[must_use]
 pub fn known_operation_name(operation: &str) -> Option<&'static str> {

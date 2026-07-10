@@ -1,4 +1,4 @@
-//! The manager-owned export transaction (the `checkpoint_squash` template):
+//! The manager-owned export transaction (the `squash_layerstacks` template):
 //! guard the host destination, forward `export_layerstack` to the sandbox
 //! daemon, pull the sealed spool back over one token-gated `daemon_http`
 //! octet-stream (spec decision 19; bounded `read_export_chunk` paging is the

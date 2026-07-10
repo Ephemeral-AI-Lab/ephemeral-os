@@ -424,7 +424,7 @@ fn cli_operation_catalog_contains_only_manager_operations() {
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",
-            "checkpoint_squash",
+            "squash_layerstacks",
             "export_changes",
         ]
     );
@@ -926,12 +926,12 @@ fn pid_exists(pid: u32) -> bool {
     nix::sys::signal::kill(pid, None).is_ok()
 }
 
-// Test 18: checkpoint_squash lives under the existing "management" family,
+// Test 18: squash_layerstacks lives under the existing "management" family,
 // takes only --sandbox-id, and forwards ONE sandbox-scoped
 // squash_layerstack request through the generic router path — no bespoke
 // client sequence, no "checkpoint" family, no manager-local lifecycle work.
 #[test]
-fn checkpoint_squash_manager_cli_forwards_to_runtime() {
+fn squash_layerstacks_public_operation_forwards_singular_runtime_request() {
     let catalog = sandbox_manager::cli_operation_catalog();
     let encoded = sandbox_protocol::catalog_to_value(catalog).to_string();
     let catalog: Value = serde_json::from_str(&encoded).expect("catalog json");
@@ -939,8 +939,8 @@ fn checkpoint_squash_manager_cli_forwards_to_runtime() {
         .as_array()
         .expect("operations array")
         .iter()
-        .find(|op| op["name"] == "checkpoint_squash")
-        .expect("checkpoint_squash present in the manager catalog");
+        .find(|op| op["name"] == "squash_layerstacks")
+        .expect("squash_layerstacks present in the manager catalog");
     assert_eq!(spec["family"], "management");
     assert!(
         !encoded.contains("\"checkpoint\""),
@@ -959,7 +959,7 @@ fn checkpoint_squash_manager_cli_forwards_to_runtime() {
 
     let response = dispatch(
         &services,
-        "checkpoint_squash",
+        "squash_layerstacks",
         json!({ "sandbox_id": "sbox-1" }),
     );
     assert!(
@@ -981,7 +981,7 @@ fn checkpoint_squash_manager_cli_forwards_to_runtime() {
 }
 
 #[test]
-fn checkpoint_squash_reports_stale_daemon_unknown_op() {
+fn squash_layerstacks_reports_stale_daemon_unknown_op() {
     struct UnknownOpClient;
 
     impl SandboxDaemonClient for UnknownOpClient {
@@ -1006,7 +1006,7 @@ fn checkpoint_squash_reports_stale_daemon_unknown_op() {
 
     let response = dispatch(
         &services,
-        "checkpoint_squash",
+        "squash_layerstacks",
         json!({ "sandbox_id": "sbox-1" }),
     );
 
@@ -1022,11 +1022,11 @@ fn checkpoint_squash_reports_stale_daemon_unknown_op() {
 }
 
 #[test]
-fn checkpoint_squash_requires_sandbox_id_and_a_ready_sandbox() {
+fn squash_layerstacks_requires_sandbox_id_and_a_ready_sandbox() {
     let client = Arc::new(RecordingSnapshotClient::default());
     let (services, store) = services_with_client(client.clone());
 
-    let missing = dispatch(&services, "checkpoint_squash", json!({}));
+    let missing = dispatch(&services, "squash_layerstacks", json!({}));
     assert_eq!(missing["error"]["kind"], "invalid_request");
     assert!(
         client.invocations().is_empty(),
@@ -1035,7 +1035,7 @@ fn checkpoint_squash_requires_sandbox_id_and_a_ready_sandbox() {
 
     let unknown = dispatch(
         &services,
-        "checkpoint_squash",
+        "squash_layerstacks",
         json!({ "sandbox_id": "nope" }),
     );
     assert!(
@@ -1052,7 +1052,7 @@ fn checkpoint_squash_requires_sandbox_id_and_a_ready_sandbox() {
         .expect("insert non-ready sandbox");
     let not_ready = dispatch(
         &services,
-        "checkpoint_squash",
+        "squash_layerstacks",
         json!({ "sandbox_id": "creating" }),
     );
     assert!(

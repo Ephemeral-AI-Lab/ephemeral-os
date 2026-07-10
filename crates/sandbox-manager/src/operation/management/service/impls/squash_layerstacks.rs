@@ -6,13 +6,7 @@ use crate::router::forward_sandbox_request;
 
 const RUNTIME_SQUASH_OP: &str = "squash_layerstack";
 
-/// Forward a `checkpoint_squash` to the selected sandbox's daemon as the
-/// daemon-local `squash_layerstack` runtime op, riding the existing generic
-/// forward path (endpoint lookup, Ready check, timeout). Manager CLI ops
-/// arrive system-scoped with `sandbox_id` in args; this rebuilds the
-/// sandbox-scoped runtime request and delegates — no bespoke client
-/// sequence, and `checkpoint_squash` is not a manager-local lifecycle op.
-pub(crate) fn dispatch_checkpoint_squash(
+pub(crate) fn dispatch_squash_layerstacks(
     services: &ManagerServices,
     request: &Request,
 ) -> Response {
@@ -37,7 +31,7 @@ fn translate_stale_daemon_response(response: Response) -> Response {
     if response_error_kind(&value) == Some("unknown_op") {
         return Response::fault_with_details(
             error_kind::OPERATION_FAILED,
-            "sandbox daemon does not support checkpoint_squash; recreate the sandbox so it uses the current daemon binary",
+            "sandbox daemon does not support squash_layerstacks; recreate the sandbox so it uses the current daemon binary",
             json!({ "daemon_op": RUNTIME_SQUASH_OP }),
         );
     }

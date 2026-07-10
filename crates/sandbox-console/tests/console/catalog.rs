@@ -24,7 +24,7 @@ async fn catalog_returns_all_three_execution_spaces() {
     let manager_ops = operation_names(&body["manager"]);
     assert!(manager_ops.contains(&"create_sandbox".to_owned()));
     assert!(manager_ops.contains(&"list_sandboxes".to_owned()));
-    assert!(manager_ops.contains(&"checkpoint_squash".to_owned()));
+    assert!(manager_ops.contains(&"squash_layerstacks".to_owned()));
 
     let runtime_ops = operation_names(&body["runtime"]);
     assert!(runtime_ops.contains(&"exec_command".to_owned()));

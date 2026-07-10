@@ -115,7 +115,7 @@ def test_boot_gate_enables_live_remount(squash_sandbox):
 def test_squash_empty_and_idle_contract(squash_sandbox):
     container = squash_sandbox
 
-    empty = manager("checkpoint_squash", "--sandbox-id", container)
+    empty = manager("squash_layerstacks", "--sandbox-id", container)
     assert empty == {"manifest_version": 1, "squashed_blocks": []}, empty
 
     for name in ("a", "b", "c"):
@@ -123,7 +123,7 @@ def test_squash_empty_and_idle_contract(squash_sandbox):
     before = _layer_ids(container)
     assert before[-1].startswith("B"), "base is the bottom boundary"
 
-    result = manager("checkpoint_squash", "--sandbox-id", container)
+    result = manager("squash_layerstacks", "--sandbox-id", container)
     assert set(result.keys()) == {"manifest_version", "squashed_blocks"}, result
     blocks = result["squashed_blocks"]
     assert len(blocks) == 1
@@ -151,7 +151,7 @@ def test_squash_empty_and_idle_contract(squash_sandbox):
     assert digest.returncode != 0, "S layer must have no .digest sidecar"
 
     # Nothing left to squash: empty blocks, no no_op flag.
-    again = manager("checkpoint_squash", "--sandbox-id", container)
+    again = manager("squash_layerstacks", "--sandbox-id", container)
     assert again["squashed_blocks"] == [], again
 
 
@@ -168,7 +168,7 @@ def test_live_migration_shortens_idle_chain(squash_sandbox):
     pre_ids = _layer_ids(container)
     pre_len = len(pre_ids)
 
-    result = manager("checkpoint_squash", "--sandbox-id", container)
+    result = manager("squash_layerstacks", "--sandbox-id", container)
     blocks = result["squashed_blocks"]
     assert len(blocks) == 1, result
     block = blocks[0]
@@ -223,7 +223,7 @@ def test_cwd_pinned_session_stays_leased(squash_sandbox):
     )
     assert shell.get("status") in ("running", "ok"), shell
 
-    result = manager("checkpoint_squash", "--sandbox-id", container)
+    result = manager("squash_layerstacks", "--sandbox-id", container)
     blocks = result["squashed_blocks"]
     assert len(blocks) == 1, result
     block = blocks[0]

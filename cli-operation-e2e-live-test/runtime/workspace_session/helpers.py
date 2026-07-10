@@ -362,8 +362,8 @@ def wait_finalized(sandbox_id, workspace_session_id, timeout_s=30):
     raise AssertionError(f"workspace session {workspace_session_id} did not finalize: {last}")
 
 
-def checkpoint_squash(sandbox_id):
-    return manager("checkpoint_squash", "--sandbox-id", sandbox_id, timeout=240)
+def squash_layerstacks(sandbox_id):
+    return manager("squash_layerstacks", "--sandbox-id", sandbox_id, timeout=240)
 
 
 def layerstack(sandbox_id):

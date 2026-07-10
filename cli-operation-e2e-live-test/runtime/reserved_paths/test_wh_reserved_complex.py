@@ -22,7 +22,7 @@ from runtime.reserved_paths.helpers import (
     assert_no_wh_visible,
     assert_read_equals,
     assert_read_not_found,
-    checkpoint_squash,
+    squash_layerstacks,
     daemon_fd_count,
     exec_publish_ok,
     exec_publish_reject,
@@ -122,8 +122,8 @@ def test_CX_02_squash_interplay_reservation_survives_squash(tmp_path):
 
             verify_merged("pre-squash")
 
-            squashed = checkpoint_squash(sandbox)
-            rec.record("checkpoint-squash.json", squashed)
+            squashed = squash_layerstacks(sandbox)
+            rec.record("squash-layerstacks.json", squashed)
             assert_ok(squashed)
             post_squash = rec.expect_stack(assert_ok(layerstack(sandbox)))
             rec.record("post-squash-layerstack.json", post_squash)

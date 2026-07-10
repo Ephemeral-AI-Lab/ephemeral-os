@@ -804,7 +804,7 @@ CASES = [
     {"id": "HRD-04", "tier": "hard", "title": "dest deny-list holds"},
     {"id": "HRD-05", "tier": "hard", "title": "resource bombs are capped"},
     {"id": "HRD-06", "tier": "hard", "title": "two concurrent exports of the same sandbox"},
-    {"id": "HRD-07", "tier": "hard", "title": "export under concurrent checkpoint_squash"},
+    {"id": "HRD-07", "tier": "hard", "title": "export under concurrent squash_layerstacks"},
     {"id": "HRD-08", "tier": "hard", "title": "export under a concurrent publish"},
     {"id": "HRD-09", "tier": "hard", "title": "deep/large delta converges or fails cleanly"},
     {"id": "HRD-10", "tier": "hard", "title": "daemon restart mid-paging"},
@@ -1637,7 +1637,7 @@ def case_hrd_06(rec):
 
 
 def case_hrd_07(rec):
-    """B5/inv 3: export under a concurrent checkpoint_squash — both converge."""
+    """B5/inv 3: export under a concurrent squash_layerstacks — both converge."""
     seed = make_seed("hrd07", {"src/a.rs": "v1\n", "src/b.rs": "B\n"})
     sandbox_id = create_sandbox(rec, seed)
     d_base, dest = _fresh_dest("hrd07")
@@ -1651,7 +1651,7 @@ def case_hrd_07(rec):
             outcome["export"] = export_changes(rec, sandbox_id, dest, timeout=300)
 
         def do_squash():
-            outcome["squash"] = manager(rec, "checkpoint_squash", "--sandbox-id", sandbox_id, timeout=300)
+            outcome["squash"] = manager(rec, "squash_layerstacks", "--sandbox-id", sandbox_id, timeout=300)
 
         threads = [threading.Thread(target=do_export), threading.Thread(target=do_squash)]
         for thread in threads:
@@ -1724,7 +1724,7 @@ def case_hrd_09(rec):
             assert not (dest / "deep").exists() or _dir_empty(dest / "deep"), "partial dest on the fail path"
             rec.axis("correctness", True, "clean start-request-ceiling failure, no partial corruption")
         # Squash-first mitigation.
-        squashed = manager(rec, "checkpoint_squash", "--sandbox-id", sandbox_id, timeout=300)
+        squashed = manager(rec, "squash_layerstacks", "--sandbox-id", sandbox_id, timeout=300)
         assert squashed.ok, squashed.json
         d2 = d_base / "after-squash"
         again = export_changes(rec, sandbox_id, d2, timeout=600)

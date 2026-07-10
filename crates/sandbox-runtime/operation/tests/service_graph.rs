@@ -169,8 +169,8 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
 }
 
 #[test]
-fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
-    let catalog = sandbox_runtime::cli_operation_catalog();
+fn runtime_operation_catalog_exports_only_public_runtime_operations() {
+    let catalog = sandbox_runtime_operations::runtime_catalog();
     let names = catalog
         .operations
         .iter()
@@ -187,7 +187,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "file", "workspace_session"]
+        ["command", "file"]
     );
     assert_eq!(
         names,
@@ -195,12 +195,10 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
             "exec_command",
             "write_command_stdin",
             "read_command_lines",
-            "file_blame",
             "file_read",
             "file_write",
             "file_edit",
-            "create_workspace_session",
-            "destroy_workspace_session",
+            "file_blame",
         ]
     );
     assert!(catalog.operations.iter().all(|spec| spec.cli.is_some()));
@@ -208,7 +206,7 @@ fn service_graph_cli_operation_catalog_exports_runtime_cli_operations() {
 
 #[test]
 fn service_graph_cli_catalog_families_match_cli_operations() {
-    let catalog = sandbox_runtime::cli_operation_catalog();
+    let catalog = sandbox_runtime_operations::runtime_catalog();
     let families = catalog
         .families
         .iter()
@@ -229,7 +227,7 @@ fn service_graph_cli_catalog_families_match_cli_operations() {
 
 #[test]
 fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
-    let catalog = sandbox_runtime::cli_operation_catalog();
+    let catalog = sandbox_runtime_operations::runtime_catalog();
     let names = catalog
         .operations
         .iter()
@@ -248,13 +246,15 @@ fn service_graph_cli_catalog_keeps_non_cli_helpers_out() {
         "status_lookup",
         "finalize_command",
         "file_list",
+        "create_workspace_session",
+        "destroy_workspace_session",
     ] {
         assert!(!names.contains(&helper), "{helper} leaked into catalog");
     }
 }
 
 #[test]
-fn runtime_known_operation_name_uses_registered_operation_entries() {
+fn hidden_http_and_lifecycle_operations_remain_registered_for_daemon_dispatch() {
     assert_eq!(
         sandbox_runtime::known_operation_name("exec_command"),
         Some("exec_command")
@@ -279,7 +279,7 @@ fn runtime_known_operation_name_uses_registered_operation_entries() {
 
 #[test]
 fn cli_operation_catalog_metadata_uses_runtime_space() {
-    let catalog = sandbox_runtime::cli_operation_catalog();
+    let catalog = sandbox_runtime_operations::runtime_catalog();
 
     for spec in catalog.operations {
         let cli = spec.cli.expect("runtime catalog spec must be CLI-visible");
@@ -314,11 +314,16 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
         }
     }
 
-    let adapter = include_str!("../src/cli_definition/workspace_session_operations.rs");
+    let adapter = include_str!("../src/operation_adapter/workspace_session_operations.rs");
     assert!(adapter.contains(".create_workspace_session("));
     assert!(adapter.contains(".guarded_destroy("));
+    assert_eq!(adapter.matches("cli: None").count(), 2);
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
+
+    let file_adapter = include_str!("../src/operation_adapter/file_operations.rs");
+    assert!(file_adapter.contains("const FILE_LIST: OperationEntry = OperationEntry {"));
+    assert_eq!(file_adapter.matches("cli: None").count(), 1);
 
     for (path, source) in rust_sources("src/command") {
         assert!(

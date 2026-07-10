@@ -15,8 +15,8 @@ use sandbox_protocol::{
 pub const MANAGEMENT_FAMILY: CliOperationFamilySpec = CliOperationFamilySpec {
     id: "management",
     title: "Management",
-    summary: "Create, destroy, list, and inspect sandbox records.",
-    description: "Create, destroy, list, and inspect sandbox records. Daemons are managed as part of sandbox lifecycle behavior, not as standalone manager operations.",
+    summary: "Manage sandbox records, compact layer stacks, and export published changes.",
+    description: "Create, destroy, list, and inspect sandbox records; compact published layer stacks; and export published changes. Daemons are managed as part of sandbox lifecycle behavior, not as standalone manager operations.",
 };
 
 pub const CREATE_SANDBOX_SPEC: CliOperationSpec = CliOperationSpec {
@@ -96,27 +96,6 @@ const DESTROY_SANDBOX_CLI: CliSpec = CliSpec {
     examples: &["sandbox-manager-cli destroy_sandbox --sandbox-id sbox-1"],
 };
 
-pub const OBSERVABILITY_SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
-    name: "snapshot",
-    family: "management",
-    summary: "Aggregate daemon observability snapshots for manager-known sandboxes.",
-    description: "Aggregate daemon-local observability snapshots for ready manager-known sandboxes without reading daemon storage from the manager.",
-    args: OBSERVABILITY_SNAPSHOT_ARGS,
-    cli: None,
-    related: &["list_sandboxes", "inspect_sandbox"],
-};
-
-const OBSERVABILITY_SNAPSHOT_ARGS: &[ArgSpec] = &[ArgSpec::optional(
-    "sandbox_id",
-    ArgKind::String,
-    "Optional manager sandbox id. When omitted, all ready sandboxes with daemon endpoints are queried.",
-    None,
-    Some(ArgCliSpec {
-        flag: Some("--sandbox-id"),
-        positional: None,
-    }),
-)];
-
 pub const LIST_SANDBOXES_SPEC: CliOperationSpec = CliOperationSpec {
     name: "list_sandboxes",
     family: "management",
@@ -159,17 +138,17 @@ const INSPECT_SANDBOX_CLI: CliSpec = CliSpec {
     examples: &["sandbox-manager-cli inspect_sandbox --sandbox-id sbox-1"],
 };
 
-pub const CHECKPOINT_SQUASH_SPEC: CliOperationSpec = CliOperationSpec {
-    name: "checkpoint_squash",
+pub const SQUASH_LAYERSTACKS_SPEC: CliOperationSpec = CliOperationSpec {
+    name: "squash_layerstacks",
     family: "management",
     summary: "Squash a sandbox's layer stack and live-remount its sessions.",
     description: "Squash every squashable block of the selected sandbox's published layers into equivalent flattened layers and migrate live workspace sessions onto the compact chains. Forwards one squash_layerstack request to the sandbox daemon.",
-    args: CHECKPOINT_SQUASH_ARGS,
-    cli: Some(CHECKPOINT_SQUASH_CLI),
+    args: SQUASH_LAYERSTACKS_ARGS,
+    cli: Some(SQUASH_LAYERSTACKS_CLI),
     related: &["list_sandboxes", "inspect_sandbox", "export_changes"],
 };
 
-const CHECKPOINT_SQUASH_ARGS: &[ArgSpec] = &[ArgSpec::required(
+const SQUASH_LAYERSTACKS_ARGS: &[ArgSpec] = &[ArgSpec::required(
     "sandbox_id",
     ArgKind::String,
     "Sandbox id.",
@@ -179,10 +158,10 @@ const CHECKPOINT_SQUASH_ARGS: &[ArgSpec] = &[ArgSpec::required(
     }),
 )];
 
-const CHECKPOINT_SQUASH_CLI: CliSpec = CliSpec {
-    path: &["manager", "checkpoint_squash"],
-    usage: "sandbox-manager-cli checkpoint_squash --sandbox-id ID",
-    examples: &["sandbox-manager-cli checkpoint_squash --sandbox-id sbox-1"],
+const SQUASH_LAYERSTACKS_CLI: CliSpec = CliSpec {
+    path: &["manager", "squash_layerstacks"],
+    usage: "sandbox-manager-cli squash_layerstacks --sandbox-id ID",
+    examples: &["sandbox-manager-cli squash_layerstacks --sandbox-id sbox-1"],
 };
 
 pub const EXPORT_CHANGES_SPEC: CliOperationSpec = CliOperationSpec {
@@ -204,7 +183,7 @@ pub const EXPORT_CHANGES_SPEC: CliOperationSpec = CliOperationSpec {
             "sandbox-manager-cli export_changes --sandbox-id sbox-1 --dest /tmp/delta.tar.zst --format tar-zst",
         ],
     }),
-    related: &["inspect_sandbox", "checkpoint_squash"],
+    related: &["inspect_sandbox", "squash_layerstacks"],
 };
 
 const EXPORT_CHANGES_ARGS: &[ArgSpec] = &[
@@ -245,7 +224,7 @@ const SPECS: &[&CliOperationSpec] = &[
     &DESTROY_SANDBOX_SPEC,
     &LIST_SANDBOXES_SPEC,
     &INSPECT_SANDBOX_SPEC,
-    &CHECKPOINT_SQUASH_SPEC,
+    &SQUASH_LAYERSTACKS_SPEC,
     &EXPORT_CHANGES_SPEC,
 ];
 

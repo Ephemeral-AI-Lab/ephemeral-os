@@ -8,6 +8,7 @@ license.workspace = true
 [dependencies]
 base64.workspace = true
 sandbox-manager-operations.workspace = true
+sandbox-observability-operations.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime-layerstack.workspace = true
 nix = { workspace = true, features = ["process", "signal"] }

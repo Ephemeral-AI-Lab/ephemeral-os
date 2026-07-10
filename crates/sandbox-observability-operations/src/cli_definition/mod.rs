@@ -9,6 +9,8 @@ mod layerstack;
 mod snapshot;
 mod trace;
 
+pub use snapshot::SNAPSHOT_SPEC;
+
 use sandbox_protocol::{
     ArgCliSpec, ArgKind, ArgSpec, CliOperationCatalog, CliOperationExecutionSpace,
     CliOperationFamilySpec, CliOperationSpec,
@@ -37,7 +39,7 @@ pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
 
 const FAMILIES: &[&CliOperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
 const SPECS: &[&CliOperationSpec] = &[
-    &snapshot::SNAPSHOT_SPEC,
+    &SNAPSHOT_SPEC,
     &trace::TRACE_SPEC,
     &events::EVENTS_SPEC,
     &cgroup::CGROUP_SPEC,

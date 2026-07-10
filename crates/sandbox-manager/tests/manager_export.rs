@@ -371,11 +371,11 @@ fn export_changes_spec_is_in_the_catalog() {
     assert!(cli.usage.contains("--format"));
     let squash = sandbox_manager_operations::cli_operation_specs()
         .iter()
-        .find(|spec| spec.name == "checkpoint_squash")
-        .expect("checkpoint_squash spec");
+        .find(|spec| spec.name == "squash_layerstacks")
+        .expect("squash_layerstacks spec");
     assert!(
         squash.related.contains(&"export_changes"),
-        "checkpoint_squash relates to export_changes"
+        "squash_layerstacks relates to export_changes"
     );
 }
 

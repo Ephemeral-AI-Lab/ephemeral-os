@@ -11,7 +11,7 @@ const SNAPSHOT_SANDBOX_ID_ARG: ArgSpec = ArgSpec::optional(
     }),
 );
 
-pub(super) const SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
+pub static SNAPSHOT_SPEC: CliOperationSpec = CliOperationSpec {
     name: "snapshot",
     family: "observability",
     summary: "Show live sandbox state.",
@@ -22,10 +22,10 @@ resource sample per scope. Served live; does not read the log.",
     args: &[SNAPSHOT_SANDBOX_ID_ARG],
     cli: Some(CliSpec {
         path: &["observability", "snapshot"],
-        usage: "sandbox-manager-cli observability snapshot [--sandbox-id ID]",
+        usage: "sandbox-observability-cli snapshot [--sandbox-id ID]",
         examples: &[
-            "sandbox-manager-cli observability snapshot",
-            "sandbox-manager-cli observability snapshot --sandbox-id eos-abc",
+            "sandbox-observability-cli snapshot",
+            "sandbox-observability-cli snapshot --sandbox-id eos-abc",
         ],
     }),
     related: &["trace", "cgroup"],

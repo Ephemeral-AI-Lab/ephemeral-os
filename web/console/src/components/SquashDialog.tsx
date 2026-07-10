@@ -20,7 +20,7 @@ interface SquashResult {
 }
 
 /**
- * checkpoint_squash with `_stream_logs` into a StreamLogPane. A pre-run
+ * squash_layerstacks with `_stream_logs` into a StreamLogPane. A pre-run
  * "est. after" count is not derivable from any op, so the dialog shows the
  * before-count only and reports the after-count from the result.
  */
@@ -46,7 +46,7 @@ export function SquashDialog({
     setResult(null);
     try {
       const outcome = await rpcStream<SquashResult>(
-        "checkpoint_squash",
+        "squash_layerstacks",
         systemScope,
         { sandbox_id: sandboxId },
         (line) => setLogs((current) => [...current, line]),

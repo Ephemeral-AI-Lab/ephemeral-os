@@ -127,18 +127,27 @@ async fn file_read_stays_in_runtime_catalog() {
 }
 
 #[tokio::test]
-async fn destroy_workspace_session_rejects_non_float_grace() {
-    let (code, _, stderr) = run(&[
-        "sandbox-runtime-cli",
-        "--sandbox-id",
-        "eos-x",
+async fn hidden_runtime_operations_are_absent_from_help() {
+    let (code, stdout, _) = run(&["sandbox-runtime-cli"]).await;
+    assert_eq!(code, 0);
+    for internal in [
+        "create_workspace_session",
         "destroy_workspace_session",
-        "--workspace-session-id",
-        "ws-1",
-        "--grace-s",
-        "abc",
-    ])
-    .await;
-    assert_eq!(code, 2);
-    assert!(stderr.contains("--grace-s must be a finite number"));
+        "file_list",
+    ] {
+        assert!(
+            !stdout.contains(internal),
+            "internal operation {internal} leaked into runtime help"
+        );
+    }
+}
+
+#[tokio::test]
+async fn workspace_session_lifecycle_operations_are_not_public_commands() {
+    for internal in ["create_workspace_session", "destroy_workspace_session"] {
+        let (code, _, stderr) =
+            run(&["sandbox-runtime-cli", "--sandbox-id", "eos-x", internal]).await;
+        assert_eq!(code, 2);
+        assert!(stderr.contains(&format!("unknown operation: {internal}")));
+    }
 }

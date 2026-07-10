@@ -42,7 +42,21 @@ async fn observability_bare_prints_observability_catalog_help() {
 async fn observability_operation_help_uses_subcommand_program_name() {
     let (code, stdout, _) = run(&["sandbox-manager-cli", "observability", "help", "trace"]).await;
     assert_eq!(code, 0);
-    assert!(stdout.contains("Usage\n  sandbox-manager-cli observability trace"));
+    assert!(stdout.contains("Usage\n  sandbox-observability-cli trace"));
+}
+
+#[tokio::test]
+async fn squash_help_uses_plural_public_operation_name() {
+    let (code, stdout, _) = run(&["sandbox-manager-cli", "help", "squash_layerstacks"]).await;
+    assert_eq!(code, 0);
+    assert!(stdout.contains("Usage\n  sandbox-manager-cli squash_layerstacks"));
+}
+
+#[tokio::test]
+async fn checkpoint_squash_is_not_a_public_operation() {
+    let (code, _, stderr) = run(&["sandbox-manager-cli", "checkpoint_squash"]).await;
+    assert_eq!(code, 2);
+    assert!(stderr.contains("unknown operation: checkpoint_squash"));
 }
 
 #[tokio::test]

@@ -892,7 +892,7 @@ def _destroy_session(rec, sandbox_id, session_id):
 
 
 def _squash(rec, sandbox_id, timeout=240):
-    result = manager(rec, "checkpoint_squash", "--sandbox-id", sandbox_id, timeout=timeout)
+    result = manager(rec, "squash_layerstacks", "--sandbox-id", sandbox_id, timeout=timeout)
     invocation = 1 + sum(1 for name in rec.timers if name.startswith("T_squash_invocation_"))
     rec.add_timer(f"T_squash_invocation_{invocation}", result.elapsed_ms, "harness")
     previous = rec.timers.get("T_squash", {}).get("ms", 0.0)
@@ -1088,12 +1088,12 @@ def _scenario_contract(case, rec, sandbox_factory):
     for idx in range(3):
         _publish(rec, sandbox_id, f"contract-{idx}", kib=1)
     before = snapshot(rec, sandbox_id, "S0")
-    result = manager(rec, "checkpoint_squash", "--sandbox-id", sandbox_id, timeout=240)
+    result = manager(rec, "squash_layerstacks", "--sandbox-id", sandbox_id, timeout=240)
     rec.add_timer("T_squash", result.elapsed_ms, "harness")
     assert result.returncode == 0 and result.stdout.strip().startswith("{"), result.stderr
     blocks = _assert_contract(result.json, 1)
     assert set(blocks[0]) == {"squashed_layer_id", "replaced_layer_ids", "replaced_layers"}
-    fault = manager(rec, "checkpoint_squash", "--sandbox-id", "eos-nonexistent", timeout=30)
+    fault = manager(rec, "squash_layerstacks", "--sandbox-id", "eos-nonexistent", timeout=30)
     assert fault.returncode != 0, fault.stdout
     assert fault.stdout.strip() == "", fault.stdout
     assert isinstance(fault.json, dict) and "error" in fault.json, fault.stderr
@@ -1111,12 +1111,12 @@ def _scenario_catalog(case, rec, sandbox_factory):
     spec_source = (REPO_ROOT / "crates/sandbox-manager-operations/src/lib.rs").read_text()
     dispatch_source = (REPO_ROOT / "crates/sandbox-manager/src/operation/cli_definition/management_operations.rs").read_text()
     runtime_source = (REPO_ROOT / "crates/sandbox-runtime/operation/src/layerstack/service/impls/squash.rs").read_text()
-    assert 'name: "checkpoint_squash"' in spec_source
-    assert "CHECKPOINT_SQUASH_SPEC" in spec_source and "--sandbox-id" in spec_source
-    assert "CHECKPOINT_SQUASH_SPEC" in dispatch_source
+    assert 'name: "squash_layerstacks"' in spec_source
+    assert "SQUASH_LAYERSTACKS_SPEC" in spec_source and "--sandbox-id" in spec_source
+    assert "SQUASH_LAYERSTACKS_SPEC" in dispatch_source
     assert 'name: "squash_layerstack"' in runtime_source and "cli: None" in runtime_source
-    assert "--progress" not in spec_source[spec_source.index("const CHECKPOINT_SQUASH_ARGS"):spec_source.index("const CHECKPOINT_SQUASH_CLI")]
-    rec.axis("correctness", True, "manager catalog source exposes checkpoint_squash only")
+    assert "--progress" not in spec_source[spec_source.index("const SQUASH_LAYERSTACKS_ARGS"):spec_source.index("const SQUASH_LAYERSTACKS_CLI")]
+    rec.axis("correctness", True, "manager catalog source exposes squash_layerstacks only")
     rec.axis("space", True, "n/a", n_a=True)
     rec.axis("time", True, "n/a", n_a=True)
     rec.set_teardown(True, "no sandbox")
@@ -1636,7 +1636,7 @@ def _scenario_singleflight(case, rec, sandbox_factory):
     results = []
 
     def call():
-        results.append(manager(rec, "checkpoint_squash", "--sandbox-id", sandbox_id, timeout=300))
+        results.append(manager(rec, "squash_layerstacks", "--sandbox-id", sandbox_id, timeout=300))
 
     threads = [threading.Thread(target=call), threading.Thread(target=call)]
     for thread in threads:

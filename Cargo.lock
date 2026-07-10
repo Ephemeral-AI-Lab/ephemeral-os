@@ -1489,6 +1489,7 @@ dependencies = [
  "nix 0.29.0",
  "rustix 0.38.44",
  "sandbox-manager-operations",
+ "sandbox-observability-operations",
  "sandbox-protocol",
  "sandbox-runtime-layerstack",
  "serde",
@@ -1532,7 +1533,9 @@ dependencies = [
 name = "sandbox-observability-operations"
 version = "0.1.0"
 dependencies = [
+ "sandbox-manager-operations",
  "sandbox-protocol",
+ "sandbox-runtime-operations",
 ]
 
 [[package]]

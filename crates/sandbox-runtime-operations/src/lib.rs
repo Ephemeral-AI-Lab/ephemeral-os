@@ -9,33 +9,26 @@
 
 mod command;
 mod file;
-mod workspace_session;
 
 pub use command::{COMMAND_FAMILY, EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};
 pub use file::{
     FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_FAMILY, FILE_LIST_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC,
-};
-pub use workspace_session::{
-    CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC, WORKSPACE_SESSION_FAMILY,
 };
 
 use sandbox_protocol::{
     CliOperationCatalog, CliOperationExecutionSpace, CliOperationFamilySpec, CliOperationSpec,
 };
 
-const FAMILIES: &[&CliOperationFamilySpec] =
-    &[&COMMAND_FAMILY, &FILE_FAMILY, &WORKSPACE_SESSION_FAMILY];
+const FAMILIES: &[&CliOperationFamilySpec] = &[&COMMAND_FAMILY, &FILE_FAMILY];
 
 const SPECS: &[&CliOperationSpec] = &[
     &EXEC_COMMAND_SPEC,
     &WRITE_STDIN_SPEC,
     &READ_LINES_SPEC,
-    &FILE_BLAME_SPEC,
     &FILE_READ_SPEC,
     &FILE_WRITE_SPEC,
     &FILE_EDIT_SPEC,
-    &CREATE_WORKSPACE_SESSION_SPEC,
-    &DESTROY_WORKSPACE_SESSION_SPEC,
+    &FILE_BLAME_SPEC,
 ];
 
 #[must_use]

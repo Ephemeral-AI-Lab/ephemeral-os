@@ -1,15 +1,16 @@
 use std::path::PathBuf;
 
 use sandbox_manager_operations::{
-    CHECKPOINT_SQUASH_SPEC, CREATE_SANDBOX_SPEC, DESTROY_SANDBOX_SPEC, EXPORT_CHANGES_SPEC,
-    INSPECT_SANDBOX_SPEC, LIST_SANDBOXES_SPEC, OBSERVABILITY_SNAPSHOT_SPEC,
+    CREATE_SANDBOX_SPEC, DESTROY_SANDBOX_SPEC, EXPORT_CHANGES_SPEC, INSPECT_SANDBOX_SPEC,
+    LIST_SANDBOXES_SPEC, SQUASH_LAYERSTACKS_SPEC,
 };
+use sandbox_observability_operations::SNAPSHOT_SPEC;
 use sandbox_protocol::{Request, Response};
 use serde_json::{json, Value};
 
 use crate::operation::dispatch::ManagerOperationEntry;
 use crate::operation::management::{
-    create_sandbox, destroy_sandbox, dispatch_checkpoint_squash, dispatch_export_changes,
+    create_sandbox, destroy_sandbox, dispatch_export_changes, dispatch_squash_layerstacks,
     inspect_sandbox, list_sandboxes, observability_snapshot, CreateSandboxInput, SnapshotOptions,
 };
 use crate::operation::ManagerServices;
@@ -21,13 +22,10 @@ use crate::{
 const OPERATIONS: &[ManagerOperationEntry] = &[
     ManagerOperationEntry::new(&CREATE_SANDBOX_SPEC, dispatch_create_sandbox),
     ManagerOperationEntry::new(&DESTROY_SANDBOX_SPEC, dispatch_destroy_sandbox),
-    ManagerOperationEntry::new(
-        &OBSERVABILITY_SNAPSHOT_SPEC,
-        dispatch_observability_snapshot,
-    ),
+    ManagerOperationEntry::new(&SNAPSHOT_SPEC, dispatch_observability_snapshot),
     ManagerOperationEntry::new(&LIST_SANDBOXES_SPEC, dispatch_list_sandboxes),
     ManagerOperationEntry::new(&INSPECT_SANDBOX_SPEC, dispatch_inspect_sandbox),
-    ManagerOperationEntry::new(&CHECKPOINT_SQUASH_SPEC, dispatch_checkpoint_squash),
+    ManagerOperationEntry::new(&SQUASH_LAYERSTACKS_SPEC, dispatch_squash_layerstacks),
     ManagerOperationEntry::new(&EXPORT_CHANGES_SPEC, dispatch_export_changes),
 ];
 

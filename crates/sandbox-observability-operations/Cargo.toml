@@ -8,5 +8,9 @@ license.workspace = true
 [dependencies]
 sandbox-protocol.workspace = true
 
+[dev-dependencies]
+sandbox-manager-operations.workspace = true
+sandbox-runtime-operations.workspace = true
+
 [lints]
 workspace = true

@@ -12,4 +12,4 @@
 
 mod cli_definition;
 
-pub use cli_definition::observability_catalog;
+pub use cli_definition::{observability_catalog, SNAPSHOT_SPEC};

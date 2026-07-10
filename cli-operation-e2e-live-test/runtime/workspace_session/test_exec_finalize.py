@@ -15,7 +15,7 @@ from runtime.workspace_session.helpers import (
     assert_ok,
     assert_output,
     assert_teardown_clean,
-    checkpoint_squash,
+    squash_layerstacks,
     destroy_session,
     exec_bare,
     exec_in,
@@ -275,8 +275,8 @@ def test_FP_01_remount_sweep_cannot_finalize_idle_implicit_session(sandbox, work
         implicit_command = workspace_tracker.track_command(implicit["command_session_id"])
         noop_session = workspace_tracker.create_session()["workspace_session_id"]
 
-        squash = assert_ok(checkpoint_squash(sandbox))
-        rec.add_artifact("checkpoint-squash.json", squash)
+        squash = assert_ok(squash_layerstacks(sandbox))
+        rec.add_artifact("squash-layerstacks.json", squash)
         drain = assert_ok(read_command_lines(sandbox, implicit_command, start_offset=0, limit=10))
         assert drain["status"] == "running", drain
         assert_ok(exec_in(sandbox, noop_session, "true"))

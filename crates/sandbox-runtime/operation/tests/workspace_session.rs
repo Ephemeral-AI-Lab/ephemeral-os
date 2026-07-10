@@ -595,7 +595,7 @@ fn sessions_map_stays_free_while_destroy_io_runs() {
 }
 
 // ---------------------------------------------------------------------------
-// CLI dispatch surface.
+// Daemon operation dispatch surface.
 // ---------------------------------------------------------------------------
 
 #[test]

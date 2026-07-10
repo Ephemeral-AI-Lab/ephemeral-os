@@ -40,7 +40,7 @@ from runtime.file.helpers import (
     write_command_stdin,
 )
 from runtime.workspace_session.helpers import (
-    checkpoint_squash,
+    squash_layerstacks,
     create_session,
     destroy_session,
     exec_in,
@@ -603,7 +603,7 @@ __all__ = [
     "assert_read_not_found",
     "_assert_publish_rejection",
     "_assert_stack_unchanged",
-    "checkpoint_squash",
+    "squash_layerstacks",
     "create_session",
     "daemon_fd_count",
     "destroy_session",

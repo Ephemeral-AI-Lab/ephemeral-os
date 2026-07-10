@@ -24,10 +24,10 @@ recent root trace.",
     ],
     cli: Some(CliSpec {
         path: &["observability", "trace"],
-        usage: "sandbox-manager-cli observability trace --sandbox-id ID [--trace-id TRACE|last]",
+        usage: "sandbox-observability-cli trace --sandbox-id ID [--trace-id TRACE|last]",
         examples: &[
-            "sandbox-manager-cli observability trace --sandbox-id eos-abc --trace-id req-7f3",
-            "sandbox-manager-cli observability trace --sandbox-id eos-abc --trace-id last",
+            "sandbox-observability-cli trace --sandbox-id eos-abc --trace-id req-7f3",
+            "sandbox-observability-cli trace --sandbox-id eos-abc --trace-id last",
         ],
     }),
     related: &["events", "snapshot"],
