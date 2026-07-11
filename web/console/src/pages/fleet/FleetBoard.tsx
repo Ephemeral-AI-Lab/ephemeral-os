@@ -57,7 +57,8 @@ export function FleetBoard() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const records = (listFast.data ?? list.data)?.sandboxes ?? [];
+  const fleet = currentFleetList(list.data, listFast.data, lifecycleActive);
+  const records = fleet?.sandboxes ?? [];
   const snapshots = new Map(
     (snapshot.data?.sandboxes ?? []).map((entry) => [entry.sandbox_id, entry]),
   );
@@ -96,7 +97,7 @@ export function FleetBoard() {
         </div>
       </div>
 
-      <FleetSummaryBar list={list.data} snapshot={snapshot.data} />
+      <FleetSummaryBar list={fleet} snapshot={snapshot.data} />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {list.isError && !list.data ? (
@@ -140,4 +141,12 @@ export function FleetBoard() {
       </div>
     </div>
   );
+}
+
+export function currentFleetList(
+  slow: SandboxList | undefined,
+  fast: SandboxList | undefined,
+  lifecycleActive: boolean,
+): SandboxList | undefined {
+  return lifecycleActive ? fast ?? slow : slow;
 }

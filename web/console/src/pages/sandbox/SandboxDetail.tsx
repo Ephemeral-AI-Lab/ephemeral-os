@@ -34,8 +34,8 @@ export function SandboxDetail() {
   const snapshot = usePoll({
     key: ["sandbox", sandboxId, "snapshot"],
     fn: () => fetchSandboxSnapshot(sandboxId),
-    mode:
-      snapshotHasActivity(record.data ?? null) === true ? "fast" : "slow",
+    mode: (data) =>
+      snapshotHasActivity(record.data ?? null, data ?? null) ? "fast" : "slow",
     enabled: sandboxId !== "" && ready,
   });
 
@@ -109,6 +109,16 @@ export function SandboxDetail() {
   );
 }
 
-function snapshotHasActivity(record: SandboxRecord | null): boolean {
-  return record?.state === "creating" || record?.state === "stopping";
+export function snapshotHasActivity(
+  record: SandboxRecord | null,
+  snapshot?: Awaited<ReturnType<typeof fetchSandboxSnapshot>> | null,
+): boolean {
+  if (record?.state !== "ready") return false;
+  return (snapshot?.sandboxes ?? []).some(
+    (sandbox) =>
+      sandbox.sandbox_id === record.id &&
+      sandbox.workspaces.some(
+        (workspace) => workspace.active_namespace_executions.length > 0,
+      ),
+  );
 }

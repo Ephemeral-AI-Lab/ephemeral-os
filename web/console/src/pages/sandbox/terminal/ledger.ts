@@ -17,6 +17,8 @@ export interface LedgerEntry {
   exitCode: number | null;
   endedAt: number | null;
   inlineOutput: string | null;
+  publishRejected: boolean;
+  publishRejectClass: string | null;
 }
 
 const LEDGER_CAP = 200;
@@ -64,6 +66,8 @@ export function entryFromExec(
     exitCode: output.exit_code,
     endedAt: running ? null : Date.now(),
     inlineOutput: output.command_session_id ? null : output.output,
+    publishRejected: output.publish_rejected === true,
+    publishRejectClass: output.publish_reject_class ?? null,
   };
 }
 
@@ -82,14 +86,16 @@ export function entryFromSnapshot(
     exitCode: null,
     endedAt: null,
     inlineOutput: null,
+    publishRejected: false,
+    publishRejectClass: null,
   };
 }
 
 /**
- * In-memory transcript cache keyed by command session id. Survives tab
- * switches (component unmounts) so a revisit catches up from the last
- * fetched offset instead of refetching from zero; a full reload starts
- * fresh, which re-pages from offset 0.
+ * In-memory transcript cache keyed by sandbox and command session id.
+ * Survives tab switches (component unmounts) so a revisit catches up from
+ * the last fetched offset instead of refetching from zero; a full reload
+ * starts fresh, which re-pages from offset 0.
  */
 export interface TranscriptState {
   lines: string[];
@@ -97,12 +103,18 @@ export interface TranscriptState {
   totalLines: number;
   status: CommandStatus;
   exitCode: number | null;
+  publishRejected: boolean;
+  publishRejectClass: string | null;
 }
 
 const transcripts = new Map<string, TranscriptState>();
 
-export function transcriptFor(commandSessionId: string): TranscriptState {
-  let state = transcripts.get(commandSessionId);
+export function transcriptFor(
+  commandSessionId: string,
+  sandboxId: string,
+): TranscriptState {
+  const key = JSON.stringify([sandboxId, commandSessionId]);
+  let state = transcripts.get(key);
   if (!state) {
     state = {
       lines: [],
@@ -110,8 +122,10 @@ export function transcriptFor(commandSessionId: string): TranscriptState {
       totalLines: 0,
       status: "running",
       exitCode: null,
+      publishRejected: false,
+      publishRejectClass: null,
     };
-    transcripts.set(commandSessionId, state);
+    transcripts.set(key, state);
   }
   return state;
 }
@@ -131,5 +145,9 @@ export function absorbOutput(
   state.totalLines = Number(output.total_lines);
   state.status = output.status;
   state.exitCode = output.exit_code;
+  if (output.publish_rejected === true) {
+    state.publishRejected = true;
+    state.publishRejectClass = output.publish_reject_class ?? null;
+  }
   return state;
 }

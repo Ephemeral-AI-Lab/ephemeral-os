@@ -11,8 +11,9 @@ export const CTRL_D = "\u0004";
  * The terminal's input line while a command runs. Enter sends the line via
  * write_command_stdin (yield pinned to 0) followed by an immediate
  * transcript nudge so the program's reaction renders without waiting for
- * the next poll tick. Ctrl-C / Ctrl-D also arrive here from the focused
- * frame's key handler; the explicit buttons stay for discoverability.
+ * the next poll tick. Ctrl-C / Ctrl-D stop at the input after writing so
+ * the enclosing terminal-frame shortcut cannot send a duplicate control
+ * frame. The explicit buttons stay for discoverability.
  */
 export function StdinBar({
   sandboxId,
@@ -58,9 +59,11 @@ export function StdinBar({
             submitLine();
           } else if (event.key === "c" && event.ctrlKey) {
             event.preventDefault();
+            event.stopPropagation();
             void write("\u0003");
           } else if (event.key === "d" && event.ctrlKey) {
             event.preventDefault();
+            event.stopPropagation();
             void write("\u0004");
           }
         }}

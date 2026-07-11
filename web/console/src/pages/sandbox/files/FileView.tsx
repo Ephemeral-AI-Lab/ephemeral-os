@@ -22,8 +22,14 @@ const EDIT_SIZE_LIMIT_BYTES = 1024 * 1024;
 
 type Mode =
   | { kind: "view" }
-  | { kind: "editing"; original: string }
-  | { kind: "conflict" };
+  | { kind: "editing"; original: string; draft: string }
+  | {
+      kind: "conflict";
+      draft: string;
+      server: string;
+      serverTotalLines: number;
+      serverTotalBytes: number;
+    };
 
 interface LoadedText {
   content: string;
@@ -153,7 +159,7 @@ export function FileView({
         ".cm-blame-gutter": { width: "14px" },
       }),
     ];
-    if (blameOn && blame && session === null && !editing) {
+    if (blameOn && blame && session === null && mode.kind === "view") {
       extensions.push(blameGutter(blame, loaded.startLine, onOwnerClick));
     }
     if (editing) {
@@ -162,7 +168,10 @@ export function FileView({
       extensions.push(EditorState.readOnly.of(true), EditorView.editable.of(false));
     }
     const state = EditorState.create({
-      doc: editing && mode.kind === "editing" ? mode.original : loaded.content,
+      doc:
+        mode.kind === "editing" || mode.kind === "conflict"
+          ? mode.draft
+          : loaded.content,
       extensions,
     });
     const view = new EditorView({ state, parent: host });
@@ -219,11 +228,16 @@ export function FileView({
               content: whole.content,
               endLine: whole.totalLines,
               totalLines: whole.totalLines,
+              totalBytes: whole.totalBytes,
               nextOffset: null,
             }
           : current,
       );
-      setMode({ kind: "editing", original: whole.content });
+      setMode({
+        kind: "editing",
+        original: whole.content,
+        draft: whole.content,
+      });
     } catch (error) {
       showError(error);
     } finally {
@@ -238,7 +252,13 @@ export function FileView({
     try {
       const current = await fileReadToEnd(sandboxId, path, session);
       if (current.content !== mode.original) {
-        setMode({ kind: "conflict" });
+        setMode({
+          kind: "conflict",
+          draft: edited,
+          server: current.content,
+          serverTotalLines: current.totalLines,
+          serverTotalBytes: current.totalBytes,
+        });
         return;
       }
       await fileWrite(sandboxId, path, edited, session);
@@ -247,6 +267,36 @@ export function FileView({
       showError(error);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const keepEditingLocalDraft = () => {
+    if (mode.kind !== "conflict") return;
+    setLoaded((current) =>
+      current
+        ? {
+            ...current,
+            content: mode.server,
+            endLine: mode.serverTotalLines,
+            totalLines: mode.serverTotalLines,
+            totalBytes: mode.serverTotalBytes,
+            nextOffset: null,
+          }
+        : current,
+    );
+    setMode({
+      kind: "editing",
+      original: mode.server,
+      draft: mode.draft,
+    });
+  };
+
+  const copyLocalDraft = async () => {
+    if (mode.kind !== "conflict") return;
+    try {
+      await navigator.clipboard?.writeText(mode.draft);
+    } catch (error) {
+      showError(error);
     }
   };
 
@@ -306,11 +356,23 @@ export function FileView({
       </div>
 
       {mode.kind === "conflict" ? (
-        <div className="flex items-center gap-3 border-b border-warn/50 bg-warn-soft px-3 py-1.5 text-xs">
-          The file changed while you were editing (agents share this
-          workspace). Saving would overwrite their change.
-          <Button size="sm" onClick={() => void load()}>
-            Reload file
+        <div
+          role="alert"
+          className="flex flex-wrap items-center gap-2 border-b border-warn/50 bg-warn-soft px-3 py-1.5 text-xs"
+        >
+          <span>
+            Local draft preserved. The file changed while you were editing
+            (agents share this workspace), so saving would overwrite their
+            change.
+          </span>
+          <Button size="sm" onClick={keepEditingLocalDraft}>
+            Keep editing local draft
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void copyLocalDraft()}>
+            Copy local draft
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void load()}>
+            Reload server version
           </Button>
         </div>
       ) : null}

@@ -14,12 +14,38 @@ const MAX_IDLE_MS = 8000;
 
 export type PollMode = "fast" | "slow";
 
+export interface PollTracking {
+  at: number;
+  fingerprint: string;
+}
+
 interface PollOptions<T> {
   key: QueryKey;
   fn: () => Promise<T>;
-  mode?: PollMode;
+  mode?: PollMode | ((data: T | undefined) => PollMode);
   enabled?: boolean;
   retry?: boolean;
+}
+
+export function pollInterval<T>(
+  data: T | undefined,
+  mode: PollMode,
+  tracking: PollTracking,
+  now = Date.now(),
+  hidden = typeof document !== "undefined" && document.hidden,
+): number | false {
+  if (hidden) return false;
+  const base = mode === "fast" ? FAST_POLL_MS : SLOW_POLL_MS;
+  const fingerprint = data === undefined ? "" : JSON.stringify(data);
+  if (fingerprint !== tracking.fingerprint) {
+    tracking.fingerprint = fingerprint;
+    tracking.at = now;
+    return base;
+  }
+  if (now - tracking.at > IDLE_AFTER_MS) {
+    return Math.min(base * IDLE_MULTIPLIER, MAX_IDLE_MS);
+  }
+  return base;
 }
 
 /**
@@ -30,9 +56,12 @@ interface PollOptions<T> {
  * Interaction nudges go through `useNudge`.
  */
 export function usePoll<T>(options: PollOptions<T>) {
-  const base = options.mode === "fast" ? FAST_POLL_MS : SLOW_POLL_MS;
-  const changeRef = useRef({ at: Date.now(), fingerprint: "" });
-  return useQuery({
+  const modeFor = (data: T | undefined): PollMode =>
+    typeof options.mode === "function"
+      ? options.mode(data)
+      : (options.mode ?? "slow");
+  const changeRef = useRef<PollTracking>({ at: Date.now(), fingerprint: "" });
+  return useQuery<T, Error, T, QueryKey>({
     queryKey: options.key,
     queryFn: options.fn,
     enabled: options.enabled ?? true,
@@ -40,21 +69,8 @@ export function usePoll<T>(options: PollOptions<T>) {
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: "always",
     refetchIntervalInBackground: false,
-    refetchInterval: (query) => {
-      if (typeof document !== "undefined" && document.hidden) return false;
-      const data = query.state.data;
-      const fingerprint = data === undefined ? "" : JSON.stringify(data);
-      const tracked = changeRef.current;
-      if (fingerprint !== tracked.fingerprint) {
-        tracked.fingerprint = fingerprint;
-        tracked.at = Date.now();
-        return base;
-      }
-      if (Date.now() - tracked.at > IDLE_AFTER_MS) {
-        return Math.min(base * IDLE_MULTIPLIER, MAX_IDLE_MS);
-      }
-      return base;
-    },
+    refetchInterval: (query) =>
+      pollInterval(query.state.data, modeFor(query.state.data), changeRef.current),
   });
 }
 

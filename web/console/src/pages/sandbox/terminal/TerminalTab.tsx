@@ -94,6 +94,8 @@ export function TerminalTab() {
               status: output.status,
               exitCode: output.exit_code,
               endedAt: Date.now(),
+              publishRejected: output.publish_rejected === true,
+              publishRejectClass: output.publish_reject_class ?? null,
             });
           }
         })

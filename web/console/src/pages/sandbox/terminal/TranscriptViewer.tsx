@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { rpc, sandboxScope } from "@/api/rpc";
-import type { CommandOutput, CommandStatus } from "@/api/types";
+import type { CommandOutput } from "@/api/types";
 import { absorbOutput, transcriptFor } from "@/pages/sandbox/terminal/ledger";
 
 const PAGE_LIMIT = 1000;
@@ -28,11 +28,11 @@ export function TranscriptViewer({
   sandboxId: string;
   commandSessionId: string;
   running: boolean;
-  onTerminal: (status: CommandStatus, exitCode: number | null) => void;
+  onTerminal: (output: CommandOutput) => void;
   registerNudge?: (nudge: () => void) => void;
 }) {
   const [, setVersion] = useState(0);
-  const stateRef = useRef(transcriptFor(commandSessionId));
+  const stateRef = useRef(transcriptFor(commandSessionId, sandboxId));
   const pinnedRef = useRef(true);
   const fetchingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -57,7 +57,7 @@ export function TranscriptViewer({
         absorbOutput(state, output);
         setVersion((version) => version + 1);
         if (output.status !== "running") {
-          onTerminal(output.status, output.exit_code);
+          onTerminal(output);
         }
         const more = state.fetchedTo < state.totalLines;
         if (!more) break;

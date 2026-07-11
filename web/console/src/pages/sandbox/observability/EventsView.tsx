@@ -41,11 +41,11 @@ export function EventsView() {
     fn: () =>
       fetchEvents(sandboxId, {
         name: name || undefined,
-        sinceMs: sinceMs > 0 ? sinceMs : undefined,
+        sinceMs: sinceMs > 0 ? Date.now() - sinceMs : undefined,
         lastN,
       }),
     mode: tail ? "fast" : "slow",
-    enabled: tail || true,
+    enabled: tail,
   });
 
   const apply = (next: { name?: string; since?: number; last?: number }) => {
@@ -115,6 +115,7 @@ export function EventsView() {
         />
         <button
           type="button"
+          aria-pressed={tail}
           onClick={() => setTail((current) => !current)}
           className={cn(
             "ml-auto flex items-center gap-1.5 rounded border px-2 py-1 text-[11px]",

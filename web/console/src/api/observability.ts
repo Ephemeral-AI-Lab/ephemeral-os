@@ -104,11 +104,17 @@ export interface TraceSpan {
   attrs: Record<string, unknown>;
 }
 
+/** An event attached to a span, positioned from the trace start by the API. */
+export interface TraceEventNode {
+  offset_ms: number;
+  event: TraceEvent;
+}
+
 export interface TraceNode {
   span: TraceSpan;
   offset_ms: number;
   children: TraceNode[];
-  events: TraceEvent[];
+  events: TraceEventNode[];
 }
 
 export interface TraceResult {

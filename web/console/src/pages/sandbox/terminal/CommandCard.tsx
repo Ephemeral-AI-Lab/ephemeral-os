@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { rpc, sandboxScope } from "@/api/rpc";
-import type { CommandStatus } from "@/api/types";
+import type { CommandOutput } from "@/api/types";
 import { PortPreview } from "@/components/PortPreview";
 import { StateBadge } from "@/components/StateBadge";
 import { formatDuration } from "@/lib/format";
@@ -34,9 +34,15 @@ export function CommandCard({
   const running = entry.status === "running";
 
   const onTerminal = useCallback(
-    (status: CommandStatus, exitCode: number | null) => {
-      if (entry.status === "running" && status !== "running") {
-        onUpdate({ status, exitCode, endedAt: Date.now() });
+    (output: CommandOutput) => {
+      if (entry.status === "running" && output.status !== "running") {
+        onUpdate({
+          status: output.status,
+          exitCode: output.exit_code,
+          endedAt: Date.now(),
+          publishRejected: output.publish_rejected === true,
+          publishRejectClass: output.publish_reject_class ?? null,
+        });
       }
     },
     [entry.status, onUpdate],
@@ -95,14 +101,21 @@ export function CommandCard({
           </span>
         ) : (
           <span className="flex shrink-0 items-center gap-1">
-            <StateBadge
-              state={entry.status}
-              label={
-                entry.exitCode !== null
-                  ? `${entry.status} · exit ${entry.exitCode}`
-                  : entry.status
-              }
-            />
+            {entry.publishRejected ? (
+              <StateBadge
+                state="danger"
+                label={`publish rejected${entry.publishRejectClass ? ` · ${entry.publishRejectClass}` : ""}`}
+              />
+            ) : (
+              <StateBadge
+                state={entry.status}
+                label={
+                  entry.exitCode !== null
+                    ? `${entry.status} · exit ${entry.exitCode}`
+                    : entry.status
+                }
+              />
+            )}
           </span>
         )}
       </button>

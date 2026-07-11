@@ -152,7 +152,7 @@ function flatten(nodes: TraceNode[], depth: number): FlatSpan[] {
   ]);
 }
 
-function Waterfall({ traceId, roots }: { traceId: string; roots: TraceNode[] }) {
+export function Waterfall({ traceId, roots }: { traceId: string; roots: TraceNode[] }) {
   const rows = useMemo(() => flatten(roots, 0), [roots]);
   const totalMs = useMemo(
     () =>
@@ -230,12 +230,12 @@ function SpanRow({ row, totalMs }: { row: FlatSpan; totalMs: number }) {
           />
           {row.node.events.map((event) => (
             <span
-              key={`${event.name}-${event.ts}`}
+              key={`${event.event.name}-${event.event.ts}`}
               className="absolute -top-0.5 text-warn"
               style={{
-                left: `${Math.min(((event.ts - (span.ts - row.node.offset_ms)) / totalMs) * 100, 99)}%`,
+                left: `${Math.min(Math.max((event.offset_ms / totalMs) * 100, 0), 99)}%`,
               }}
-              title={`⚑ ${event.name}`}
+              title={`⚑ ${event.event.name}`}
             >
               <Flag size={10} />
             </span>
