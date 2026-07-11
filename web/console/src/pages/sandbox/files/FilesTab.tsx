@@ -1,26 +1,40 @@
+import { useState } from "react";
 import { useSearchParams } from "react-router";
-import { GitBranch } from "lucide-react";
-import { Select, Tooltip } from "@mantine/core";
+import { GitBranch, PanelLeft } from "lucide-react";
+import {
+  Box,
+  Breadcrumbs,
+  Button,
+  Center,
+  Drawer,
+  Flex,
+  Group,
+  Paper,
+  Select,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { FileTree } from "@/pages/sandbox/files/FileTree";
 import { FileView } from "@/pages/sandbox/files/FileView";
-import { cn } from "@/lib/cn";
 
 const PUBLISHED = "__published__";
 
 /**
- * Files tab: FileTree + SessionScopePicker driving both tree and viewer.
- * The scope picker mirrors the API's dual mode — the latest published
- * snapshot (no session id) or a live session's mounted workspace. Blame only
- * exists in published scope.
+ * Files keeps the editor and navigation state in the URL. On narrow screens
+ * the same navigator moves into a Mantine Drawer, preserving one scroll owner
+ * for the editor pane and a focus-restoring entry point for the tree.
  */
 export function FilesTab() {
   const { sandboxId, snapshot } = useSandbox();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const narrow = useMediaQuery("(max-width: 47.99em)");
   const path = searchParams.get("path") ?? "";
   const session = searchParams.get("session");
   const blameOn = searchParams.get("blame") === "1";
-
   const workspaces = snapshot?.sandboxes[0]?.workspaces ?? [];
 
   const apply = (next: { path?: string | null; session?: string | null; blame?: boolean }) => {
@@ -40,90 +54,158 @@ export function FilesTab() {
     setSearchParams(params, { replace: true });
   };
 
-  return (
-    <div className="flex h-full min-h-0">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-line bg-surface">
-        <div className="border-b border-line p-2">
-          <label className="mb-1 block text-[11px] text-ink-faint">scope</label>
-          <Select
-            className="w-full"
-            value={session ?? PUBLISHED}
-            onChange={(value) =>
-              apply({ session: value === PUBLISHED ? null : value ?? null, blame: false })
-            }
-            data={[
-              { value: PUBLISHED, label: "published snapshot" },
-              ...workspaces.map((workspace) => ({
-                value: workspace.workspace_id,
-                label: `live · ${workspace.workspace_id}`,
-              })),
-            ]}
-          />
-        </div>
-        <FileTree
-          sandboxId={sandboxId}
-          session={session}
-          selectedPath={path}
-          onSelect={(selected) => apply({ path: selected })}
-        />
-      </aside>
+  const navigator = (
+    <FileNavigator
+      onScopeChange={(value) => apply({ session: value === PUBLISHED ? null : value ?? null, blame: false })}
+      onSelect={(selected) => {
+        apply({ path: selected });
+        setNavigatorOpen(false);
+      }}
+      sandboxId={sandboxId}
+      selectedPath={path}
+      session={session}
+      workspaces={workspaces}
+    />
+  );
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 border-b border-line bg-surface px-3 py-1.5">
-          <span className="text-xs text-ink-faint">
-            {session ? (
-              <>
-                live session <span className="font-mono text-ink-mid">{session}</span>
-              </>
-            ) : (
-              "latest published snapshot"
-            )}
-          </span>
-          <span className="ml-auto">
+  return (
+    <Flex data-files-workspace h="100%" mih={0} miw={0} style={{ flex: 1, overflow: "hidden" }}>
+      {!narrow ? (
+        <Paper
+          component="aside"
+          data-files-navigator
+          radius={0}
+          withBorder
+          style={{ display: "flex", flex: "0 0 17rem", flexDirection: "column", minHeight: 0 }}
+        >
+          {navigator}
+        </Paper>
+      ) : (
+        <Drawer
+          data-files-navigator-drawer
+          onClose={() => setNavigatorOpen(false)}
+          opened={navigatorOpen}
+          position="left"
+          size="20rem"
+          title="File navigator"
+        >
+          <Box style={{ display: "flex", height: "100%", minHeight: 0, flexDirection: "column" }}>
+            {navigator}
+          </Box>
+        </Drawer>
+      )}
+
+      <Flex direction="column" mih={0} miw={0} style={{ flex: 1 }}>
+        <Paper component="header" data-files-toolbar px="md" py="sm" radius={0} withBorder>
+          <Group justify="space-between" wrap="wrap">
+            <Group gap="sm" wrap="nowrap">
+              {narrow ? (
+                <Button
+                  aria-label="Open file navigator"
+                  leftSection={<PanelLeft size={14} />}
+                  onClick={() => setNavigatorOpen(true)}
+                >
+                  Files
+                </Button>
+              ) : null}
+              <Box miw={0}>
+                <Breadcrumbs separator="›">
+                  <Text size="xs">Files</Text>
+                  <Text c="dimmed" ff="monospace" size="xs">
+                    {session ? `live · ${session}` : "published snapshot"}
+                  </Text>
+                  {path.split("/").filter(Boolean).map((segment, index) => (
+                    <Text c={index === path.split("/").filter(Boolean).length - 1 ? undefined : "dimmed"} ff="monospace" key={`${segment}-${index}`} size="xs">
+                      {segment}
+                    </Text>
+                  ))}
+                </Breadcrumbs>
+              </Box>
+            </Group>
             <Tooltip
               label={
                 session
-                  ? "Blame reads the published auditability log and takes no session id — switch to the published snapshot to use it."
+                  ? "Blame reads the published auditability log. Switch to the published snapshot to use it."
                   : "Color each line by its owner from the publish auditability log."
               }
               openDelay={300}
             >
-              <button
-                type="button"
+              <Button
+                aria-pressed={blameOn}
                 disabled={session !== null}
+                leftSection={<GitBranch size={13} />}
                 onClick={() => apply({ blame: !blameOn })}
-                className={cn(
-                  "flex items-center gap-1 rounded border px-2 py-0.5 text-[11px]",
-                  session !== null
-                    ? "cursor-not-allowed border-line text-ink-faint"
-                    : blameOn
-                      ? "border-accent bg-accent-soft text-accent"
-                      : "border-line text-ink-mid hover:bg-surface-hover",
-                )}
+                variant={blameOn ? "filled" : "default"}
               >
-                <GitBranch size={11} />
-                blame
-              </button>
+                Blame
+              </Button>
             </Tooltip>
-          </span>
-        </div>
+          </Group>
+        </Paper>
+
         {path === "" ? (
-          <div className="mx-auto mt-16 max-w-md rounded-lg border border-line bg-surface p-8 text-center">
-            <div className="text-sm font-semibold">Pick a file</div>
-            <p className="mt-2 text-xs text-ink-mid">
-              Browse the {session ? "live session workspace" : "published snapshot"}{" "}
-              on the left. Blame is available in published scope.
-            </p>
-          </div>
+          <Center p="xl" style={{ flex: 1, minHeight: 0 }}>
+            <Paper maw={440} p="xl" ta="center" withBorder>
+              <Text fw={600} size="sm">Pick a file</Text>
+              <Text c="dimmed" mt="xs" size="xs">
+                Browse the {session ? "live session workspace" : "published snapshot"} from the file navigator.
+                Blame is available in published scope.
+              </Text>
+            </Paper>
+          </Center>
         ) : (
           <FileView
-            sandboxId={sandboxId}
-            path={path}
-            session={session}
             blameOn={blameOn && session === null}
+            key={`${session ?? "published"}:${path}`}
+            path={path}
+            sandboxId={sandboxId}
+            session={session}
           />
         )}
-      </div>
-    </div>
+      </Flex>
+    </Flex>
+  );
+}
+
+function FileNavigator({
+  sandboxId,
+  session,
+  selectedPath,
+  workspaces,
+  onScopeChange,
+  onSelect,
+}: {
+  sandboxId: string;
+  session: string | null;
+  selectedPath: string;
+  workspaces: { workspace_id: string }[];
+  onScopeChange: (value: string | null) => void;
+  onSelect: (path: string) => void;
+}) {
+  return (
+    <Stack gap={0} h="100%" mih={0}>
+      <Box p="sm" style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}>
+        <Select
+          aria-label="File scope"
+          data={[
+            { value: PUBLISHED, label: "published snapshot" },
+            ...workspaces.map((workspace) => ({
+              value: workspace.workspace_id,
+              label: `live · ${workspace.workspace_id}`,
+            })),
+          ]}
+          label="Scope"
+          onChange={onScopeChange}
+          size="xs"
+          value={session ?? PUBLISHED}
+        />
+      </Box>
+      <FileTree
+        onSelect={onSelect}
+        sandboxId={sandboxId}
+        selectedPath={selectedPath}
+        session={session}
+      />
+    </Stack>
   );
 }

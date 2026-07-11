@@ -30,6 +30,15 @@ vi.mock("@/pages/sandbox/files/blame", () => ({
 }));
 
 vi.mock("@codemirror/state", () => ({
+  Compartment: class Compartment {
+    of(extension: unknown) {
+      return extension;
+    }
+
+    reconfigure(extension: unknown) {
+      return extension;
+    }
+  },
   EditorState: {
     create: () => ({ doc: { toString: () => mocks.editorText } }),
     readOnly: { of: vi.fn() },
@@ -40,12 +49,15 @@ vi.mock("@codemirror/view", () => ({
   EditorView: class EditorView {
     static lineWrapping = {};
     static theme = vi.fn(() => ({}));
+    static contentAttributes = { of: vi.fn(() => ({})) };
     static editable = { of: vi.fn() };
     state: { doc: { toString: () => string } };
 
     constructor({ state }: { state: { doc: { toString: () => string } } }) {
       this.state = state;
     }
+
+    dispatch() {}
 
     destroy() {}
   },

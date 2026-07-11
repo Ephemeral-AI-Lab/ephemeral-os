@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { EditorState } from "@codemirror/state";
-import { EditorView, lineNumbers } from "@codemirror/view";
+import { Compartment, EditorState } from "@codemirror/state";
+import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { keymap } from "@codemirror/view";
-import { Loader2 } from "lucide-react";
-import { Button } from "@mantine/core";
+import { PanelsTopLeft } from "lucide-react";
+import {
+  Alert,
+  Box,
+  Button,
+  Center,
+  Drawer,
+  Flex,
+  Group,
+  Loader,
+  Paper,
+  Text,
+} from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import {
   fileBlame,
   fileRead,
@@ -41,11 +52,18 @@ interface LoadedText {
   binary: boolean;
 }
 
+type EditorMeta = {
+  document: string;
+  startLine: number;
+  editable: boolean;
+  blameKey: string;
+  mode: Mode["kind"];
+};
+
 /**
- * The file surface: a windowed read-only viewer (2000-line windows, offset
- * paging, truncation indicator) with the BlameGutter in published scope, and
- * an edit mode that pages the whole file first, guards oversized files, and
- * refuses to save over a concurrent change.
+ * The file surface retains one CodeMirror instance for the selected path.
+ * Paging appends content in place and blame/editability use compartments, so
+ * focus, viewport, selection, and history survive normal Files interactions.
  */
 export function FileView({
   sandboxId,
@@ -60,16 +78,23 @@ export function FileView({
 }) {
   const [loaded, setLoaded] = useState<LoadedText | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>({ kind: "view" });
   const [busy, setBusy] = useState(false);
   const [blame, setBlame] = useState<BlameRange[] | null>(null);
+  const [blameDrawerOpen, setBlameDrawerOpen] = useState(false);
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const lineNumbersCompartment = useRef(new Compartment()).current;
+  const editabilityCompartment = useRef(new Compartment()).current;
+  const blameCompartment = useRef(new Compartment()).current;
+  const editorMeta = useRef<EditorMeta | null>(null);
   const navigate = useNavigate();
   const { showError } = useErrorToast();
+  const narrow = useMediaQuery("(max-width: 47.99em)");
 
   const load = useCallback(async () => {
-    setLoaded(null);
+    setLoading(true);
     setLoadError(null);
     setMode({ kind: "view" });
     try {
@@ -97,6 +122,8 @@ export function FileView({
         return;
       }
       setLoadError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setLoading(false);
     }
   }, [sandboxId, path, session]);
 
@@ -106,7 +133,7 @@ export function FileView({
 
   useEffect(() => {
     setBlame(null);
-    if (!blameOn || session !== null || path === "") return;
+    if (!blameOn || session !== null) return;
     let cancelled = false;
     fileBlame(sandboxId, path)
       .then((result) => {
@@ -136,63 +163,112 @@ export function FileView({
   useEffect(() => {
     const host = hostRef.current;
     if (!host || !loaded || loaded.binary) return;
-    const editing = mode.kind === "editing";
-    const extensions = [
-      lineNumbers({
-        formatNumber: (line) => String(line + loaded.startLine - 1),
-      }),
-      EditorView.lineWrapping,
-      EditorView.theme({
-        "&": { fontSize: "12px", backgroundColor: "var(--color-surface)" },
-        ".cm-gutters": {
-          backgroundColor: "var(--color-app)",
-          color: "var(--color-ink-faint)",
-          border: "none",
-        },
-        ".cm-blame-chip": {
-          display: "inline-block",
-          width: "10px",
-          height: "12px",
-          borderRadius: "2px",
-          cursor: "pointer",
-        },
-        ".cm-blame-gutter": { width: "14px" },
-      }),
-    ];
-    if (blameOn && blame && session === null && mode.kind === "view") {
-      extensions.push(blameGutter(blame, loaded.startLine, onOwnerClick));
-    }
-    if (editing) {
-      extensions.push(history(), keymap.of([...defaultKeymap, ...historyKeymap]));
-    } else {
-      extensions.push(EditorState.readOnly.of(true), EditorView.editable.of(false));
-    }
-    const state = EditorState.create({
-      doc:
-        mode.kind === "editing" || mode.kind === "conflict"
-          ? mode.draft
-          : loaded.content,
-      extensions,
+
+    const editable = mode.kind === "editing";
+    const blameKey = blameOn && blame && session === null ? JSON.stringify(blame) : "";
+    const lineNumberExtension = lineNumbers({
+      formatNumber: (line) => String(line + loaded.startLine - 1),
     });
-    const view = new EditorView({ state, parent: host });
-    viewRef.current = view;
-    return () => {
-      view.destroy();
-      viewRef.current = null;
+    const editabilityExtension = [
+      EditorState.readOnly.of(!editable),
+      EditorView.editable.of(editable),
+    ];
+    const blameExtension = blameKey ? blameGutter(blame!, loaded.startLine, onOwnerClick) : [];
+    const view = viewRef.current;
+
+    if (!view) {
+      const initialDocument = mode.kind === "view" ? loaded.content : mode.draft;
+      const state = EditorState.create({
+        doc: initialDocument,
+        extensions: [
+          history(),
+          keymap.of([...defaultKeymap, ...historyKeymap]),
+          lineNumbersCompartment.of(lineNumberExtension),
+          editabilityCompartment.of(editabilityExtension),
+          blameCompartment.of(blameExtension),
+          EditorView.lineWrapping,
+          EditorView.contentAttributes.of({ "aria-label": `File contents for ${path}` }),
+          EditorView.theme({
+            "&": { height: "100%", fontSize: "12px", backgroundColor: "var(--mantine-color-body)" },
+            ".cm-gutters": {
+              backgroundColor: "var(--mantine-color-default-hover)",
+              color: "var(--mantine-color-dimmed)",
+              border: "none",
+            },
+            ".cm-blame-chip": {
+              display: "inline-block",
+              width: "10px",
+              height: "12px",
+              borderRadius: "2px",
+              cursor: "pointer",
+            },
+            ".cm-blame-gutter": { width: "14px" },
+          }),
+        ],
+      });
+      viewRef.current = new EditorView({ state, parent: host });
+      editorMeta.current = {
+        document: initialDocument,
+        startLine: loaded.startLine,
+        editable,
+        blameKey,
+        mode: mode.kind,
+      };
+      return;
+    }
+
+    const previous = editorMeta.current;
+    const currentDocument = view.state.doc.toString();
+    const retainDraft =
+      (mode.kind === "editing" || mode.kind === "conflict") &&
+      (previous?.mode === "editing" || previous?.mode === "conflict");
+    const nextDocument = retainDraft
+      ? currentDocument
+      : mode.kind === "view"
+        ? loaded.content
+        : mode.draft;
+    const effects = [];
+    if (previous?.startLine !== loaded.startLine) {
+      effects.push(lineNumbersCompartment.reconfigure(lineNumberExtension));
+    }
+    if (previous?.editable !== editable) {
+      effects.push(editabilityCompartment.reconfigure(editabilityExtension));
+    }
+    if (previous?.blameKey !== blameKey) {
+      effects.push(blameCompartment.reconfigure(blameExtension));
+    }
+
+    if (currentDocument !== nextDocument) {
+      const changes = nextDocument.startsWith(currentDocument)
+        ? { from: currentDocument.length, insert: nextDocument.slice(currentDocument.length) }
+        : { from: 0, to: currentDocument.length, insert: nextDocument };
+      view.dispatch({ changes, effects });
+    } else if (effects.length > 0) {
+      view.dispatch({ effects });
+    }
+    editorMeta.current = {
+      document: nextDocument,
+      startLine: loaded.startLine,
+      editable,
+      blameKey,
+      mode: mode.kind,
     };
-  }, [loaded, mode, blame, blameOn, session, onOwnerClick]);
+  }, [loaded, mode, blame, blameOn, session, onOwnerClick, lineNumbersCompartment, editabilityCompartment, blameCompartment]);
+
+  useEffect(
+    () => () => {
+      viewRef.current?.destroy();
+      viewRef.current = null;
+      editorMeta.current = null;
+    },
+    [],
+  );
 
   const loadMore = async () => {
     if (!loaded || loaded.nextOffset === null) return;
     setBusy(true);
     try {
-      const window = await fileRead(
-        sandboxId,
-        path,
-        session,
-        loaded.nextOffset,
-        WINDOW_LINES,
-      );
+      const window = await fileRead(sandboxId, path, session, loaded.nextOffset, WINDOW_LINES);
       setLoaded({
         content: `${loaded.content}\n${window.content}`,
         startLine: loaded.startLine,
@@ -214,11 +290,7 @@ export function FileView({
     try {
       const whole = await fileReadToEnd(sandboxId, path, session);
       if (whole.totalBytes > EDIT_SIZE_LIMIT_BYTES) {
-        showError(
-          new Error(
-            `file is ${whole.totalBytes} bytes — over the 1 MiB edit threshold, opening read-only`,
-          ),
-        );
+        showError(new Error(`file is ${whole.totalBytes} bytes — over the 1 MiB edit threshold, opening read-only`));
         return;
       }
       setLoaded((current) =>
@@ -233,11 +305,7 @@ export function FileView({
             }
           : current,
       );
-      setMode({
-        kind: "editing",
-        original: whole.content,
-        draft: whole.content,
-      });
+      setMode({ kind: "editing", original: whole.content, draft: whole.content });
     } catch (error) {
       showError(error);
     } finally {
@@ -284,11 +352,7 @@ export function FileView({
           }
         : current,
     );
-    setMode({
-      kind: "editing",
-      original: mode.server,
-      draft: mode.draft,
-    });
+    setMode({ kind: "editing", original: mode.server, draft: mode.draft });
   };
 
   const copyLocalDraft = async () => {
@@ -300,108 +364,119 @@ export function FileView({
     }
   };
 
-  if (loadError) {
-    return (
-      <div className="m-4 rounded border border-danger/40 bg-danger-soft p-3 text-xs text-ink">
-        {loadError}
-      </div>
-    );
-  }
   if (!loaded) {
     return (
-      <div className="flex flex-1 items-center justify-center text-ink-faint">
-        <Loader2 size={16} className="animate-spin" />
-      </div>
+      <Center style={{ flex: 1, minHeight: 0 }}>
+        {loadError ? <Alert color="red" title="File unavailable">{loadError}</Alert> : <Loader aria-label="Loading file" size="sm" />}
+      </Center>
     );
   }
+
   if (loaded.binary) {
     return (
-      <div className="m-4 rounded border border-line bg-surface p-6 text-center text-xs text-ink-mid">
-        Binary (non-UTF-8) file — the file operations are UTF-8-text-only in
-        v0.
-      </div>
+      <Center p="xl" style={{ flex: 1, minHeight: 0 }}>
+        <Paper maw={480} p="xl" ta="center" withBorder>
+          <Text size="sm">Binary (non-UTF-8) file</Text>
+          <Text c="dimmed" mt="xs" size="xs">File operations are UTF-8-text-only in v0.</Text>
+        </Paper>
+      </Center>
     );
   }
 
-  const blameLegend =
-    blameOn && blame && session === null ? ownersOf(blame) : null;
+  const blameLegend = blameOn && blame && session === null ? ownersOf(blame) : null;
+  const blameControls = blameLegend ? <BlameLegend owners={blameLegend} onOwnerClick={onOwnerClick} /> : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-1.5">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-ink-mid">
-          {path} · lines {loaded.startLine}–{loaded.endLine} of {loaded.totalLines}
-          {loaded.nextOffset !== null ? " (truncated)" : ""}
-        </span>
-        {loaded.nextOffset !== null && mode.kind === "view" ? (
-          <Button size="compact-xs" onClick={() => void loadMore()} disabled={busy}>
-            load next {WINDOW_LINES}
-          </Button>
-        ) : null}
-        {mode.kind === "view" ? (
-          <Button size="compact-xs" onClick={() => void beginEdit()} disabled={busy}>
-            Edit
-          </Button>
-        ) : null}
-        {mode.kind === "editing" ? (
-          <>
-            <Button size="compact-xs" variant="subtle" onClick={() => void load()} disabled={busy}>
-              Cancel
-            </Button>
-            <Button size="compact-xs" variant="filled" onClick={() => void save()} disabled={busy}>
-              {busy ? "Saving…" : "Save"}
-            </Button>
-          </>
-        ) : null}
-      </div>
+    <Flex direction="column" mih={0} style={{ flex: 1 }}>
+      <Paper component="section" data-file-view-toolbar px="md" py="sm" radius={0} withBorder>
+        <Group justify="space-between" wrap="wrap">
+          <Text ff="monospace" size="xs" style={{ minWidth: 0 }} truncate>
+            {path} · lines {loaded.startLine}–{loaded.endLine} of {loaded.totalLines}
+            {loaded.nextOffset !== null ? " (truncated)" : ""}
+          </Text>
+          <Group gap="xs">
+            {loaded.nextOffset !== null && mode.kind === "view" ? (
+              <Button disabled={busy} onClick={() => void loadMore()}>Load next {WINDOW_LINES}</Button>
+            ) : null}
+            {mode.kind === "view" ? (
+              <Button disabled={busy} onClick={() => void beginEdit()}>Edit</Button>
+            ) : null}
+            {mode.kind === "editing" ? (
+              <>
+                <Button disabled={busy} onClick={() => void load()} variant="default">Cancel</Button>
+                <Button disabled={busy} onClick={() => void save()} variant="filled">{busy ? "Saving…" : "Save"}</Button>
+              </>
+            ) : null}
+            {narrow && blameControls ? (
+              <Button leftSection={<PanelsTopLeft size={13} />} onClick={() => setBlameDrawerOpen(true)} variant="default">
+                Blame legend
+              </Button>
+            ) : null}
+          </Group>
+        </Group>
+      </Paper>
 
+      {loadError ? <Alert color="red" m="sm" title="File reload failed">{loadError}</Alert> : null}
       {mode.kind === "conflict" ? (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center gap-2 border-b border-warn/50 bg-warn-soft px-3 py-1.5 text-xs"
+        <Alert color="yellow" title="Concurrent file change" variant="light">
+          <Group gap="sm" justify="space-between" wrap="wrap">
+            <Text size="xs">Local draft preserved. The file changed while you were editing, so saving would overwrite another change.</Text>
+            <Group gap="xs">
+              <Button onClick={keepEditingLocalDraft}>Keep editing local draft</Button>
+              <Button onClick={() => void copyLocalDraft()} variant="default">Copy local draft</Button>
+              <Button onClick={() => void load()} variant="default">Reload server version</Button>
+            </Group>
+          </Group>
+        </Alert>
+      ) : null}
+
+      {!narrow && blameControls ? (
+        <Paper component="section" px="md" py="xs" radius={0} withBorder>
+          {blameControls}
+        </Paper>
+      ) : null}
+      {narrow && blameControls ? (
+        <Drawer
+          onClose={() => setBlameDrawerOpen(false)}
+          opened={blameDrawerOpen}
+          position="right"
+          size="20rem"
+          title="Blame legend"
         >
-          <span>
-            Local draft preserved. The file changed while you were editing
-            (agents share this workspace), so saving would overwrite their
-            change.
-          </span>
-          <Button size="compact-xs" onClick={keepEditingLocalDraft}>
-            Keep editing local draft
-          </Button>
-          <Button size="compact-xs" variant="subtle" onClick={() => void copyLocalDraft()}>
-            Copy local draft
-          </Button>
-          <Button size="compact-xs" variant="subtle" onClick={() => void load()}>
-            Reload server version
-          </Button>
-        </div>
+          {blameControls}
+        </Drawer>
       ) : null}
 
-      {blameLegend ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-1 text-[11px]">
-          <span className="text-ink-faint">blame:</span>
-          {blameLegend.map((owner) => {
-            const info = ownerInfo(owner);
-            return (
-              <button
-                key={owner}
-                type="button"
-                onClick={() => onOwnerClick(owner)}
-                className="flex items-center gap-1 rounded px-1 py-px hover:bg-surface-hover"
-                title={owner}
-              >
-                <span
-                  className="inline-block size-2.5 rounded-sm"
-                  style={{ backgroundColor: info.color }}
-                />
-                <span className="max-w-56 truncate font-mono">{owner}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      <Box pos="relative" style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <Box ref={hostRef} h="100%" />
+        {loading ? (
+          <Center inset={0} pos="absolute" style={{ background: "rgb(255 253 251 / 0.72)" }}>
+            <Loader aria-label="Loading file" size="sm" />
+          </Center>
+        ) : null}
+      </Box>
+    </Flex>
+  );
+}
 
-      <div ref={hostRef} className="min-h-0 flex-1 overflow-auto" />
-    </div>
+function BlameLegend({ owners, onOwnerClick }: { owners: string[]; onOwnerClick: (owner: string) => void }) {
+  return (
+    <Group gap="xs" wrap="wrap">
+      <Text c="dimmed" size="xs">Blame</Text>
+      {owners.map((owner) => {
+        const info = ownerInfo(owner);
+        return (
+          <Button
+            key={owner}
+            leftSection={<Box h={10} style={{ backgroundColor: info.color, borderRadius: 2 }} w={10} />}
+            onClick={() => onOwnerClick(owner)}
+            title={owner}
+            variant="subtle"
+          >
+            <Text ff="monospace" maw={220} size="xs" truncate>{owner}</Text>
+          </Button>
+        );
+      })}
+    </Group>
   );
 }
