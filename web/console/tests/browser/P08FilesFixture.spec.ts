@@ -105,6 +105,55 @@ for (const [width, height] of [
   });
 }
 
+test("P08 Files captures expanded tree and blame at desktop @visual", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFiles(page);
+  const tree = page.getByRole("tree", { name: "File tree" });
+  const docs = tree.locator('[role="treeitem"][title="docs"]');
+  await docs.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(tree.locator('[role="treeitem"][title="docs/operator.txt"]')).toBeVisible();
+  await page.getByRole("button", { name: "Blame" }).click();
+  await expect(page.getByText("workspace_session:workspace-fixture")).toBeVisible();
+  await expect(page).toHaveScreenshot("p08-files-tree-blame-1440x900.png", { animations: "disabled" });
+});
+
+test("P08 Files captures narrow Drawers @visual", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await openFiles(page);
+  await page.getByRole("button", { name: "Open file navigator" }).click();
+  await expect(page.getByRole("dialog", { name: "File navigator" })).toBeVisible();
+  await expect(page).toHaveScreenshot("p08-files-navigator-drawer-375x812.png", { animations: "disabled" });
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Blame" }).click();
+  await page.getByRole("button", { name: "Blame legend" }).click();
+  await expect(page.getByRole("dialog", { name: "Blame legend" })).toBeVisible();
+  await expect(page).toHaveScreenshot("p08-files-blame-drawer-375x812.png", { animations: "disabled" });
+});
+
+test("P08 Files captures paged and preserved-conflict editor states @visual", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFiles(page, "paged.txt");
+  await page.getByRole("button", { name: "Load next 2000" }).click();
+  await page.locator(".cm-scroller").evaluate(async (element) => {
+    element.scrollTop = element.scrollHeight;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  });
+  await expect(page.locator(".cm-content")).toContainText("line 4000");
+  await expect(page).toHaveScreenshot("p08-files-paged-1440x900.png", { animations: "disabled" });
+
+  await openFiles(page);
+  await page.getByRole("button", { name: "Edit" }).click();
+  const content = page.locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("local draft: preserve this operator edit");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Local draft preserved.")).toBeVisible();
+  await expect(page).toHaveScreenshot("p08-files-conflict-1440x900.png", { animations: "disabled" });
+});
+
 test("P08 virtualizes the first 2,000 tree entries and supports the tree keyboard contract", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openFiles(page);
