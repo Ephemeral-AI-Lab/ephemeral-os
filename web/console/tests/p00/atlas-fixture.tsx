@@ -5,9 +5,10 @@ import "@mantine/core/styles.css";
 import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Navigate, Route, Routes } from "react-router";
+import { MemoryRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./atlas.css";
 import { ephemeralosTheme } from "../../src/theme";
+import { LegacyLayerStackRedirect } from "../../src/App";
 import { Shell } from "../../src/shell/Shell";
 import { FleetBoard } from "../../src/pages/fleet/FleetBoard";
 import { NotFound } from "../../src/pages/NotFound";
@@ -24,6 +25,11 @@ import { LayerStackView } from "../../src/pages/sandbox/observability/LayerStack
 
 const route = new URL(window.location.href).searchParams.get("route") ?? "/";
 
+function RouteProbe() {
+  const location = useLocation();
+  return <output data-atlas-location hidden>{`${location.pathname}${location.search}${location.hash}`}</output>;
+}
+
 function AtlasApp() {
   const queryClient = useMemo(
     () => new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }),
@@ -34,29 +40,30 @@ function AtlasApp() {
     <MantineProvider forceColorScheme="light" theme={ephemeralosTheme}>
       <Notifications limit={4} position="bottom-right" />
       <QueryClientProvider client={queryClient}>
-          <MemoryRouter initialEntries={[route]}>
-            <Routes>
-              <Route element={<Shell />}>
-                <Route index element={<FleetBoard />} />
-                <Route path="sandboxes/:sandboxId" element={<SandboxDetail />}>
-                  <Route index element={<OverviewTab />} />
-                  <Route path="terminal" element={<TerminalTab />} />
-                  <Route path="files" element={<FilesTab />} />
+        <MemoryRouter initialEntries={[route]}>
+          <RouteProbe />
+          <Routes>
+            <Route element={<Shell />}>
+              <Route index element={<FleetBoard />} />
+              <Route path="sandboxes/:sandboxId" element={<SandboxDetail />}>
+                <Route index element={<OverviewTab />} />
+                <Route path="terminal" element={<TerminalTab />} />
+                <Route path="files" element={<FilesTab />} />
+                <Route path="layerstack" element={<LegacyLayerStackRedirect />} />
+                <Route path="preview" element={<PreviewTab />} />
+                <Route path="observability" element={<ObservabilityTab />}>
+                  <Route index element={<Navigate to="resources" replace />} />
+                  <Route path="resources" element={<ResourcesView />} />
+                  <Route path="traces" element={<TracesView />} />
+                  <Route path="traces/:traceId" element={<TracesView />} />
+                  <Route path="events" element={<EventsView />} />
                   <Route path="layerstack" element={<LayerStackView />} />
-                  <Route path="preview" element={<PreviewTab />} />
-                  <Route path="observability" element={<ObservabilityTab />}>
-                    <Route index element={<Navigate to="resources" replace />} />
-                    <Route path="resources" element={<ResourcesView />} />
-                    <Route path="traces" element={<TracesView />} />
-                    <Route path="traces/:traceId" element={<TracesView />} />
-                    <Route path="events" element={<EventsView />} />
-                    <Route path="layerstack" element={<LayerStackView />} />
-                  </Route>
                 </Route>
-                <Route path="*" element={<NotFound />} />
               </Route>
-            </Routes>
-          </MemoryRouter>
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
       </QueryClientProvider>
     </MantineProvider>
   );

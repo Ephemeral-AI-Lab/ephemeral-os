@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from "react-router";
 import { AppProviders } from "@/AppProviders";
 import { Shell } from "@/shell/Shell";
 import { FleetBoard } from "@/pages/fleet/FleetBoard";
@@ -14,6 +14,22 @@ import { TracesView } from "@/pages/sandbox/observability/TracesView";
 import { EventsView } from "@/pages/sandbox/observability/EventsView";
 import { LayerStackView } from "@/pages/sandbox/observability/LayerStackView";
 
+export function LegacyLayerStackRedirect() {
+  const { sandboxId = "" } = useParams();
+  const location = useLocation();
+
+  return (
+    <Navigate
+      replace
+      to={{
+        pathname: `/sandboxes/${encodeURIComponent(sandboxId)}/observability/layerstack`,
+        search: location.search,
+        hash: location.hash,
+      }}
+    />
+  );
+}
+
 export default function App() {
   return (
     <AppProviders>
@@ -25,7 +41,7 @@ export default function App() {
               <Route index element={<OverviewTab />} />
               <Route path="terminal" element={<TerminalTab />} />
               <Route path="files" element={<FilesTab />} />
-              <Route path="layerstack" element={<LayerStackView />} />
+              <Route path="layerstack" element={<LegacyLayerStackRedirect />} />
               <Route path="preview" element={<PreviewTab />} />
               <Route path="observability" element={<ObservabilityTab />}>
                 <Route index element={<Navigate to="resources" replace />} />
