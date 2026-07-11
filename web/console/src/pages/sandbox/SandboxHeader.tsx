@@ -5,7 +5,7 @@ import { DestroyAction } from "@/components/DestroyAction";
 import { PortPreview } from "@/components/PortPreview";
 import { SquashDialog } from "@/components/SquashDialog";
 import { StateBadge } from "@/components/StateBadge";
-import { Button, Tooltip } from "@mantine/core";
+import { Badge, Box, Button, Group, Text, Tooltip } from "@mantine/core";
 import { shortHash } from "@/lib/format";
 
 export function previewScopes(snapshot: SnapshotResult | undefined) {
@@ -33,47 +33,47 @@ export function SandboxHeader({
 }) {
   const layers = snapshot?.sandboxes[0]?.stack.layer_count;
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3">
-      <span className="font-mono text-sm font-semibold">{sandboxId}</span>
-      {record ? <StateBadge state={record.state} /> : null}
-      {record?.state === "ready" ? (
-        <HealthDot sandboxId={sandboxId} showLabel />
-      ) : null}
-      {record ? (
-        <span className="truncate font-mono text-xs text-ink-mid" title="workspace bind root">
-          {record.workspace_root}
-        </span>
-      ) : null}
-      {record?.daemon ? (
-        <span className="font-mono text-xs text-ink-faint" title="daemon RPC endpoint">
-          rpc {record.daemon.host}:{record.daemon.port}
-        </span>
-      ) : null}
-      {record?.daemon_http ? (
-        <span className="font-mono text-xs text-ink-faint" title="daemon_http endpoint">
-          http {record.daemon_http.host}:{record.daemon_http.port}
-        </span>
-      ) : null}
-      {record?.shared_base ? (
-        <Tooltip label={`shared read-only base · root ${record.shared_base.root_hash}`} openDelay={300}>
-          <span className="rounded border border-line bg-idle-soft px-1.5 py-px font-mono text-[11px] text-ink-mid">
-            base {shortHash(record.shared_base.root_hash)}
-          </span>
-        </Tooltip>
-      ) : null}
-      <span className="ml-auto flex items-center gap-2">
-        {record?.state === "ready" ? (
-          <>
-            <PortPreview sandboxId={sandboxId} scopes={previewScopes(snapshot)} />
-            <SquashDialog
-              sandboxId={sandboxId}
-              layerCount={layers}
-              trigger={(open) => <Button size="compact-xs" onClick={open}>Squash</Button>}
-            />
-          </>
+    <Box data-sandbox-header px="md" pt="sm">
+      <Group gap="sm" wrap="wrap">
+        <Text ff="monospace" fw={700} size="sm">{sandboxId}</Text>
+        {record ? <StateBadge state={record.state} /> : null}
+        {record?.state === "ready" ? <HealthDot sandboxId={sandboxId} showLabel /> : null}
+        {record ? (
+          <Text c="dimmed" ff="monospace" size="xs" title="workspace bind root" truncate maw={360}>
+            {record.workspace_root}
+          </Text>
         ) : null}
-        <DestroyAction sandboxId={sandboxId} />
-      </span>
-    </div>
+        {record?.daemon ? (
+          <Text c="dimmed" ff="monospace" size="xs" title="daemon RPC endpoint">
+            rpc {record.daemon.host}:{record.daemon.port}
+          </Text>
+        ) : null}
+        {record?.daemon_http ? (
+          <Text c="dimmed" ff="monospace" size="xs" title="daemon_http endpoint">
+            http {record.daemon_http.host}:{record.daemon_http.port}
+          </Text>
+        ) : null}
+        {record?.shared_base ? (
+          <Tooltip label={`shared read-only base · root ${record.shared_base.root_hash}`} openDelay={300}>
+            <Badge color="neutral" ff="monospace" size="sm" variant="light">
+              base {shortHash(record.shared_base.root_hash)}
+            </Badge>
+          </Tooltip>
+        ) : null}
+        <Group gap="xs" ml="auto">
+          {record?.state === "ready" ? (
+            <>
+              <PortPreview sandboxId={sandboxId} scopes={previewScopes(snapshot)} />
+              <SquashDialog
+                sandboxId={sandboxId}
+                layerCount={layers}
+                trigger={(open) => <Button size="compact-xs" onClick={open}>Squash</Button>}
+              />
+            </>
+          ) : null}
+          <DestroyAction sandboxId={sandboxId} />
+        </Group>
+      </Group>
+    </Box>
   );
 }

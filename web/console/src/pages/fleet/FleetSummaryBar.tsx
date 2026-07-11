@@ -1,6 +1,7 @@
 import type { SandboxList } from "@/api/types";
 import { inFlightCount, type SnapshotResult } from "@/api/observability";
 import { formatBytes } from "@/lib/format";
+import { Badge, Group, Text } from "@mantine/core";
 
 /**
  * Client-side aggregation of the per-sandbox snapshot list — the no-arg
@@ -20,28 +21,26 @@ export function FleetSummaryBar({
   }
   const snapshots = snapshot?.sandboxes ?? [];
   const executions = snapshots.reduce((total, entry) => total + inFlightCount(entry), 0);
-  const layers = snapshots.reduce((total, entry) => total + entry.stack.layer_count, 0);
   const memory = snapshots.reduce((total, entry) => {
     const mem = entry.resources.latest?.metrics["mem_cur"];
     return typeof mem === "number" ? total + mem : total;
   }, 0);
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-surface px-4 py-2 text-[13px] text-ink-mid">
-      <span>
-        Fleet: <span className="font-medium text-ink">{records.length}</span>{" "}
+    <Group data-fleet-summary gap="xs" p="sm" wrap="wrap">
+      <Text size="sm">
+        Fleet: <Text component="span" fw={700} inherit>{records.length}</Text>{" "}
         {records.length === 1 ? "sandbox" : "sandboxes"}
-      </span>
+      </Text>
       {[...byState.entries()].map(([state, count]) => (
-        <span key={state}>
+        <Badge key={state} size="sm" variant="light">
           {count} {state}
-        </span>
+        </Badge>
       ))}
-      <span>
+      <Text size="sm">
         {executions} running {executions === 1 ? "command" : "commands"}
-      </span>
-      <span>Σ mem {formatBytes(memory)}</span>
-      <span>Σ {layers} layers</span>
-    </div>
+      </Text>
+      <Text size="sm">Σ mem {formatBytes(memory)}</Text>
+    </Group>
   );
 }

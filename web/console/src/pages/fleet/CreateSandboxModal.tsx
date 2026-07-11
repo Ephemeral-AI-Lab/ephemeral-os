@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { Button, Input, Modal, Select, Text } from "@mantine/core";
+import { Button, Group, Input, Modal, Select, Stack, Text, TextInput } from "@mantine/core";
 import {
   buildArgs,
   findOperation,
@@ -33,6 +33,7 @@ export function CreateSandboxModal({
   onStream: (logs: string[] | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [workspacePickerOpen, setWorkspacePickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -79,19 +80,21 @@ export function CreateSandboxModal({
 
   const openModal = () => {
     setOpen(true);
+    setWorkspacePickerOpen(false);
     setErrors({});
     setValues(defaultValues(spec));
   };
 
   return (
     <>
-      <Button variant="filled" disabled={busy} onClick={openModal}>
-        <Plus size={13} />
+      <Button leftSection={<Plus size={14} />} variant="filled" disabled={busy} onClick={openModal}>
         {busy ? "Creating…" : "New Sandbox"}
       </Button>
       <Modal
         opened={open}
         onClose={() => setOpen(false)}
+        closeOnEscape={!workspacePickerOpen}
+        closeButtonProps={{ "aria-label": "Close create sandbox" }}
         title="Create sandbox"
         centered
       >
@@ -99,82 +102,81 @@ export function CreateSandboxModal({
           {spec?.summary ?? "Create a host-side sandbox record and runtime sandbox."}
         </Text>
         <form
-          className="flex flex-col gap-3"
           onSubmit={(event) => {
             event.preventDefault();
             void submit();
           }}
         >
-          {(spec?.args ?? []).map((arg) => (
-            <div key={arg.name}>
-              <label
-                htmlFor={`create-${arg.name}`}
-                className="mb-1 block text-xs font-medium text-ink-mid"
-              >
-                <span className="font-mono">{arg.name}</span>
-                {arg.required ? <span className="text-danger"> *</span> : null}
-              </label>
-              {arg.name === "image" ? (
-                <Select
+          <Stack gap="sm">
+            {(spec?.args ?? []).map((arg) => {
+              const error =
+                errors[arg.name] ??
+                (arg.name === "image" && images.isError
+                  ? (images.error as Error).message
+                  : arg.name === "image" && images.data?.length === 0
+                    ? "No Docker images are available."
+                    : undefined);
+
+              return (
+                <Input.Wrapper
+                  key={arg.name}
                   id={`create-${arg.name}`}
-                  value={values[arg.name] ?? ""}
-                  onChange={(value) =>
-                    setValues((current) => ({ ...current, [arg.name]: value ?? "" }))
-                  }
-                  data={images.data ?? []}
-                  placeholder={images.isPending ? "Loading Docker images…" : "Select a Docker image"}
-                  disabled={
-                    images.isPending || images.isError || (images.data?.length ?? 0) === 0
-                  }
-                  classNames={{ input: "font-mono" }}
-                />
-              ) : arg.name === "workspace_root" ? (
-                <WorkspacePicker
-                  id={`create-${arg.name}`}
-                  value={values[arg.name] ?? ""}
-                  onChange={(path) =>
-                    setValues((current) => ({ ...current, [arg.name]: path }))
-                  }
-                />
-              ) : (
-                <Input
-                  id={`create-${arg.name}`}
-                  type={arg.name === "count" ? "number" : undefined}
-                  min={arg.name === "count" ? 1 : undefined}
-                  step={arg.name === "count" ? 1 : undefined}
-                  inputMode={arg.name === "count" ? "numeric" : undefined}
-                  value={values[arg.name] ?? ""}
-                  onChange={(event) =>
-                    setValues((current) => ({
-                      ...current,
-                      [arg.name]: event.target.value,
-                    }))
-                  }
-                  placeholder={arg.help}
-                  className="w-full font-mono"
-                />
-              )}
-              {errors[arg.name] ? (
-                <p className="mt-1 text-[11px] text-danger">{errors[arg.name]}</p>
-              ) : arg.name === "image" && images.isError ? (
-                <p className="mt-1 text-[11px] text-danger">
-                  {(images.error as Error).message}
-                </p>
-              ) : arg.name === "image" && images.data?.length === 0 ? (
-                <p className="mt-1 text-[11px] text-danger">No Docker images are available.</p>
-              ) : (
-                <p className="mt-1 text-[11px] text-ink-faint">{arg.help}</p>
-              )}
-            </div>
-          ))}
-          <div className="mt-1 flex justify-end gap-2">
-            <Button variant="subtle" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="filled" type="submit" disabled={!spec}>
-              Create
-            </Button>
-          </div>
+                  label={<Text component="span" ff="monospace" size="sm">{arg.name}</Text>}
+                  required={arg.required}
+                  description={error ? undefined : arg.help}
+                  error={error}
+                >
+                  {arg.name === "image" ? (
+                    <Select
+                      id={`create-${arg.name}`}
+                      value={values[arg.name] ?? ""}
+                      onChange={(value) =>
+                        setValues((current) => ({ ...current, [arg.name]: value ?? "" }))
+                      }
+                      data={images.data ?? []}
+                      placeholder={images.isPending ? "Loading Docker images…" : "Select a Docker image"}
+                      disabled={
+                        images.isPending || images.isError || (images.data?.length ?? 0) === 0
+                      }
+                    />
+                  ) : arg.name === "workspace_root" ? (
+                    <WorkspacePicker
+                      id={`create-${arg.name}`}
+                      value={values[arg.name] ?? ""}
+                      onOpenChange={setWorkspacePickerOpen}
+                      onChange={(path) =>
+                        setValues((current) => ({ ...current, [arg.name]: path }))
+                      }
+                    />
+                  ) : (
+                    <TextInput
+                      id={`create-${arg.name}`}
+                      type={arg.name === "count" ? "number" : undefined}
+                      min={arg.name === "count" ? 1 : undefined}
+                      step={arg.name === "count" ? 1 : undefined}
+                      inputMode={arg.name === "count" ? "numeric" : undefined}
+                      value={values[arg.name] ?? ""}
+                      onChange={(event) =>
+                        setValues((current) => ({
+                          ...current,
+                          [arg.name]: event.target.value,
+                        }))
+                      }
+                      placeholder={arg.help}
+                    />
+                  )}
+                </Input.Wrapper>
+              );
+            })}
+            <Group justify="flex-end" mt="xs">
+              <Button variant="subtle" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="filled" type="submit" disabled={!spec}>
+                Create
+              </Button>
+            </Group>
+          </Stack>
         </form>
       </Modal>
     </>
