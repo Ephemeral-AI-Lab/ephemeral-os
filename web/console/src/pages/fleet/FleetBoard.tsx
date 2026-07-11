@@ -118,7 +118,7 @@ export function FleetBoard() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3">
             {visible.map((record) => (
               <SandboxCard
                 key={record.id}
@@ -128,7 +128,7 @@ export function FleetBoard() {
               />
             ))}
             {createLogs !== null && !records.some((record) => record.state === "creating") ? (
-              <div className="rounded-lg border border-dashed border-run/50 bg-surface p-3">
+              <div className="flex min-h-56 flex-col rounded-xl border border-dashed border-run/50 bg-surface p-4 shadow-sm">
                 <div className="mb-2 text-xs font-medium text-run">creating…</div>
                 <div className="max-h-32 overflow-y-auto rounded border border-line bg-app p-2 font-mono text-[11px] text-ink-mid">
                   {createLogs.length === 0 ? "starting…" : createLogs.map((line, i) => <div key={i}>{line}</div>)}

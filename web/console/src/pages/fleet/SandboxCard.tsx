@@ -32,48 +32,63 @@ export function SandboxCard({
   const layers = snapshot?.stack.layer_count;
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-line bg-surface p-3">
-      <div className="flex items-center gap-2">
+    <article className="group flex h-full min-h-56 flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none">
+      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
         <Link
           to={`/sandboxes/${encodeURIComponent(record.id)}`}
-          className="min-w-0 flex-1 truncate font-mono text-[13px] font-medium text-ink hover:text-accent"
+          className="min-w-0 flex-1 truncate font-mono text-[13px] font-medium text-ink transition-colors hover:text-accent group-hover:text-accent"
         >
           {record.id}
         </Link>
         <StateBadge state={record.state} />
         {record.state === "ready" ? <HealthDot sandboxId={record.id} /> : null}
       </div>
-      <div className="truncate font-mono text-xs text-ink-mid" title={record.workspace_root}>
-        {record.workspace_root}
+
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 py-3">
+        <div className="min-w-0 rounded-md border border-line bg-app px-2.5 py-2">
+          <div className="mb-1 text-[10px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+            Workspace
+          </div>
+          <div className="truncate font-mono text-xs text-ink-mid" title={record.workspace_root}>
+            {record.workspace_root}
+          </div>
+        </div>
+
+        {record.state === "creating" ? (
+          <StreamLogPane lines={createLogs ?? []} maxHeightClass="max-h-32" />
+        ) : null}
+
+        {record.state === "failed" ? (
+          <div className="rounded-md border border-danger/40 bg-danger-soft p-2.5 text-xs text-danger">
+            Sandbox failed to reach ready. Inspect the record for endpoint and
+            state details.
+          </div>
+        ) : null}
+
+        {record.state === "ready" ? (
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md border border-line bg-app px-2.5 py-2 text-xs text-ink-mid">
+            <div className="min-w-0">
+              <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+                Activity
+              </div>
+              <div className="mt-1 truncate font-medium text-ink">
+                {sessions} {sessions === 1 ? "session" : "sessions"} · {commands}{" "}
+                {commands === 1 ? "cmd" : "cmds"}
+              </div>
+            </div>
+            <div className="grid gap-1 text-[11px]">
+              <span className="flex items-center justify-end gap-1">
+                cpu <ResourceSparkline values={spark.cpu} label="cpu" />
+              </span>
+              <span className="flex items-center justify-end gap-1">
+                mem <ResourceSparkline values={spark.mem} label="memory" />
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      {record.state === "creating" ? (
-        <StreamLogPane lines={createLogs ?? []} maxHeightClass="max-h-32" />
-      ) : null}
-
-      {record.state === "failed" ? (
-        <div className="rounded border border-danger/40 bg-danger-soft p-2 text-xs text-danger">
-          Sandbox failed to reach ready. Inspect the record for endpoint and
-          state details.
-        </div>
-      ) : null}
-
-      {record.state === "ready" ? (
-        <div className="flex items-center gap-3 text-xs text-ink-mid">
-          <span>
-            {sessions} {sessions === 1 ? "session" : "sessions"} · {commands}{" "}
-            {commands === 1 ? "cmd" : "cmds"}
-          </span>
-          <span className="ml-auto flex items-center gap-1">
-            cpu <ResourceSparkline values={spark.cpu} label="cpu" />
-          </span>
-          <span className="flex items-center gap-1">
-            mem <ResourceSparkline values={spark.mem} label="memory" />
-          </span>
-        </div>
-      ) : null}
-
-      <div className="mt-auto flex items-center gap-2 border-t border-line pt-2">
+      <div className="mt-auto flex items-center gap-2 border-t border-line px-4 py-3">
         {record.state === "ready" ? (
           <>
             <Button
@@ -106,7 +121,7 @@ export function SandboxCard({
           <DestroyAction sandboxId={record.id} />
         </span>
       </div>
-    </div>
+    </article>
   );
 }
 

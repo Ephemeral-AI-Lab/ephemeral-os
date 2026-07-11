@@ -1,2 +1,0 @@
-$ cargo fmt --all -- --check
-RESULT exit=0

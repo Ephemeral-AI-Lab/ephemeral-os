@@ -1,3 +1,0 @@
-$ cargo check --workspace --all-targets --all-features
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.18s
-RESULT exit=0

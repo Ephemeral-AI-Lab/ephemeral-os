@@ -1,6 +1,0 @@
-=== squash invocation 1  (blocks=1, sessions=0) ===
-  parent (layerstack.squash) :      8.000 ms
-  remount sweep (serial sum) :      0.000 ms   (  0.0% of parent)
-  non-sweep (open+plan+build+commit) :      8.000 ms   (100.0% of parent)
-
-wrote docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/logs/attribution-baseline-s200.json
