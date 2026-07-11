@@ -105,6 +105,7 @@ export function WorkspacePicker({
         title="Select workspace folder"
         centered
         size="lg"
+        styles={{ content: { minHeight: 202 } }}
       >
         <Stack gap="sm">
           <Text size="sm" c="dimmed">
