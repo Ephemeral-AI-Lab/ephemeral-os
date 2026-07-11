@@ -142,6 +142,9 @@ test("P08 Files captures paged and preserved-conflict editor states @visual", as
   });
   await expect(page.locator(".cm-content")).toContainText("line 4000");
   await expect(page).toHaveScreenshot("p08-files-paged-1440x900.png", { animations: "disabled" });
+  await page.locator(".cm-content").focus();
+  await page.keyboard.press("ControlOrMeta+A");
+  await expect(page).toHaveScreenshot("p08-files-paged-selection-1440x900.png", { animations: "disabled" });
 
   await openFiles(page);
   await page.getByRole("button", { name: "Edit" }).click();
