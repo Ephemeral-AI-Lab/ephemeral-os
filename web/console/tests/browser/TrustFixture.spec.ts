@@ -61,6 +61,10 @@ async function createConflict(page: Page) {
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("alert")).toContainText("Local draft preserved");
   await expect(editor).toContainText("local draft: preserve this operator edit");
+  await page.locator("#root").evaluate((root) => {
+    root.scrollLeft = 0;
+  });
+  await expect(page.locator("#root")).toHaveJSProperty("scrollLeft", 0);
 }
 
 async function openTrustFixture(page: Page) {
