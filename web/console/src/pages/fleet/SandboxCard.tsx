@@ -57,7 +57,7 @@ export function SandboxCard({
         </Box>
 
         {record.state === "creating" ? (
-          <StreamLogPane lines={createLogs ?? []} maxHeightClass="max-h-32" />
+          <StreamLogPane lines={createLogs ?? []} maxHeight={128} />
         ) : null}
 
         {record.state === "failed" ? (

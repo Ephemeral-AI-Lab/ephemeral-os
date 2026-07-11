@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Button, Input, Modal, Text } from "@mantine/core";
+import { Box, Button, Group, Input, Modal, Text } from "@mantine/core";
 import { StreamLogPane } from "@/components/StreamLogPane";
 
 /**
@@ -46,7 +46,7 @@ export function ConfirmDestroyDialog({
       >
         <Text size="sm" c="dimmed">
           This stops the daemon, destroys the runtime sandbox, and removes the
-          record. It cannot be undone. Type <span className="font-mono text-ink">{sandboxId}</span>{" "}
+          record. It cannot be undone. Type <Text span ff="monospace" style={{ color: "var(--mantine-color-text)" }}>{sandboxId}</Text>{" "}
           to confirm.
         </Text>
         <Input
@@ -55,15 +55,16 @@ export function ConfirmDestroyDialog({
           onChange={(event) => setTyped(event.target.value)}
           placeholder={sandboxId}
           disabled={busy}
-          className="w-full font-mono"
+          w="100%"
+          styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
           autoFocus
         />
         {busy || logLines.length > 0 ? (
-          <div className="mt-3">
+          <Box mt="md">
             <StreamLogPane lines={logLines} />
-          </div>
+          </Box>
         ) : null}
-        <div className="mt-4 flex justify-end gap-2">
+        <Group justify="flex-end" gap="sm" mt="lg">
           <Button
             variant="subtle"
             onClick={close}
@@ -79,7 +80,7 @@ export function ConfirmDestroyDialog({
           >
             {busy ? "Destroying…" : "Destroy sandbox"}
           </Button>
-        </div>
+        </Group>
       </Modal>
     </>
   );

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { ExternalLink, RotateCw } from "lucide-react";
-import { Button, Input, Loader, Select } from "@mantine/core";
+import { Box, Button, Flex, Group, Input, Loader, Paper, Select, Text } from "@mantine/core";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { previewScopes } from "@/pages/sandbox/SandboxHeader";
 
@@ -50,11 +50,11 @@ export function PreviewTab() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
-        <label className="text-[11px] text-ink-faint">scope</label>
+    <Box style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
+      <Flex align="center" gap="sm" wrap="wrap" px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-neutral-3)", background: "var(--mantine-color-white)" }}>
+        <Text component="label" fz={11} c="dimmed">scope</Text>
         <Select
-          className="w-52"
+          w={208}
           value={scope}
           onChange={(value) => apply({ scope: value ?? "shared" })}
           data={[
@@ -62,9 +62,7 @@ export function PreviewTab() {
             ...(scopeEntry || scope === "shared" ? [] : [{ value: scope, label: `isolated · ${scope}` }]),
           ]}
         />
-        <label className="text-[11px] text-ink-faint" htmlFor="preview-port">
-          port
-        </label>
+        <Text component="label" htmlFor="preview-port" fz={11} c="dimmed">port</Text>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -76,15 +74,14 @@ export function PreviewTab() {
             value={portDraft}
             onChange={(event) => setPortDraft(event.target.value)}
             placeholder="5173"
-            className="w-20 font-mono"
+            w={80}
+            styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
             inputMode="numeric"
           />
         </form>
-        <label className="text-[11px] text-ink-faint" htmlFor="preview-path">
-          path
-        </label>
+        <Text component="label" htmlFor="preview-path" fz={11} c="dimmed">path</Text>
         <form
-          className="min-w-0 flex-1"
+          style={{ flex: 1, minWidth: 0 }}
           onSubmit={(event) => {
             event.preventDefault();
             apply({ path: pathDraft.trim() === "" ? "/" : pathDraft.trim() });
@@ -95,7 +92,8 @@ export function PreviewTab() {
             value={pathDraft}
             onChange={(event) => setPathDraft(event.target.value)}
             placeholder="/"
-            className="w-full font-mono"
+            w="100%"
+            styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
           />
         </form>
         <Button
@@ -117,24 +115,24 @@ export function PreviewTab() {
           <ExternalLink size={12} />
           tab
         </Button>
-      </div>
+      </Flex>
 
       {isolated ? (
-        <div className="border-b border-warn/40 bg-warn-soft px-3 py-1 text-[11px] text-ink">
-          Isolated session: the server must bind <span className="font-mono">0.0.0.0</span>{" "}
-          or the workspace IP — <span className="font-mono">127.0.0.1</span> is not
+        <Box px="md" py={4} fz={11} style={{ borderBottom: "1px solid var(--mantine-color-warning-3)", background: "var(--mantine-color-warning-0)" }}>
+          Isolated session: the server must bind <Text span ff="monospace">0.0.0.0</Text>{" "}
+          or the workspace IP — <Text span ff="monospace">127.0.0.1</Text> is not
           reachable from outside the namespace.
-        </div>
+        </Box>
       ) : null}
 
-      <div className="relative min-h-0 flex-1 bg-app" aria-busy={isLoading}>
+      <Box style={{ position: "relative", flex: 1, minHeight: 0, background: "var(--mantine-color-warm-0)" }} aria-busy={isLoading}>
         {previewUrl ? (
           <>
             {isLoading ? (
-              <div className="absolute top-0 w-full flex items-center gap-2 bg-surface/90 px-3 py-1.5 text-[11px] text-ink-mid" role="status">
+              <Group gap="sm" px="md" py={6} fz={11} c="dimmed" role="status" style={{ position: "absolute", top: 0, width: "100%", background: "var(--mantine-color-white)", zIndex: 1 }}>
                 <Loader size="xs" />
                 Loading preview…
-              </div>
+              </Group>
             ) : null}
             <iframe
               key={`${previewUrl}-${reloadKey}`}
@@ -144,20 +142,20 @@ export function PreviewTab() {
               allow=""
               referrerPolicy="no-referrer"
               title={`preview of ${sandboxId} port ${port}`}
-              className="h-full w-full border-0 bg-white"
+              style={{ width: "100%", height: "100%", border: 0, background: "var(--mantine-color-white)" }}
             />
           </>
         ) : (
-          <div className="mx-auto mt-16 max-w-md rounded-lg border border-line bg-surface p-8 text-center">
-            <div className="text-sm font-semibold">Pick a port to preview</div>
-            <p className="mt-2 text-xs text-ink-mid">
+          <Paper withBorder maw={448} mx="auto" mt={64} p="xl" ta="center">
+            <Text size="sm" fw={600}>Pick a port to preview</Text>
+            <Text mt="sm" size="xs" c="dimmed">
               Anything serving HTTP inside the sandbox renders here through{" "}
-              <span className="font-mono">/s/{sandboxId}/…</span> — start a
+              <Text span ff="monospace">/s/{sandboxId}/…</Text> — start a
               server in the Terminal tab, then enter its port above.
-            </p>
-          </div>
+            </Text>
+          </Paper>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }

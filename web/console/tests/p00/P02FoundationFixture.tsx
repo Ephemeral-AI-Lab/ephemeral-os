@@ -1,4 +1,4 @@
-import { Button, Drawer, Modal, Text, TextInput, Tooltip } from "@mantine/core";
+import { Button, Drawer, Modal, Paper, Text, TextInput, Tooltip } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { createRoot } from "react-dom/client";
 import { useState } from "react";
@@ -23,24 +23,24 @@ function FoundationSpecimen() {
           </Text>
           <h1>Shared provider, stable legacy surface</h1>
           <p>
-            One root owns Mantine overlays while the existing Tailwind shell stays readable during migration.
+            One root owns Mantine overlays while the shared shell stays readable during migration.
           </p>
         </div>
         <Button data-testid="mantine-action">Mantine action</Button>
       </header>
 
       <div className={styles.grid}>
-        <section aria-label="Legacy compatibility sentinel" className="rounded-md border border-line bg-surface p-3 shadow-sm">
+        <Paper aria-label="Legacy compatibility sentinel" p="md" shadow="sm" withBorder>
           <Text c="dimmed" fw={700} size="xs" tt="uppercase">
-            Unchanged legacy utility surface
+            Shared component surface
           </Text>
-          <p className="mt-2 text-sm text-ink">
-            This sentinel intentionally retains the current Tailwind classes while Mantine is present.
-          </p>
-          <button className="rounded border border-line bg-surface px-2 py-1 text-xs text-ink hover:bg-surface-hover" type="button">
+          <Text mt="sm" size="sm">
+            This sentinel proves the shell remains usable while Mantine owns visual primitives.
+          </Text>
+          <Button mt="sm" size="compact-xs" variant="default" type="button">
             Legacy control
-          </button>
-        </section>
+          </Button>
+        </Paper>
 
         <section aria-label="Mantine overlay controls" className={styles.controls}>
           <Button onClick={() => setModalOpened(true)} variant="default">

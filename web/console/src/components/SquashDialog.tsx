@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layers } from "lucide-react";
-import { Button, Modal, Text } from "@mantine/core";
+import { Button, Code, Group, Modal, Text } from "@mantine/core";
 import { rpcStream, systemScope } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
 import { StreamLogPane } from "@/components/StreamLogPane";
@@ -69,34 +69,34 @@ export function SquashDialog({
         opened={open}
         onClose={() => !busy && setOpen(false)}
         title={
-          <span className="flex items-center gap-1.5">
-            <Layers size={14} className="text-accent" />
+          <Group gap={6}>
+            <Layers size={14} color="var(--mantine-color-eyeBlue-7)" />
             Squash layer stack
-          </span>
+          </Group>
         }
         centered
         closeOnClickOutside={!busy}
         closeOnEscape={!busy}
       >
         <Text size="sm" c="dimmed">
-          Squashes every squashable block of <span className="font-mono text-ink">{sandboxId}</span>&apos;s
+          Squashes every squashable block of <Text span ff="monospace" style={{ color: "var(--mantine-color-text)" }}>{sandboxId}</Text>&apos;s
           published layers and live-remounts its sessions.
           {typeof layerCount === "number" ? <> Current stack: {layerCount} layers.</> : null}
         </Text>
         {busy || logs.length > 0 ? <StreamLogPane lines={logs} /> : null}
         {result ? (
-          <div className="mt-2 rounded border border-ok/40 bg-ok-soft p-2 font-mono text-xs text-ink">
+          <Code block mt="sm" p="sm" style={{ border: "1px solid var(--mantine-color-success-3)", background: "var(--mantine-color-success-0)", color: "var(--mantine-color-text)" }}>
             {JSON.stringify(result)}
-          </div>
+          </Code>
         ) : null}
-        <div className="mt-4 flex justify-end gap-2">
+        <Group justify="flex-end" gap="sm" mt="lg">
           <Button variant="subtle" onClick={() => setOpen(false)} disabled={busy}>
             Close
           </Button>
           <Button variant="filled" onClick={() => void run()} disabled={busy}>
             {busy ? "Squashing…" : "Squash"}
           </Button>
-        </div>
+        </Group>
       </Modal>
     </>
   );

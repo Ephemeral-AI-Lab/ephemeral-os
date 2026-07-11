@@ -1,31 +1,61 @@
-@import "tailwindcss";
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-@theme {
-  --color-app: #f7f8fa;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f1f3f6;
-  --color-line: #e3e6eb;
-  --color-ink: #1a1d21;
-  --color-ink-mid: #57606d;
-  --color-ink-faint: #8a93a2;
-  --color-accent: #2563eb;
-  --color-accent-soft: #eff4ff;
-  --color-ok: #16a34a;
-  --color-ok-soft: #ecfdf3;
-  --color-run: #2563eb;
-  --color-run-soft: #eff4ff;
-  --color-warn: #d97706;
-  --color-warn-soft: #fffaeb;
-  --color-idle: #6b7280;
-  --color-idle-soft: #f3f4f6;
-  --color-danger: #dc2626;
-  --color-danger-soft: #fef2f2;
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+ol,
+ul,
+menu,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
 
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas,
-    monospace;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
 
-  --text-base: 13.5px;
+ol,
+ul,
+menu {
+  padding: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block;
 }
 
 html {
@@ -38,9 +68,9 @@ body {
   height: 100%;
   min-height: 100%;
   overflow: hidden;
-  background-color: var(--color-app);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
+  background-color: var(--mantine-color-warm-0);
+  color: var(--mantine-color-text);
+  font-family: var(--mantine-font-family);
   font-size: 13.5px;
   line-height: 1.45;
 }
@@ -215,6 +245,6 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--mantine-color-eyeBlue-7);
   outline-offset: 1px;
 }

@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 const VIEWPORTS = [
   [375, 812],
+  [768, 1024],
+  [1024, 768],
   [1440, 900],
 ] as const;
 

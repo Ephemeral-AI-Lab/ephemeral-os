@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { MantineProvider } from "@mantine/core";
+import { Box, Grid, MantineProvider, Paper, Text, Title } from "@mantine/core";
 import "@mantine/core/styles.css";
 import { Notifications } from "@mantine/notifications";
 import "@mantine/notifications/styles.css";
@@ -58,29 +58,34 @@ function App() {
       <Notifications limit={4} position="bottom-right" />
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={["/events"]}>
-          <main className="min-h-screen bg-app p-4 text-ink">
-            <header className="mb-4 border-b border-line pb-3">
-              <p className="font-mono text-xs text-ink-faint">P00 · sanitized deterministic fixture</p>
-              <h1 className="text-lg font-semibold">Trust-state evidence</h1>
-            </header>
-            <div className="grid gap-4 xl:grid-cols-2">
-              <section className="min-h-80 overflow-hidden rounded-md border border-line bg-surface">
-                <h2 className="border-b border-line px-3 py-2 text-sm font-semibold">Events — tail paused</h2>
-                <div className="h-64">
+          <Box component="main" mih="100vh" bg="warm.0" p="md">
+            <Box component="header" mb="md" pb="sm" style={{ borderBottom: "1px solid var(--mantine-color-neutral-3)" }}>
+              <Text ff="monospace" size="xs" c="dimmed">P00 · sanitized deterministic fixture</Text>
+              <Title order={1} size="h4">Trust-state evidence</Title>
+            </Box>
+            <Grid gutter="md">
+              <Grid.Col span={{ base: 12, xl: 6 }}>
+                <Paper withBorder mih={320} style={{ overflow: "hidden" }}>
+                <Title order={2} size="sm" px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-neutral-3)" }}>Events — tail paused</Title>
+                <Box h={256}>
                   <Routes>
                     <Route element={<SandboxOutlet />}>
                       <Route path="/events" element={<EventsView />} />
                     </Route>
                   </Routes>
-                </div>
-              </section>
-              <section className="rounded-md border border-line bg-surface p-3">
-                <h2 className="mb-2 text-sm font-semibold">Terminal publication result</h2>
+                </Box>
+                </Paper>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, xl: 6 }}>
+                <Paper withBorder p="md">
+                <Title order={2} size="sm" mb="sm">Terminal publication result</Title>
                 <RejectedCommand />
-              </section>
-              <section className="min-h-96 overflow-hidden rounded-md border border-line bg-surface xl:col-span-2">
-                <h2 className="border-b border-line px-3 py-2 text-sm font-semibold">Files — conflict retains local draft</h2>
-                <div className="h-80">
+                </Paper>
+              </Grid.Col>
+              <Grid.Col span={12}>
+                <Paper withBorder mih={384} style={{ overflow: "hidden" }}>
+                <Title order={2} size="sm" px="md" py="sm" style={{ borderBottom: "1px solid var(--mantine-color-neutral-3)" }}>Files — conflict retains local draft</Title>
+                <Box h={320}>
                   <Routes>
                     <Route element={<SandboxOutlet />}>
                       <Route
@@ -89,10 +94,11 @@ function App() {
                       />
                     </Route>
                   </Routes>
-                </div>
-              </section>
-            </div>
-          </main>
+                </Box>
+                </Paper>
+              </Grid.Col>
+            </Grid>
+          </Box>
         </MemoryRouter>
       </QueryClientProvider>
     </MantineProvider>

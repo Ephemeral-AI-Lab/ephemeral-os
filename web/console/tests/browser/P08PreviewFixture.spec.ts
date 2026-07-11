@@ -9,6 +9,10 @@ async function openPreview(page: Page, body: string, status = 200) {
   await page.route(`**${previewPrefix}/**`, (route) => route.fulfill({ status, contentType: "text/html", body }));
   await installAtlasApi(page);
   await page.goto(`/atlas.html?route=${encodeURIComponent(previewRoute)}`);
+  await page.waitForFunction(() => {
+    const logo = document.querySelector('img[src="/assets/images/logo.png"]');
+    return logo instanceof HTMLImageElement && logo.complete && logo.naturalWidth > 0;
+  });
   return page.frameLocator(`iframe[title="${iframeTitle}"]`);
 }
 

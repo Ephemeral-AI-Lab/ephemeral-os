@@ -1,5 +1,4 @@
-import { Tooltip } from "@mantine/core";
-import { cn } from "@/lib/cn";
+import { Box, Text, Tooltip } from "@mantine/core";
 import { useHealth } from "@/api/health";
 
 /**
@@ -23,25 +22,28 @@ export function HealthDot({
       : status === "unreachable"
         ? `daemon_http unreachable: ${health.data?.detail ?? ""}`
         : "probing daemon_http…";
+  const color =
+    status === "ok"
+      ? "var(--mantine-color-success-6)"
+      : status === "unreachable"
+        ? "var(--mantine-color-danger-6)"
+        : "var(--mantine-color-warm-4)";
+
   return (
     <Tooltip label={label} openDelay={300}>
-      <span className="inline-flex items-center gap-1">
-        <span
-          className={cn(
-            "inline-block size-2 rounded-full",
-            status === "ok" && "bg-ok",
-            status === "unreachable" && "bg-danger",
-            !status && "bg-idle/40",
-          )}
+      <Box component="span" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+        <Box
+          component="span"
+          style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: color, opacity: status ? 1 : 0.4 }}
           role="img"
           aria-label={label}
         />
         {showLabel ? (
-          <span className="text-xs text-ink-mid">
+          <Text component="span" size="xs" c="dimmed">
             {status === "ok" ? "http ok" : status === "unreachable" ? "http down" : "http ?"}
-          </span>
+          </Text>
         ) : null}
-      </span>
+      </Box>
     </Tooltip>
   );
 }

@@ -1,6 +1,5 @@
 import { Badge } from "@mantine/core";
 import type { CommandStatus, SandboxState } from "@/api/types";
-import { cn } from "@/lib/cn";
 
 type Tone = "ok" | "run" | "warn" | "idle" | "danger";
 
@@ -31,11 +30,9 @@ const commandTones: Record<CommandStatus, Tone> = {
 export function StateBadge({
   state,
   label,
-  className,
 }: {
   state: SandboxState | CommandStatus | Tone;
   label?: string;
-  className?: string;
 }) {
   const tone: Tone =
     state in sandboxTones
@@ -45,7 +42,6 @@ export function StateBadge({
         : (state as Tone);
   return (
     <Badge
-      className={cn("inline-flex", className)}
       color={toneColors[tone]}
       variant="light"
       leftSection={

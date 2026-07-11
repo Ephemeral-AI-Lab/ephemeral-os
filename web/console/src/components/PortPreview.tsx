@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { AppWindow } from "lucide-react";
-import { Button, Input, Popover, Select } from "@mantine/core";
+import { Button, Input, Popover, Select, Stack, Text } from "@mantine/core";
 
 export function previewPath(
   sandboxId: string,
@@ -59,14 +59,14 @@ export function PortPreview({
         )}
       </Popover.Target>
       <Popover.Dropdown w={256}>
-        <div className="flex flex-col gap-2">
-          <label className="text-xs text-ink-mid">scope</label>
+        <Stack gap="sm">
+          <Text component="label" size="xs" c="dimmed">scope</Text>
           <Select
             value={scope}
             onChange={(value) => setScope(value ?? defaultScope)}
             data={scopeList.map((entry) => ({ value: entry.id, label: entry.label }))}
           />
-          <label className="mt-1 text-xs text-ink-mid">port</label>
+          <Text component="label" size="xs" c="dimmed" mt={4}>port</Text>
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -78,26 +78,28 @@ export function PortPreview({
               onChange={(event) => setPort(event.target.value)}
               placeholder="5173"
               inputMode="numeric"
-              className="w-full font-mono"
+              w="100%"
+              styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
               autoFocus
             />
           </form>
           {selected?.isolated ? (
-            <p className="text-[11px] leading-4 text-warn">
+            <Text fz={11} lh={1.333} c="warning">
               Isolated session: the server must bind 0.0.0.0 or the workspace
               IP — 127.0.0.1 is not reachable.
-            </p>
+            </Text>
           ) : null}
           <Button
             variant="filled"
             size="compact-xs"
-            className="mt-1 justify-center"
+            mt={4}
+            fullWidth
             disabled={!portValid}
             onClick={openPreview}
           >
             Open preview
           </Button>
-        </div>
+        </Stack>
       </Popover.Dropdown>
     </Popover>
   );

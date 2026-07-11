@@ -1,5 +1,3 @@
-import { cn } from "@/lib/cn";
-
 /**
  * A fixed-size inline-SVG sparkline. Plain SVG by design (design.md):
  * uPlot is overkill at this size, and a fixed width/height guarantees
@@ -10,13 +8,11 @@ export function ResourceSparkline({
   width = 72,
   height = 18,
   label,
-  className,
 }: {
   values: number[];
   width?: number;
   height?: number;
   label?: string;
-  className?: string;
 }) {
   const points = sparklinePoints(values, width, height);
   return (
@@ -26,7 +22,7 @@ export function ResourceSparkline({
       viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={label}
-      className={cn("shrink-0 text-accent", className)}
+      style={{ flexShrink: 0, color: "var(--mantine-color-eyeBlue-7)" }}
     >
       {points ? (
         <polyline
@@ -43,7 +39,7 @@ export function ResourceSparkline({
           y1={height - 2}
           x2={width - 1}
           y2={height - 2}
-          stroke="var(--color-line)"
+          stroke="var(--mantine-color-neutral-3)"
           strokeWidth="1.2"
         />
       )}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { cn } from "@/lib/cn";
+import { Box, Text } from "@mantine/core";
 
 /**
  * Renders `_stream_logs` progress lines (streamed over SSE) as a
@@ -7,12 +7,10 @@ import { cn } from "@/lib/cn";
  */
 export function StreamLogPane({
   lines,
-  className,
-  maxHeightClass = "max-h-40",
+  maxHeight = 160,
 }: {
   lines: string[];
-  className?: string;
-  maxHeightClass?: string;
+  maxHeight?: number | string;
 }) {
   const paneRef = useRef<HTMLDivElement>(null);
 
@@ -22,23 +20,30 @@ export function StreamLogPane({
   }, [lines.length]);
 
   return (
-    <div
+    <Box
       ref={paneRef}
-      className={cn(
-        "overflow-y-auto rounded border border-line bg-app p-2 font-mono text-[11px] leading-relaxed text-ink-mid",
-        maxHeightClass,
-        className,
-      )}
+      style={{
+        maxHeight,
+        overflowY: "auto",
+        border: "1px solid var(--mantine-color-neutral-3)",
+        borderRadius: "var(--mantine-radius-sm)",
+        background: "var(--mantine-color-warm-0)",
+        padding: "var(--mantine-spacing-sm)",
+        color: "var(--mantine-color-dimmed)",
+        fontFamily: "var(--mantine-font-family-monospace)",
+        fontSize: 11,
+        lineHeight: 1.625,
+      }}
     >
       {lines.length === 0 ? (
-        <span className="text-ink-faint">waiting for progress…</span>
+        <Text component="span" fz="inherit" c="dimmed">waiting for progress…</Text>
       ) : (
         lines.map((line, index) => (
-          <div key={index} className="whitespace-pre-wrap break-all">
+          <Box key={index} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
             {line}
-          </div>
+          </Box>
         ))
       )}
-    </div>
+    </Box>
   );
 }
