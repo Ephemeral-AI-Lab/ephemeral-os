@@ -12,7 +12,7 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run test:fixture:serve",
-    url: "http://127.0.0.1:4173",
+    url: "http://127.0.0.1:4173/atlas.html",
     reuseExistingServer: !process.env.CI,
   },
 });
