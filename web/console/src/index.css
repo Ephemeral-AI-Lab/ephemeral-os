@@ -29,15 +29,21 @@
 }
 
 html {
+  min-height: 100%;
   font-size: 14px;
 }
 
 body {
+  min-height: 100%;
   background-color: var(--color-app);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: 13.5px;
   line-height: 1.45;
+}
+
+#root {
+  min-height: 100%;
 }
 
 :focus-visible {
