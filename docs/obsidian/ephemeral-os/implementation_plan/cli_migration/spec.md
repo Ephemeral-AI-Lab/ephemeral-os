@@ -5,11 +5,18 @@ tags:
   - cli
   - migration
   - spec
-status: draft
-updated: 2026-07-03
+status: superseded
+updated: 2026-07-11
+superseded_by: ../operation-migration/spec.md
 ---
 
 # CLI Split Migration Spec
+
+> [!warning] Superseded
+> This pre-cutover design record is retained as historical evidence. The
+> adopted operation-ownership migration specification now owns the architecture,
+> dependency law, and current source layout; the public CLI behavior remains
+> covered by the Phase 0 characterization evidence and final verification.
 
 Split the single `sandbox-cli` binary (three execution spaces inside
 `crates/sandbox-gateway`) into two purpose-built binaries:

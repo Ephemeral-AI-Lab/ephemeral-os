@@ -4,11 +4,17 @@ tags:
   - ephemeral-os
   - cli
   - reference
-status: reference
-updated: 2026-07-03
+status: superseded
+updated: 2026-07-11
+superseded_by: ../operation-migration/spec.md
 ---
 
 # CLI Operation Reference — `sandbox-manager-cli` / `sandbox-runtime-cli`
+
+> [!warning] Superseded
+> This pre-cutover operation reference is retained as historical evidence. The
+> adopted operation-ownership migration specification and its Phase 0/final
+> verification evidence now own the current contract and source layout.
 
 Every CLI operation, its invocation variants, and the expected output.
 This is the behavioral contract for the [[spec|CLI split migration]]:

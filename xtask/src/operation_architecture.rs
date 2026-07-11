@@ -331,20 +331,20 @@ fn run_behavior_proofs(root: &Path) -> Result<()> {
             "sandbox-console",
             "--test",
             "console",
-            "unknown_operation_is_rejected_before_gateway_transport",
+            "rpc_tests::unknown_operation_is_rejected_before_gateway_transport",
             "--",
             "--exact",
-        ], Some("unknown_operation_is_rejected_before_gateway_transport")),
+        ], Some("rpc_tests::unknown_operation_is_rejected_before_gateway_transport")),
         (&[
             "test",
             "-p",
             "sandbox-console",
             "--test",
             "console",
-            "internal_operation_is_rejected_before_gateway_transport",
+            "rpc_tests::internal_operation_is_rejected_before_gateway_transport",
             "--",
             "--exact",
-        ], Some("internal_operation_is_rejected_before_gateway_transport")),
+        ], Some("rpc_tests::internal_operation_is_rejected_before_gateway_transport")),
     ];
     for (arguments, expected) in proofs {
         let output = run_cargo(root, arguments)?;
