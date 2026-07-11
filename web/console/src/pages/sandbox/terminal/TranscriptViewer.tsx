@@ -1,12 +1,12 @@
+import { Alert, Box, Text } from "@mantine/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { rpc, sandboxScope } from "@/api/rpc";
 import type { CommandOutput } from "@/api/types";
 import { absorbOutput, transcriptFor } from "@/pages/sandbox/terminal/ledger";
+import { useTranscriptPoller } from "@/pages/sandbox/terminal/TranscriptPollProvider";
 
 const PAGE_LIMIT = 1000;
-const FAST_TAIL_MS = 400;
-const SETTLED_TAIL_MS = 2000;
 
 export interface TranscriptHandle {
   nudge: () => void;
@@ -33,11 +33,9 @@ export function TranscriptViewer({
 }) {
   const [, setVersion] = useState(0);
   const stateRef = useRef(transcriptFor(commandSessionId, sandboxId));
-  const pinnedRef = useRef(true);
   const fetchingRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const runningRef = useRef(running);
-  runningRef.current = running;
+  const scrollSettleTimerRef = useRef<number | null>(null);
 
   const fetchPages = useCallback(async () => {
     if (fetchingRef.current) return;
@@ -62,8 +60,12 @@ export function TranscriptViewer({
         const more = state.fetchedTo < state.totalLines;
         if (!more) break;
       }
-    } catch {
-      // Poll errors keep the last good transcript; the next tick retries.
+      stateRef.current.error = null;
+    } catch (error) {
+      // Poll errors keep the last good transcript; the coordinator retries.
+      stateRef.current.error =
+        error instanceof Error ? error.message : "Transcript refresh failed.";
+      setVersion((version) => version + 1);
     } finally {
       fetchingRef.current = false;
     }
@@ -71,17 +73,22 @@ export function TranscriptViewer({
 
   useEffect(() => {
     void fetchPages();
-    if (!running) return;
-    const interval = setInterval(
-      () => void fetchPages(),
-      document.hidden ? SETTLED_TAIL_MS : FAST_TAIL_MS,
-    );
-    return () => clearInterval(interval);
-  }, [fetchPages, running]);
+  }, [fetchPages]);
+
+  useTranscriptPoller(`${sandboxId}:${commandSessionId}`, running, fetchPages);
 
   useEffect(() => {
     registerNudge?.(() => void fetchPages());
   }, [registerNudge, fetchPages]);
+
+  useEffect(
+    () => () => {
+      if (scrollSettleTimerRef.current !== null) {
+        window.clearTimeout(scrollSettleTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const state = stateRef.current;
   const count = state.lines.length;
@@ -90,29 +97,58 @@ export function TranscriptViewer({
     count,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => 18,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 18,
     overscan: 30,
   });
 
   useEffect(() => {
-    if (pinnedRef.current && count > 0) {
+    if (state.tailPinned !== false && count > 0) {
       virtualizer.scrollToIndex(count - 1, { align: "end" });
     }
-  }, [count, virtualizer]);
+  }, [count, state.tailPinned, virtualizer]);
 
   const onScroll = () => {
     const pane = scrollRef.current;
     if (!pane) return;
-    pinnedRef.current =
-      pane.scrollHeight - pane.scrollTop - pane.clientHeight < 40;
+    // TanStack Virtual scrolls while it reconciles variable-height rows.
+    // Settle before treating a position as user intent; transient programmatic
+    // positions during a paged catch-up must not disable tail following.
+    if (scrollSettleTimerRef.current !== null) {
+      window.clearTimeout(scrollSettleTimerRef.current);
+    }
+    scrollSettleTimerRef.current = window.setTimeout(() => {
+      const current = scrollRef.current;
+      if (!current) return;
+      const tailPinned =
+        current.scrollHeight - current.scrollTop - current.clientHeight < 40;
+      if (stateRef.current.tailPinned !== tailPinned) {
+        stateRef.current.tailPinned = tailPinned;
+        setVersion((version) => version + 1);
+      }
+    }, 48);
   };
 
   return (
-    <div
+    <Box
       ref={scrollRef}
       onScroll={onScroll}
-      className="h-64 overflow-y-auto bg-app px-2 py-1 font-mono text-xs leading-[18px] text-ink"
+      data-terminal-transcript
+      data-transcript-scroll-owner
+      p="sm"
+      style={{
+        height: "16rem",
+        overflowY: "auto",
+        fontFamily: "var(--mantine-font-family-monospace)",
+        fontSize: "var(--mantine-font-size-xs)",
+        lineHeight: "18px",
+      }}
     >
-      <div
+      {state.error ? (
+        <Alert data-terminal-transcript-stale color="yellow" mb="xs" title="Transcript refresh delayed">
+          Showing the last fetched output while the connection recovers.
+        </Alert>
+      ) : null}
+      <Box
         style={{
           height: `${virtualizer.getTotalSize()}px`,
           width: "100%",
@@ -120,32 +156,41 @@ export function TranscriptViewer({
         }}
       >
         {virtualizer.getVirtualItems().map((item) => (
-          <div
+          <Text
             key={item.key}
+            data-terminal-line
+            data-index={item.index}
+            ref={virtualizer.measureElement}
             style={{
               position: "absolute",
               top: 0,
               left: 0,
               width: "100%",
               transform: `translateY(${item.start}px)`,
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
             }}
-            className="whitespace-pre-wrap break-all"
           >
             {state.lines[item.index] ?? ""}
-          </div>
+          </Text>
         ))}
-      </div>
+      </Box>
       {count === 0 ? (
-        <div className="text-ink-faint">
+        <Text c="dimmed" size="xs">
           {running ? "waiting for output…" : "no output"}
-        </div>
+        </Text>
       ) : null}
-      <div className="sticky bottom-0 flex justify-end">
-        <span className="rounded-tl bg-surface/90 px-1 text-[10px] text-ink-faint">
+      <Box style={{ position: "sticky", bottom: 0, display: "flex", justifyContent: "flex-end" }}>
+        <Text
+          c="dimmed"
+          size="10px"
+          px={4}
+          style={{ background: "var(--mantine-color-body)", opacity: 0.9 }}
+        >
           lines {state.fetchedTo} of {state.totalLines}
           {running ? " · tailing" : ""}
-        </span>
-      </div>
-    </div>
+        </Text>
+      </Box>
+    </Box>
   );
 }

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { CornerDownLeft } from "lucide-react";
-import { Button } from "@mantine/core";
+import { ActionIcon, Group, Paper, Text, TextInput } from "@mantine/core";
 import { rpc, sandboxScope } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
 
@@ -25,6 +25,7 @@ export function StdinBar({
   nudge: () => void;
 }) {
   const [text, setText] = useState("");
+  const controlPendingRef = useRef(false);
   const { showError } = useErrorToast();
 
   const write = async (stdin: string) => {
@@ -47,10 +48,30 @@ export function StdinBar({
     void write(`${line}\n`);
   };
 
+  const sendControl = (control: typeof CTRL_C | typeof CTRL_D) => {
+    if (controlPendingRef.current) return;
+    controlPendingRef.current = true;
+    void write(control).finally(() => {
+      controlPendingRef.current = false;
+    });
+  };
+
   return (
-    <div className="flex items-center gap-1 border-t border-line bg-surface px-2 py-1">
-      <span className="font-mono text-xs text-ink-faint">stdin</span>
-      <input
+    <Paper
+      component="form"
+      data-terminal-stdin
+      p="xs"
+      radius={0}
+      withBorder
+      onSubmit={(event) => {
+        event.preventDefault();
+        submitLine();
+      }}
+    >
+      <Group gap="xs" wrap="nowrap">
+      <Text c="dimmed" ff="monospace" size="xs">stdin</Text>
+      <TextInput
+        aria-label="Standard input"
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={(event) => {
@@ -60,37 +81,39 @@ export function StdinBar({
           } else if (event.key === "c" && event.ctrlKey) {
             event.preventDefault();
             event.stopPropagation();
-            void write("\u0003");
+            if (!event.repeat) sendControl(CTRL_C);
           } else if (event.key === "d" && event.ctrlKey) {
             event.preventDefault();
             event.stopPropagation();
-            void write("\u0004");
+            if (!event.repeat) sendControl(CTRL_D);
           }
         }}
         placeholder="type a line, Enter sends it"
-        className="h-6 min-w-0 flex-1 border-none bg-transparent px-1 font-mono text-xs text-ink outline-none placeholder:text-ink-faint"
+        style={{ flex: 1, minWidth: 0 }}
+        styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
       />
-      <Button size="compact-xs" variant="subtle" onClick={submitLine} title="send line">
+      <ActionIcon aria-label="Send line" type="submit" variant="subtle" title="send line">
         <CornerDownLeft size={12} />
-      </Button>
-      <Button
-        size="compact-xs"
+      </ActionIcon>
+      <ActionIcon
+        aria-label="Send Ctrl-C"
         variant="subtle"
-        onClick={() => void write("\u0003")}
+        onClick={() => sendControl(CTRL_C)}
         title="send Ctrl-C (SIGINT)"
-        className="font-mono"
+        styles={{ root: { fontFamily: "var(--mantine-font-family-monospace)" } }}
       >
         ^C
-      </Button>
-      <Button
-        size="compact-xs"
+      </ActionIcon>
+      <ActionIcon
+        aria-label="Send Ctrl-D"
         variant="subtle"
-        onClick={() => void write("\u0004")}
+        onClick={() => sendControl(CTRL_D)}
         title="send Ctrl-D (EOF)"
-        className="font-mono"
+        styles={{ root: { fontFamily: "var(--mantine-font-family-monospace)" } }}
       >
         ^D
-      </Button>
-    </div>
+      </ActionIcon>
+      </Group>
+    </Paper>
   );
 }

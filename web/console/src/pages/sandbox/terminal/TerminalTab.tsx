@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { Box, Button, Center, Flex, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
+import { PanelLeft } from "lucide-react";
 import { rpc, sandboxScope } from "@/api/rpc";
 import type { CommandOutput } from "@/api/types";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
@@ -8,6 +11,7 @@ import { previewScopes } from "@/pages/sandbox/SandboxHeader";
 import { CommandCard } from "@/pages/sandbox/terminal/CommandCard";
 import { CommandComposer } from "@/pages/sandbox/terminal/CommandComposer";
 import { SessionSidebar } from "@/pages/sandbox/terminal/SessionSidebar";
+import { TranscriptPollProvider } from "@/pages/sandbox/terminal/TranscriptPollProvider";
 import {
   entryFromExec,
   entryFromSnapshot,
@@ -25,8 +29,10 @@ export function TerminalTab() {
   const selectedSession = searchParams.get("session");
   const [ledger, setLedger] = useState<LedgerEntry[]>(() => loadLedger(sandboxId));
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [sessionsOpen, setSessionsOpen] = useState(false);
   const ledgerPaneRef = useRef<HTMLDivElement>(null);
   const finalizingRef = useRef<Set<string>>(new Set());
+  const narrow = useMediaQuery("(max-width: 47.99em)");
 
   useEffect(() => {
     setLedger(loadLedger(sandboxId));
@@ -151,30 +157,61 @@ export function TerminalTab() {
   const scopes = previewScopes(snapshot ?? undefined);
 
   return (
-    <div className="flex h-full min-h-0">
+    <TranscriptPollProvider>
+      <Flex data-terminal-workspace h="100%" mih={0} miw={0} style={{ flex: 1, overflow: "hidden" }}>
       <SessionSidebar
         workspaces={workspaces}
         selected={selectedSession}
+        narrow={narrow}
+        opened={sessionsOpen}
+        onClose={() => setSessionsOpen(false)}
         onSelect={(sessionId) => {
           const next = new URLSearchParams(searchParams);
           if (sessionId) next.set("session", sessionId);
           else next.delete("session");
           setSearchParams(next, { replace: true });
+          setSessionsOpen(false);
         }}
       />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div ref={ledgerPaneRef} className="min-h-0 flex-1 overflow-y-auto p-3">
+      <Flex direction="column" mih={0} miw={0} style={{ flex: 1 }}>
+        <Paper component="header" data-terminal-toolbar px="md" py="sm" radius={0} withBorder>
+          <Group justify="space-between" wrap="wrap">
+            <Group gap="sm" wrap="nowrap">
+              {narrow ? (
+                <Button
+                  aria-label="Open sessions"
+                  leftSection={<PanelLeft size={14} />}
+                  onClick={() => setSessionsOpen(true)}
+                >
+                  Sessions
+                </Button>
+              ) : null}
+              <Box>
+                <Title order={2} size="sm">Terminal ledger</Title>
+                <Text c="dimmed" size="xs">
+                  history: {selectedSession ?? "all commands"}
+                </Text>
+              </Box>
+            </Group>
+            <Text c="dimmed" size="xs">
+              {visibleLedger.length} {visibleLedger.length === 1 ? "command" : "commands"}
+            </Text>
+          </Group>
+        </Paper>
+        <Box ref={ledgerPaneRef} data-terminal-ledger p="md" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           {visibleLedger.length === 0 ? (
-            <div className="mx-auto mt-16 max-w-md rounded-lg border border-line bg-surface p-8 text-center">
-              <div className="text-sm font-semibold">No commands yet</div>
-              <p className="mt-2 text-xs text-ink-mid">
+            <Center h="100%">
+              <Paper maw={480} p="xl" ta="center" withBorder>
+                <Title order={3} size="sm">No commands yet</Title>
+                <Text c="dimmed" mt="xs" size="xs">
                 {selectedSession
                   ? `Nothing has run in ${selectedSession} from this browser.`
                   : "Run the first command below — each command opens its own terminal."}
-              </p>
-            </div>
+                </Text>
+              </Paper>
+            </Center>
           ) : (
-            <div className="flex flex-col gap-2">
+            <Stack gap="sm">
               {visibleLedger.map((entry) => (
                 <CommandCard
                   key={entry.localId}
@@ -193,16 +230,16 @@ export function TerminalTab() {
                   previewScopes={scopes}
                 />
               ))}
-            </div>
+            </Stack>
           )}
-        </div>
+        </Box>
         <CommandComposer
           sandboxId={sandboxId}
           workspaces={workspaces}
-          targetSession={selectedSession}
           onLaunched={onLaunched}
         />
-      </div>
-    </div>
+      </Flex>
+      </Flex>
+    </TranscriptPollProvider>
   );
 }

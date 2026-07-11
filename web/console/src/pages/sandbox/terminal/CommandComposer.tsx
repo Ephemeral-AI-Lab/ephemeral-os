@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Play } from "lucide-react";
-import { Button, Input, Select } from "@mantine/core";
+import { Box, Button, Group, Paper, Select, TextInput } from "@mantine/core";
 import { rpc, sandboxScope } from "@/api/rpc";
 import type { CommandOutput } from "@/api/types";
 import type { WorkspaceSnapshot } from "@/api/observability";
@@ -19,33 +19,31 @@ const AUTO_PUBLISH = "__auto_publish__";
 export function CommandComposer({
   sandboxId,
   workspaces,
-  targetSession,
   onLaunched,
 }: {
   sandboxId: string;
   workspaces: WorkspaceSnapshot[];
-  targetSession: string | null;
   onLaunched: (cmd: string, workspaceSessionId: string | null, output: CommandOutput) => void;
 }) {
   const [cmd, setCmd] = useState("");
-  const [target, setTarget] = useState<string>(targetSession ?? AUTO_PUBLISH);
+  const [target, setTarget] = useState<string>(AUTO_PUBLISH);
   const [timeoutSeconds, setTimeoutSeconds] = useState("");
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { showError } = useErrorToast();
 
-  useEffect(() => {
-    setTarget(targetSession ?? AUTO_PUBLISH);
-  }, [targetSession]);
+  const timeout = timeoutSeconds.trim();
+  const timeoutError = timeout !== "" && (!Number.isFinite(Number(timeout)) || Number(timeout) <= 0)
+    ? "Enter a positive timeout."
+    : null;
 
   const submit = async () => {
     const text = cmd.trim();
-    if (text === "" || busy) return;
+    if (text === "" || busy || timeoutError) return;
     const workspaceSessionId = target === AUTO_PUBLISH ? null : target;
     const args: Record<string, unknown> = { cmd: text, yield_time_ms: 0 };
     if (workspaceSessionId) args["workspace_session_id"] = workspaceSessionId;
-    const timeout = timeoutSeconds.trim();
-    if (timeout !== "" && Number.isFinite(Number(timeout)) && Number(timeout) > 0) {
+    if (timeout !== "") {
       args["timeout_ms"] = Math.round(Number(timeout) * 1000);
     }
     setBusy(true);
@@ -66,58 +64,66 @@ export function CommandComposer({
   };
 
   return (
-    <form
-      className="flex min-w-0 items-center gap-2 border-t border-line bg-surface px-3 py-2"
+    <Paper
+      component="form"
+      data-terminal-composer
+      px="md"
+      py="sm"
+      radius={0}
+      withBorder
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
-      <span className="shrink-0 font-mono text-sm text-ink-faint">$</span>
-      <Input
-        ref={inputRef}
-        value={cmd}
-        onChange={(event) => setCmd(event.target.value)}
-        placeholder="run a command…"
-        className="min-w-0 flex-1 font-mono"
-        autoFocus
-      />
-      <label className="shrink-0 text-[11px] text-ink-faint" htmlFor="composer-target">
-        in
-      </label>
-      <Select
-        id="composer-target"
-        className="w-48 shrink-0"
-        value={target}
-        onChange={(value) => setTarget(value ?? AUTO_PUBLISH)}
-        data={[
-          { value: AUTO_PUBLISH, label: "auto-publish" },
-          ...workspaces.map((workspace) => ({
-            value: workspace.workspace_id,
-            label: `${workspace.workspace_id} (${workspace.network_profile})`,
-          })),
-        ]}
-      />
-      <label className="shrink-0 text-[11px] text-ink-faint" htmlFor="composer-timeout">
-        timeout (s)
-      </label>
-      <Input
-        id="composer-timeout"
-        value={timeoutSeconds}
-        onChange={(event) => setTimeoutSeconds(event.target.value)}
-        placeholder="none"
-        className="w-14 shrink-0 font-mono"
-        inputMode="numeric"
-      />
-      <Button
-        type="submit"
-        variant="filled"
-        className="shrink-0"
-        disabled={busy || cmd.trim() === ""}
-      >
-        <Play size={12} />
-        run
-      </Button>
-    </form>
+      <Group align="flex-end" gap="sm" wrap="wrap">
+        <Box style={{ flex: "1 1 20rem", minWidth: 0 }}>
+          <TextInput
+            ref={inputRef}
+            aria-label="Command"
+            label="Command"
+            value={cmd}
+            onChange={(event) => setCmd(event.target.value)}
+            placeholder="$ run a command…"
+            styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
+            autoFocus
+          />
+        </Box>
+        <Select
+          aria-label="Execution target"
+          label="Execution target"
+          value={target}
+          w={{ base: "100%", sm: 224 }}
+          onChange={(value) => setTarget(value ?? AUTO_PUBLISH)}
+          data={[
+            { value: AUTO_PUBLISH, label: "auto-publish" },
+            ...workspaces.map((workspace) => ({
+              value: workspace.workspace_id,
+              label: `${workspace.workspace_id} (${workspace.network_profile})`,
+            })),
+          ]}
+        />
+        <TextInput
+          aria-label="Timeout in seconds"
+          error={timeoutError}
+          inputMode="numeric"
+          label="Timeout (seconds)"
+          placeholder="none"
+          value={timeoutSeconds}
+          w={{ base: "100%", sm: 132 }}
+          onChange={(event) => setTimeoutSeconds(event.target.value)}
+          styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
+        />
+        <Button
+          type="submit"
+          variant="filled"
+          leftSection={<Play size={13} />}
+          loading={busy}
+          disabled={busy || cmd.trim() === "" || timeoutError !== null}
+        >
+          Run
+        </Button>
+      </Group>
+    </Paper>
   );
 }

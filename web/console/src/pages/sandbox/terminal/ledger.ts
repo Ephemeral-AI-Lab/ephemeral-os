@@ -105,6 +105,8 @@ export interface TranscriptState {
   exitCode: number | null;
   publishRejected: boolean;
   publishRejectClass: string | null;
+  error: string | null;
+  tailPinned: boolean;
 }
 
 const transcripts = new Map<string, TranscriptState>();
@@ -124,9 +126,15 @@ export function transcriptFor(
       exitCode: null,
       publishRejected: false,
       publishRejectClass: null,
+      error: null,
+      tailPinned: true,
     };
     transcripts.set(key, state);
   }
+  // Keep an existing hot-reload cache compatible with the current state
+  // shape without ever sharing a transcript across sandbox keys.
+  state.error ??= null;
+  state.tailPinned ??= true;
   return state;
 }
 

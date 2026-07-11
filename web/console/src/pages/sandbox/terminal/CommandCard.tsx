@@ -1,5 +1,6 @@
 import { useCallback, useRef } from "react";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { Box, Collapse, Group, Loader, Paper, Text, UnstyledButton } from "@mantine/core";
 import { rpc, sandboxScope } from "@/api/rpc";
 import type { CommandOutput } from "@/api/types";
 import { PortPreview } from "@/components/PortPreview";
@@ -31,6 +32,7 @@ export function CommandCard({
   previewScopes: { id: string; label: string; isolated: boolean }[];
 }) {
   const nudgeRef = useRef<() => void>(() => {});
+  const controlPendingRef = useRef(false);
   const running = entry.status === "running";
 
   const onTerminal = useCallback(
@@ -56,78 +58,88 @@ export function CommandCard({
     ((entry.endedAt ?? Date.now()) - entry.startedAt) / 1000;
 
   const frameKeyDown = (event: React.KeyboardEvent) => {
-    if (!running || !entry.commandSessionId) return;
+    if (!running || !entry.commandSessionId || event.repeat) return;
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed) return;
     if (event.ctrlKey && (event.key === "c" || event.key === "d")) {
       event.preventDefault();
+      if (controlPendingRef.current) return;
+      controlPendingRef.current = true;
       void rpc("write_command_stdin", sandboxScope(sandboxId), {
         command_session_id: entry.commandSessionId,
         stdin: event.key === "c" ? CTRL_C : CTRL_D,
         yield_time_ms: 0,
-      }).finally(() => nudgeRef.current());
+      }).finally(() => {
+        controlPendingRef.current = false;
+        nudgeRef.current();
+      });
     }
   };
 
   return (
-    <div
+    <Paper
+      component="article"
+      data-terminal-command
       id={entry.commandSessionId ? `cmd-${entry.commandSessionId}` : undefined}
-      className={`rounded-md border ${expanded ? "border-accent/50" : "border-line"} bg-surface`}
+      p={0}
+      withBorder
+      style={expanded ? { borderColor: "var(--mantine-color-eyeBlue-5)" } : undefined}
     >
-      <button
+      <UnstyledButton
+        aria-controls={entry.commandSessionId ? `terminal-${entry.commandSessionId}` : undefined}
+        aria-expanded={expanded}
+        aria-label={`${expanded ? "Collapse" : "Expand"} command ${entry.cmd}`}
+        data-terminal-command-toggle
         type="button"
         onClick={onToggle}
-        className="flex h-8 w-full items-center gap-2 px-2 text-left hover:bg-surface-hover"
+        p="sm"
+        style={{ width: "100%" }}
       >
-        {expanded ? (
-          <ChevronDown size={13} className="shrink-0 text-ink-faint" />
-        ) : (
-          <ChevronRight size={13} className="shrink-0 text-ink-faint" />
-        )}
-        <span className="font-mono text-xs text-ink-faint">$</span>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs">{entry.cmd}</span>
-        <span
-          className="shrink-0 rounded bg-idle-soft px-1 py-px font-mono text-[10px] text-ink-mid"
-          title="owning workspace session"
-        >
-          {entry.autoPublish
-            ? "auto-publish"
-            : (entry.workspaceSessionId ?? "session ?")}
-        </span>
-        {running ? (
-          <span className="flex shrink-0 items-center gap-1 text-[11px] text-run">
-            <Loader2 size={11} className="animate-spin" />
-            {formatDuration(elapsedSeconds)}
-          </span>
-        ) : (
-          <span className="flex shrink-0 items-center gap-1">
-            {entry.publishRejected ? (
-              <StateBadge
-                state="danger"
-                label={`publish rejected${entry.publishRejectClass ? ` · ${entry.publishRejectClass}` : ""}`}
-              />
-            ) : (
-              <StateBadge
-                state={entry.status}
-                label={
-                  entry.exitCode !== null
-                    ? `${entry.status} · exit ${entry.exitCode}`
-                    : entry.status
-                }
-              />
-            )}
-          </span>
-        )}
-      </button>
+        <Group gap="sm" wrap="nowrap">
+          {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          <Text c="dimmed" ff="monospace" size="xs">$</Text>
+          <Text ff="monospace" size="xs" truncate style={{ flex: 1, minWidth: 0 }}>
+            {entry.cmd}
+          </Text>
+          <Text
+            c="dimmed"
+            ff="monospace"
+            size="xs"
+            title="owning workspace session"
+            truncate
+            w={120}
+          >
+            {entry.autoPublish ? "auto-publish" : (entry.workspaceSessionId ?? "session ?")}
+          </Text>
+          {running ? (
+            <Group gap={4} wrap="nowrap" style={{ color: "var(--mantine-color-eyeBlue-7)" }}>
+              <Loader size={12} />
+              <Text size="xs" style={{ color: "inherit" }}>{formatDuration(elapsedSeconds)}</Text>
+            </Group>
+          ) : entry.publishRejected ? (
+            <StateBadge
+              state="danger"
+              label={`publish rejected${entry.publishRejectClass ? ` · ${entry.publishRejectClass}` : ""}`}
+            />
+          ) : (
+            <StateBadge
+              state={entry.status}
+              label={entry.exitCode !== null ? `${entry.status} · exit ${entry.exitCode}` : entry.status}
+            />
+          )}
+        </Group>
+      </UnstyledButton>
 
-      {expanded ? (
-        <div
-          className="border-t border-line focus:outline-none"
+      <Collapse expanded={expanded} keepMounted={false} transitionDuration={120}>
+        <Box
+          data-terminal-frame
+          id={entry.commandSessionId ? `terminal-${entry.commandSessionId}` : undefined}
           tabIndex={0}
           onKeyDown={frameKeyDown}
+          style={{ borderTop: "1px solid var(--mantine-color-neutral-3)" }}
         >
           {running ? (
-            <div className="flex items-center justify-end gap-2 border-b border-line bg-app/60 px-2 py-1">
+            <Group justify="flex-end" p="xs" style={{ borderBottom: "1px solid var(--mantine-color-neutral-3)" }}>
               <PortPreview
                 sandboxId={sandboxId}
                 scopes={previewScopes}
@@ -138,9 +150,9 @@ export function CommandCard({
                         ?.id ?? "shared")
                 }
               />
-            </div>
+            </Group>
           ) : null}
-          {entry.commandSessionId ? (
+          {expanded && entry.commandSessionId ? (
             <TranscriptViewer
               sandboxId={sandboxId}
               commandSessionId={entry.commandSessionId}
@@ -148,19 +160,19 @@ export function CommandCard({
               onTerminal={onTerminal}
               registerNudge={registerNudge}
             />
-          ) : (
+          ) : expanded ? (
             <InlineTranscript output={entry.inlineOutput ?? ""} />
-          )}
-          {running && entry.commandSessionId ? (
+          ) : null}
+          {expanded && running && entry.commandSessionId ? (
             <StdinBar
               sandboxId={sandboxId}
               commandSessionId={entry.commandSessionId}
               nudge={() => nudgeRef.current()}
             />
           ) : null}
-        </div>
-      ) : null}
-    </div>
+        </Box>
+      </Collapse>
+    </Paper>
   );
 }
 
@@ -171,16 +183,21 @@ export function CommandCard({
  */
 function InlineTranscript({ output }: { output: string }) {
   return (
-    <div className="max-h-64 overflow-y-auto bg-app px-2 py-1 font-mono text-xs leading-[18px]">
+    <Box
+      data-terminal-inline-transcript
+      ff="monospace"
+      p="sm"
+      style={{ maxHeight: "16rem", overflowY: "auto" }}
+    >
       {output.length > 0 ? (
         output.split("\n").map((line, index) => (
-          <div key={index} className="whitespace-pre-wrap break-all">
+          <Text key={index} ff="monospace" size="xs" style={{ overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
             {line}
-          </div>
+          </Text>
         ))
       ) : (
-        <span className="text-ink-faint">no output</span>
+        <Text c="dimmed" size="xs">no output</Text>
       )}
-    </div>
+    </Box>
   );
 }
