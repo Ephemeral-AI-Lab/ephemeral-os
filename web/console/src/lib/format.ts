@@ -12,6 +12,12 @@ export function formatBytes(bytes: number): string {
   return `${value >= 10 ? Math.round(value) : value.toFixed(1)}${unit}`;
 }
 
+export function formatMegabytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "–";
+  const megabytes = bytes / 1_000_000;
+  return `${megabytes.toFixed(megabytes >= 10 ? 1 : 2)} MB`;
+}
+
 export function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "–";
   if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`;

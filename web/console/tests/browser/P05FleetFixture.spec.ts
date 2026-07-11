@@ -182,7 +182,7 @@ for (const [width, height] of [
   [1440, 900],
   [1920, 1080],
 ] as const) {
-  test(`P05 Fleet cards use bounded start-aligned flex rows at ${width}x${height}`, async ({ page }) => {
+test(`P05 Fleet cards stay compact and start-aligned at ${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await openFleet(page, { list: records(7) });
     await expect(page.locator("[data-fleet-card]")).toHaveCount(7);
@@ -200,7 +200,7 @@ for (const [width, height] of [
     );
     const collectionWidth = (await page.locator("[data-fleet-card-collection]").boundingBox())!.width;
     const hasHorizontalOverflow = await page.evaluate(() => document.body.scrollWidth > document.body.clientWidth);
-    expect(geometry.every((card) => card.height <= 22 * 14 + 1)).toBe(true);
+    expect(geometry.every((card) => card.height <= 18 * 14 + 1)).toBe(true);
     expect(geometry.every((card) => card.flexGrow === "0")).toBe(true);
     expect(hasHorizontalOverflow).toBe(false);
     if (width < 768) {
@@ -213,6 +213,14 @@ for (const [width, height] of [
     }
   });
 }
+
+test("P05 ready sandbox cards expose current CPU and memory", async ({ page }) => {
+  await openFleet(page, { list: [record("resources-sandbox")] });
+  const card = page.locator("[data-fleet-card]");
+
+  await expect(card.getByText("0.24%", { exact: true })).toBeVisible();
+  await expect(card.getByText("24.0 MB", { exact: true })).toBeVisible();
+});
 
 test("P05 preserves the last fleet data on refresh failure and removes Fleet layers/Squash @visual", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });

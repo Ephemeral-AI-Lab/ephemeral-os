@@ -2,10 +2,11 @@ import { Link, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { Alert, Box, Button, Card, Group, Stack, Text } from "@mantine/core";
+import { Alert, Box, Button, Card, Group, SimpleGrid, Stack, Text } from "@mantine/core";
 import { rpcStream, systemScope } from "@/api/rpc";
 import type { SandboxRecord } from "@/api/types";
 import { inFlightCount, type SandboxSnapshot } from "@/api/observability";
+import { formatMegabytes } from "@/lib/format";
 import { recordSample } from "@/lib/sparkHistory";
 import { ConfirmDestroyDialog } from "@/components/ConfirmDestroyDialog";
 import { HealthDot } from "@/components/HealthDot";
@@ -27,6 +28,13 @@ export function SandboxCard({
   const spark = recordSample(record.id, snapshot?.resources.latest ?? null);
   const sessions = snapshot?.workspaces.length ?? 0;
   const commands = snapshot ? inFlightCount(snapshot) : 0;
+  const latest = snapshot?.resources.latest;
+  const memory = latest?.metrics["mem_cur"];
+  const cpuDelta = latest?.deltas["cpu_usec"];
+  const sampleDeltaMs = latest?.sample_delta_ms ?? 0;
+  const cpuPercent = typeof cpuDelta === "number" && sampleDeltaMs > 0
+    ? (cpuDelta / (sampleDeltaMs * 1_000)) * 100
+    : null;
 
   return (
     <Card component="article" data-fleet-card padding="md" radius="md" shadow="sm" withBorder>
@@ -48,7 +56,7 @@ export function SandboxCard({
         </Group>
       </Card.Section>
 
-      <Stack gap="sm" mt="sm" style={{ flex: 1, minHeight: 0 }}>
+      <Stack gap="sm" mt="sm">
         <Box data-fleet-workspace>
           <Text c="dimmed" fw={700} size="xs" tt="uppercase">Workspace</Text>
           <Text ff="monospace" size="xs" title={record.workspace_root} truncate>
@@ -67,25 +75,27 @@ export function SandboxCard({
         ) : null}
 
         {record.state === "ready" ? (
-          <Group data-fleet-activity align="center" gap="sm" justify="space-between" wrap="nowrap">
-            <Box style={{ minWidth: 0 }}>
+          <Box data-fleet-activity>
+            <Group align="center" justify="space-between" wrap="nowrap">
               <Text c="dimmed" fw={700} size="xs" tt="uppercase">Activity</Text>
               <Text size="sm" truncate>
                 {sessions} {sessions === 1 ? "session" : "sessions"} · {commands}{" "}
                 {commands === 1 ? "cmd" : "cmds"}
               </Text>
-            </Box>
-            <Stack gap={2} style={{ flex: "0 0 auto" }}>
-              <Group gap={4} justify="flex-end" wrap="nowrap">
-                <Text c="dimmed" size="xs">cpu</Text>
-                <ResourceSparkline values={spark.cpu} label="cpu" />
-              </Group>
-              <Group gap={4} justify="flex-end" wrap="nowrap">
-                <Text c="dimmed" size="xs">mem</Text>
-                <ResourceSparkline values={spark.mem} label="memory" />
-              </Group>
-            </Stack>
-          </Group>
+            </Group>
+            <SimpleGrid cols={2} data-fleet-resources mt="xs" spacing="sm">
+              <ResourceMetric
+                label="CPU"
+                value={cpuPercent === null ? "–" : `${cpuPercent.toFixed(cpuPercent < 1 ? 2 : 1)}%`}
+                values={spark.cpu}
+              />
+              <ResourceMetric
+                label="Memory"
+                value={typeof memory === "number" ? formatMegabytes(memory) : "–"}
+                values={spark.mem}
+              />
+            </SimpleGrid>
+          </Box>
         ) : null}
       </Stack>
 
@@ -114,6 +124,18 @@ export function SandboxCard({
         </Group>
       </Card.Section>
     </Card>
+  );
+}
+
+function ResourceMetric({ label, value, values }: { label: string; value: string; values: number[] }) {
+  return (
+    <Box data-fleet-resource>
+      <Group gap="xs" justify="space-between" wrap="nowrap">
+        <Text c="dimmed" size="xs">{label}</Text>
+        <Text fw={700} size="sm">{value}</Text>
+      </Group>
+      <ResourceSparkline values={values} label={`${label} history`} />
+    </Box>
   );
 }
 

@@ -7,10 +7,14 @@ use base64::Engine as _;
 use sandbox_manager::{
     manager_handler_keys, CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices,
     SandboxDaemonClient, SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId,
-    SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxState, SandboxStore, StartedDaemon,
+    SandboxManagerRouter, SandboxRecord, SandboxResourceMetrics, SandboxRuntime, SandboxState,
+    SandboxStore, StartedDaemon,
 };
 use sandbox_operation_catalog::{
-    internal, manager::EXPORT_CHANGES_SPEC, observability::SNAPSHOT_SPEC, routes,
+    internal,
+    manager::EXPORT_CHANGES_SPEC,
+    observability::{CGROUP_SPEC, SNAPSHOT_SPEC},
+    routes,
 };
 use sandbox_operation_contract::{
     error, OperationExecutionOwner, OperationRequest, OperationResponse, OperationScope,
@@ -36,6 +40,19 @@ impl SandboxRuntime for FakeRuntime {
 
     fn destroy_sandbox(&self, _record: &SandboxRecord) -> Result<(), ManagerError> {
         Ok(())
+    }
+
+    fn read_sandbox_resource_metrics(
+        &self,
+        _id: &SandboxId,
+    ) -> Result<SandboxResourceMetrics, ManagerError> {
+        Ok(SandboxResourceMetrics {
+            cpu_usage_usec: 42,
+            memory_current_bytes: Some(1_024),
+            memory_limit_bytes: Some(2_048),
+            io_read_bytes: 4_096,
+            io_write_bytes: 8_192,
+        })
     }
 }
 
@@ -184,6 +201,51 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
     assert_eq!(response["sandboxes"], json!([]));
 }
 
+#[tokio::test]
+async fn manager_router_reads_sandbox_resource_metrics_from_the_runtime() {
+    let (router, daemon_client) = ready_router();
+
+    let response = router
+        .dispatch_request(request(
+            CGROUP_SPEC.name,
+            OperationScope::sandbox("sbox-1"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["view"], "cgroup");
+    assert_eq!(response["scope"], "sandbox");
+    assert_eq!(
+        response["series"][0]["metrics"]["metrics_source"],
+        "docker_engine"
+    );
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+}
+
+#[tokio::test]
+async fn manager_router_forwards_workspace_resource_metrics_to_the_daemon() {
+    let (router, daemon_client) = ready_router();
+
+    let response = router
+        .dispatch_request(request(
+            CGROUP_SPEC.name,
+            OperationScope::sandbox("sbox-1"),
+            json!({ "scope": "workspace-1" }),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["forwarded"], true);
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, CGROUP_SPEC.name);
+}
+
 #[test]
 fn manager_public_routes_and_handler_keys_are_bijective() {
     let expected = routes::manager_routes()
@@ -197,9 +259,6 @@ fn manager_public_routes_and_handler_keys_are_bijective() {
         .collect::<Vec<_>>();
     let actual = manager_handler_keys().collect::<Vec<_>>();
 
-    assert!(expected
-        .iter()
-        .all(|(scope_kind, _)| *scope_kind == OperationScopeKind::System));
     assert_eq!(actual.len(), expected.len());
     for (scope_kind, operation) in &expected {
         assert_eq!(

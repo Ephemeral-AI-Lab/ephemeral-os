@@ -1,6 +1,6 @@
 import type { SandboxList } from "@/api/types";
 import { inFlightCount, type SnapshotResult } from "@/api/observability";
-import { formatBytes } from "@/lib/format";
+import { formatMegabytes } from "@/lib/format";
 import { Badge, Group, Text } from "@mantine/core";
 
 /**
@@ -21,10 +21,10 @@ export function FleetSummaryBar({
   }
   const snapshots = snapshot?.sandboxes ?? [];
   const executions = snapshots.reduce((total, entry) => total + inFlightCount(entry), 0);
-  const memory = snapshots.reduce((total, entry) => {
+  const memory = snapshots.reduce<number | null>((total, entry) => {
     const mem = entry.resources.latest?.metrics["mem_cur"];
-    return typeof mem === "number" ? total + mem : total;
-  }, 0);
+    return typeof mem === "number" ? (total ?? 0) + mem : total;
+  }, null);
 
   return (
     <Group data-fleet-summary gap="xs" p="sm" wrap="wrap">
@@ -40,7 +40,7 @@ export function FleetSummaryBar({
       <Text size="sm">
         {executions} running {executions === 1 ? "command" : "commands"}
       </Text>
-      <Text size="sm">Σ mem {formatBytes(memory)}</Text>
+      <Text size="sm">Σ mem {memory === null ? "–" : formatMegabytes(memory)}</Text>
     </Group>
   );
 }

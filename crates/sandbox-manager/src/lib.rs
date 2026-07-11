@@ -8,6 +8,7 @@ mod daemon_client;
 mod daemon_install;
 mod error;
 mod export_apply;
+mod management;
 mod model;
 mod operations;
 mod progress;
@@ -30,6 +31,8 @@ pub use operations::{
 };
 pub use progress::ProgressSink;
 pub use router::SandboxManagerRouter;
-pub use runtime::{CreateSandboxRequest, CreateSandboxResult, SandboxRuntime};
+pub use runtime::{
+    CreateSandboxRequest, CreateSandboxResult, SandboxResourceMetrics, SandboxRuntime,
+};
 pub use store::SandboxStore;
 pub use workspace_roots::{WorkspaceDirectory, WorkspaceDirectoryListing, WorkspaceRootPolicy};

@@ -5,8 +5,9 @@ use std::time::Duration;
 
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
-    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore, SharedBaseMount, StartedDaemon, WorkspaceRootPolicy,
+    SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord,
+    SandboxResourceMetrics, SandboxRuntime, SandboxState, SandboxStore, SharedBaseMount,
+    StartedDaemon, WorkspaceRootPolicy,
 };
 use sandbox_operation_contract::{
     ArgKind, OperationDomain, OperationRequest, OperationResponse, OperationScope,
@@ -46,6 +47,19 @@ impl SandboxRuntime for FakeRuntime {
             .expect("destroyed lock")
             .push(record.id.as_str().to_owned());
         Ok(())
+    }
+
+    fn read_sandbox_resource_metrics(
+        &self,
+        _id: &SandboxId,
+    ) -> Result<SandboxResourceMetrics, ManagerError> {
+        Ok(SandboxResourceMetrics {
+            cpu_usage_usec: 12_000,
+            memory_current_bytes: Some(24_000_000),
+            memory_limit_bytes: Some(64_000_000),
+            io_read_bytes: 4_000,
+            io_write_bytes: 2_000,
+        })
     }
 }
 
@@ -768,6 +782,26 @@ fn observability_snapshot_aggregates_ready_sandboxes_with_concrete_daemon_reques
     assert!(invocations
         .iter()
         .all(|invocation| invocation.timeout_override == Some(Duration::from_millis(1_500))));
+}
+
+#[test]
+fn observability_snapshot_enriches_ready_nodes_with_host_resource_metrics() {
+    let client = Arc::new(RecordingSnapshotClient::default());
+    let (services, store) = services_with_client(client);
+    store
+        .insert(sandbox_record(
+            "sbox-1",
+            SandboxState::Ready,
+            Some(endpoint("sbox-1")),
+        ))
+        .expect("insert ready sandbox");
+
+    let response = dispatch(&services, "snapshot", json!({}));
+    let metrics = &response["sandboxes"][0]["resources"]["latest"]["metrics"];
+
+    assert_eq!(metrics["metrics_source"], "docker_engine");
+    assert_eq!(metrics["cpu_usec"], 12_000);
+    assert_eq!(metrics["mem_cur"], 24_000_000);
 }
 
 #[test]

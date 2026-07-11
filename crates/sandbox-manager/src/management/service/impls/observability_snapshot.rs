@@ -5,6 +5,7 @@ use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
 use sandbox_operation_contract::{OperationRequest, OperationScope};
 use serde_json::{json, Map, Value};
 
+use super::resource_metrics::latest_resource_value;
 use crate::operations::{ManagerServices, ObservabilitySnapshotLimits};
 use crate::{
     ManagerError, SandboxDaemonClient, SandboxDaemonEndpoint, SandboxId, SandboxRecord,
@@ -29,6 +30,7 @@ pub(crate) fn observability_snapshot(
         Arc::clone(&services.daemon_client),
         request_id,
         services.snapshot_limits,
+        services,
     ))
 }
 
@@ -55,6 +57,7 @@ fn aggregate_records(
     daemon_client: Arc<dyn SandboxDaemonClient>,
     request_id: &str,
     limits: ObservabilitySnapshotLimits,
+    services: &ManagerServices,
 ) -> Vec<Value> {
     let mut nodes = Vec::with_capacity(records.len());
     for chunk in records.chunks(limits.max_concurrent_requests) {
@@ -67,7 +70,13 @@ fn aggregate_records(
                     let worker_client = Arc::clone(&daemon_client);
                     let worker_request_id = request_id.to_owned();
                     let handle = scope.spawn(move || {
-                        sandbox_node(record, worker_client, &worker_request_id, limits.timeout_ms)
+                        sandbox_node(
+                            record,
+                            worker_client,
+                            &worker_request_id,
+                            limits.timeout_ms,
+                            services,
+                        )
                     });
                     (panic_record, handle)
                 })
@@ -92,6 +101,7 @@ fn sandbox_node(
     daemon_client: Arc<dyn SandboxDaemonClient>,
     request_id: &str,
     timeout_ms: u64,
+    services: &ManagerServices,
 ) -> Value {
     if record.state != SandboxState::Ready {
         return unavailable_node(
@@ -104,10 +114,22 @@ fn sandbox_node(
         return unavailable_node(&record, None, "sandbox daemon endpoint is unavailable");
     };
     let request = sandbox_snapshot_request(&record, request_id);
-    match daemon_client.invoke(&endpoint, request, Some(Duration::from_millis(timeout_ms))) {
-        Ok(response) => node_from_daemon_response(&record, &endpoint, response.into_json_value()),
-        Err(error) => unavailable_node(&record, Some(&endpoint), error.to_string()),
+    let mut node =
+        match daemon_client.invoke(&endpoint, request, Some(Duration::from_millis(timeout_ms))) {
+            Ok(response) => {
+                node_from_daemon_response(&record, &endpoint, response.into_json_value())
+            }
+            Err(error) => unavailable_node(&record, Some(&endpoint), error.to_string()),
+        };
+    if let Ok(latest) = latest_resource_value(services, &record.id) {
+        if let Some(object) = node.as_object_mut() {
+            object.insert(
+                "resources".to_owned(),
+                json!({ "latest": latest, "history": [] }),
+            );
+        }
     }
+    node
 }
 
 fn sandbox_snapshot_request(record: &SandboxRecord, request_id: &str) -> OperationRequest {

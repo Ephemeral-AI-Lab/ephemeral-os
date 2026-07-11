@@ -4,4 +4,5 @@ pub(crate) mod export_changes;
 pub(crate) mod inspect_sandbox;
 pub(crate) mod list_sandboxes;
 pub(crate) mod observability_snapshot;
+pub(crate) mod resource_metrics;
 pub(crate) mod squash_layerstacks;

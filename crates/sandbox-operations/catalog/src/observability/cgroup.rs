@@ -5,16 +5,16 @@ use crate::routed::{RoutedOperation, Routing};
 
 pub const CGROUP: RoutedOperation = RoutedOperation {
     spec: &CGROUP_SPEC,
-    routing: Routing::Sandbox(OperationExecutionOwner::Observability),
+    routing: Routing::Sandbox(OperationExecutionOwner::Manager),
 };
 
 pub static CGROUP_SPEC: OperationSpec = OperationSpec {
     name: "cgroup",
     family: "observability",
     summary: "Resource series for a scope (cpu/mem/io + disk).",
-    description: "Fold the sample log for one scope into a time series with deltas: \
-cgroup counters (cpu/mem/io from /sys/fs/cgroup) plus the disk sample (upperdir \
-bytes/files) carried in the same record.",
+    description: "Return a read-only resource time series. Sandbox scope reads CPU, memory, \
+and block-I/O counters from the host Docker Engine; workspace scopes retain daemon \
+disk samples.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(

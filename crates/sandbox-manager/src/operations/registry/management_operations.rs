@@ -5,15 +5,16 @@ use sandbox_operation_catalog::manager::{
     LIST_DOCKER_IMAGES_SPEC, LIST_SANDBOXES_SPEC, LIST_WORKSPACE_DIRECTORIES_SPEC,
     SQUASH_LAYERSTACKS_SPEC,
 };
-use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
+use sandbox_operation_catalog::observability::{CGROUP_SPEC, SNAPSHOT_SPEC};
 use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScopeKind};
 use serde_json::{json, Value};
 
-use crate::operations::dispatch::ManagerOperationEntry;
-use crate::operations::management::{
-    create_sandbox, destroy_sandbox, dispatch_export_changes, dispatch_squash_layerstacks,
-    inspect_sandbox, list_sandboxes, observability_snapshot, CreateSandboxInput, SnapshotOptions,
+use crate::management::{
+    create_sandbox, destroy_sandbox, dispatch_export_changes, dispatch_resource_metrics,
+    dispatch_squash_layerstacks, inspect_sandbox, list_sandboxes, observability_snapshot,
+    CreateSandboxInput, SnapshotOptions,
 };
+use crate::operations::dispatch::ManagerOperationEntry;
 use crate::operations::ManagerServices;
 use crate::{
     ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId,
@@ -45,6 +46,11 @@ const OPERATIONS: &[ManagerOperationEntry] = &[
         OperationScopeKind::System,
         &SNAPSHOT_SPEC,
         dispatch_observability_snapshot,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::Sandbox,
+        &CGROUP_SPEC,
+        dispatch_resource_metrics,
     ),
     ManagerOperationEntry::new(
         OperationScopeKind::System,

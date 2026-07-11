@@ -754,7 +754,7 @@ fn validate_catalog_constructions(
 
 fn catalog_domain(path: &Path, catalog_root: &Path) -> Option<Domain> {
     let relative = path.strip_prefix(catalog_root).ok()?;
-    if relative == Path::new("manager.rs") {
+    if relative == Path::new("manager.rs") || in_domain_directory(relative, "manager") {
         Some(Domain::Manager)
     } else if relative == Path::new("runtime.rs") || in_domain_directory(relative, "runtime") {
         Some(Domain::Runtime)

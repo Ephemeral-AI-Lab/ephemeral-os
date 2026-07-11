@@ -196,6 +196,23 @@ impl SandboxRuntime for DockerSandboxRuntime {
         self.engine.list_images().map_err(runtime_failed)
     }
 
+    fn read_sandbox_resource_metrics(
+        &self,
+        id: &SandboxId,
+    ) -> Result<sandbox_manager::SandboxResourceMetrics, ManagerError> {
+        let metrics = self
+            .engine
+            .container_resource_metrics(id.as_str().to_owned())
+            .map_err(runtime_failed)?;
+        Ok(sandbox_manager::SandboxResourceMetrics {
+            cpu_usage_usec: metrics.cpu_usage_usec,
+            memory_current_bytes: metrics.memory_current_bytes,
+            memory_limit_bytes: metrics.memory_limit_bytes,
+            io_read_bytes: metrics.io_read_bytes,
+            io_write_bytes: metrics.io_write_bytes,
+        })
+    }
+
     fn create_sandbox(
         &self,
         request: &CreateSandboxRequest,

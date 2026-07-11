@@ -8,7 +8,8 @@ use std::future::Future;
 
 use bollard::container::{
     Config, CreateContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
-    StartContainerOptions, StopContainerOptions, UploadToContainerOptions, WaitContainerOptions,
+    StartContainerOptions, StatsOptions, StopContainerOptions, UploadToContainerOptions,
+    WaitContainerOptions,
 };
 use bollard::errors::Error as BollardError;
 use bollard::image::ListImagesOptions;
@@ -70,6 +71,15 @@ pub(crate) struct VolumeSpec {
 
 pub(crate) struct ImageCommandResult {
     pub(crate) exit_code: i64,
+}
+
+/// Cumulative counters obtained from Docker's read-only container stats API.
+pub(crate) struct ContainerResourceMetrics {
+    pub(crate) cpu_usage_usec: u64,
+    pub(crate) memory_current_bytes: Option<u64>,
+    pub(crate) memory_limit_bytes: Option<u64>,
+    pub(crate) io_read_bytes: u64,
+    pub(crate) io_write_bytes: u64,
 }
 
 /// Result of starting a container and resolving its published daemon ports (the
@@ -266,6 +276,33 @@ impl DockerEngine {
             info.architecture.ok_or_else(|| {
                 DockerError::Api("docker info did not report an architecture".to_owned())
             })
+        })
+    }
+
+    pub(crate) fn container_resource_metrics(
+        &self,
+        container: String,
+    ) -> Result<ContainerResourceMetrics, DockerError> {
+        self.run_blocking(move |docker| async move {
+            let mut stats = docker.stats(
+                &container,
+                Some(StatsOptions {
+                    stream: false,
+                    one_shot: true,
+                }),
+            );
+            let stats = match stats.next().await {
+                Some(Ok(stats)) => stats,
+                Some(Err(error)) => {
+                    return Err(DockerError::Api(format!("container stats: {error}")));
+                }
+                None => {
+                    return Err(DockerError::Api(
+                        "container stats returned no response".to_owned(),
+                    ));
+                }
+            };
+            Ok(container_resource_metrics(&stats))
         })
     }
 
@@ -476,6 +513,44 @@ impl DockerEngine {
                 .map_err(|error| DockerError::Api(format!("inspect_container: {error}")))?;
             Ok(inspected.state.as_ref().and_then(container_exit_reason))
         })
+    }
+}
+
+fn container_resource_metrics(stats: &bollard::container::Stats) -> ContainerResourceMetrics {
+    let (io_read_bytes, io_write_bytes) = block_io_totals(stats);
+    ContainerResourceMetrics {
+        // Docker's total CPU usage counter is nanoseconds; the observability
+        // contract uses microseconds to match cgroup v2's cpu.stat usage_usec.
+        cpu_usage_usec: stats.cpu_stats.cpu_usage.total_usage / 1_000,
+        memory_current_bytes: stats.memory_stats.usage,
+        memory_limit_bytes: stats.memory_stats.limit,
+        io_read_bytes,
+        io_write_bytes,
+    }
+}
+
+fn block_io_totals(stats: &bollard::container::Stats) -> (u64, u64) {
+    let mut reads = 0_u64;
+    let mut writes = 0_u64;
+    for entry in stats
+        .blkio_stats
+        .io_service_bytes_recursive
+        .as_deref()
+        .unwrap_or_default()
+    {
+        match entry.op.to_ascii_lowercase().as_str() {
+            "read" => reads = reads.saturating_add(entry.value),
+            "write" => writes = writes.saturating_add(entry.value),
+            _ => {}
+        }
+    }
+    if reads == 0 && writes == 0 {
+        (
+            stats.storage_stats.read_size_bytes.unwrap_or(0),
+            stats.storage_stats.write_size_bytes.unwrap_or(0),
+        )
+    } else {
+        (reads, writes)
     }
 }
 

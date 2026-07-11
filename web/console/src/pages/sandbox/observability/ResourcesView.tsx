@@ -23,10 +23,10 @@ const CHARTS = [
     },
   },
   {
-    title: "Memory (mem_cur bytes)",
+    title: "Memory (MB)",
     value: (sample: ResourceSample) => {
       const memory = sample.metrics["mem_cur"];
-      return typeof memory === "number" ? memory : null;
+      return typeof memory === "number" ? memory / 1_000_000 : null;
     },
   },
   {

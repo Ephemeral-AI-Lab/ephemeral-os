@@ -186,8 +186,6 @@ body {
 [data-fleet-creation-card] {
   box-sizing: border-box;
   flex: 0 0 100%;
-  height: 22rem;
-  max-height: 22rem;
   min-width: 0;
   overflow: hidden;
   width: 100%;
@@ -196,11 +194,15 @@ body {
 [data-fleet-card] {
   display: flex;
   flex-direction: column;
+  height: auto;
+  max-height: none;
 }
 
 [data-fleet-creation-card] {
   border: 1px dashed var(--mantine-color-eyeBlue-5);
   border-radius: var(--mantine-radius-md);
+  height: 22rem;
+  max-height: 22rem;
   padding: var(--mantine-spacing-md);
 }
 
@@ -210,6 +212,17 @@ body {
   border: 1px solid var(--mantine-color-neutral-3);
   border-radius: var(--mantine-radius-sm);
   padding: var(--mantine-spacing-xs) var(--mantine-spacing-sm);
+}
+
+[data-fleet-resources] {
+  border-top: 1px solid var(--mantine-color-neutral-3);
+  padding-top: var(--mantine-spacing-xs);
+}
+
+[data-fleet-resource] svg {
+  display: block;
+  margin-top: 2px;
+  width: 100%;
 }
 
 [data-workspace-option-viewport] {
