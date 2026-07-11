@@ -17,7 +17,7 @@ export default defineConfig({
         target: `http://${consoleServer}`,
         changeOrigin: false,
       },
-      "/s": {
+      "/s/": {
         target: `http://${consoleServer}`,
         changeOrigin: false,
         ws: true,
