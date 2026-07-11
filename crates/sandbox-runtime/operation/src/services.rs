@@ -5,7 +5,7 @@ use std::sync::Arc;
 use rustix::io::Errno;
 #[cfg(target_os = "linux")]
 use rustix::mount::{unmount, UnmountFlags};
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_runtime_layerstack::service::StackObservation;
 
 use crate::command::CommandOperationService;
@@ -129,7 +129,7 @@ impl SandboxRuntimeOperations {
 
     /// Live per-layer lease breakdown of the active manifest (in-memory state).
     ///
-    /// The daemon merges this with the observability leaf reader's disk byte
+    /// The daemon merges this with the telemetry reader's disk byte
     /// sizes (keyed by layer id) to render the `layerstack` inventory.
     pub fn observe_layerstack(
         &self,
@@ -137,7 +137,7 @@ impl SandboxRuntimeOperations {
         self.layerstack.observe()
     }
 
-    /// Storage root of the layer stack, for the observability leaf byte reader.
+    /// Storage root of the layer stack, for the telemetry byte reader.
     #[must_use]
     pub fn layer_stack_root(&self) -> &std::path::Path {
         self.layerstack.layer_stack_root()
@@ -178,7 +178,7 @@ fn boot_reap_then_sweep(
         .unwrap_or_default();
     for session in &reaped {
         observer.event(
-            sandbox_observability::record::names::WORKSPACE_SESSION_DESTROY,
+            sandbox_observability_telemetry::record::names::WORKSPACE_SESSION_DESTROY,
             serde_json::json!({
                 "boot_reap": true,
                 "workspace_handle_id": session.workspace_handle_id,
@@ -196,7 +196,7 @@ fn boot_reap_then_sweep(
     match sweep {
         Ok(report) => {
             observer.event(
-                sandbox_observability::record::names::LAYERSTACK_SQUASH,
+                sandbox_observability_telemetry::record::names::LAYERSTACK_SQUASH,
                 serde_json::json!({
                     "boot_sweep": true,
                     "removed_layer_ids": report.removed_layer_ids,
@@ -228,7 +228,7 @@ fn probe_and_set_remount_gate(layerstack: &Arc<LayerStackService>, observer: &Ob
     let scratch = layerstack.layer_stack_root().join("staging");
     let proven = crate::workspace_crate::probe_and_set_live_remount_gate(&scratch);
     observer.event(
-        sandbox_observability::record::names::NAMESPACE_EXEC_REMOUNT_OVERLAY,
+        sandbox_observability_telemetry::record::names::NAMESPACE_EXEC_REMOUNT_OVERLAY,
         serde_json::json!({ "boot_gate": true, "live_remount_enabled": proven }),
     );
     cli_log(format!(

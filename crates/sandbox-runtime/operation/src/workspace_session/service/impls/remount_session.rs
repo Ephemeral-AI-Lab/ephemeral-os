@@ -1,6 +1,6 @@
 use std::sync::PoisonError;
 
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 
 use crate::workspace_crate::{RemountOutcome, WorkspaceSessionId};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};

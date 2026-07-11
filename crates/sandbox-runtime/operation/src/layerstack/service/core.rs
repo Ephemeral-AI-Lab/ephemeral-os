@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 
 use crate::file::FileService;
 use crate::layerstack::LayerStackServiceError;

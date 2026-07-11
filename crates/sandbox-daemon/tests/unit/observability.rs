@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::observability::DaemonObservability;
 use crate::rpc::{SandboxDaemonServer, ServerConfig};
 use sandbox_config::configs::observability::ObservabilityConfig;
-use sandbox_observability::{ObservabilityPaths, Reader, SampleDelta};
+use sandbox_observability_telemetry::{ObservabilityPaths, Reader, SampleDelta};
 use sandbox_operation_catalog::observability::{
     CGROUP_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TRACE_SPEC,
 };

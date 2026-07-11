@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use sandbox_observability::SpanStatus;
+use sandbox_observability_telemetry::SpanStatus;
 use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use serde_json::Value;
 

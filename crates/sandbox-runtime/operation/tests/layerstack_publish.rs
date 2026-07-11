@@ -59,7 +59,7 @@ impl PublishFixture {
             self.root.clone(),
             self.base.join("scratch"),
             sandbox_runtime::LayerstackRuntimeConfig::default(),
-            sandbox_observability::Observer::disabled(),
+            sandbox_observability_telemetry::Observer::disabled(),
             support::test_file_service(),
         )?)
     }

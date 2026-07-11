@@ -12,7 +12,7 @@ use std::thread;
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use sandbox_observability::{Observer, SpanRegistry};
+use sandbox_observability_telemetry::{Observer, SpanRegistry};
 use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::file::{
     EditInput, EditOp, FileEntryKind, FileListEntryKind, FileOperationError, FileService,

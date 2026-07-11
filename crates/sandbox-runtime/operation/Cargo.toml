@@ -12,7 +12,7 @@ sandbox-operation-catalog = { workspace = true, features = ["runtime"] }
 sandbox-runtime-namespace-execution.workspace = true
 sandbox-runtime-namespace-process.workspace = true
 sandbox-runtime-layerstack.workspace = true
-sandbox-observability.workspace = true
+sandbox-observability-telemetry.workspace = true
 rustix.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

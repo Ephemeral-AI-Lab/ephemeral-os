@@ -39,7 +39,7 @@ fn chunk_request(export_id: &str, offset: u64, limit: Option<u64>) -> OperationR
 fn operations_with_real_layerstack() -> (SandboxRuntimeOperations, std::path::PathBuf) {
     let fake = Arc::new(FakeWorkspaceService::new());
     let layerstack =
-        support::observed_layerstack_service(sandbox_observability::Observer::disabled());
+        support::observed_layerstack_service(sandbox_observability_telemetry::Observer::disabled());
     let root = layerstack.layer_stack_root().to_path_buf();
     let services = support::build_services_with_launch_driver_and_layerstack(
         Arc::clone(&fake),

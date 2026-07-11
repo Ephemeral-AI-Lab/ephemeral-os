@@ -565,9 +565,9 @@ fn load_observability_handlers(
     specs: &BTreeMap<String, DomainOperation>,
     facts: &mut SemanticFacts,
 ) -> Result<()> {
-    let observability_root = root.join("crates/sandbox-observability/application/src");
+    let observability_root = root.join("crates/sandbox-observability/query/src");
     let sources = rust_sources(&observability_root)?;
-    let relative = "crates/sandbox-observability/application/src/registry.rs";
+    let relative = "crates/sandbox-observability/query/src/registry.rs";
     let source =
         fs::read_to_string(root.join(relative)).context("read observability operation registry")?;
     let aggregate = const_slice_body(&source, "OPERATIONS")?

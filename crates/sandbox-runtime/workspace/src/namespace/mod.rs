@@ -4,7 +4,7 @@ mod setns_runner;
 
 use std::sync::Arc;
 
-use sandbox_observability::{NoopHook, Observer};
+use sandbox_observability_telemetry::{NoopHook, Observer};
 use sandbox_runtime_namespace_execution::{ExecutionCaps, NamespaceExecutionEngine};
 
 #[cfg(target_os = "linux")]

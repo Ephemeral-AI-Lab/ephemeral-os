@@ -117,7 +117,7 @@ operator or agent
   → sandbox-gateway                 (newline-delimited JSON wire protocol)
   → sandbox-manager                 (sandbox lifecycle, daemon endpoints)
   → sandbox-daemon                  (dispatch runtime requests, in-sandbox)
-  → sandbox-runtime / sandbox-observability-application
+  → sandbox-runtime / sandbox-observability-query
   → sandbox-runtime-{workspace, layerstack, namespace-execution,
                      namespace-process, overlay}
 ```

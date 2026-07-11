@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 use serde_json::json;
 
 use crate::workspace_crate::{

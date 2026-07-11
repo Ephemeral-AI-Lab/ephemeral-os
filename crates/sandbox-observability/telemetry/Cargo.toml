@@ -1,5 +1,5 @@
 [package]
-name = "sandbox-observability"
+name = "sandbox-observability-telemetry"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 
 use crate::layerstack::LayerStackService;
 use crate::workspace_crate::{WorkspaceRuntimeService, WorkspaceSessionId};

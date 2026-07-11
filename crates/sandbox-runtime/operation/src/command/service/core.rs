@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use sandbox_observability::{Observer, SpanRegistry};
+use sandbox_observability_telemetry::{Observer, SpanRegistry};
 use sandbox_runtime_namespace_execution::{
     ExecutionCaps, NamespaceExecutionEngine, NamespaceExecutionId,
 };

@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use super::SandboxDaemonServer;
 use crate::rpc::error::SandboxDaemonError;
-use sandbox_observability::record::names;
-use sandbox_observability::{SpanStatus, TraceContext};
+use sandbox_observability_telemetry::record::names;
+use sandbox_observability_telemetry::{SpanStatus, TraceContext};
 use sandbox_operation_contract::{
     error, OperationExecutionOwner, OperationRequest, OperationResponse, OperationVisibility,
 };
@@ -99,7 +99,7 @@ impl SandboxDaemonServer {
                 &operations,
                 observability.as_deref(),
             );
-            sandbox_observability_application::dispatch_operation(&input, &request)
+            sandbox_observability_query::dispatch_operation(&input, &request)
         });
         match task.await {
             Ok(response) => response,

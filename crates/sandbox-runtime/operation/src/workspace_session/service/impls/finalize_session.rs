@@ -1,7 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
-use sandbox_observability::record::names;
-use sandbox_observability::SpanStatus;
+use sandbox_observability_telemetry::record::names;
+use sandbox_observability_telemetry::SpanStatus;
 use serde_json::json;
 
 use crate::layerstack::{

@@ -9,7 +9,7 @@ mod support;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use sandbox_observability::{Observer, SpanRegistry};
+use sandbox_observability_telemetry::{Observer, SpanRegistry};
 use sandbox_runtime::command::{
     CommandOperationService, CommandServiceError, CommandStatus, ExecCommandInput,
     ReadCommandLinesInput, WriteCommandStdinInput,

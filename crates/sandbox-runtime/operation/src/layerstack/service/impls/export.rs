@@ -13,7 +13,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use base64::Engine as _;
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 use sandbox_operation_catalog::internal::runtime::{EXPORT_LAYERSTACK, READ_EXPORT_CHUNK};
 use sandbox_operation_contract::OperationScopeKind;
 use sandbox_runtime_layerstack::{

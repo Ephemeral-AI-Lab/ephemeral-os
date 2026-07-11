@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_operation_contract::{OperationRequest, OperationScope};
 use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::workspace_session::{

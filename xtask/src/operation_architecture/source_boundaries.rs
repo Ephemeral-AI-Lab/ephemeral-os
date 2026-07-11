@@ -167,8 +167,8 @@ fn validate_observability_boundary(facts: &StaleFacts, violations: &mut Vec<Stri
     for file in facts.files.iter().filter(|file| {
         (file
             .path
-            .starts_with("crates/sandbox-observability/application/src/")
-            || file.path == "crates/sandbox-observability/application/build.rs")
+            .starts_with("crates/sandbox-observability/query/src/")
+            || file.path == "crates/sandbox-observability/query/build.rs")
             && is_rust_source(file)
     }) {
         let roots = crate_roots(&file.content, "sandbox_runtime_layerstack");

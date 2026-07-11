@@ -12,8 +12,8 @@ use std::time::Instant;
 use http::header::{HeaderMap, CONTENT_LENGTH};
 use http::{Request, Response, StatusCode};
 use hyper::body::Incoming;
-use sandbox_observability::record::names;
-use sandbox_observability::{Observer, SpanStatus, TraceContext};
+use sandbox_observability_telemetry::record::names;
+use sandbox_observability_telemetry::{Observer, SpanStatus, TraceContext};
 
 use self::route::ForwardRoute;
 use crate::http::response::{self, BoxBody};

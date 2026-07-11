@@ -1384,3 +1384,23 @@ observability query, MCP tool call, and console RPC call.
 | Move the E2E suite to root `e2e/` | It is system verification asserting against manager and runtime source, misnamed and wrongly scoped as a CLI/adapter artifact; `crates/` holds Cargo packages only. |
 | Delete generated reports instead of moving them | 4,274,972 lines of generated evidence is not maintained source and overwhelms the code footprint. |
 | Avoid compatibility shims | Destructive change is accepted, and duplicate APIs would preserve the dependency ambiguity this migration removes. |
+
+## Current observability naming amendment
+
+This amendment supersedes earlier target-name and target-path references for
+the observability pair in this record. `crates/sandbox-observability/` remains
+a grouping-only namespace, with no Cargo package at its root. Its exact
+children are `README.md`, `telemetry/`, and `query/`.
+
+- `telemetry/` is package `sandbox-observability-telemetry` and Rust crate
+  `sandbox_observability_telemetry`. It owns event records, sampling,
+  collection, storage, and reading primitives.
+- `query/` is package `sandbox-observability-query` and Rust crate
+  `sandbox_observability_query`. It owns structured selection and response
+  construction through its input port.
+- `telemetry` remains a Primitive and `query` remains an Application in the
+  architecture layer map. Those labels describe dependency role, not a
+  directory or package-name convention.
+- The naming-policy exception is now only
+  `crates/sandbox-runtime/operation` → `sandbox-runtime`; observability has
+  no exception.

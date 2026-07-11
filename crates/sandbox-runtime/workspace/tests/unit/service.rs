@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use serde_json::json;
 
 use sandbox_runtime_workspace::model::{

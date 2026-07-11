@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 mod fake_launcher;
 pub use fake_launcher::{FakeLauncher, FakeRunnerScript};
-use sandbox_observability::{Observer, SpanRegistry};
+use sandbox_observability_telemetry::{Observer, SpanRegistry};
 use sandbox_runtime_namespace_execution::{NamespaceExecutionEngine, NamespaceExecutionError};
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 

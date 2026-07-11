@@ -12,7 +12,7 @@ use crate::runner::protocol::{NamespaceRunnerRequest, RunResult};
 #[cfg(target_os = "linux")]
 use crate::runner::shell_security;
 #[cfg(target_os = "linux")]
-use sandbox_observability::{record, Observer, ObserverConfig, Sink, TraceContext};
+use sandbox_observability_telemetry::{record, Observer, ObserverConfig, Sink, TraceContext};
 #[cfg(target_os = "linux")]
 use std::os::unix::process::CommandExt;
 

@@ -1,7 +1,7 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 use serde_json::json;
 

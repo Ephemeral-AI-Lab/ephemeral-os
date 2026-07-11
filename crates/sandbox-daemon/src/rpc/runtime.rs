@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::observability::DaemonObservability;
 use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use sandbox_config::configs::observability::ObservabilityConfig;
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_operation_contract::OperationResponse;
 use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::{SandboxRuntimeConfig, SandboxRuntimeOperations};

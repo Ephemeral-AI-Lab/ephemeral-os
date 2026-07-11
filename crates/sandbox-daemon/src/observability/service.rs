@@ -1,13 +1,13 @@
 //! Daemon observability sampling, rotation, and lifecycle. `collect()` emits a
-//! compact append-only log through the leaf `sandbox-observability` crate.
+//! compact append-only log through `sandbox-observability-telemetry`.
 
 use std::path::Path;
 use std::sync::{Mutex, PoisonError};
 
 use sandbox_config::configs::observability::ViewsConfig;
-use sandbox_observability::collect::cgroup::CgroupSample;
-use sandbox_observability::collect::disk;
-use sandbox_observability::{
+use sandbox_observability_telemetry::collect::cgroup::CgroupSample;
+use sandbox_observability_telemetry::collect::disk;
+use sandbox_observability_telemetry::{
     record, sample_layerstack, ObservabilityPaths, Observer, ObserverConfig, Reader, Sink,
     WalkBudget,
 };

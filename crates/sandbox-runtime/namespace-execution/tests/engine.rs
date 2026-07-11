@@ -7,7 +7,7 @@ mod support;
 
 use std::sync::Arc;
 
-use sandbox_observability::{NoopHook, SpanStatus, TraceContext};
+use sandbox_observability_telemetry::{NoopHook, SpanStatus, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
 use serde_json::json;
 use support::{

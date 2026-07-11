@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::thread;
 
-use sandbox_observability::{SpanStatus, TerminalHook, TraceContext};
+use sandbox_observability_telemetry::{SpanStatus, TerminalHook, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
 use serde_json::Value;
 

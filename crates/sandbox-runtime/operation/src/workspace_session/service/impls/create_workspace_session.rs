@@ -1,6 +1,6 @@
 use std::collections::hash_map::Entry;
 
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 use serde_json::json;
 
 use crate::workspace_crate::{CreateWorkspaceRequest, DestroyWorkspaceRequest};

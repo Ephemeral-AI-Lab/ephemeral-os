@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use http_body_util::BodyExt as _;
 use sandbox_config::configs::observability::ObservabilityConfig;
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService};

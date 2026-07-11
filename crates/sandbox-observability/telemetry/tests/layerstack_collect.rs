@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use sandbox_observability::{sample_layerstack, LayerBytes, LayerStackBytes, WalkBudget};
+use sandbox_observability_telemetry::{sample_layerstack, LayerBytes, LayerStackBytes, WalkBudget};
 
 type TestResult = Result<(), Box<dyn Error>>;
 

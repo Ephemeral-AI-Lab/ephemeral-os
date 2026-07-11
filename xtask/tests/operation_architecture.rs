@@ -47,7 +47,7 @@ fn semantic_fixture(root: &Path) -> PathBuf {
         "crates/sandbox-operations/catalog/src",
         "crates/sandbox-manager/src",
         "crates/sandbox-runtime/operation/src",
-        "crates/sandbox-observability/application/src",
+        "crates/sandbox-observability/query/src",
         "crates/sandbox-cli/src/projection",
     ] {
         copy_directory(&root.join(directory), &fixture.join(directory));
@@ -96,7 +96,7 @@ fn forbidden_dependency_edge_is_rejected_for_every_edge_kind() {
         ("sandbox-manager", "manager_router"),
         ("sandbox-manager", "manager_export"),
         ("sandbox-runtime", "operation_registry"),
-        ("sandbox-observability-application", "application"),
+        ("sandbox-observability-query", "query"),
         ("sandbox-console", "console"),
     ] {
         let mut replaced = packages.clone();
@@ -166,7 +166,7 @@ fn forbidden_dependency_edge_is_rejected_for_every_edge_kind() {
             "manager_alias",
         ),
         (
-            "sandbox-observability-application",
+            "sandbox-observability-query",
             "sandbox-runtime-layerstack",
             "layerstack_alias",
         ),
@@ -386,12 +386,12 @@ fn missing_and_extra_handlers_are_rejected() {
             "unwired runtime handler construction",
         ),
         (
-            "crates/sandbox-observability/application/src/phase8_extra.rs",
+            "crates/sandbox-observability/query/src/phase8_extra.rs",
             "use crate::registry::OperationEntry as Entry; const PHASE8_ENTRY: Entry = Entry::new(&SNAPSHOT_SPEC, dispatch);",
             "unwired observability handler construction",
         ),
         (
-            "crates/sandbox-observability/application/src/phase8_extra.rs",
+            "crates/sandbox-observability/query/src/phase8_extra.rs",
             "use crate::registry::OperationEntry as Entry; const PHASE8_ENTRY: Entry = Entry { scope_kind: OperationScopeKind::Sandbox, spec: &SNAPSHOT_SPEC, handler: dispatch };",
             "observability executable entry construction census",
         ),
@@ -1104,7 +1104,7 @@ fn maintained_stale_reference_and_generated_path_are_rejected() {
         executable: false,
     });
     facts.files.push(TrackedSource {
-        path: "crates/sandbox-observability/application/src/phase8_runtime_escape.rs".to_owned(),
+        path: "crates/sandbox-observability/query/src/phase8_runtime_escape.rs".to_owned(),
         content: "use sandbox_runtime_layerstack::LayerStack;".to_owned(),
         executable: false,
     });
@@ -1254,22 +1254,22 @@ fn maintained_stale_reference_and_generated_path_are_rejected() {
             "use sandbox_protocol::ProtocolLimits;".to_owned(),
         ),
         (
-            "crates/sandbox-observability/application/src/phase8_allowed_alias.rs",
+            "crates/sandbox-observability/query/src/phase8_allowed_alias.rs",
             "use sandbox_runtime_layerstack::{service::StackObservation as Obs, self as layerstack}; use layerstack::LayerRef;"
                 .to_owned(),
         ),
         (
-            "crates/sandbox-observability/application/src/phase8_forbidden_alias.rs",
+            "crates/sandbox-observability/query/src/phase8_forbidden_alias.rs",
             "use sandbox_runtime_layerstack as layerstack; use layerstack::handler::LayerHandler;"
                 .to_owned(),
         ),
         (
-            "crates/sandbox-observability/application/src/phase8_forbidden_alias_chain.rs",
+            "crates/sandbox-observability/query/src/phase8_forbidden_alias_chain.rs",
             "use sandbox_runtime_layerstack as layerstack; use layerstack as layerstack_api; use layerstack_api::handler::LayerHandler;"
                 .to_owned(),
         ),
         (
-            "crates/sandbox-observability/application/src/phase8_forbidden_root_reexport.rs",
+            "crates/sandbox-observability/query/src/phase8_forbidden_root_reexport.rs",
             "pub use sandbox_runtime_layerstack as layerstack;".to_owned(),
         ),
         (
@@ -1444,7 +1444,7 @@ fn maintained_stale_reference_and_generated_path_are_rejected() {
         .iter()
         .any(|violation| violation.contains("phase8_allowed_alias.rs")));
     assert!(!violations.iter().any(|violation| {
-        violation.contains("crates/sandbox-observability/application/tests/application.rs")
+        violation.contains("crates/sandbox-observability/query/tests/query.rs")
     }));
     assert!(violations.iter().any(|violation| {
         violation.contains("provider imports forbidden manager API")

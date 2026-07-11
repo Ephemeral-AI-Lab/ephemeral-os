@@ -33,7 +33,7 @@ the protocol-owned wire codec and owns application composition. CLI paths,
 flags, usage, examples, and help live in `sandbox-cli::projection`.
 
 The runtime application's workspace dependencies are limited to the contract,
-the catalog's `runtime` feature, `sandbox-observability`, and the workspace,
+the catalog's `runtime` feature, `sandbox-observability-telemetry`, and the workspace,
 layerstack, namespace-execution, and namespace-process runtime primitives. It
 must not depend on `sandbox-protocol`, `sandbox-operation-client`, product
 adapters, composition roots, manager, or the observability application.
@@ -94,7 +94,7 @@ session lifecycle.
   runner transport DTOs, and `setns` execution.
 - `sandbox-runtime-overlay` owns low-level overlay mount, move, and unmount
   primitives used by the other runtime primitives.
-- `sandbox-observability` owns leaf tracing, event, sampling, and reading
+- `sandbox-observability-telemetry` owns tracing, event, sampling, and reading
   primitives used by runtime services.
 
 `crates/sandbox-runtime/` is an organizational namespace only. It has no root
@@ -122,7 +122,7 @@ CommandOperationService + WorkspaceSessionService + LayerStackService + FileServ
 ```
 
 The daemon's observability adapter reads neutral snapshots from this aggregate
-and supplies them to `sandbox-observability-application`; the two applications
+and supplies them to `sandbox-observability-query`; the two applications
 do not depend on one another.
 
 ## Verification

@@ -1,9 +1,9 @@
 use sandbox_config::configs::observability::ViewsConfig;
-use sandbox_observability::{sample_layerstack, LayerStackBytes, WalkBudget};
-use sandbox_observability_application::ports::{
+use sandbox_observability_query::ports::{
     NamespaceExecutionSnapshot, ObservabilityInput, ObservabilitySnapshot, QueryContext,
     QueryLimits, WorkspaceSnapshot,
 };
+use sandbox_observability_telemetry::{sample_layerstack, LayerStackBytes, WalkBudget};
 use sandbox_runtime::{
     LayerDeltaDescription, RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot,
     RuntimeWorkspaceSnapshot, SandboxRuntimeOperations, StackObservation,

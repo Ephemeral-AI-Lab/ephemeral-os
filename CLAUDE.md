@@ -87,7 +87,7 @@ introduce new violations; justify any `unsafe` with a `// SAFETY:` block.
   `sandbox-cli::projection`.
 - `sandbox-protocol` owns only wire codec, framing, authentication fields,
   limits, and readiness. Applications (`sandbox-manager`, `sandbox-runtime`,
-  `sandbox-observability-application`) never depend on protocol, the shared
+  `sandbox-observability-query`) never depend on protocol, the shared
   client, product adapters, composition roots, or each other's implementations.
 - `crates/sandbox-operations/`, `crates/sandbox-observability/`, and
   `crates/sandbox-runtime/` are the only namespace directories. They are

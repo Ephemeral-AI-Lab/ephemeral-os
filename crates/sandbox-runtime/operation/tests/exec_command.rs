@@ -362,13 +362,15 @@ fn destroy_workspace_session_waits_for_existing_session_exec_until_active_insert
     let (spawn_entered_tx, spawn_entered_rx) = mpsc::channel();
     let (release_spawn_tx, release_spawn_rx) = mpsc::channel();
     let blocking_launcher = BlockingNsLauncher::new(spawn_entered_tx, release_spawn_rx);
-    let obs = sandbox_observability::Observer::disabled();
+    let obs = sandbox_observability_telemetry::Observer::disabled();
     let workspace = Arc::new(sandbox_runtime::WorkspaceSessionService::new(
         support::fake_workspace_runtime(Arc::clone(&fake)),
         layerstack_service()?,
         obs.clone(),
     ));
-    let exec_spans = Arc::new(sandbox_observability::SpanRegistry::new(obs.clone()));
+    let exec_spans = Arc::new(sandbox_observability_telemetry::SpanRegistry::new(
+        obs.clone(),
+    ));
     let engine = Arc::new(
         sandbox_runtime_namespace_execution::NamespaceExecutionEngine::with_launcher(
             Box::new(blocking_launcher),
@@ -942,7 +944,7 @@ fn layerstack_service() -> Result<Arc<LayerStackService>, Box<dyn std::error::Er
         root,
         base.join("scratch"),
         sandbox_runtime::LayerstackRuntimeConfig::default(),
-        sandbox_observability::Observer::disabled(),
+        sandbox_observability_telemetry::Observer::disabled(),
         support::test_file_service(),
     )?))
 }

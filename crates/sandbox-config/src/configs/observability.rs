@@ -4,7 +4,7 @@
 //! maps `enabled`, `max_line_bytes`, and the sampling budget plus
 //! `record::proc::DAEMON` into leaf-owned types, keeping `max_file_bytes` as
 //! daemon-owned rotation policy and `views` as daemon-owned view limits. The
-//! `sandbox-observability` leaf never imports this crate.
+//! `sandbox-observability-telemetry` never imports this crate.
 
 use serde::Deserialize;
 

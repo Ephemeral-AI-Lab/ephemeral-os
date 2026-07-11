@@ -1,4 +1,4 @@
-use sandbox_observability::{LayerStackBytes, Reader};
+use sandbox_observability_telemetry::{LayerStackBytes, Reader};
 use sandbox_runtime_layerstack::service::StackObservation;
 use sandbox_runtime_layerstack::LayerDeltaDescription;
 

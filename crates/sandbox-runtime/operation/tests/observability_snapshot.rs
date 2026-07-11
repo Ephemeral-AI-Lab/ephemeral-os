@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::{CommandOperationService, SandboxRuntimeOperations};
@@ -87,8 +87,8 @@ fn observability_snapshot_reports_active_command_namespace_execution(
     Ok(())
 }
 
-/// The runtime now depends on the `sandbox-observability` leaf (it carries the
-/// span/event emit seams), so the old "operation excludes sandbox-observability"
+/// The runtime now depends on `sandbox-observability-telemetry` (it carries the
+/// span/event emit seams), so the old "operation excludes telemetry"
 /// assertion is intentionally gone. What must still hold is that the runtime
 /// never pulls a storage engine: SQLite stays out. The leaf-boundary
 /// invariant (obs must not depend on runtime/daemon/manager) is owned by the obs

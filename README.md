@@ -24,12 +24,12 @@ sandbox-manager
 sandbox-daemon
    | decodes wire requests and composes applications
    v
-sandbox-runtime / sandbox-observability-application
+sandbox-runtime / sandbox-observability-query
    | command, file, workspace, layerstack, and observability behavior
    v
 sandbox-runtime-workspace / sandbox-runtime-layerstack /
 sandbox-runtime-namespace-execution / sandbox-runtime-namespace-process /
-sandbox-runtime-overlay / sandbox-observability
+sandbox-runtime-overlay / sandbox-observability-telemetry
 ```
 
 | Component | Kind | Job | Must never |
@@ -44,8 +44,8 @@ sandbox-runtime-overlay / sandbox-observability
 | `sandbox-manager` | lib | own sandbox lifecycle, daemon endpoint tracking, system-scoped operation handlers, routing, and application ports | depend on protocol/client/adapters/composition roots or implement runtime command/workspace semantics |
 | `sandbox-protocol` | lib | own wire codec, framing, authentication fields, limits, and the daemon readiness handshake | own operation declarations/help or depend on catalog/applications/client/adapters |
 | `sandbox-daemon` | bin+lib | compose authenticated RPC, the exact HTTP allowlist, runtime dispatch, observability dispatch, sampling, and lifecycle | depend on product adapters/client/manager or expose operation routes over HTTP beyond `file_list` |
-| `sandbox-observability-application` | lib | own structured observability query selection and response construction through an application-owned input port | depend on protocol/client/adapters/daemon or the concrete runtime application |
-| `sandbox-observability` | lib | own tracing, events, sampling, collection, and reading primitives | depend on any workspace package |
+| `sandbox-observability-query` | lib | own structured observability query selection and response construction through an application-owned input port | depend on protocol/client/adapters/daemon or the concrete runtime application |
+| `sandbox-observability-telemetry` | lib | own tracing, events, sampling, collection, and reading primitives | depend on any workspace package |
 | `sandbox-runtime` | lib | own public runtime handlers plus canonical internal workspace-session/layerstack dispatch and orchestration | depend on protocol/client/adapters/composition roots or own low-level runtime primitives |
 | `sandbox-runtime-workspace` | lib | workspace runtime lifecycle, namespace handles, capture, and destroy | own command process state |
 | `sandbox-runtime-layerstack` | lib | content hashes, manifest/layer types, storage, leases | own command execution |
@@ -62,9 +62,9 @@ shared gateway client behavior lives in `crates/sandbox-operations/client`;
 CLI metadata lives only in `crates/sandbox-cli/src/projection`; and wire-only
 codec, framing, authentication, limits, and readiness live in
 `crates/sandbox-protocol`. Applications (`sandbox-manager`, `sandbox-runtime`,
-and `sandbox-observability-application`) never depend on protocol, the client,
+and `sandbox-observability-query`) never depend on protocol, the client,
 product adapters, composition roots, or each other's implementations. The
-contract, config, observability primitives, layerstack, and overlay packages
+contract, config, telemetry, layerstack, and overlay packages
 have no workspace dependencies; the catalog depends only on the contract,
 protocol depends only on the contract, and the client depends only on contract
 and protocol. CAS fixtures live with `sandbox-runtime-layerstack`.
@@ -82,8 +82,9 @@ contains the exhaustive allowed-edge table.
   fixtures.
 - `crates/sandbox-operations/` - grouping-only namespace for `contract/`,
   `catalog/`, and `client/`.
-- `crates/sandbox-observability/` - grouping-only namespace for the
-  `primitives/` package (`sandbox-observability`) and `application/`.
+- `crates/sandbox-observability/` - grouping-only namespace for `telemetry/`
+  (`sandbox-observability-telemetry`) and `query/`
+  (`sandbox-observability-query`).
 - `crates/sandbox-runtime/` - grouping-only namespace for `operation/`
   (`sandbox-runtime`), `workspace/`, `layerstack/`, `namespace-execution/`,
   `namespace-process/`, and `overlay/`.

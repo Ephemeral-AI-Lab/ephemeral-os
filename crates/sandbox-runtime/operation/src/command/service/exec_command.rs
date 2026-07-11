@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, MutexGuard, PoisonError};
 use std::time::Instant;
 
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NamespaceExecutionId, NamespaceTarget,
 };

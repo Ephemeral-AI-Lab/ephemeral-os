@@ -454,7 +454,7 @@ crates/sandbox-operations/catalog/src/internal/runtime.rs — → ±0   (interna
 crates/sandbox-cli/src/projection/runtime.rs               — → ±0   (NO --finalize-policy flag)
 crates/sandbox-runtime/namespace-execution/src/registry.rs   — → +~35  (MAX_TERMINAL_ENTRIES cap, oldest-terminal eviction dropping values)
 crates/sandbox-runtime/workspace/src/model.rs       485 →  485  (doc reword only at :103)
-crates/sandbox-observability/primitives/src/record.rs — →  +6   (finalize span/event names; attr doc reword :58,:60,:113)
+crates/sandbox-observability/telemetry/src/record.rs — →  +6   (finalize span/event names; attr doc reword :58,:60,:113)
 crates/sandbox-daemon/src/observability/service.rs    — →  +2   (workspace_value: finalize_policy field)
 ```
 

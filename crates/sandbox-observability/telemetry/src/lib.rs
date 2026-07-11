@@ -1,4 +1,4 @@
-//! Leaf observability crate: one NDJSON record model (`Record::{Span, Event,
+//! Leaf telemetry crate: one NDJSON record model (`Record::{Span, Event,
 //! Sample}`), a single-write `Sink`, a folding `Reader`, and the `Observer` emit
 //! API. No storage engine, no runtime/daemon/config dependency — `serde`,
 //! `serde_json`, and `thiserror` only.

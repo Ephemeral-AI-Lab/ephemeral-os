@@ -28,7 +28,7 @@ fn squash_request() -> OperationRequest {
 fn operations_with_real_layerstack() -> (SandboxRuntimeOperations, std::path::PathBuf) {
     let fake = Arc::new(FakeWorkspaceService::new());
     let layerstack =
-        support::observed_layerstack_service(sandbox_observability::Observer::disabled());
+        support::observed_layerstack_service(sandbox_observability_telemetry::Observer::disabled());
     let root = layerstack.layer_stack_root().to_path_buf();
     let services = support::build_services_with_launch_driver_and_layerstack(
         Arc::clone(&fake),
@@ -187,7 +187,7 @@ fn admission_gate_serializes_destroy_against_file_ops() {
     let operations = SandboxRuntimeOperations::new(
         Arc::clone(&services.command),
         Arc::clone(&services.workspace),
-        support::observed_layerstack_service(sandbox_observability::Observer::disabled()),
+        support::observed_layerstack_service(sandbox_observability_telemetry::Observer::disabled()),
         support::test_file_service(),
     );
 

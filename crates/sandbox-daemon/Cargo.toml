@@ -13,8 +13,8 @@ path = "src/main.rs"
 sandbox-config.workspace = true
 sandbox-operation-contract.workspace = true
 sandbox-operation-catalog = { workspace = true, features = ["observability", "runtime"] }
-sandbox-observability.workspace = true
-sandbox-observability-application.workspace = true
+sandbox-observability-telemetry.workspace = true
+sandbox-observability-query.workspace = true
 sandbox-runtime-namespace-process.workspace = true
 sandbox-protocol.workspace = true
 sandbox-runtime.workspace = true

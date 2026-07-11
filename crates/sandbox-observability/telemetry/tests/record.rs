@@ -4,7 +4,7 @@
 
 use std::borrow::Cow;
 
-use sandbox_observability::{Attrs, Event, Record, Sample, Span, SpanStatus};
+use sandbox_observability_telemetry::{Attrs, Event, Record, Sample, Span, SpanStatus};
 use serde_json::{json, Value};
 
 fn attrs(value: Value) -> Attrs {

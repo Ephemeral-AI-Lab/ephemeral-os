@@ -8,8 +8,8 @@ members = [
     "crates/sandbox-config",
     "crates/sandbox-daemon",
     "crates/sandbox-manager",
-    "crates/sandbox-observability/primitives",
-    "crates/sandbox-observability/application",
+    "crates/sandbox-observability/telemetry",
+    "crates/sandbox-observability/query",
     "crates/sandbox-cli",
     "crates/sandbox-mcp",
     "crates/sandbox-console",
@@ -83,8 +83,8 @@ sandbox-runtime-namespace-execution = { path = "crates/sandbox-runtime/namespace
 sandbox-runtime-overlay = { path = "crates/sandbox-runtime/overlay" }
 sandbox-runtime-workspace = { path = "crates/sandbox-runtime/workspace" }
 sandbox-manager = { path = "crates/sandbox-manager" }
-sandbox-observability = { path = "crates/sandbox-observability/primitives" }
-sandbox-observability-application = { path = "crates/sandbox-observability/application" }
+sandbox-observability-telemetry = { path = "crates/sandbox-observability/telemetry" }
+sandbox-observability-query = { path = "crates/sandbox-observability/query" }
 sandbox-cli = { path = "crates/sandbox-cli" }
 sandbox-mcp = { path = "crates/sandbox-mcp" }
 sandbox-console = { path = "crates/sandbox-console" }

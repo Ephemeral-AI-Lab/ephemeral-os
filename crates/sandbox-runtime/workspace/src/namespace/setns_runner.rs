@@ -7,7 +7,7 @@ use crate::model::WorkspaceHandle;
 use crate::session::MountedWorkspace;
 use crate::session::WorkspaceManagerError;
 #[cfg(target_os = "linux")]
-use sandbox_observability::record::names;
+use sandbox_observability_telemetry::record::names;
 #[cfg(target_os = "linux")]
 use sandbox_runtime_namespace_execution::NamespaceTarget;
 use sandbox_runtime_namespace_process::runner::protocol::RunResult;

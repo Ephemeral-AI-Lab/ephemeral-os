@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_operation_contract::OperationDomain;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService, ExecCommandInput};
 use sandbox_runtime::file::FileService;

@@ -13,8 +13,8 @@ use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, PoisonError};
 
-use sandbox_observability::record::names;
-use sandbox_observability::TraceContext;
+use sandbox_observability_telemetry::record::names;
+use sandbox_observability_telemetry::TraceContext;
 use sandbox_operation_catalog::internal::runtime::SQUASH_LAYERSTACK;
 use sandbox_operation_contract::OperationScopeKind;
 use sandbox_runtime_layerstack::LayerStack;

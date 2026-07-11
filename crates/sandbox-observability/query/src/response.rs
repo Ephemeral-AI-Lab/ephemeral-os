@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use sandbox_observability::{LayerStackBytes, Reader, SampleDelta};
+use sandbox_observability_telemetry::{LayerStackBytes, Reader, SampleDelta};
 use sandbox_runtime_layerstack::service::StackObservation;
 use sandbox_runtime_layerstack::{LayerDeltaDescription, LayerDeltaEntryKind};
 use serde_json::{json, Value};

@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_runtime_workspace::session::{ResourceCaps, WorkspaceManager};
 use sandbox_runtime_workspace::WorkspaceRuntimeService;
 use serde_json::json;

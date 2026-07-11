@@ -1,4 +1,4 @@
-use sandbox_observability::RawFilter;
+use sandbox_observability_telemetry::RawFilter;
 use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use sandbox_runtime_layerstack::LayerRef;
 use serde_json::{json, Value};

@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::path::PathBuf;
 
-use sandbox_observability::ObservabilityPaths;
+use sandbox_observability_telemetry::ObservabilityPaths;
 
 #[test]
 fn derives_one_log_and_its_rotated_sibling_from_daemon_socket_path() -> Result<(), Box<dyn Error>> {

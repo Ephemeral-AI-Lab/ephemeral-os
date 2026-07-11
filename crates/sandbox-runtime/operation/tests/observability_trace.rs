@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use sandbox_observability::record::{names, proc};
-use sandbox_observability::{
+use sandbox_observability_telemetry::record::{names, proc};
+use sandbox_observability_telemetry::{
     Observer, ObserverConfig, RawFilter, Reader, Sink, SpanStatus, TraceContext,
 };
 use sandbox_operation_contract::{OperationRequest, OperationScope};
@@ -333,7 +333,10 @@ fn sink_error_does_not_surface_to_command_result() {
             proc: proc::DAEMON,
             enabled: true,
         },
-        Sink::new(wedged, sandbox_observability::record::MAX_LINE_BYTES),
+        Sink::new(
+            wedged,
+            sandbox_observability_telemetry::record::MAX_LINE_BYTES,
+        ),
     );
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
@@ -377,7 +380,7 @@ fn enabled_observer(path: &Path) -> Observer {
         },
         Sink::new(
             path.to_path_buf(),
-            sandbox_observability::record::MAX_LINE_BYTES,
+            sandbox_observability_telemetry::record::MAX_LINE_BYTES,
         ),
     )
 }

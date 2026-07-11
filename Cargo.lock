@@ -1549,8 +1549,8 @@ dependencies = [
  "hyper",
  "hyper-util",
  "sandbox-config",
- "sandbox-observability",
- "sandbox-observability-application",
+ "sandbox-observability-query",
+ "sandbox-observability-telemetry",
  "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-protocol",
@@ -1614,23 +1614,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "sandbox-observability"
+name = "sandbox-observability-query"
+version = "0.1.0"
+dependencies = [
+ "sandbox-observability-telemetry",
+ "sandbox-operation-catalog",
+ "sandbox-operation-contract",
+ "sandbox-runtime-layerstack",
+ "serde_json",
+]
+
+[[package]]
+name = "sandbox-observability-telemetry"
 version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "sandbox-observability-application"
-version = "0.1.0"
-dependencies = [
- "sandbox-observability",
- "sandbox-operation-catalog",
- "sandbox-operation-contract",
- "sandbox-runtime-layerstack",
- "serde_json",
 ]
 
 [[package]]
@@ -1692,7 +1692,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "rustix 0.38.44",
- "sandbox-observability",
+ "sandbox-observability-telemetry",
  "sandbox-operation-catalog",
  "sandbox-operation-contract",
  "sandbox-runtime-layerstack",
@@ -1730,7 +1730,7 @@ dependencies = [
  "libc",
  "nix 0.29.0",
  "rustix 0.38.44",
- "sandbox-observability",
+ "sandbox-observability-telemetry",
  "sandbox-runtime-namespace-process",
  "serde_json",
  "time",
@@ -1744,7 +1744,7 @@ dependencies = [
  "libc",
  "nix 0.29.0",
  "rustix 0.38.44",
- "sandbox-observability",
+ "sandbox-observability-telemetry",
  "sandbox-runtime-overlay",
  "seccompiler",
  "serde",
@@ -1768,7 +1768,7 @@ dependencies = [
  "nix 0.29.0",
  "rtnetlink",
  "rustix 0.38.44",
- "sandbox-observability",
+ "sandbox-observability-telemetry",
  "sandbox-runtime-layerstack",
  "sandbox-runtime-namespace-execution",
  "sandbox-runtime-namespace-process",

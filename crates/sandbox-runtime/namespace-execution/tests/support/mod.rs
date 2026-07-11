@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 
-use sandbox_observability::{SpanStatus, TerminalHook};
+use sandbox_observability_telemetry::{SpanStatus, TerminalHook};
 
 use crate::launcher::{NsRunnerLauncher, RunnerChild, RunnerPlacement};
 use crate::pty::{open_pty_pair, PtyMaster};

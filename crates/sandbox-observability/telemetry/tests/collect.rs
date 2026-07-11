@@ -3,9 +3,9 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use sandbox_observability::collect::cgroup::CgroupSample;
-use sandbox_observability::collect::disk::sample_upperdir;
-use sandbox_observability::WalkBudget;
+use sandbox_observability_telemetry::collect::cgroup::CgroupSample;
+use sandbox_observability_telemetry::collect::disk::sample_upperdir;
+use sandbox_observability_telemetry::WalkBudget;
 
 fn fixture(label: &str) -> PathBuf {
     static NEXT: AtomicU64 = AtomicU64::new(0);

@@ -8,7 +8,9 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use sandbox_observability::{Attrs, Record, Sample, Sink, Span, SpanStatus, MAX_LINE_BYTES};
+use sandbox_observability_telemetry::{
+    Attrs, Record, Sample, Sink, Span, SpanStatus, MAX_LINE_BYTES,
+};
 use serde_json::{json, Value};
 
 static NEXT: AtomicU64 = AtomicU64::new(0);

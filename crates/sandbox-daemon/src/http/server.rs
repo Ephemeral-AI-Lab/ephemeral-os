@@ -9,7 +9,7 @@ use http::{Request, Response};
 use hyper::body::Incoming;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use sandbox_runtime::SandboxRuntimeOperations;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;

@@ -250,9 +250,19 @@ fn validate_tree(root: &Path) -> Vec<String> {
     compare_children(
         root,
         "crates/sandbox-observability",
-        &["application", "primitives"],
+        &["README.md", "query", "telemetry"],
         &mut violations,
     );
+    match fs::symlink_metadata(root.join("crates/sandbox-observability/README.md")) {
+        Ok(metadata) if metadata.file_type().is_file() => {}
+        Ok(_) => violations.push(
+            "observability namespace README must be a regular file: crates/sandbox-observability/README.md"
+                .to_owned(),
+        ),
+        Err(error) => violations.push(format!(
+            "could not inspect observability namespace README: {error}"
+        )),
+    }
     compare_children(
         root,
         "crates/sandbox-runtime",
@@ -826,7 +836,7 @@ fn validate_projection_ownership(facts: &StaleFacts, violations: &mut Vec<String
         "crates/sandbox-operations/catalog/src/",
         "crates/sandbox-manager/src/",
         "crates/sandbox-runtime/operation/src/",
-        "crates/sandbox-observability/application/src/",
+        "crates/sandbox-observability/query/src/",
     ];
     for file in facts
         .files
@@ -1117,7 +1127,7 @@ fn validate_handler_ownership(facts: &StaleFacts, violations: &mut Vec<String>) 
             && compact.contains("_SPEC")
             && !file
                 .path
-                .starts_with("crates/sandbox-observability/application/src/")
+                .starts_with("crates/sandbox-observability/query/src/")
             && !file.path.starts_with("crates/sandbox-manager/src/")
         {
             violations.push(format!(

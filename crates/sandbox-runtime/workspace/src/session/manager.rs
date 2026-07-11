@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use sandbox_observability::Observer;
+use sandbox_observability_telemetry::Observer;
 use serde::Deserialize;
 
 use crate::isolated_network_setup::IsolatedNetwork;

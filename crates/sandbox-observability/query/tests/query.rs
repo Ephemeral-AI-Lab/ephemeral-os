@@ -2,12 +2,12 @@ use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use sandbox_observability::{LayerBytes, LayerStackBytes, Reader};
-use sandbox_observability_application::ports::{
+use sandbox_observability_query::ports::{
     NamespaceExecutionSnapshot, ObservabilityInput, ObservabilitySnapshot, QueryContext,
     QueryLimits, WorkspaceSnapshot,
 };
-use sandbox_observability_application::{dispatch_operation, observability_handler_keys};
+use sandbox_observability_query::{dispatch_operation, observability_handler_keys};
+use sandbox_observability_telemetry::{LayerBytes, LayerStackBytes, Reader};
 use sandbox_operation_contract::{
     OperationExecutionOwner, OperationRequest, OperationScope, OperationScopeKind,
     OperationVisibility,
@@ -568,7 +568,7 @@ fn write_lines(path: &PathBuf, lines: &[Value]) {
 fn log_path(label: &str) -> PathBuf {
     static NEXT: AtomicU64 = AtomicU64::new(0);
     std::env::temp_dir().join(format!(
-        "sandbox-observability-application-{label}-{}-{}.ndjson",
+        "sandbox-observability-query-{label}-{}-{}.ndjson",
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ))

@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use sandbox_observability::record::proc;
-use sandbox_observability::{
+use sandbox_observability_telemetry::record::proc;
+use sandbox_observability_telemetry::{
     Observer, ObserverConfig, RawFilter, Reader, Sink, Span, SpanStatus, TraceContext,
     MAX_LINE_BYTES,
 };
