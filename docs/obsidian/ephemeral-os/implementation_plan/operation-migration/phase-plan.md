@@ -6,7 +6,7 @@ tags:
   - migration
   - phase-plan
   - execution-tracker
-status: in-progress
+status: complete
 updated: 2026-07-11
 ---
 
@@ -55,7 +55,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | approved | 2026-07-11 | 2026-07-11 | Codex |
 | 7 | Update documentation, scripts, law statements | approved | 2026-07-11 | 2026-07-11 | Codex |
-| 8 | Enforce boundaries and cut over | gate review | 2026-07-11 | — | — |
+| 8 | Enforce boundaries and cut over | approved | 2026-07-11 | 2026-07-11 | Codex |
 
 ## Standing gate (every phase)
 
@@ -729,6 +729,7 @@ one commit.
 | 2026-07-11 | <a id="phase8-live-e2e"></a>Final full live Docker E2E proof | From `e2e/`: `E2E_REBUILD_BINARY=0 python3 -m pytest`; exact isolation command `E2E_REBUILD_BINARY=0 python3 -m pytest runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write -vv`; final full command `E2E_REBUILD_BINARY=0 python3 -m pytest`; append-only run record `e2e/test-reports/TEST-REPORT.md` | The first complete collection reported 366 passed, 6 skipped, and one fixture `ERROR`; the exact case then passed session create/write/read/destroy in `1 passed in 0.88s` with no code change. The required final complete 373-test collection exited 0 with `367 passed, 6 skipped in 1027.41s (0:17:07)`. The six skips are documented environment/opt-in cases; there were zero failures or errors. | No implementation or specification deviation; the initial lifecycle/transport error did not reproduce and left no leaked container or scoped failure artifact. |
 | 2026-07-11 | <a id="phase8-live-smoke"></a>Six-operation cross-surface smoke and cleanup proof | `cargo build -p sandbox-mcp --bin sandbox-mcp`; `bin/start-sandbox-console-stack --skip-gateway`; root-wrapper manager `create_sandbox`; runtime `exec_command`; system and sandbox `snapshot`; JSON-RPC `tools/call` `list_sandboxes` through `target/debug/sandbox-mcp --set management`; console `POST /api/rpc` `list_sandboxes`; manager `destroy_sandbox` and `list_sandboxes` absence assertion | Corrected proof exited 0. Emitted records showed manager `ready`, runtime marker `phase8-runtime-smoke`, both observability scopes present/ready, MCP `isError:false`, console presence, teardown `stopped`, and final `absence_verified`. The first harness invocation had already passed all six product operations but used the wrong top-level JSON shape only for its final absence assertion; changing it to `.sandboxes | all(...)` made the complete rerun pass. | No product or specification deviation; the correction was confined to the temporary proof harness. |
 | 2026-07-11 | Phase 8 gate review | `cargo run -p xtask -- operation-architecture-check`; `cargo fmt --all -- --check`; scoped `git diff --check`; exact `rg`/`awk` assertions for adopted specification status, two superseded legacy records, and unchecked Phase 8/spec acceptance items | The checker completed every dependency, feature-closure, catalog, projection, route, visibility, source-boundary, stale-reference, and authority-inventory proof and ended `operation architecture check passed`. Formatting and scoped diff checks passed. The status assertions printed `acceptance_state=adopted phase8_unchecked=0 spec_unchecked=0 legacy_superseded=2 diff_check=pass fmt=pass`. Dashboard status advanced to `gate review`; approval remains pending independent review. | The acceptance-link edit shifted eight authoritative-token coordinates; the exact inventory entries were updated without changing scanner behavior or classifications. |
+| 2026-07-11 | Phase 8 approved | Post-gate-review `cargo check --workspace --all-targets --all-features`; `cargo test -p xtask --test operation_architecture`; independent read-only audit at commit `1ab56505f` repeated `cargo run -p xtask -- operation-architecture-check`, the seven self-tests, `cargo fmt --all -- --check`, anchor/checklist/status assertions, and `git show --check --oneline --no-renames 1ab56505f` | Workspace check passed. The local and independent self-test runs passed 7/7 in 74.84s and 74.82s. The independent checker ended `operation architecture check passed`; format and commit diff checks passed; the audit found 5/5 changes, 7/7 Phase 8 acceptances, 20/20 linked specification acceptances, eight unique evidence anchors, two superseded legacy records, and no blocker. Dashboard status advanced to `approved`; the execution tracker is `complete`. | None. |
 
 ---
 
