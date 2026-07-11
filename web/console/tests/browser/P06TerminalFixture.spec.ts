@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { measureFromTimestampToPaintP95 } from "./performance";
 
 type TerminalApi = {
   stdinWrites: string[];
@@ -242,6 +243,21 @@ test("P06 virtualizes 10k lines, contains a 10k-character line, and preserves ta
   await expect(page).toHaveScreenshot("p06-terminal-10k-tail-1440x900.png", {
     animations: "disabled",
     maxDiffPixelRatio: 0.003,
+  });
+});
+
+test("P12 keeps 10k Terminal scrolling below the input-to-paint budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openTerminal(page, true);
+  const transcript = page.locator("[data-terminal-transcript]");
+
+  await measureFromTimestampToPaintP95(page, "Terminal 10k scroll", async (iteration) => {
+    const index = (iteration * 463 + 251) % 10_000;
+    return transcript.evaluate((element, target) => {
+      const startedAt = performance.now();
+      element.scrollTop = target / 9_999 * (element.scrollHeight - element.clientHeight);
+      return startedAt;
+    }, index);
   });
 });
 

@@ -70,9 +70,12 @@ export function FileTree({
       staleTime: 5000,
     })),
   });
+  const listingStateKey = listings
+    .map((listing) => `${listing.status}:${listing.dataUpdatedAt}:${listing.errorUpdatedAt}`)
+    .join("|");
   const listingsByPath = useMemo(
     () => new Map(expandedPaths.map((path, index) => [path, listings[index]])),
-    [expandedPaths, listings],
+    [expandedPaths, listingStateKey],
   );
 
   const rows = useMemo(

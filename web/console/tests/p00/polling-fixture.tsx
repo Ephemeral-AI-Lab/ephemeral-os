@@ -18,7 +18,24 @@ function PollProbe({ mode }: { mode: PollMode }) {
     mode,
   });
 
-  return <output data-testid={`poll-${mode}`}>{query.data?.revision ?? "loading"}</output>;
+  return (
+    <>
+      <output
+        data-testid={`poll-${mode}`}
+        style={{ display: "inline-block", minWidth: "7ch" }}
+      >
+        {query.data?.revision ?? "loading"}
+      </output>
+      <button
+        aria-label={`Refetch ${mode} poll`}
+        data-testid={`poll-${mode}-refetch`}
+        onClick={() => void query.refetch({ cancelRefetch: true })}
+        type="button"
+      >
+        Refetch
+      </button>
+    </>
+  );
 }
 
 function App() {
@@ -34,8 +51,8 @@ function App() {
     <QueryClientProvider client={client}>
       <main>
         <h1>P00 polling fixture</h1>
-        <PollProbe mode="fast" />
-        <PollProbe mode="slow" />
+        <p><PollProbe mode="fast" /></p>
+        <p><PollProbe mode="slow" /></p>
       </main>
     </QueryClientProvider>
   );

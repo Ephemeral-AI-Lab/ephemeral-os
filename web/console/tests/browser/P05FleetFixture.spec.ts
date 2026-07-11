@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { measureInputToPaintP95 } from "./performance";
 
 type SandboxState = "creating" | "ready" | "stopping" | "stopped" | "failed";
 
@@ -284,6 +285,23 @@ test("P05 WorkspacePicker searches virtually, preserves the create draft, and re
   await pickerDialog.getByRole("button", { name: "Roots" }).click();
   await expect(pickerDialog.locator("[data-workspace-picker-truncated]")).toContainText("first 500 child folders");
   await expect(page).toHaveScreenshot("p05-workspace-picker-truncated-375x812.png", { animations: "disabled" });
+});
+
+test("P12 keeps 10k WorkspacePicker filtering below the input-to-paint budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFleet(page, { list: [record("performance-picker")] });
+  await page.getByRole("button", { name: "New Sandbox" }).click();
+  const createDialog = page.getByRole("dialog", { name: "Create sandbox" });
+  await createDialog.locator("#create-workspace_root").click();
+  const picker = page.getByRole("dialog", { name: "Select workspace folder" });
+  await picker.getByRole("button", { name: "Search child folders" }).click();
+  const input = picker.getByRole("textbox", { name: "Search child folders" });
+
+  await measureInputToPaintP95(page, "WorkspacePicker 10k filter", async (iteration) => {
+    const folder = `folder-${9_999 - iteration}`;
+    await input.fill(folder);
+    await expect(picker.getByRole("option", { name: folder })).toBeVisible();
+  });
 });
 
 test("P05 creation and WorkspacePicker retain visible keyboard focus at 375x812 @visual", async ({ page }) => {

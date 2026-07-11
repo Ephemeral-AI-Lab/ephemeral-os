@@ -15,7 +15,6 @@ import {
 import {
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type SortingState,
@@ -39,6 +38,17 @@ function eventKey(event: TraceEvent): string {
   return `${event.trace}-${event.ts}-${event.name}`;
 }
 
+function sortKey(sorting: SortingState): string {
+  const current = sorting[0];
+  return current ? `${current.id}:${current.desc ? "desc" : "asc"}` : "none";
+}
+
+function compareEvents(column: string, left: TraceEvent, right: TraceEvent): number {
+  const leftValue = column === "ts" ? left.ts : column === "name" ? left.name : left.trace;
+  const rightValue = column === "ts" ? right.ts : column === "name" ? right.name : right.trace;
+  return leftValue === rightValue ? 0 : leftValue > rightValue ? 1 : -1;
+}
+
 /**
  * EventStream: newest-first table over the `events` view with the API's
  * exact filters (name, since-ms, last-N) plus a polling live-tail toggle.
@@ -55,6 +65,7 @@ export function EventsView() {
   const [selected, setSelected] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "ts", desc: true }]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sortCache = useRef<{ data: TraceEvent[]; values: Map<string, TraceEvent[]> } | null>(null);
 
   const events = usePoll({
     key: ["observability", sandboxId, "events", name, sinceMs, lastN],
@@ -136,16 +147,33 @@ export function EventsView() {
     ],
     [expanded, sandboxId],
   );
+  const eventData = events.data?.events ?? [];
+  if (sortCache.current?.data !== eventData) {
+    sortCache.current = { data: eventData, values: new Map([["none", eventData]]) };
+  }
+  const currentSortKey = sortKey(sorting);
+  let sortedEvents = sortCache.current.values.get(currentSortKey);
+  if (!sortedEvents) {
+    const [column, direction] = currentSortKey.split(":");
+    sortedEvents = [...eventData].sort((left, right) => compareEvents(column!, left, right));
+    if (direction === "desc") sortedEvents.reverse();
+    sortCache.current.values.set(currentSortKey, sortedEvents);
+  }
   const table = useReactTable({
     columns,
-    data: events.data?.events ?? [],
+    data: eventData,
     getCoreRowModel: getCoreRowModel(),
     getRowId: eventKey,
-    getSortedRowModel: getSortedRowModel(),
+    manualSorting: true,
     onSortingChange: setSorting,
     state: { sorting },
   });
-  const rows = table.getRowModel().rows;
+  const coreRows = table.getCoreRowModel().rows;
+  const rowsByEvent = useMemo(
+    () => new Map(coreRows.map((row) => [row.original, row])),
+    [coreRows],
+  );
+  const rows = sortedEvents.map((event) => rowsByEvent.get(event)!);
   const shouldVirtualize = rows.length > VIRTUALIZE_AT;
   const rowVirtualizer = useVirtualizer({
     count: shouldVirtualize ? rows.length : 0,

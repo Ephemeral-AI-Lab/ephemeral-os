@@ -1,29 +1,34 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { measureInputToPaintP95 } from "./performance";
 
 const INITIAL_FILE = "operator note: preserve this local change";
 const SERVER_FILE = "operator note: another writer changed the server version";
 const PAGED_FIRST = Array.from({ length: 2_000 }, (_, index) => `line ${String(index + 1).padStart(4, "0")}`).join("\n");
 const PAGED_SECOND = Array.from({ length: 2_000 }, (_, index) => `line ${String(index + 2_001).padStart(4, "0")}`).join("\n");
 
-const rootEntries = [
-  { name: "docs", kind: "directory", size: null },
-  { name: "operator.txt", kind: "file", size: INITIAL_FILE.length },
-  { name: "paged.txt", kind: "file", size: PAGED_FIRST.length + PAGED_SECOND.length + 1 },
-  ...Array.from({ length: 1_997 }, (_, index) => ({
-    name: `fixture-${String(index).padStart(4, "0")}.txt`,
-    kind: "file",
-    size: index + 1,
-  })),
-];
+function makeRootEntries(count: number, operatorContent = INITIAL_FILE) {
+  return [
+    { name: "docs", kind: "directory", size: null },
+    { name: "operator.txt", kind: "file", size: operatorContent.length },
+    { name: "paged.txt", kind: "file", size: PAGED_FIRST.length + PAGED_SECOND.length + 1 },
+    ...Array.from({ length: count - 3 }, (_, index) => ({
+      name: `fixture-${String(index).padStart(4, "0")}.txt`,
+      kind: "file",
+      size: index + 1,
+    })),
+  ];
+}
 
-async function installFilesApi(page: Page) {
+async function installFilesApi(page: Page, options: { rootEntryCount?: number; operatorContent?: string } = {}) {
+  const operatorContent = options.operatorContent ?? INITIAL_FILE;
+  const rootEntries = makeRootEntries(options.rootEntryCount ?? 2_000, operatorContent);
   let operatorReads = 0;
   await page.route("**/api/sandboxes/files-fixture/files/list", async (route) => {
     const args = route.request().postDataJSON() as { path?: string };
     const path = args.path ?? "";
     const body = path === "docs"
-      ? { path, entries: [{ name: "operator.txt", kind: "file", size: INITIAL_FILE.length }], truncated: false }
+      ? { path, entries: [{ name: "operator.txt", kind: "file", size: operatorContent.length }], truncated: false }
       : { path: "", entries: rootEntries, truncated: true };
     await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
   });
@@ -67,7 +72,7 @@ async function installFilesApi(page: Page) {
     }
 
     operatorReads += 1;
-    const content = operatorReads >= 3 ? SERVER_FILE : INITIAL_FILE;
+    const content = operatorReads >= 3 ? SERVER_FILE : operatorContent;
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -85,8 +90,8 @@ async function installFilesApi(page: Page) {
   });
 }
 
-async function openFiles(page: Page, path = "operator.txt") {
-  await installFilesApi(page);
+async function openFiles(page: Page, path = "operator.txt", options: { rootEntryCount?: number; operatorContent?: string } = {}) {
+  await installFilesApi(page, options);
   await page.goto(`/p08-files.html?path=${encodeURIComponent(path)}`);
   await expect(page.locator("[data-files-workspace]")).toBeVisible();
   await expect(page.locator(".cm-content")).toBeVisible();
@@ -176,6 +181,36 @@ test("P08 virtualizes the first 2,000 tree entries and supports the tree keyboar
   await expect(docs).toBeFocused();
   await page.keyboard.press("End");
   await expect(tree.getByRole("treeitem").last()).toBeFocused();
+});
+
+test("P12 keeps 10k file-tree keyboard navigation below the input-to-paint budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFiles(page, "operator.txt", { rootEntryCount: 10_000 });
+  const tree = page.getByRole("tree", { name: "File tree" });
+  const docs = tree.locator('[role="treeitem"][title="docs"]');
+  await docs.focus();
+  await expect.poll(() => tree.getByRole("treeitem").count()).toBeLessThan(128);
+  await page.keyboard.press("End");
+  await expect(tree.getByRole("treeitem").last()).toBeFocused();
+
+  await measureInputToPaintP95(page, "File tree 10k keyboard navigation", async (iteration) => {
+    await page.keyboard.press(iteration % 2 ? "ArrowUp" : "ArrowDown");
+    await expect(tree.locator(':focus')).toBeVisible();
+  });
+});
+
+test("P12 keeps 1 MiB CodeMirror editing below the input-to-paint budget", async ({ page }) => {
+  const oneMiB = `${"x".repeat(63)}\n`.repeat(16_384);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openFiles(page, "operator.txt", { operatorContent: oneMiB });
+  await page.getByRole("button", { name: "Edit" }).click();
+  const content = page.locator(".cm-content");
+  await content.focus();
+
+  await measureInputToPaintP95(page, "CodeMirror 1 MiB edit", async (iteration) => {
+    await page.keyboard.insertText(String(iteration % 10));
+    await expect(content).toBeVisible();
+  });
 });
 
 test("P08 keeps the CodeMirror instance through paging, blame, and a preserved conflict", async ({ page }) => {

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { measureFromTimestampToPaintP95, measureInputToPaintP95 } from "./performance";
 
 const NOW = 1_700_004_000_000;
 
@@ -8,13 +9,17 @@ type FixtureApi = {
   failEvents: () => void;
 };
 
-const events = Array.from({ length: 2_000 }, (_, index) => ({
-  ts: NOW - (1_999 - index) * 1_000,
+function makeEvents(count = 2_000) {
+  return Array.from({ length: count }, (_, index) => ({
+  ts: NOW - (count - 1 - index) * 1_000,
   trace: "trace-2k",
   parent: index % 2 ? "span-root" : null,
   name: `event-${String(index).padStart(4, "0")}`,
   attrs: { index, source: "P07 fixture", detail: `event detail ${index}` },
-}));
+  }));
+}
+
+const events = makeEvents();
 
 const samples = Array.from({ length: 16 }, (_, index) => ({
   ts: NOW - (15 - index) * 5_000,
@@ -23,13 +28,14 @@ const samples = Array.from({ length: 16 }, (_, index) => ({
   deltas: { cpu_usec: 10_000 + index * 500, io_rbytes: 500 + index * 10, io_wbytes: 200 + index * 5 },
 }));
 
-const trace = {
+function traceFor(fixtureEvents: typeof events) {
+  return {
   view: "trace",
   trace: "trace-2k",
   spans: [{
     offset_ms: 0,
     span: { ts: NOW - 2_000, trace: "trace-2k", span: "span-root", name: "fixture.root", dur_ms: 2_000, status: "completed", attrs: { fixture: true } },
-    events: [{ offset_ms: 500, event: events.at(-1) }],
+    events: [{ offset_ms: 500, event: fixtureEvents.at(-1) }],
     children: Array.from({ length: 1_999 }, (_, index) => ({
       offset_ms: (index + 1) % 1_800,
       span: {
@@ -45,9 +51,14 @@ const trace = {
       children: [],
     })),
   }],
-};
+  };
+}
 
-async function installObservabilityApi(page: Page): Promise<FixtureApi> {
+const trace = traceFor(events);
+
+async function installObservabilityApi(page: Page, eventCount = 2_000): Promise<FixtureApi> {
+  const fixtureEvents = eventCount === 2_000 ? events : makeEvents(eventCount);
+  const fixtureTrace = eventCount === 2_000 ? trace : traceFor(fixtureEvents);
   let eventsFail = false;
   let eventsCalls = 0;
   await page.route("**/api/rpc", async (route) => {
@@ -58,11 +69,11 @@ async function installObservabilityApi(page: Page): Promise<FixtureApi> {
         await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { kind: "fixture_error", message: "event stream unavailable" } }) });
         return;
       }
-      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ view: "events", events }) });
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ view: "events", events: fixtureEvents }) });
       return;
     }
     if (op === "trace") {
-      await route.fulfill({ contentType: "application/json", body: JSON.stringify(trace) });
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify(fixtureTrace) });
       return;
     }
     if (op === "cgroup") {
@@ -99,12 +110,12 @@ async function installObservabilityApi(page: Page): Promise<FixtureApi> {
   return { eventCalls: () => eventsCalls, failEvents: () => { eventsFail = true; } };
 }
 
-async function openView(page: Page, view: "events" | "resources" | "traces" | "layers") {
-  const api = await installObservabilityApi(page);
+async function openView(page: Page, view: "events" | "resources" | "traces" | "layers", eventCount = 2_000) {
+  const api = await installObservabilityApi(page, eventCount);
   await page.clock.setFixedTime(NOW);
   await page.goto(`/p07-observability.html?view=${view}`);
   const ready = {
-    events: "event-1999",
+    events: `event-${String(eventCount - 1).padStart(4, "0")}`,
     resources: "CPU (Δ cpu_usec / s)",
     traces: "fixture.root",
     layers: "fixture-layer-2",
@@ -164,6 +175,24 @@ test("P07 Events sort through the TanStack table model without unbounded DOM row
   await expect.poll(() => page.locator("[data-event-row]").count()).toBeLessThan(128);
 });
 
+test("P12 keeps 10k Events sorting below the input-to-paint budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openView(page, "events", 10_000);
+  const rows = page.locator("[data-event-row]");
+  const sort = page.getByRole("button", { name: "name" });
+  await expect.poll(() => rows.count()).toBeLessThan(128);
+  await page.getByRole("button", { name: "tail", exact: true }).click();
+  await expect(page.getByRole("button", { name: "resume tail", exact: true })).toBeVisible();
+  await sort.click();
+  await sort.click();
+  await sort.click();
+
+  await measureInputToPaintP95(page, "Events Table 10k sort", async () => {
+    await sort.click();
+    await expect(rows.first()).toBeVisible();
+  });
+});
+
 test("P07 virtualizes a 2K-span waterfall and preserves an independent overflow owner", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openView(page, "traces");
@@ -175,6 +204,23 @@ test("P07 virtualizes a 2K-span waterfall and preserves an independent overflow 
   });
   await expect(page.locator('[data-trace-span="span-1500"]')).toBeVisible();
   await expect(page).toHaveScreenshot("p07-traces-2k-mid-1440x900.png", { animations: "disabled" });
+});
+
+test("P12 keeps 2k Trace waterfall scrolling below the input-to-paint budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openView(page, "traces");
+  const waterfall = page.locator("[data-trace-waterfall]");
+  let lastIndex = 0;
+
+  await measureFromTimestampToPaintP95(page, "Trace 2k waterfall scroll", async (iteration) => {
+    lastIndex = (iteration * 97) % 1_999;
+    return waterfall.evaluate((element, target) => {
+      const startedAt = performance.now();
+      element.scrollTop = target / 1_999 * (element.scrollHeight - element.clientHeight);
+      return startedAt;
+    }, lastIndex);
+  });
+  await expect(page.locator(`[data-trace-span="span-${String(lastIndex + 1).padStart(4, "0")}"]`)).toBeVisible();
 });
 
 test("P07 exposes selected span detail without expanding the 2K waterfall", async ({ page }) => {
@@ -205,6 +251,18 @@ test("P07 resource charts retain accessible summaries through a resize", async (
   await expect(page.locator("[aria-label$='numerical summary']")).toHaveCount(4);
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.locator("[data-resources-view] canvas")).toHaveCount(4);
+});
+
+test("P12 keeps uPlot chart resize repainting below the input-to-paint budget", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openView(page, "resources");
+  const charts = page.locator("[data-resources-view] canvas");
+  await expect(charts).toHaveCount(4);
+
+  await measureInputToPaintP95(page, "uPlot chart resize", async (iteration) => {
+    await page.setViewportSize({ width: iteration % 2 ? 1439 : 1440, height: 900 });
+    await expect(charts).toHaveCount(4);
+  });
 });
 
 test("P07 layers makes the backend's first-500 limit explicit", async ({ page }) => {
