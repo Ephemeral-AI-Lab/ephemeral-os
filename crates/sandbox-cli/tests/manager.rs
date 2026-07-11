@@ -53,6 +53,8 @@ async fn help_lists_exact_management_catalog() {
         help_operation_names(&stdout),
         [
             "create_sandbox",
+            "list_docker_images",
+            "list_workspace_directories",
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",

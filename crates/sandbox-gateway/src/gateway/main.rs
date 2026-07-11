@@ -13,6 +13,7 @@ use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ExportApplyCaps, ManagerError, ManagerServices,
     ObservabilitySnapshotLimits, SandboxDaemonEndpoint, SandboxDaemonInstaller,
     SandboxManagerRouter, SandboxRecord, SandboxRuntime, SandboxStore, StartedDaemon,
+    WorkspaceRootPolicy,
 };
 use sandbox_provider_docker::{DockerSandboxDaemonInstaller, DockerSandboxRuntime};
 use tokio_util::sync::CancellationToken;
@@ -148,6 +149,10 @@ fn build_docker_services(
             .max_concurrent_requests,
         timeout_ms: manager_config.observability_snapshot.timeout_ms,
     };
+    let workspace_roots = match manager_config.workspace_roots.clone() {
+        Some(roots) => WorkspaceRootPolicy::configured(roots)?,
+        None => WorkspaceRootPolicy::default_picker()?,
+    };
     let docker_config = manager_config
         .docker
         .ok_or("config is missing the manager.docker section")?;
@@ -177,6 +182,7 @@ fn build_docker_services(
     );
     services.export_caps = export_caps;
     services.snapshot_limits = snapshot_limits;
+    services.workspace_roots = workspace_roots;
     Ok(Arc::new(services))
 }
 
@@ -215,6 +221,12 @@ fn default_manager_services() -> Arc<ManagerServices> {
 struct UnconfiguredRuntime;
 
 impl SandboxRuntime for UnconfiguredRuntime {
+    fn list_images(&self) -> Result<Vec<String>, ManagerError> {
+        Err(ManagerError::RuntimeFailed {
+            message: "sandbox runtime is not configured".to_owned(),
+        })
+    }
+
     fn create_sandbox(
         &self,
         _request: &CreateSandboxRequest,

@@ -37,8 +37,8 @@ fn public_catalogs_are_route_complete() {
         );
     }
 
-    assert_eq!(operation_count, 18);
-    assert_eq!(routes::public_routes().count(), 19);
+    assert_eq!(operation_count, 20);
+    assert_eq!(routes::public_routes().count(), 21);
 }
 
 #[test]
@@ -69,6 +69,20 @@ fn public_route_manifest_is_exact_and_policy_consistent() {
         [
             (
                 "create_sandbox",
+                OperationScopePolicy::System,
+                OperationScopeKind::System,
+                OperationExecutionOwner::Manager,
+                OperationVisibility::Public
+            ),
+            (
+                "list_docker_images",
+                OperationScopePolicy::System,
+                OperationScopeKind::System,
+                OperationExecutionOwner::Manager,
+                OperationVisibility::Public
+            ),
+            (
+                "list_workspace_directories",
                 OperationScopePolicy::System,
                 OperationScopeKind::System,
                 OperationExecutionOwner::Manager,

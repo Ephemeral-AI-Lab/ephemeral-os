@@ -6,7 +6,7 @@ use std::time::Duration;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord, SandboxRuntime,
-    SandboxState, SandboxStore, SharedBaseMount, StartedDaemon,
+    SandboxState, SandboxStore, SharedBaseMount, StartedDaemon, WorkspaceRootPolicy,
 };
 use sandbox_operation_contract::{
     ArgKind, OperationDomain, OperationRequest, OperationResponse, OperationScope,
@@ -20,6 +20,10 @@ struct FakeRuntime {
 }
 
 impl SandboxRuntime for FakeRuntime {
+    fn list_images(&self) -> Result<Vec<String>, ManagerError> {
+        Ok(vec!["ubuntu:24.04".to_owned()])
+    }
+
     fn create_sandbox(
         &self,
         request: &CreateSandboxRequest,
@@ -397,6 +401,8 @@ fn operation_catalog_contains_only_manager_operations() {
         names,
         [
             "create_sandbox",
+            "list_docker_images",
+            "list_workspace_directories",
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",
@@ -416,6 +422,110 @@ fn operation_catalog_contains_only_manager_operations() {
         .args
         .iter()
         .any(|arg| arg.name == "sandbox_id" && arg.kind == ArgKind::String)));
+}
+
+#[test]
+fn create_sandbox_picker_resources_use_configured_workspace_roots() {
+    let (mut services, runtime, _installer, _client) = services();
+    let workspace = TestWorkspace::new("picker");
+    let outside = TestWorkspace::new("picker-outside");
+    services.workspace_roots =
+        WorkspaceRootPolicy::configured(vec![workspace.root.clone()]).expect("configure root");
+
+    let images = dispatch(&services, "list_docker_images", json!({}));
+    assert_eq!(images, json!({"images": ["ubuntu:24.04"]}));
+
+    let roots = dispatch(&services, "list_workspace_directories", json!({}));
+    assert_eq!(roots["path"], Value::Null);
+    assert_eq!(roots["parent"], Value::Null);
+    assert_eq!(roots["truncated"], false);
+    assert_eq!(
+        roots["directories"],
+        json!([{
+            "name": workspace.root.canonicalize().expect("canonical root").to_string_lossy(),
+            "path": workspace.root.canonicalize().expect("canonical root").to_string_lossy(),
+        }])
+    );
+
+    let selected = workspace
+        .path()
+        .canonicalize()
+        .expect("canonical workspace");
+    let listing = dispatch(
+        &services,
+        "list_workspace_directories",
+        json!({"path": workspace.root.to_string_lossy()}),
+    );
+    assert_eq!(
+        listing["path"],
+        workspace
+            .root
+            .canonicalize()
+            .expect("canonical root")
+            .to_string_lossy()
+            .into_owned()
+    );
+    assert_eq!(
+        listing["directories"],
+        json!([{
+            "name": "workspace",
+            "path": selected.to_string_lossy(),
+        }])
+    );
+    assert_eq!(listing["truncated"], false);
+
+    let created = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"image": "ubuntu:24.04", "workspace_root": workspace.path_string()}),
+    );
+    assert_eq!(created["id"], "container-1");
+    assert_eq!(
+        runtime.created.lock().expect("created lock")[0].1,
+        selected,
+        "creation receives the canonical picker selection"
+    );
+
+    let rejected = dispatch(
+        &services,
+        "create_sandbox",
+        json!({"image": "ubuntu:24.04", "workspace_root": outside.path_string()}),
+    );
+    assert_eq!(
+        rejected["error"]["kind"],
+        sandbox_operation_contract::error::INVALID_REQUEST
+    );
+    assert_eq!(runtime.created.lock().expect("created lock").len(), 1);
+}
+
+#[test]
+fn workspace_picker_caps_directory_results() {
+    let workspace = TestWorkspace::new("picker-cap");
+    for index in 0..501 {
+        std::fs::create_dir(workspace.root.join(format!("folder-{index:03}")))
+            .expect("create child folder");
+    }
+    let policy =
+        WorkspaceRootPolicy::configured(vec![workspace.root.clone()]).expect("configure root");
+
+    let listing = policy
+        .list(Some(workspace.root.clone()))
+        .expect("list workspace children");
+    assert_eq!(listing.directories.len(), 500);
+    assert!(listing.truncated);
+}
+
+#[test]
+fn default_workspace_picker_keeps_legacy_create_paths() {
+    let workspace = TestWorkspace::new("picker-default");
+    let policy = WorkspaceRootPolicy::default_picker().expect("default picker");
+
+    assert_eq!(
+        policy
+            .resolve(workspace.path().to_path_buf())
+            .expect("legacy path remains accepted"),
+        workspace.path()
+    );
 }
 
 #[test]

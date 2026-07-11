@@ -28,6 +28,10 @@ const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
 struct FakeRuntime;
 
 impl SandboxRuntime for FakeRuntime {
+    fn list_images(&self) -> Result<Vec<String>, ManagerError> {
+        Ok(vec!["ubuntu:24.04".to_owned()])
+    }
+
     fn create_sandbox(
         &self,
         _request: &CreateSandboxRequest,

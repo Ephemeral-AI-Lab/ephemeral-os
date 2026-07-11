@@ -15,6 +15,12 @@ pub struct CreateSandboxResult {
 }
 
 pub trait SandboxRuntime: Send + Sync {
+    fn list_images(&self) -> Result<Vec<String>, ManagerError> {
+        Err(ManagerError::RuntimeFailed {
+            message: "sandbox runtime does not support Docker image discovery".to_owned(),
+        })
+    }
+
     fn create_sandbox(
         &self,
         request: &CreateSandboxRequest,

@@ -25,6 +25,10 @@ static TEMP_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 struct FakeRuntime;
 
 impl SandboxRuntime for FakeRuntime {
+    fn list_images(&self) -> Result<Vec<String>, ManagerError> {
+        Ok(vec!["ubuntu:24.04".to_owned()])
+    }
+
     fn create_sandbox(
         &self,
         request: &CreateSandboxRequest,

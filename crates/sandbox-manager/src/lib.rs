@@ -14,6 +14,7 @@ mod progress;
 pub(crate) mod router;
 mod runtime;
 mod store;
+mod workspace_roots;
 
 pub use daemon_client::SandboxDaemonClient;
 pub use daemon_install::{SandboxDaemonInstaller, StartedDaemon};
@@ -31,3 +32,4 @@ pub use progress::ProgressSink;
 pub use router::SandboxManagerRouter;
 pub use runtime::{CreateSandboxRequest, CreateSandboxResult, SandboxRuntime};
 pub use store::SandboxStore;
+pub use workspace_roots::{WorkspaceDirectory, WorkspaceDirectoryListing, WorkspaceRootPolicy};

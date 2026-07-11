@@ -192,6 +192,10 @@ impl DockerSandboxRuntime {
 }
 
 impl SandboxRuntime for DockerSandboxRuntime {
+    fn list_images(&self) -> Result<Vec<String>, ManagerError> {
+        self.engine.list_images().map_err(runtime_failed)
+    }
+
     fn create_sandbox(
         &self,
         request: &CreateSandboxRequest,

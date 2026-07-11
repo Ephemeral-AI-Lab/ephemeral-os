@@ -228,6 +228,8 @@ fn expected_names(set: OperationSet) -> &'static [&'static str] {
     match set {
         OperationSet::Management => &[
             "create_sandbox",
+            "list_docker_images",
+            "list_workspace_directories",
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",
@@ -254,6 +256,18 @@ fn tools_list_fixture(set: OperationSet) -> Value {
         OperationSet::Observability => include_str!("fixtures/observability-tools-list.json"),
     };
     serde_json::from_str(fixture).expect("tools/list fixture JSON")
+}
+
+fn assert_phase_zero_tools_preserved(actual: &Value, phase_zero: &Value) {
+    let actual_tools = actual["tools"].as_array().expect("current tools");
+    for expected in phase_zero["tools"].as_array().expect("Phase 0 tools") {
+        let name = expected["name"].as_str().expect("tool name");
+        let current = actual_tools
+            .iter()
+            .find(|tool| tool["name"] == name)
+            .unwrap_or_else(|| panic!("missing Phase 0 tool: {name}"));
+        assert_eq!(current, expected, "{name} changed from Phase 0");
+    }
 }
 
 fn assert_schema(set: OperationSet, tool: &Value, spec: &OperationSpecDocument) {
@@ -381,7 +395,7 @@ fn lifecycle_and_tools_list_match_all_three_catalogs() {
     ] {
         let mut process = McpProcess::start_initialized(set_name(set), "127.0.0.1:9");
         let response = process.request("tools/list", Some(json!({})));
-        assert_eq!(result(&response), &tools_list_fixture(set));
+        assert_phase_zero_tools_preserved(result(&response), &tools_list_fixture(set));
         let tools = result(&response)["tools"].as_array().expect("MCP tools");
         let names = tools
             .iter()
@@ -495,6 +509,12 @@ fn mcp_requests_match_the_shared_builder() {
             OperationSet::Management,
             "create_sandbox",
             json!({"image": "ubuntu:24.04", "workspace_root": "/workspace"}),
+        ),
+        (OperationSet::Management, "list_docker_images", json!({})),
+        (
+            OperationSet::Management,
+            "list_workspace_directories",
+            json!({"path": "/workspace"}),
         ),
         (
             OperationSet::Management,

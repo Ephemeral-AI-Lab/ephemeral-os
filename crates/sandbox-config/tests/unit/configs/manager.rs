@@ -87,6 +87,44 @@ fn manager_registry_path_defaults_to_none_and_deserializes_when_set() {
 }
 
 #[test]
+fn manager_workspace_roots_default_and_overrides_validate() {
+    let default = ManagerConfig::default();
+    assert!(default.workspace_roots.is_none());
+
+    let doc = crate::ConfigDocument::parse(
+        std::path::Path::new("<test>"),
+        "manager:\n  workspace_roots: [/Users/me/projects, /tmp/workspaces]\n",
+    )
+    .expect("document parses");
+    let manager: ManagerConfig = doc
+        .section("manager")
+        .expect("manager section deserializes");
+    manager.validate().expect("workspace roots are valid");
+    assert_eq!(
+        manager.workspace_roots,
+        Some(vec![
+            PathBuf::from("/Users/me/projects"),
+            PathBuf::from("/tmp/workspaces")
+        ])
+    );
+}
+
+#[test]
+fn manager_workspace_roots_reject_empty_and_relative_values() {
+    let manager = ManagerConfig {
+        workspace_roots: Some(Vec::new()),
+        ..ManagerConfig::default()
+    };
+    assert_invalid_manager(&manager, "manager.workspace_roots");
+
+    let manager = ManagerConfig {
+        workspace_roots: Some(vec![PathBuf::from("relative/workspace")]),
+        ..ManagerConfig::default()
+    };
+    assert_invalid_manager(&manager, "manager.workspace_roots");
+}
+
+#[test]
 fn validate_rejects_blank_gateway_instance_id() {
     let mut docker = prd_docker();
     docker.gateway_instance_id = String::new();

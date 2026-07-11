@@ -15,6 +15,9 @@ const CREATE_SANDBOX_ARGUMENTS: &[ArgumentProjection] = &[
 const SANDBOX_ID_ARGUMENT: &[ArgumentProjection] =
     &[ArgumentProjection::flag("sandbox_id", "--sandbox-id")];
 
+const WORKSPACE_DIRECTORY_ARGUMENTS: &[ArgumentProjection] =
+    &[ArgumentProjection::flag("path", "--path")];
+
 const EXPORT_CHANGES_ARGUMENTS: &[ArgumentProjection] = &[
     ArgumentProjection::flag("sandbox_id", "--sandbox-id"),
     ArgumentProjection::flag("dest", "--dest"),
@@ -31,6 +34,23 @@ const OPERATIONS: &[OperationProjection] = &[
             "sandbox-manager-cli create_sandbox --image ubuntu:24.04 --workspace-bind-root /testbed --count 5",
         ],
         arguments: CREATE_SANDBOX_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "list_docker_images",
+        path: &["manager", "list_docker_images"],
+        usage: "sandbox-manager-cli list_docker_images",
+        examples: &["sandbox-manager-cli list_docker_images"],
+        arguments: &[],
+    },
+    OperationProjection {
+        name: "list_workspace_directories",
+        path: &["manager", "list_workspace_directories"],
+        usage: "sandbox-manager-cli list_workspace_directories [--path PATH]",
+        examples: &[
+            "sandbox-manager-cli list_workspace_directories",
+            "sandbox-manager-cli list_workspace_directories --path /home/me/project",
+        ],
+        arguments: WORKSPACE_DIRECTORY_ARGUMENTS,
     },
     OperationProjection {
         name: "destroy_sandbox",

@@ -153,6 +153,11 @@ pub struct ManagerConfig {
     /// reconciling against the containers the runtime actually recovers.
     /// `None` keeps the registry in process memory only.
     pub registry_path: Option<PathBuf>,
+    /// Optional host directory allowlist for the workspace picker. When set,
+    /// `create_sandbox` must use a directory below one of these roots.
+    /// Omitting it preserves existing direct API behavior; the Console picker
+    /// starts from the gateway user's home directory.
+    pub workspace_roots: Option<Vec<PathBuf>>,
     pub export: ManagerExportConfig,
     pub observability_snapshot: ManagerObservabilitySnapshotConfig,
     pub local_daemon: ManagerLocalDaemonConfig,
@@ -165,6 +170,17 @@ impl ManagerConfig {
     /// # Errors
     /// Returns an error when a field violates manager policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
+        if let Some(roots) = &self.workspace_roots {
+            if roots.is_empty() {
+                return Err(ConfigFieldError::new(
+                    "manager.workspace_roots",
+                    "must contain at least one directory",
+                ));
+            }
+            for root in roots {
+                require_absolute(root, "manager.workspace_roots")?;
+            }
+        }
         self.export.validate()?;
         self.observability_snapshot.validate()?;
         self.local_daemon.validate()?;

@@ -48,6 +48,34 @@ fn remove_routes(value: &mut Value) {
     }
 }
 
+fn assert_phase_zero_operations_preserved(current: &Value, phase0: &Value) {
+    for catalog in ["management", "runtime", "observability"] {
+        assert_eq!(
+            current[catalog]["operation_execution_space"],
+            phase0[catalog]["operation_execution_space"],
+            "{catalog} execution space"
+        );
+        assert_eq!(
+            current[catalog]["families"], phase0[catalog]["families"],
+            "{catalog} families"
+        );
+        let current_operations = current[catalog]["operations"]
+            .as_array()
+            .expect("current operations");
+        for expected in phase0[catalog]["operations"]
+            .as_array()
+            .expect("Phase 0 operations")
+        {
+            let name = expected["name"].as_str().expect("operation name");
+            let actual = current_operations
+                .iter()
+                .find(|operation| operation["name"] == name)
+                .unwrap_or_else(|| panic!("missing Phase 0 operation: {catalog}.{name}"));
+            assert_eq!(actual, expected, "{catalog}.{name} changed from Phase 0");
+        }
+    }
+}
+
 #[tokio::test]
 async fn catalog_returns_all_three_execution_spaces() {
     let gateway = support::FakeGateway::spawn(|_| Vec::new()).await;
@@ -61,7 +89,7 @@ async fn catalog_returns_all_three_execution_spaces() {
     remove_cli_fields(&mut phase0);
     let mut current_semantics = body.clone();
     remove_routes(&mut current_semantics);
-    assert_eq!(current_semantics, phase0);
+    assert_phase_zero_operations_preserved(&current_semantics, &phase0);
 
     let mut keys = body
         .as_object()
@@ -76,6 +104,8 @@ async fn catalog_returns_all_three_execution_spaces() {
         operation_names(&body["management"]),
         names(&[
             "create_sandbox",
+            "list_docker_images",
+            "list_workspace_directories",
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",

@@ -19,6 +19,8 @@ fn management_catalog_is_the_exact_public_set() {
         names,
         [
             "create_sandbox",
+            "list_docker_images",
+            "list_workspace_directories",
             "destroy_sandbox",
             "list_sandboxes",
             "inspect_sandbox",

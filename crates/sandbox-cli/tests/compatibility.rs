@@ -5,8 +5,36 @@ use std::process::Command;
 use sandbox_cli::projection::document::{catalog_document, catalog_to_value};
 use serde_json::{json, Value};
 
+fn assert_phase_zero_operations_preserved(current: &Value, phase_zero: &Value) {
+    for catalog in ["management", "runtime", "observability"] {
+        assert_eq!(
+            current[catalog]["operation_execution_space"],
+            phase_zero[catalog]["operation_execution_space"],
+            "{catalog} execution space"
+        );
+        assert_eq!(
+            current[catalog]["families"], phase_zero[catalog]["families"],
+            "{catalog} families"
+        );
+        let current_operations = current[catalog]["operations"]
+            .as_array()
+            .expect("current operations");
+        for expected in phase_zero[catalog]["operations"]
+            .as_array()
+            .expect("Phase 0 operations")
+        {
+            let name = expected["name"].as_str().expect("operation name");
+            let actual = current_operations
+                .iter()
+                .find(|operation| operation["name"] == name)
+                .unwrap_or_else(|| panic!("missing Phase 0 operation: {catalog}.{name}"));
+            assert_eq!(actual, expected, "{catalog}.{name} changed from Phase 0");
+        }
+    }
+}
+
 #[test]
-fn all_feature_compatibility_catalog_matches_phase_zero_fixture() {
+fn all_feature_compatibility_catalog_preserves_phase_zero_operations() {
     let management = catalog_document(
         sandbox_operation_catalog::manager::manager_catalog(),
         sandbox_cli::projection::manager::catalog_projection(),
@@ -27,10 +55,10 @@ fn all_feature_compatibility_catalog_matches_phase_zero_fixture() {
         "runtime": catalog_to_value(&runtime),
         "observability": catalog_to_value(&observability),
     });
-    let fixture = include_str!("fixtures/compatibility-catalog.json");
-    let fixture = fixture.strip_suffix('\n').unwrap_or(fixture);
+    let fixture: Value = serde_json::from_str(include_str!("fixtures/compatibility-catalog.json"))
+        .expect("Phase 0 compatibility catalog fixture");
 
-    assert_eq!(catalog.to_string(), fixture);
+    assert_phase_zero_operations_preserved(&catalog, &fixture);
 }
 
 #[test]

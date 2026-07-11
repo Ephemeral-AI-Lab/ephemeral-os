@@ -45,6 +45,33 @@ const CREATE_SANDBOX_ARGS: &[ArgSpec] = &[
     ),
 ];
 
+pub const LIST_DOCKER_IMAGES_SPEC: OperationSpec = OperationSpec {
+    name: "list_docker_images",
+    family: "management",
+    summary: "List local Docker image references available for sandbox creation.",
+    description:
+        "List every local Docker image reference, including untagged image IDs that can create a sandbox.",
+    args: &[],
+    related: &["create_sandbox"],
+};
+
+pub const LIST_WORKSPACE_DIRECTORIES_SPEC: OperationSpec = OperationSpec {
+    name: "list_workspace_directories",
+    family: "management",
+    summary: "List local workspace directories available for sandbox creation.",
+    description:
+        "List picker-visible workspace roots when path is omitted, or up to 500 immediate local subdirectories of a selected workspace directory.",
+    args: LIST_WORKSPACE_DIRECTORIES_ARGS,
+    related: &["create_sandbox"],
+};
+
+const LIST_WORKSPACE_DIRECTORIES_ARGS: &[ArgSpec] = &[ArgSpec::optional(
+    "path",
+    ArgKind::Path,
+    "Absolute picker-visible workspace directory to browse. Omit to list roots.",
+    None,
+)];
+
 pub const DESTROY_SANDBOX_SPEC: OperationSpec = OperationSpec {
     name: "destroy_sandbox",
     family: "management",
@@ -133,6 +160,16 @@ pub const CREATE_SANDBOX: RoutedOperation = RoutedOperation {
     routing: MANAGER_OWNED,
 };
 
+pub const LIST_DOCKER_IMAGES: RoutedOperation = RoutedOperation {
+    spec: &LIST_DOCKER_IMAGES_SPEC,
+    routing: MANAGER_OWNED,
+};
+
+pub const LIST_WORKSPACE_DIRECTORIES: RoutedOperation = RoutedOperation {
+    spec: &LIST_WORKSPACE_DIRECTORIES_SPEC,
+    routing: MANAGER_OWNED,
+};
+
 pub const DESTROY_SANDBOX: RoutedOperation = RoutedOperation {
     spec: &DESTROY_SANDBOX_SPEC,
     routing: MANAGER_OWNED,
@@ -162,6 +199,8 @@ const FAMILIES: &[&OperationFamilySpec] = &[&MANAGEMENT_FAMILY];
 
 const OPERATIONS: &[&RoutedOperation] = &[
     &CREATE_SANDBOX,
+    &LIST_DOCKER_IMAGES,
+    &LIST_WORKSPACE_DIRECTORIES,
     &DESTROY_SANDBOX,
     &LIST_SANDBOXES,
     &INSPECT_SANDBOX,

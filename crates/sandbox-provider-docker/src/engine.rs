@@ -11,6 +11,7 @@ use bollard::container::{
     StartContainerOptions, StopContainerOptions, UploadToContainerOptions, WaitContainerOptions,
 };
 use bollard::errors::Error as BollardError;
+use bollard::image::ListImagesOptions;
 use bollard::models::{
     ContainerInspectResponse, ContainerState, ContainerStateStatusEnum, ContainerSummary,
     HostConfig, HostConfigCgroupnsModeEnum, PortBinding,
@@ -103,6 +104,36 @@ impl DockerEngine {
 
     pub(crate) fn config(&self) -> &DockerRuntimeConfig {
         &self.config
+    }
+
+    pub(crate) fn list_images(&self) -> Result<Vec<String>, DockerError> {
+        self.run_blocking(move |docker| async move {
+            let images = docker
+                .list_images(Some(ListImagesOptions::<String> {
+                    all: true,
+                    ..Default::default()
+                }))
+                .await
+                .map_err(|error| DockerError::Api(format!("list_images: {error}")))?;
+            let mut references = Vec::new();
+            for image in images {
+                let tags = image
+                    .repo_tags
+                    .into_iter()
+                    .filter(|tag| tag != "<none>:<none>")
+                    .collect::<Vec<_>>();
+                if tags.is_empty() {
+                    if !image.id.is_empty() {
+                        references.push(image.id);
+                    }
+                } else {
+                    references.extend(tags);
+                }
+            }
+            references.sort();
+            references.dedup();
+            Ok(references)
+        })
     }
 
     fn run_blocking<T, F, Fut>(&self, op: F) -> Result<T, DockerError>

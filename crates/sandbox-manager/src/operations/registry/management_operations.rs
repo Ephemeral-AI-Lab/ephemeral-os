@@ -2,7 +2,8 @@ use std::path::PathBuf;
 
 use sandbox_operation_catalog::manager::{
     CREATE_SANDBOX_SPEC, DESTROY_SANDBOX_SPEC, EXPORT_CHANGES_SPEC, INSPECT_SANDBOX_SPEC,
-    LIST_SANDBOXES_SPEC, SQUASH_LAYERSTACKS_SPEC,
+    LIST_DOCKER_IMAGES_SPEC, LIST_SANDBOXES_SPEC, LIST_WORKSPACE_DIRECTORIES_SPEC,
+    SQUASH_LAYERSTACKS_SPEC,
 };
 use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
 use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScopeKind};
@@ -16,7 +17,7 @@ use crate::operations::management::{
 use crate::operations::ManagerServices;
 use crate::{
     ManagerError, ProgressSink, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId,
-    SandboxRecord,
+    SandboxRecord, WorkspaceDirectoryListing,
 };
 
 const OPERATIONS: &[ManagerOperationEntry] = &[
@@ -24,6 +25,16 @@ const OPERATIONS: &[ManagerOperationEntry] = &[
         OperationScopeKind::System,
         &CREATE_SANDBOX_SPEC,
         dispatch_create_sandbox,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &LIST_DOCKER_IMAGES_SPEC,
+        dispatch_list_docker_images,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &LIST_WORKSPACE_DIRECTORIES_SPEC,
+        dispatch_list_workspace_directories,
     ),
     ManagerOperationEntry::new(
         OperationScopeKind::System,
@@ -77,7 +88,7 @@ pub(crate) fn dispatch_create_sandbox_with_progress(
         Ok(image) => image,
         Err(response) => return response,
     };
-    let workspace_root = match workspace_root(request) {
+    let workspace_root = match workspace_root(services, request) {
         Ok(workspace_root) => workspace_root,
         Err(response) => return response,
     };
@@ -140,6 +151,31 @@ fn dispatch_list_sandboxes(
     }
 }
 
+fn dispatch_list_docker_images(
+    services: &ManagerServices,
+    _request: &OperationRequest,
+) -> OperationResponse {
+    match services.runtime.list_images() {
+        Ok(images) => OperationResponse::ok(json!({ "images": images })),
+        Err(error) => error.into_response(),
+    }
+}
+
+fn dispatch_list_workspace_directories(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
+    let selected = match request.optional_string("path") {
+        Ok(Some(path)) => Some(PathBuf::from(path)),
+        Ok(None) => None,
+        Err(response) => return response,
+    };
+    match services.workspace_roots.list(selected) {
+        Ok(listing) => OperationResponse::ok(workspace_directories_value(listing)),
+        Err(error) => error.into_response(),
+    }
+}
+
 fn dispatch_observability_snapshot(
     services: &ManagerServices,
     request: &OperationRequest,
@@ -160,13 +196,19 @@ fn sandbox_id(request: &OperationRequest) -> Result<SandboxId, OperationResponse
         .and_then(|value| SandboxId::new(value).map_err(ManagerError::into_response))
 }
 
-fn workspace_root(request: &OperationRequest) -> Result<PathBuf, OperationResponse> {
+fn workspace_root(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> Result<PathBuf, OperationResponse> {
     let raw = request.required_string("workspace_root")?;
     let path = PathBuf::from(&raw);
     if !path.is_absolute() {
         return Err(ManagerError::InvalidWorkspaceRoot { value: raw }.into_response());
     }
-    Ok(path)
+    services
+        .workspace_roots
+        .resolve(path)
+        .map_err(ManagerError::into_response)
 }
 
 fn image(request: &OperationRequest) -> Result<String, OperationResponse> {
@@ -197,6 +239,18 @@ fn snapshot_options(request: &OperationRequest) -> Result<SnapshotOptions, Opera
 fn records_value(records: Vec<SandboxRecord>) -> Value {
     json!({
         "sandboxes": records.into_iter().map(record_value).collect::<Vec<_>>(),
+    })
+}
+
+fn workspace_directories_value(listing: WorkspaceDirectoryListing) -> Value {
+    json!({
+        "path": listing.path.map(|path| path.to_string_lossy().into_owned()),
+        "parent": listing.parent.map(|path| path.to_string_lossy().into_owned()),
+        "truncated": listing.truncated,
+        "directories": listing.directories.into_iter().map(|directory| json!({
+            "name": directory.name,
+            "path": directory.path.to_string_lossy(),
+        })).collect::<Vec<_>>(),
     })
 }
 

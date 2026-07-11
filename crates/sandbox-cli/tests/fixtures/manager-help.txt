@@ -6,6 +6,12 @@ Management
   create_sandbox
     Create a host-side sandbox record and runtime sandbox.
 
+  list_docker_images
+    List local Docker image references available for sandbox creation.
+
+  list_workspace_directories
+    List local workspace directories available for sandbox creation.
+
   destroy_sandbox
     Destroy a host-side sandbox and remove it from the registry.
 

@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::export_apply::ExportApplyCaps;
-use crate::{SandboxDaemonClient, SandboxDaemonInstaller, SandboxRuntime, SandboxStore};
+use crate::{
+    SandboxDaemonClient, SandboxDaemonInstaller, SandboxRuntime, SandboxStore, WorkspaceRootPolicy,
+};
 
 /// `manager.observability_snapshot` fan-out limits; the gateway overwrites
 /// the default with the configured values before serving.
@@ -29,6 +31,7 @@ pub struct ManagerServices {
     /// the configured values before serving.
     pub export_caps: ExportApplyCaps,
     pub snapshot_limits: ObservabilitySnapshotLimits,
+    pub workspace_roots: WorkspaceRootPolicy,
 }
 
 impl ManagerServices {
@@ -46,6 +49,7 @@ impl ManagerServices {
             daemon_client,
             export_caps: ExportApplyCaps::default(),
             snapshot_limits: ObservabilitySnapshotLimits::default(),
+            workspace_roots: WorkspaceRootPolicy::default(),
         }
     }
 }

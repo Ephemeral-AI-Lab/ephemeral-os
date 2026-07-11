@@ -21,6 +21,11 @@ runner:
 
 # Optional. Host paths resolve against the gateway's working directory.
 manager:
+  # Optional host directory allowlist for the Console workspace picker.
+  # When set, create_sandbox must use one of these roots. When omitted, the
+  # picker starts at the gateway user's home and existing API paths keep working.
+  # workspace_roots:
+  #   - /Users/me/projects
   docker:
     # De-privileged container boundary (Phase 3): cap_add SYS_ADMIN+NET_ADMIN,
     # Docker's default seccomp, and no-new-privileges instead of --privileged.
