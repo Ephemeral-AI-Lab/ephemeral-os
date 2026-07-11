@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { Search } from "lucide-react";
+import { Input } from "@mantine/core";
 import { rpc, systemScope } from "@/api/rpc";
 import type { SandboxList } from "@/api/types";
 import { fetchFleetSnapshot } from "@/api/observability";
 import { usePoll } from "@/poll/usePoll";
-import { Input } from "@/components/ui/input";
 import { CreateSandboxModal } from "@/pages/fleet/CreateSandboxModal";
 import { FleetSummaryBar } from "@/pages/fleet/FleetSummaryBar";
 import { SandboxCard } from "@/pages/fleet/SandboxCard";

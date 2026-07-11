@@ -5,9 +5,7 @@ import { DestroyAction } from "@/components/DestroyAction";
 import { PortPreview } from "@/components/PortPreview";
 import { SquashDialog } from "@/components/SquashDialog";
 import { StateBadge } from "@/components/StateBadge";
-import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip } from "@/components/ui/tooltip";
+import { Button, Tooltip } from "@mantine/core";
 import { shortHash } from "@/lib/format";
 
 export function previewScopes(snapshot: SnapshotResult | undefined) {
@@ -57,9 +55,7 @@ export function SandboxHeader({
         </span>
       ) : null}
       {record?.shared_base ? (
-        <Tooltip
-          content={`shared read-only base · root ${record.shared_base.root_hash}`}
-        >
+        <Tooltip label={`shared read-only base · root ${record.shared_base.root_hash}`} openDelay={300}>
           <span className="rounded border border-line bg-idle-soft px-1.5 py-px font-mono text-[11px] text-ink-mid">
             base {shortHash(record.shared_base.root_hash)}
           </span>
@@ -72,11 +68,7 @@ export function SandboxHeader({
             <SquashDialog
               sandboxId={sandboxId}
               layerCount={layers}
-              trigger={
-                <DialogTrigger asChild>
-                  <Button size="sm">Squash</Button>
-                </DialogTrigger>
-              }
+              trigger={(open) => <Button size="compact-xs" onClick={open}>Squash</Button>}
             />
           </>
         ) : null}

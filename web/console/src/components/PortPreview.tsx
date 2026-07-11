@@ -1,20 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { AppWindow } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button, Input, Popover, Select } from "@mantine/core";
 
 export function previewPath(
   sandboxId: string,
@@ -62,30 +49,23 @@ export function PortPreview({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Popover opened={open} onChange={setOpen} position="bottom-end" withArrow>
+      <Popover.Target>
         {trigger ?? (
-          <Button size="sm" title="Open a served port in the Preview tab">
+          <Button size="compact-xs" title="Open a served port in the Preview tab">
             <AppWindow size={12} />
             Preview
           </Button>
         )}
-      </PopoverTrigger>
-      <PopoverContent>
+      </Popover.Target>
+      <Popover.Dropdown w={256}>
         <div className="flex flex-col gap-2">
           <label className="text-xs text-ink-mid">scope</label>
-          <Select value={scope} onValueChange={setScope}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {scopeList.map((entry) => (
-                <SelectItem key={entry.id} value={entry.id}>
-                  {entry.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            value={scope}
+            onChange={(value) => setScope(value ?? defaultScope)}
+            data={scopeList.map((entry) => ({ value: entry.id, label: entry.label }))}
+          />
           <label className="mt-1 text-xs text-ink-mid">port</label>
           <form
             onSubmit={(event) => {
@@ -109,8 +89,8 @@ export function PortPreview({
             </p>
           ) : null}
           <Button
-            variant="primary"
-            size="sm"
+            variant="filled"
+            size="compact-xs"
             className="mt-1 justify-center"
             disabled={!portValid}
             onClick={openPreview}
@@ -118,7 +98,7 @@ export function PortPreview({
             Open preview
           </Button>
         </div>
-      </PopoverContent>
+      </Popover.Dropdown>
     </Popover>
   );
 }

@@ -1,17 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { ExternalLink, RotateCw } from "lucide-react";
+import { Button, Input, Select } from "@mantine/core";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { previewScopes } from "@/pages/sandbox/SandboxHeader";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 /**
  * The embedded web viewer: an iframe over the console's `/s/:id/...`
@@ -93,21 +85,15 @@ export function PreviewTab() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b border-line bg-surface px-3 py-2">
         <label className="text-[11px] text-ink-faint">scope</label>
-        <Select value={scope} onValueChange={(value) => apply({ scope: value })}>
-          <SelectTrigger className="w-52">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {scopes.map((entry) => (
-              <SelectItem key={entry.id} value={entry.id}>
-                {entry.label}
-              </SelectItem>
-            ))}
-            {scopeEntry ? null : scope !== "shared" ? (
-              <SelectItem value={scope}>isolated · {scope}</SelectItem>
-            ) : null}
-          </SelectContent>
-        </Select>
+        <Select
+          className="w-52"
+          value={scope}
+          onChange={(value) => apply({ scope: value ?? "shared" })}
+          data={[
+            ...scopes.map((entry) => ({ value: entry.id, label: entry.label })),
+            ...(scopeEntry || scope === "shared" ? [] : [{ value: scope, label: `isolated · ${scope}` }]),
+          ]}
+        />
         <label className="text-[11px] text-ink-faint" htmlFor="preview-port">
           port
         </label>
@@ -145,7 +131,7 @@ export function PreviewTab() {
           />
         </form>
         <Button
-          size="sm"
+          size="compact-xs"
           onClick={() => setReloadKey((key) => key + 1)}
           disabled={!previewUrl}
           title="refresh"
@@ -153,7 +139,7 @@ export function PreviewTab() {
           <RotateCw size={12} />
         </Button>
         <Button
-          size="sm"
+          size="compact-xs"
           onClick={() => {
             if (previewUrl) window.open(previewUrl, "_blank", "noopener");
           }}
@@ -177,7 +163,7 @@ export function PreviewTab() {
         <div className="flex items-center gap-3 border-b border-danger/40 bg-danger-soft px-3 py-1.5 text-[11px] text-ink">
           Embedding blocked: {blocked}.
           <Button
-            size="sm"
+            size="compact-xs"
             onClick={() => {
               if (previewUrl) window.open(previewUrl, "_blank", "noopener");
             }}

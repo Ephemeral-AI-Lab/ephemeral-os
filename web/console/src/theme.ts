@@ -179,7 +179,9 @@ export const ephemeralosTheme = createTheme({
   components: {
     ActionIcon: ActionIcon.extend({ defaultProps: { radius: "sm", size: "sm" } }),
     Badge: Badge.extend({ defaultProps: { radius: "sm", size: "sm" } }),
-    Button: Button.extend({ defaultProps: { radius: "sm", size: "compact-sm" } }),
+    Button: Button.extend({
+      defaultProps: { radius: "sm", size: "compact-sm", variant: "outline" },
+    }),
     Input: Input.extend({ defaultProps: { radius: "sm" } }),
     Modal: Modal.extend({
       defaultProps: { overlayProps: { backgroundOpacity: 0.16, blur: 0 }, radius: "md" },

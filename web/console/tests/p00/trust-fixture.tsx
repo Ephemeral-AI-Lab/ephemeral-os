@@ -1,9 +1,13 @@
 import { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { MantineProvider } from "@mantine/core";
+import "@mantine/core/styles.css";
+import { Notifications } from "@mantine/notifications";
+import "@mantine/notifications/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Outlet, Route, Routes } from "react-router";
 import "./trust.css";
-import { ToastProvider } from "../../src/components/ErrorToast";
+import { ephemeralosTheme } from "../../src/theme";
 import { FileView } from "../../src/pages/sandbox/files/FileView";
 import { EventsView } from "../../src/pages/sandbox/observability/EventsView";
 import { CommandCard } from "../../src/pages/sandbox/terminal/CommandCard";
@@ -50,8 +54,9 @@ function App() {
   );
 
   return (
-    <QueryClientProvider client={client}>
-      <ToastProvider>
+    <MantineProvider forceColorScheme="light" theme={ephemeralosTheme}>
+      <Notifications limit={4} position="bottom-right" />
+      <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={["/events"]}>
           <main className="min-h-screen bg-app p-4 text-ink">
             <header className="mb-4 border-b border-line pb-3">
@@ -89,8 +94,8 @@ function App() {
             </div>
           </main>
         </MemoryRouter>
-      </ToastProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </MantineProvider>
   );
 }
 

@@ -1,14 +1,15 @@
-import { cn } from "@/lib/cn";
+import { Badge } from "@mantine/core";
 import type { CommandStatus, SandboxState } from "@/api/types";
+import { cn } from "@/lib/cn";
 
 type Tone = "ok" | "run" | "warn" | "idle" | "danger";
 
-const toneClasses: Record<Tone, string> = {
-  ok: "bg-ok-soft text-ok border-ok/30",
-  run: "bg-run-soft text-run border-run/30",
-  warn: "bg-warn-soft text-warn border-warn/40",
-  idle: "bg-idle-soft text-idle border-idle/30",
-  danger: "bg-danger-soft text-danger border-danger/30",
+const toneColors: Record<Tone, string> = {
+  ok: "success",
+  run: "eyeBlue",
+  warn: "warning",
+  idle: "warm",
+  danger: "danger",
 };
 
 const sandboxTones: Record<SandboxState, Tone> = {
@@ -43,15 +44,18 @@ export function StateBadge({
         ? commandTones[state as CommandStatus]
         : (state as Tone);
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[11px] font-medium leading-4",
-        toneClasses[tone],
-        className,
-      )}
+    <Badge
+      className={cn("inline-flex", className)}
+      color={toneColors[tone]}
+      variant="light"
+      leftSection={
+        <span
+          aria-hidden
+          style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "currentColor" }}
+        />
+      }
     >
-      <span className="size-1.5 rounded-full bg-current" aria-hidden />
       {label ?? String(state)}
-    </span>
+    </Badge>
   );
 }

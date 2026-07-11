@@ -1,15 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronUp, Folder } from "lucide-react";
+import { Button, Modal, Text } from "@mantine/core";
 import { listWorkspaceDirectories } from "@/api/hostResources";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 export function WorkspacePicker({
   id,
@@ -44,26 +37,22 @@ export function WorkspacePicker({
         <Folder size={13} className="shrink-0 text-accent" />
         <span className="min-w-0 truncate">{value || "Select a folder…"}</span>
       </Button>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          if (next) setPath(value || null);
-        }}
+      <Modal
+        opened={open}
+        onClose={() => setOpen(false)}
+        title="Select workspace folder"
+        centered
+        size="lg"
       >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Select workspace folder</DialogTitle>
-            <DialogDescription>
-              Choose the host directory to bind-mount into the sandbox.
-            </DialogDescription>
-          </DialogHeader>
+          <Text size="sm" c="dimmed" mb="md">
+            Choose the host directory to bind-mount into the sandbox.
+          </Text>
           <div className="flex min-h-0 flex-col gap-2">
             <div className="flex items-center gap-2 rounded border border-line bg-app p-2">
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="subtle"
+                size="compact-xs"
                 disabled={listing.data?.parent === null || !listing.data}
                 onClick={() => setPath(listing.data?.parent ?? null)}
               >
@@ -72,8 +61,8 @@ export function WorkspacePicker({
               </Button>
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="subtle"
+                size="compact-xs"
                 disabled={path === null}
                 onClick={() => setPath(null)}
               >
@@ -113,12 +102,12 @@ export function WorkspacePicker({
               ) : null}
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="subtle" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
               <Button
                 type="button"
-                variant="primary"
+                variant="filled"
                 disabled={currentPath === null}
                 onClick={() => {
                   if (currentPath === null) return;
@@ -130,8 +119,7 @@ export function WorkspacePicker({
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </Modal>
     </>
   );
 }

@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router";
+import { Input, Select } from "@mantine/core";
 import { fetchEvents } from "@/api/observability";
 import { usePoll } from "@/poll/usePoll";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { TraceCell } from "@/pages/sandbox/observability/TracesView";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 import { formatTimestamp } from "@/lib/format";
 
@@ -86,20 +79,14 @@ export function EventsView() {
         </form>
         <label className="text-[11px] text-ink-faint">since</label>
         <Select
+          className="w-32"
           value={String(sinceMs)}
-          onValueChange={(value) => apply({ since: Number(value) })}
-        >
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {SINCE_CHOICES.map((choice) => (
-              <SelectItem key={choice.ms} value={String(choice.ms)}>
-                {choice.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={(value) => apply({ since: Number(value ?? 0) })}
+          data={SINCE_CHOICES.map((choice) => ({
+            value: String(choice.ms),
+            label: choice.label,
+          }))}
+        />
         <label className="text-[11px] text-ink-faint" htmlFor="event-last">
           last-N
         </label>

@@ -1,13 +1,5 @@
 import { useState, type ReactNode } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button, Input, Modal, Text } from "@mantine/core";
 import { StreamLogPane } from "@/components/StreamLogPane";
 
 /**
@@ -30,32 +22,35 @@ export function ConfirmDestroyDialog({
   onConfirm: () => void;
   busy: boolean;
   logLines: string[];
-  trigger?: ReactNode;
+  trigger: (open: () => void) => ReactNode;
 }) {
   const [typed, setTyped] = useState("");
   const armed = typed === sandboxId;
 
+  const close = () => {
+    if (busy) return;
+    setTyped("");
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (busy) return;
-        setTyped("");
-        onOpenChange(next);
-      }}
-    >
-      {trigger}
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Destroy sandbox</DialogTitle>
-          <DialogDescription>
-            This stops the daemon, destroys the runtime sandbox, and removes
-            the record. It cannot be undone. Type{" "}
-            <span className="font-mono text-ink">{sandboxId}</span> to
-            confirm.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      {trigger(() => onOpenChange(true))}
+      <Modal
+        opened={open}
+        onClose={close}
+        title="Destroy sandbox"
+        centered
+        closeOnClickOutside={!busy}
+        closeOnEscape={!busy}
+      >
+        <Text size="sm" c="dimmed">
+          This stops the daemon, destroys the runtime sandbox, and removes the
+          record. It cannot be undone. Type <span className="font-mono text-ink">{sandboxId}</span>{" "}
+          to confirm.
+        </Text>
         <Input
+          mt="md"
           value={typed}
           onChange={(event) => setTyped(event.target.value)}
           placeholder={sandboxId}
@@ -70,21 +65,22 @@ export function ConfirmDestroyDialog({
         ) : null}
         <div className="mt-4 flex justify-end gap-2">
           <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
+            variant="subtle"
+            onClick={close}
             disabled={busy}
           >
             Cancel
           </Button>
           <Button
-            variant="danger"
+            color="danger"
+            variant="filled"
             disabled={!armed || busy}
             onClick={onConfirm}
           >
             {busy ? "Destroying…" : "Destroy sandbox"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </Modal>
+    </>
   );
 }

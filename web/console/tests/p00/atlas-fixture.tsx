@@ -1,10 +1,13 @@
 import { useMemo } from "react";
 import { createRoot } from "react-dom/client";
+import { MantineProvider } from "@mantine/core";
+import "@mantine/core/styles.css";
+import { Notifications } from "@mantine/notifications";
+import "@mantine/notifications/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Navigate, Route, Routes } from "react-router";
 import "./atlas.css";
-import { ToastProvider } from "../../src/components/ErrorToast";
-import { TooltipProvider } from "../../src/components/ui/tooltip";
+import { ephemeralosTheme } from "../../src/theme";
 import { Shell } from "../../src/shell/Shell";
 import { FleetBoard } from "../../src/pages/fleet/FleetBoard";
 import { NotFound } from "../../src/pages/NotFound";
@@ -28,9 +31,9 @@ function AtlasApp() {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <TooltipProvider>
+    <MantineProvider forceColorScheme="light" theme={ephemeralosTheme}>
+      <Notifications limit={4} position="bottom-right" />
+      <QueryClientProvider client={queryClient}>
           <MemoryRouter initialEntries={[route]}>
             <Routes>
               <Route element={<Shell />}>
@@ -54,9 +57,8 @@ function AtlasApp() {
               </Route>
             </Routes>
           </MemoryRouter>
-        </TooltipProvider>
-      </ToastProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </MantineProvider>
   );
 }
 

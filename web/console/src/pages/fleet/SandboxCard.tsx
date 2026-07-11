@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { Button } from "@mantine/core";
 import { rpcStream, systemScope } from "@/api/rpc";
 import type { SandboxRecord } from "@/api/types";
 import { inFlightCount, type SandboxSnapshot } from "@/api/observability";
@@ -12,8 +13,6 @@ import { ResourceSparkline } from "@/components/ResourceSparkline";
 import { SquashDialog } from "@/components/SquashDialog";
 import { StateBadge } from "@/components/StateBadge";
 import { StreamLogPane } from "@/components/StreamLogPane";
-import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
 import { useErrorToast } from "@/components/ErrorToast";
 
 export function SandboxCard({
@@ -93,7 +92,7 @@ export function SandboxCard({
           <>
             <Button
               size="sm"
-              variant="primary"
+              variant="filled"
               onClick={() => void navigate(`/sandboxes/${encodeURIComponent(record.id)}`)}
             >
               Open
@@ -101,11 +100,11 @@ export function SandboxCard({
             <SquashDialog
               sandboxId={record.id}
               layerCount={layers}
-              trigger={
-                <DialogTrigger asChild>
-                  <Button size="sm">Squash{typeof layers === "number" ? ` (${layers})` : ""}</Button>
-                </DialogTrigger>
-              }
+              trigger={(open) => (
+                <Button size="compact-xs" onClick={open}>
+                  Squash{typeof layers === "number" ? ` (${layers})` : ""}
+                </Button>
+              )}
             />
           </>
         ) : null}
@@ -161,13 +160,17 @@ function DestroyAction({ sandboxId }: { sandboxId: string }) {
       onConfirm={() => void destroy()}
       busy={busy}
       logLines={logs}
-      trigger={
-        <DialogTrigger asChild>
-          <Button size="sm" variant="danger" aria-label={`Destroy ${sandboxId}`}>
+      trigger={(open) => (
+          <Button
+            size="compact-xs"
+            color="danger"
+            variant="filled"
+            aria-label={`Destroy ${sandboxId}`}
+            onClick={open}
+          >
             <Trash2 size={12} />
           </Button>
-        </DialogTrigger>
-      }
+      )}
     />
   );
 }

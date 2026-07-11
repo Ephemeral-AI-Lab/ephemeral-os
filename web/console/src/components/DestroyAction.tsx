@@ -5,8 +5,7 @@ import { Trash2 } from "lucide-react";
 import { rpcStream, systemScope } from "@/api/rpc";
 import { ConfirmDestroyDialog } from "@/components/ConfirmDestroyDialog";
 import { useErrorToast } from "@/components/ErrorToast";
-import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@mantine/core";
 
 /**
  * The destroy_sandbox action: type-the-id confirm, `_stream_logs` progress,
@@ -54,14 +53,18 @@ export function DestroyAction({
       onConfirm={() => void destroy()}
       busy={busy}
       logLines={logs}
-      trigger={
-        <DialogTrigger asChild>
-          <Button size="sm" variant="danger" aria-label={`Destroy ${sandboxId}`}>
+      trigger={(open) => (
+          <Button
+            size="compact-xs"
+            color="danger"
+            variant="filled"
+            aria-label={`Destroy ${sandboxId}`}
+            onClick={open}
+          >
             <Trash2 size={12} />
             {label}
           </Button>
-        </DialogTrigger>
-      }
+      )}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Button, Select, Tooltip } from "@mantine/core";
 import {
   fetchLayerStack,
   fetchLayerStackLayer,
@@ -13,16 +14,6 @@ import { usePoll } from "@/poll/usePoll";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { SquashDialog } from "@/components/SquashDialog";
 import { ResourceSparkline } from "@/components/ResourceSparkline";
-import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import { formatBytes, shortHash } from "@/lib/format";
 
@@ -122,29 +113,26 @@ export function LayerStackView() {
         </span>
         <span>{stack.data?.active_lease_count ?? 0} active leases</span>
         <label className="ml-auto text-[11px] text-ink-faint">workspace</label>
-        <Select value={workspaceId} onValueChange={setWorkspaceId}>
-          <SelectTrigger className="w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_WORKSPACES}>all workspaces</SelectItem>
-            {workspaces.map((workspace) => (
-              <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                workspace · {workspace.workspace_id}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Select
+          className="w-64"
+          value={workspaceId}
+          onChange={(value) => setWorkspaceId(value ?? ALL_WORKSPACES)}
+          data={[
+            { value: ALL_WORKSPACES, label: "all workspaces" },
+            ...workspaces.map((workspace) => ({
+              value: workspace.workspace_id,
+              label: `workspace · ${workspace.workspace_id}`,
+            })),
+          ]}
+        />
         <SquashDialog
           sandboxId={sandboxId}
           layerCount={layers.length}
-          trigger={
-            <DialogTrigger asChild>
-              <Button size="sm" variant="primary">
+          trigger={(open) => (
+              <Button size="compact-xs" variant="filled" onClick={open}>
                 Squash ({layers.length})
               </Button>
-            </DialogTrigger>
-          }
+          )}
         />
       </div>
 
@@ -257,7 +245,8 @@ function LayerRow({
           {formatBytes(layer.bytes)}
         </span>
         <Tooltip
-          content={`${layer.leased_by_workspaces} workspace lease(s)${layer.booked_by.length > 0 ? ` · booked by ${layer.booked_by.join(", ")}` : ""}`}
+          label={`${layer.leased_by_workspaces} workspace lease(s)${layer.booked_by.length > 0 ? ` · booked by ${layer.booked_by.join(", ")}` : ""}`}
+          openDelay={300}
         >
           <span
             className={cn(

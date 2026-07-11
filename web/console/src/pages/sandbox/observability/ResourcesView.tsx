@@ -1,17 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router";
 import uPlot from "uplot";
+import { Select } from "@mantine/core";
 import "uplot/dist/uPlot.min.css";
 import { fetchCgroup, type ResourceSample } from "@/api/observability";
 import { usePoll } from "@/poll/usePoll";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const WINDOWS = [
   { label: "60s", ms: 60_000 },
@@ -55,35 +49,25 @@ export function ResourcesView() {
     <div className="flex flex-col gap-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-[11px] text-ink-faint">scope</label>
-        <Select value={scope} onValueChange={(value) => apply({ scope: value })}>
-          <SelectTrigger className="w-64">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="sandbox">sandbox</SelectItem>
-            {workspaces.map((workspace) => (
-              <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                workspace · {workspace.workspace_id}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Select
+          className="w-64"
+          value={scope}
+          onChange={(value) => apply({ scope: value ?? "sandbox" })}
+          data={[
+            { value: "sandbox", label: "sandbox" },
+            ...workspaces.map((workspace) => ({
+              value: workspace.workspace_id,
+              label: `workspace · ${workspace.workspace_id}`,
+            })),
+          ]}
+        />
         <label className="text-[11px] text-ink-faint">window</label>
         <Select
+          className="w-36"
           value={String(windowMs)}
-          onValueChange={(value) => apply({ window: Number(value) })}
-        >
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {WINDOWS.map((window) => (
-              <SelectItem key={window.ms} value={String(window.ms)}>
-                {window.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          onChange={(value) => apply({ window: Number(value ?? WINDOWS[0].ms) })}
+          data={WINDOWS.map((window) => ({ value: String(window.ms), label: window.label }))}
+        />
         <span className="ml-auto text-[11px] text-ink-faint">
           auto-refresh · {samples.length} samples
         </span>

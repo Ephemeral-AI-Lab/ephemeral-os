@@ -1,17 +1,10 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layers } from "lucide-react";
+import { Button, Modal, Text } from "@mantine/core";
 import { rpcStream, systemScope } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
 import { StreamLogPane } from "@/components/StreamLogPane";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface SquashResult {
   layers_before?: number;
@@ -31,7 +24,7 @@ export function SquashDialog({
 }: {
   sandboxId: string;
   layerCount?: number;
-  trigger: React.ReactNode;
+  trigger: (open: () => void) => React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -62,34 +55,34 @@ export function SquashDialog({
     }
   };
 
+  const openDialog = () => {
+    if (busy) return;
+    setLogs([]);
+    setResult(null);
+    setOpen(true);
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (busy) return;
-        setOpen(next);
-        if (next) {
-          setLogs([]);
-          setResult(null);
-        }
-      }}
-    >
-      {trigger}
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-1.5">
+    <>
+      {trigger(openDialog)}
+      <Modal
+        opened={open}
+        onClose={() => !busy && setOpen(false)}
+        title={
+          <span className="flex items-center gap-1.5">
             <Layers size={14} className="text-accent" />
             Squash layer stack
-          </DialogTitle>
-          <DialogDescription>
-            Squashes every squashable block of{" "}
-            <span className="font-mono text-ink">{sandboxId}</span>&apos;s
-            published layers and live-remounts its sessions.
-            {typeof layerCount === "number" ? (
-              <> Current stack: {layerCount} layers.</>
-            ) : null}
-          </DialogDescription>
-        </DialogHeader>
+          </span>
+        }
+        centered
+        closeOnClickOutside={!busy}
+        closeOnEscape={!busy}
+      >
+        <Text size="sm" c="dimmed">
+          Squashes every squashable block of <span className="font-mono text-ink">{sandboxId}</span>&apos;s
+          published layers and live-remounts its sessions.
+          {typeof layerCount === "number" ? <> Current stack: {layerCount} layers.</> : null}
+        </Text>
         {busy || logs.length > 0 ? <StreamLogPane lines={logs} /> : null}
         {result ? (
           <div className="mt-2 rounded border border-ok/40 bg-ok-soft p-2 font-mono text-xs text-ink">
@@ -97,14 +90,14 @@ export function SquashDialog({
           </div>
         ) : null}
         <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={busy}>
+          <Button variant="subtle" onClick={() => setOpen(false)} disabled={busy}>
             Close
           </Button>
-          <Button variant="primary" onClick={() => void run()} disabled={busy}>
+          <Button variant="filled" onClick={() => void run()} disabled={busy}>
             {busy ? "Squashing…" : "Squash"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </Modal>
+    </>
   );
 }

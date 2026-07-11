@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { CornerDownLeft } from "lucide-react";
+import { Button } from "@mantine/core";
 import { rpc, sandboxScope } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
-import { Button } from "@/components/ui/button";
 
 export const CTRL_C = "\u0003";
 export const CTRL_D = "\u0004";
@@ -70,12 +70,12 @@ export function StdinBar({
         placeholder="type a line, Enter sends it"
         className="h-6 min-w-0 flex-1 border-none bg-transparent px-1 font-mono text-xs text-ink outline-none placeholder:text-ink-faint"
       />
-      <Button size="sm" variant="ghost" onClick={submitLine} title="send line">
+      <Button size="compact-xs" variant="subtle" onClick={submitLine} title="send line">
         <CornerDownLeft size={12} />
       </Button>
       <Button
-        size="sm"
-        variant="ghost"
+        size="compact-xs"
+        variant="subtle"
         onClick={() => void write("\u0003")}
         title="send Ctrl-C (SIGINT)"
         className="font-mono"
@@ -83,8 +83,8 @@ export function StdinBar({
         ^C
       </Button>
       <Button
-        size="sm"
-        variant="ghost"
+        size="compact-xs"
+        variant="subtle"
         onClick={() => void write("\u0004")}
         title="send Ctrl-D (EOF)"
         className="font-mono"

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { fireEvent, screen } from "@testing-library/react";
+import { Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -24,6 +24,7 @@ vi.mock("@/pages/sandbox/observability/TracesView", () => ({
 }));
 
 import { EventsView } from "@/pages/sandbox/observability/EventsView";
+import { renderWithAppProviders } from "../utils/renderWithAppProviders";
 
 describe("EventsView polling contract", () => {
   let pollOptions: {
@@ -43,12 +44,11 @@ describe("EventsView polling contract", () => {
   });
 
   it("converts the selected duration into the API's absolute unix-ms threshold", async () => {
-    render(
-      <MemoryRouter initialEntries={["/events?since=300000"]}>
-        <Routes>
-          <Route path="/events" element={<EventsView />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithAppProviders(
+      <Routes>
+        <Route path="/events" element={<EventsView />} />
+      </Routes>,
+      { initialEntries: ["/events?since=300000"] },
     );
 
     await pollOptions.fn();
@@ -61,12 +61,11 @@ describe("EventsView polling contract", () => {
   });
 
   it("stops polling when the operator pauses the live tail", () => {
-    render(
-      <MemoryRouter initialEntries={["/events"]}>
-        <Routes>
-          <Route path="/events" element={<EventsView />} />
-        </Routes>
-      </MemoryRouter>,
+    renderWithAppProviders(
+      <Routes>
+        <Route path="/events" element={<EventsView />} />
+      </Routes>,
+      { initialEntries: ["/events"] },
     );
 
     fireEvent.click(screen.getByRole("button", { name: "tail" }));

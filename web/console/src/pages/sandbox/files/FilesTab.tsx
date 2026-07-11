@@ -1,16 +1,9 @@
 import { useSearchParams } from "react-router";
 import { GitBranch } from "lucide-react";
+import { Select, Tooltip } from "@mantine/core";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { FileTree } from "@/pages/sandbox/files/FileTree";
 import { FileView } from "@/pages/sandbox/files/FileView";
-import { Tooltip } from "@/components/ui/tooltip";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/cn";
 
 const PUBLISHED = "__published__";
@@ -53,23 +46,19 @@ export function FilesTab() {
         <div className="border-b border-line p-2">
           <label className="mb-1 block text-[11px] text-ink-faint">scope</label>
           <Select
+            className="w-full"
             value={session ?? PUBLISHED}
-            onValueChange={(value) =>
-              apply({ session: value === PUBLISHED ? null : value, blame: false })
+            onChange={(value) =>
+              apply({ session: value === PUBLISHED ? null : value ?? null, blame: false })
             }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={PUBLISHED}>published snapshot</SelectItem>
-              {workspaces.map((workspace) => (
-                <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-                  live · {workspace.workspace_id}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            data={[
+              { value: PUBLISHED, label: "published snapshot" },
+              ...workspaces.map((workspace) => ({
+                value: workspace.workspace_id,
+                label: `live · ${workspace.workspace_id}`,
+              })),
+            ]}
+          />
         </div>
         <FileTree
           sandboxId={sandboxId}
@@ -92,11 +81,12 @@ export function FilesTab() {
           </span>
           <span className="ml-auto">
             <Tooltip
-              content={
+              label={
                 session
                   ? "Blame reads the published auditability log and takes no session id — switch to the published snapshot to use it."
                   : "Color each line by its owner from the publish auditability log."
               }
+              openDelay={300}
             >
               <button
                 type="button"

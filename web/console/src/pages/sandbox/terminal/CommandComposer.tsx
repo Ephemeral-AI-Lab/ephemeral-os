@@ -1,18 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Play } from "lucide-react";
+import { Button, Input, Select } from "@mantine/core";
 import { rpc, sandboxScope } from "@/api/rpc";
 import type { CommandOutput } from "@/api/types";
 import type { WorkspaceSnapshot } from "@/api/observability";
 import { useErrorToast } from "@/components/ErrorToast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const AUTO_PUBLISH = "__auto_publish__";
 
@@ -93,19 +85,19 @@ export function CommandComposer({
       <label className="shrink-0 text-[11px] text-ink-faint" htmlFor="composer-target">
         in
       </label>
-      <Select value={target} onValueChange={setTarget}>
-        <SelectTrigger id="composer-target" className="w-48 shrink-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={AUTO_PUBLISH}>auto-publish</SelectItem>
-          {workspaces.map((workspace) => (
-            <SelectItem key={workspace.workspace_id} value={workspace.workspace_id}>
-              {workspace.workspace_id} ({workspace.network_profile})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Select
+        id="composer-target"
+        className="w-48 shrink-0"
+        value={target}
+        onChange={(value) => setTarget(value ?? AUTO_PUBLISH)}
+        data={[
+          { value: AUTO_PUBLISH, label: "auto-publish" },
+          ...workspaces.map((workspace) => ({
+            value: workspace.workspace_id,
+            label: `${workspace.workspace_id} (${workspace.network_profile})`,
+          })),
+        ]}
+      />
       <label className="shrink-0 text-[11px] text-ink-faint" htmlFor="composer-timeout">
         timeout (s)
       </label>
@@ -119,7 +111,7 @@ export function CommandComposer({
       />
       <Button
         type="submit"
-        variant="primary"
+        variant="filled"
         className="shrink-0"
         disabled={busy || cmd.trim() === ""}
       >

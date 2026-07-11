@@ -1,5 +1,5 @@
+import { Tooltip } from "@mantine/core";
 import { cn } from "@/lib/cn";
-import { Tooltip } from "@/components/ui/tooltip";
 import { useHealth } from "@/api/health";
 
 /**
@@ -24,7 +24,7 @@ export function HealthDot({
         ? `daemon_http unreachable: ${health.data?.detail ?? ""}`
         : "probing daemon_http…";
   return (
-    <Tooltip content={label}>
+    <Tooltip label={label} openDelay={300}>
       <span className="inline-flex items-center gap-1">
         <span
           className={cn(

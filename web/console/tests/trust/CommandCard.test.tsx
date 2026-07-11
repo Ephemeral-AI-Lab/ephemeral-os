@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { LedgerEntry } from "@/pages/sandbox/terminal/ledger";
 
@@ -24,6 +24,7 @@ vi.mock("@/pages/sandbox/terminal/TranscriptViewer", () => ({
 }));
 
 import { CommandCard } from "@/pages/sandbox/terminal/CommandCard";
+import { renderWithAppProviders } from "../utils/renderWithAppProviders";
 
 const runningEntry: LedgerEntry = {
   localId: "local-1",
@@ -42,7 +43,7 @@ const runningEntry: LedgerEntry = {
 
 describe("CommandCard keyboard contract", () => {
   it("writes one control frame when Ctrl-C originates in the stdin field", async () => {
-    render(
+    renderWithAppProviders(
       <CommandCard
         sandboxId="sandbox-a"
         entry={runningEntry}

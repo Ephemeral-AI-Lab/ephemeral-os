@@ -5,6 +5,7 @@ import { EditorView, lineNumbers } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
 import { Loader2 } from "lucide-react";
+import { Button } from "@mantine/core";
 import {
   fileBlame,
   fileRead,
@@ -14,7 +15,6 @@ import {
 } from "@/api/files";
 import { RpcError } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
-import { Button } from "@/components/ui/button";
 import { blameGutter, ownerInfo, ownersOf } from "@/pages/sandbox/files/blame";
 
 const WINDOW_LINES = 2000;
@@ -334,21 +334,21 @@ export function FileView({
           {loaded.nextOffset !== null ? " (truncated)" : ""}
         </span>
         {loaded.nextOffset !== null && mode.kind === "view" ? (
-          <Button size="sm" onClick={() => void loadMore()} disabled={busy}>
+          <Button size="compact-xs" onClick={() => void loadMore()} disabled={busy}>
             load next {WINDOW_LINES}
           </Button>
         ) : null}
         {mode.kind === "view" ? (
-          <Button size="sm" onClick={() => void beginEdit()} disabled={busy}>
+          <Button size="compact-xs" onClick={() => void beginEdit()} disabled={busy}>
             Edit
           </Button>
         ) : null}
         {mode.kind === "editing" ? (
           <>
-            <Button size="sm" variant="ghost" onClick={() => void load()} disabled={busy}>
+            <Button size="compact-xs" variant="subtle" onClick={() => void load()} disabled={busy}>
               Cancel
             </Button>
-            <Button size="sm" variant="primary" onClick={() => void save()} disabled={busy}>
+            <Button size="compact-xs" variant="filled" onClick={() => void save()} disabled={busy}>
               {busy ? "Saving…" : "Save"}
             </Button>
           </>
@@ -365,13 +365,13 @@ export function FileView({
             (agents share this workspace), so saving would overwrite their
             change.
           </span>
-          <Button size="sm" onClick={keepEditingLocalDraft}>
+          <Button size="compact-xs" onClick={keepEditingLocalDraft}>
             Keep editing local draft
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => void copyLocalDraft()}>
+          <Button size="compact-xs" variant="subtle" onClick={() => void copyLocalDraft()}>
             Copy local draft
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => void load()}>
+          <Button size="compact-xs" variant="subtle" onClick={() => void load()}>
             Reload server version
           </Button>
         </div>

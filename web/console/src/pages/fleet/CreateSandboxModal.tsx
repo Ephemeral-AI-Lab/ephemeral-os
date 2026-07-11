@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
+import { Button, Input, Modal, Select, Text } from "@mantine/core";
 import {
   buildArgs,
   findOperation,
@@ -10,23 +11,6 @@ import {
 import { listDockerImages } from "@/api/hostResources";
 import { rpcStream, systemScope } from "@/api/rpc";
 import { useErrorToast } from "@/components/ErrorToast";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { WorkspacePicker } from "@/pages/fleet/WorkspacePicker";
 
 function defaultValues(spec: OperationSpecDoc | undefined): Record<string, string> {
@@ -93,30 +77,27 @@ export function CreateSandboxModal({
     }
   };
 
+  const openModal = () => {
+    setOpen(true);
+    setErrors({});
+    setValues(defaultValues(spec));
+  };
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (next) {
-          setErrors({});
-          setValues(defaultValues(spec));
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button variant="primary" disabled={busy}>
-          <Plus size={13} />
-          {busy ? "Creating…" : "New Sandbox"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create sandbox</DialogTitle>
-          <DialogDescription>
-            {spec?.summary ?? "Create a host-side sandbox record and runtime sandbox."}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button variant="filled" disabled={busy} onClick={openModal}>
+        <Plus size={13} />
+        {busy ? "Creating…" : "New Sandbox"}
+      </Button>
+      <Modal
+        opened={open}
+        onClose={() => setOpen(false)}
+        title="Create sandbox"
+        centered
+      >
+        <Text size="sm" c="dimmed" mb="md">
+          {spec?.summary ?? "Create a host-side sandbox record and runtime sandbox."}
+        </Text>
         <form
           className="flex flex-col gap-3"
           onSubmit={(event) => {
@@ -135,30 +116,18 @@ export function CreateSandboxModal({
               </label>
               {arg.name === "image" ? (
                 <Select
+                  id={`create-${arg.name}`}
                   value={values[arg.name] ?? ""}
-                  onValueChange={(value) =>
-                    setValues((current) => ({ ...current, [arg.name]: value }))
+                  onChange={(value) =>
+                    setValues((current) => ({ ...current, [arg.name]: value ?? "" }))
                   }
-                >
-                  <SelectTrigger
-                    id={`create-${arg.name}`}
-                    className="w-full font-mono"
-                    disabled={
-                      images.isPending || images.isError || (images.data?.length ?? 0) === 0
-                    }
-                  >
-                    <SelectValue
-                      placeholder={images.isPending ? "Loading Docker images…" : "Select a Docker image"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(images.data ?? []).map((image) => (
-                      <SelectItem key={image} value={image}>
-                        {image}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  data={images.data ?? []}
+                  placeholder={images.isPending ? "Loading Docker images…" : "Select a Docker image"}
+                  disabled={
+                    images.isPending || images.isError || (images.data?.length ?? 0) === 0
+                  }
+                  classNames={{ input: "font-mono" }}
+                />
               ) : arg.name === "workspace_root" ? (
                 <WorkspacePicker
                   id={`create-${arg.name}`}
@@ -199,15 +168,15 @@ export function CreateSandboxModal({
             </div>
           ))}
           <div className="mt-1 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button variant="subtle" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button variant="primary" type="submit" disabled={!spec}>
+            <Button variant="filled" type="submit" disabled={!spec}>
               Create
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </Modal>
+    </>
   );
 }

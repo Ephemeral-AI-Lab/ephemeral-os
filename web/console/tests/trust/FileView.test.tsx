@@ -1,5 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -61,6 +60,7 @@ vi.mock("@codemirror/commands", () => ({
 }));
 
 import { FileView } from "@/pages/sandbox/files/FileView";
+import { renderWithAppProviders } from "../utils/renderWithAppProviders";
 
 const whole = (content: string) => ({
   content,
@@ -86,15 +86,13 @@ describe("FileView conflict contract", () => {
   });
 
   it("keeps the local draft visible when a concurrent change blocks saving", async () => {
-    render(
-      <MemoryRouter>
-        <FileView
-          sandboxId="sandbox-a"
-          path="notes.txt"
-          session={null}
-          blameOn={false}
-        />
-      </MemoryRouter>,
+    renderWithAppProviders(
+      <FileView
+        sandboxId="sandbox-a"
+        path="notes.txt"
+        session={null}
+        blameOn={false}
+      />,
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Edit" }));
