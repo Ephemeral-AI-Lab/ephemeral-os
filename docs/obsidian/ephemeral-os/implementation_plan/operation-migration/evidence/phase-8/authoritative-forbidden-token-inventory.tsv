@@ -98,10 +98,10 @@ docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	639	134	immutable-evidence	sandbox-observability-operations
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	639	168	immutable-evidence	sandbox_cli::core
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	639	187	immutable-evidence	cli-operation-e2e-live-test
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	84	immutable-evidence	cli-operation-e2e-live-test
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	208	immutable-evidence	internal/migration
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	230	immutable-evidence	crates/sandbox-manager/src/operation
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	716	267	immutable-evidence	crates/sandbox-cli/src/core
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	721	84	immutable-evidence	cli-operation-e2e-live-test
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	721	208	immutable-evidence	internal/migration
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	721	230	immutable-evidence	crates/sandbox-manager/src/operation
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md	721	267	immutable-evidence	crates/sandbox-cli/src/core
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	42	4	before-state	crates/sandbox-operation-core
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	42	39	before-state	crates/sandbox-operation-adapters
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	93	128	before-state	operation vocabulary + sandbox-protocol
@@ -161,7 +161,7 @@ docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1132	
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1132	37	negative-requirement	cli_definition
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1132	54	negative-requirement	cli_metadata
 docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1154	34	negative-requirement	get_observability
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1326	57	negative-requirement	get_observability
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1373	144	before-state	get_observability
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1375	152	before-state	CliSpec
-docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1378	11	negative-requirement	get_observability
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1329	57	negative-requirement	get_observability
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1376	144	before-state	get_observability
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1378	152	before-state	CliSpec
+docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md	1381	11	negative-requirement	get_observability

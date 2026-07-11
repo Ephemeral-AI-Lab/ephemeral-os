@@ -55,7 +55,7 @@ Statuses: `blocked` → `ready` → `in progress` → `gate review` → `approve
 | 5 | Clean the runtime application in place | approved | 2026-07-10 | 2026-07-10 | Codex |
 | 6 | Extract observability application, remove multiplexing | approved | 2026-07-11 | 2026-07-11 | Codex |
 | 7 | Update documentation, scripts, law statements | approved | 2026-07-11 | 2026-07-11 | Codex |
-| 8 | Enforce boundaries and cut over | in progress | 2026-07-11 | — | — |
+| 8 | Enforce boundaries and cut over | gate review | 2026-07-11 | — | — |
 
 ## Standing gate (every phase)
 
@@ -669,36 +669,41 @@ one commit.
   allocation accounts for moved/deleted production source.
 - [x] Verify Phase 2 deletions remain complete; delete any stale
   re-exports, old package-name references, and temporary migration code.
-- [ ] Update the specification's acceptance checkboxes from evidence rows
+- [x] Update the specification's acceptance checkboxes from evidence rows
   in this plan; flip the spec status from `draft` to adopted and mark the
   legacy CLI migration plan superseded.
 
 ### Acceptance criteria
 
-- [ ] `cargo run -p xtask -- operation-architecture-check` passes, and its
+- [x] `cargo run -p xtask -- operation-architecture-check` passes, and its
   self-tests demonstrate each failure mode. *Evidence: check output + test
-  run.*
-- [ ] Full structural matrix passes:
+  run.* [Structural evidence](#phase8-structural-matrix);
+  [self-test evidence](#phase8-architecture-self-tests).
+- [x] Full structural matrix passes:
   `cargo metadata`, architecture check, `cargo fmt --all -- --check`,
   `cargo clippy --workspace --all-targets --all-features -- -D warnings`,
   `cargo test --workspace --all-features`,
   `cargo test -p sandbox-operation-catalog --all-features`,
-  per-binary `cargo tree` closure checks.
-- [ ] Adapter matrix passes: `cargo test -p sandbox-cli --all-features`,
+  per-binary `cargo tree` closure checks. [Structural evidence](#phase8-structural-matrix);
+  [standing-gate evidence](#phase8-standing-gate).
+- [x] Adapter matrix passes: `cargo test -p sandbox-cli --all-features`,
   `-p sandbox-mcp`, `-p sandbox-console`,
   `npm --prefix web/console ci && npm --prefix web/console run build`;
   outputs match the Phase 0 baseline modulo the four approved behavior
-  changes.
-- [ ] Live proof recorded: full `e2e/` suite per `RUNNING.md` (no subset),
+  changes. [Adapter evidence](#phase8-adapter-matrix).
+- [x] Live proof recorded: full `e2e/` suite per `RUNNING.md` (no subset),
   `bin/start-sandbox-docker-gateway --rebuild-binary`, and the final smoke
   covering one manager operation, one runtime operation, a system-scoped
   snapshot, a sandbox-scoped observability query, an MCP tool call, and a
-  console RPC call.
-- [ ] `cargo metadata` reports exactly the 20 crate manifest paths from the
+  console RPC call. [Gateway evidence](#phase8-gateway-rebuild);
+  [live E2E evidence](#phase8-live-e2e); [smoke evidence](#phase8-live-smoke).
+- [x] `cargo metadata` reports exactly the 20 crate manifest paths from the
   specification's LOC tables plus `xtask/Cargo.toml`.
-- [ ] The specification's LOC tables carry measured values; every spec
+  [Structural evidence](#phase8-structural-matrix).
+- [x] The specification's LOC tables carry measured values; every spec
   acceptance checkbox is checked with a link to an evidence row here.
-- [ ] Standing gate passed.
+  [Measured LOC evidence](#phase8-measured-loc).
+- [x] Standing gate passed. [Standing-gate evidence](#phase8-standing-gate).
 
 ### Progress log
 
@@ -710,9 +715,9 @@ one commit.
 | 2026-07-11 | Immutable Phase 0 evidence exception | `dir=docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0; payloads=$(find "$dir" -maxdepth 1 -type f ! -name IMMUTABLE.md -exec basename {} \; \| LC_ALL=C sort); listed=$(sed -n 's/^- `\(.*\)`$/\1/p' "$dir/IMMUTABLE.md" \| LC_ALL=C sort); test "$(printf '%s\n' "$payloads" \| sed '/^$/d' \| wc -l \| tr -d ' ')" = 25; test "$payloads" = "$listed"`; `sed -n '1172,1190p' docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md` | Exit 0: the bundle has exactly 25 payloads and one adjacent manifest with 25 unique, exact entries. The amended gate exempts only those inventoried payloads, scans the manifest itself, and rejects missing, unlisted, additional, or duplicate payloads. | Phase 0 evidence must preserve forbidden before-state identifiers verbatim. Amended `Required removals and stale-reference gates`; see the Phase 8 deviation-register row. |
 | 2026-07-11 | Metalinguistic authority exception | `sed -n '1191,1207p' docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md`; `sed -n '648,713p' docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md` | The amended gate names exactly `spec.md` and `phase-plan.md`, limits their exception to generic raw-token matching, requires every match to be classified, and retains targeted positive-assertion verification before approval. | The two authoritative migration documents necessarily quote forbidden before-state and negative-gate tokens. Amended `Required removals and stale-reference gates`; see the Phase 8 deviation-register row. |
 | 2026-07-11 | Architecture checker implementation | `cargo test -p xtask --test operation_architecture`; `cargo run -p xtask -- operation-architecture-check`; `git diff --check`; `cargo fmt --all -- --check`; `cargo check -p xtask --all-targets --all-features`; `cargo clippy -p xtask --all-targets --all-features -- -D warnings`; the three `cargo check -p sandbox-cli --no-default-features --features <domain> --bin sandbox-<domain>-cli` commands; exact manager-router visibility and provider-readiness tests; `rg -c '^#\\[test\\]' xtask/tests/operation_architecture.rs` | All seven checker self-tests passed in 75.13s; diff, format, xtask check, and clippy passed; all three single-domain CLI builds passed; both exact chokepoint tests passed 1/1; the self-test census printed `7`. The live checker reached only the Phase 8 item-4 cleanup findings: one empty retired directory and maintained legacy documents, with no dependency, metadata, catalog, projection, route, visibility, source-boundary, feature-closure, or authority-inventory violation. | None. |
-| 2026-07-11 | Architecture checker self-tests | `cargo test -p xtask --test operation_architecture`; `rg -n '^#\\[test\\]' xtask/tests/operation_architecture.rs`; post-checkpoint `cargo check --workspace --all-targets --all-features` and the same self-test command | Exactly seven top-level tests exercise the required forbidden edge, unmapped package, missing/extra handler, public/internal overlap, missing projection, feature-closure, and stale-path failures. Both runs passed 7/7 (75.13s and 74.89s); the post-checkpoint workspace check passed in 22.58s. | None. |
+| 2026-07-11 | <a id="phase8-architecture-self-tests"></a>Architecture checker self-tests | `cargo test -p xtask --test operation_architecture`; `rg -n '^#\\[test\\]' xtask/tests/operation_architecture.rs`; post-checkpoint `cargo check --workspace --all-targets --all-features` and the same self-test command | Exactly seven top-level tests exercise the required forbidden edge, unmapped package, missing/extra handler, public/internal overlap, missing projection, feature-closure, and stale-path failures. Both runs passed 7/7 (75.13s and 74.89s); the post-checkpoint workspace check passed in 22.58s. | None. |
 | 2026-07-11 | Self-test stale-fixture isolation | `cargo test -p xtask --test operation_architecture maintained_stale_reference_and_generated_path_are_rejected -- --exact`; `cargo run -p xtask -- operation-architecture-check`; post-amend `cargo check --workspace --all-targets --all-features`; `cargo test -p xtask --test operation_architecture` | The stale-tree input is assembled at runtime rather than exempting or weakening the maintained-source scan. The exact regression passed 1/1 in 73.20s; the live checker returned only item-4 cleanup findings; post-amend workspace check passed and all seven self-tests passed in 74.87s. | None. |
-| 2026-07-11 | Measured cutover LOC | `cargo metadata --no-deps --format-version 1 | jq ...` enumerated each workspace manifest; for every package, `git ls-files "$directory/src" "$directory/build.rs" | rg '\.rs$' | xargs git grep -n -e '^' -- | wc -l`; a `sed`/`awk` extraction compared all specification rows byte-for-byte with those results; `git diff --numstat -M cc5f9974e..HEAD -- ':(glob)crates/**/src/**/*.rs' ':(glob)crates/**/build.rs'` | The command printed 21 exact rows and `new=3120 reshaped=20415 unchanged=17771 crates=41306 xtask=7014`; the specification comparison printed `spec_rows=21 exact_table_match=yes`. Production diff accounting printed `added=5911 deleted=3996 net=+1915`, exactly `41,306 - 39,391`. Separately measured maintained source is web console 6,283, E2E Python 19,000, and provider example 82. | None. |
+| 2026-07-11 | <a id="phase8-measured-loc"></a>Measured cutover LOC | `cargo metadata --no-deps --format-version 1 | jq ...` enumerated each workspace manifest; for every package, `git ls-files "$directory/src" "$directory/build.rs" | rg '\.rs$' | xargs git grep -n -e '^' -- | wc -l`; a `sed`/`awk` extraction compared all specification rows byte-for-byte with those results; `git diff --numstat -M cc5f9974e..HEAD -- ':(glob)crates/**/src/**/*.rs' ':(glob)crates/**/build.rs'` | The command printed 21 exact rows and `new=3120 reshaped=20415 unchanged=17771 crates=41306 xtask=7014`; the specification comparison printed `spec_rows=21 exact_table_match=yes`. Production diff accounting printed `added=5911 deleted=3996 net=+1915`, exactly `41,306 - 39,391`. Separately measured maintained source is web console 6,283, E2E Python 19,000, and provider example 82. | None. |
 | 2026-07-11 | Phase 2 deletion and migration-leftover cleanup | `for candidate in cli-operation-e2e-live-test crates/sandbox-operations/{manager,runtime,observability} crates/sandbox-operations/catalog/src/internal/migration.rs crates/sandbox-manager/src/operation crates/sandbox-cli/src/core crates/sandbox-runtime/operation/src/operation_adapter crates/sandbox-daemon/src/observability/view; do test ! -e "$candidate"; done`; exact `find` child-set assertions for the three namespace roots and `test ! -e` root `Cargo.toml`/`src`; `cargo metadata --no-deps --format-version 1 \| jq -r '.packages[].manifest_path'`; targeted `rg` over `crates xtask bin e2e web Cargo.toml`; `git diff --check`; `cargo run -p xtask -- operation-architecture-check` | The deletion proof printed `retired_paths_absent=9`; namespace children are exactly `operations:catalog,client,contract`, `observability:application,primitives`, and `runtime:layerstack,namespace-execution,namespace-process,operation,overlay,workspace`, with no namespace-root package. Metadata printed `crates:20 xtask:1`; maintained code/config/script/test scanning printed `0_matches`; diff checking passed. The architecture checker now reaches exactly 14 stale-document findings, all confined to the two legacy CLI-migration documents reserved for the next change item; every source, package, route, projection, boundary, feature, and other maintained-document check passes. | None. |
 | 2026-07-11 | Cleanup-evidence inventory correction | `cargo test -p xtask --test operation_architecture maintained_stale_reference_and_generated_path_are_rejected -- --exact`; exact line, column, category, and pattern comparison in `authoritative-forbidden-token-inventory.tsv` | The initial post-checkpoint run identified four newly recorded command occurrences that were not yet present in the metalinguistic authority inventory. Adding those exact classifications preserved the scanner unchanged; the focused regression then passed 1/1 in 74.74s. | None. |
 | 2026-07-11 | Legacy CLI migration records superseded | `sed -n '1,22p' docs/obsidian/ephemeral-os/implementation_plan/cli_migration/spec.md`; `sed -n '1,21p' docs/obsidian/ephemeral-os/implementation_plan/cli_migration/operation.md`; `cargo run -p xtask -- operation-architecture-check` | Both pre-cutover records now declare `status: superseded`, date the transition, point to the operation-migration specification, and retain their bodies as explicit historical evidence. The stale-reference phase of the architecture checker reports no violation. | None. |
@@ -723,6 +728,7 @@ one commit.
 | 2026-07-11 | <a id="phase8-gateway-rebuild"></a>Final Docker gateway rebuild | `bin/start-sandbox-docker-gateway --rebuild-binary` | Exit 0 in 16.68s. The arm64 musl daemon was rebuilt with package-fast, packaged as SHA-256 `47986ca25a0a582cc47439f20af02b0560680089eaf82cfeeaa43d0e782577e2`, and a fresh gateway started on `127.0.0.1:7878`. | None. |
 | 2026-07-11 | <a id="phase8-live-e2e"></a>Final full live Docker E2E proof | From `e2e/`: `E2E_REBUILD_BINARY=0 python3 -m pytest`; exact isolation command `E2E_REBUILD_BINARY=0 python3 -m pytest runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write -vv`; final full command `E2E_REBUILD_BINARY=0 python3 -m pytest`; append-only run record `e2e/test-reports/TEST-REPORT.md` | The first complete collection reported 366 passed, 6 skipped, and one fixture `ERROR`; the exact case then passed session create/write/read/destroy in `1 passed in 0.88s` with no code change. The required final complete 373-test collection exited 0 with `367 passed, 6 skipped in 1027.41s (0:17:07)`. The six skips are documented environment/opt-in cases; there were zero failures or errors. | No implementation or specification deviation; the initial lifecycle/transport error did not reproduce and left no leaked container or scoped failure artifact. |
 | 2026-07-11 | <a id="phase8-live-smoke"></a>Six-operation cross-surface smoke and cleanup proof | `cargo build -p sandbox-mcp --bin sandbox-mcp`; `bin/start-sandbox-console-stack --skip-gateway`; root-wrapper manager `create_sandbox`; runtime `exec_command`; system and sandbox `snapshot`; JSON-RPC `tools/call` `list_sandboxes` through `target/debug/sandbox-mcp --set management`; console `POST /api/rpc` `list_sandboxes`; manager `destroy_sandbox` and `list_sandboxes` absence assertion | Corrected proof exited 0. Emitted records showed manager `ready`, runtime marker `phase8-runtime-smoke`, both observability scopes present/ready, MCP `isError:false`, console presence, teardown `stopped`, and final `absence_verified`. The first harness invocation had already passed all six product operations but used the wrong top-level JSON shape only for its final absence assertion; changing it to `.sandboxes | all(...)` made the complete rerun pass. | No product or specification deviation; the correction was confined to the temporary proof harness. |
+| 2026-07-11 | Phase 8 gate review | `cargo run -p xtask -- operation-architecture-check`; `cargo fmt --all -- --check`; scoped `git diff --check`; exact `rg`/`awk` assertions for adopted specification status, two superseded legacy records, and unchecked Phase 8/spec acceptance items | The checker completed every dependency, feature-closure, catalog, projection, route, visibility, source-boundary, stale-reference, and authority-inventory proof and ended `operation architecture check passed`. Formatting and scoped diff checks passed. The status assertions printed `acceptance_state=adopted phase8_unchecked=0 spec_unchecked=0 legacy_superseded=2 diff_check=pass fmt=pass`. Dashboard status advanced to `gate review`; approval remains pending independent review. | The acceptance-link edit shifted eight authoritative-token coordinates; the exact inventory entries were updated without changing scanner behavior or classifications. |
 
 ---
 

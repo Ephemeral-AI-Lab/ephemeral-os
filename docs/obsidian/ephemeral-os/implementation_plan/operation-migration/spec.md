@@ -7,7 +7,7 @@ tags:
   - architecture
   - migration
   - implementation-plan
-status: draft
+status: adopted
 updated: 2026-07-11
 ---
 
@@ -20,7 +20,7 @@ adapters, and composition roots keep their paths; four new packages are
 added under the `crates/sandbox-operations/` and
 `crates/sandbox-observability/` namespace directories, and the observability
 primitives crate relocates one level to pair with its application. On
-approval, it supersedes the physical layout decisions in
+Adopted on 2026-07-11, it supersedes the physical layout decisions in
 [[cli_migration/spec|the legacy CLI migration plan]] and extends the already
 implemented [[mcp_cli_surface/implementation-spec|MCP and three-set CLI
 specification]]. The existing
@@ -28,8 +28,8 @@ specification]]. The existing
 behavioral baseline unless this specification explicitly identifies a breaking
 internal change.
 
-Until approval, this document is a proposal and has no superseding force. At
-adoption, change its status and mark the legacy plan as superseded.
+This document was adopted on 2026-07-11 and has superseding force. The
+legacy plan is marked superseded.
 
 > [!important] Architectural decision
 > Exactly three organizational namespace directories exist under `crates/`:
@@ -1284,64 +1284,67 @@ observability query, MCP tool call, and console RPC call.
 
 ### Ownership and structure
 
-- [ ] The target tree matches this specification: four new packages under
+- [x] The target tree matches this specification: four new packages under
   the operation and observability namespace directories, applications and
   product adapters at their existing paths, exactly three namespace
-  directories, no super-crates.
-- [ ] Every intentionally external component is listed in the "Remains
-  outside" table and owns no public operation metadata or business handler.
-- [ ] The live E2E suite runs from `e2e/`; `web/console` remains at its
+  directories, no super-crates. [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] Every intentionally external component is listed in the "Remains
+  outside" table and owns no public operation metadata or business handler. [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] The live E2E suite runs from `e2e/`; `web/console` remains at its
   existing path with no source move, and its source changes are limited to
   approved behavior changes 2–3 (concrete observability operation values and
-  retirement of manual workspace-session create/destroy controls).
-- [ ] All required-removal and stale-reference gates pass.
+  retirement of manual workspace-session create/destroy controls). [Adapter evidence](phase-plan.md#phase8-adapter-matrix); [live evidence](phase-plan.md#phase8-live-e2e).
+- [x] All required-removal and stale-reference gates pass. [Structural evidence](phase-plan.md#phase8-structural-matrix).
 
 ### Dependency integrity
 
-- [ ] Contract has no workspace dependencies.
-- [ ] The merged catalog and protocol each point inward to the contract; the
-  catalog has no other workspace dependency.
-- [ ] Applications do not depend on protocol, the client, presentation
+- [x] Contract has no workspace dependencies. [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] The merged catalog and protocol each point inward to the contract; the
+  catalog has no other workspace dependency. [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] Applications do not depend on protocol, the client, presentation
   adapters, composition roots, or each other's implementations.
-- [ ] CLI, MCP, and console depend on the shared client rather than one
-  another or directly on protocol.
-- [ ] One automated metadata check enforces all forbidden edges over normal,
+  [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] CLI, MCP, and console depend on the shared client rather than one
+  another or directly on protocol. [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] One automated metadata check enforces all forbidden edges over normal,
   dev, build, and optional dependencies, with deny-by-default package
-  classification.
-- [ ] Each CLI binary's catalog feature closure contains only its own
-  domain.
+  classification. [Architecture self-test evidence](phase-plan.md#phase8-architecture-self-tests).
+- [x] Each CLI binary's catalog feature closure contains only its own
+  domain. [Structural evidence](phase-plan.md#phase8-structural-matrix).
 
 ### Operation integrity
 
-- [ ] Every public `(scope kind, operation)` key is globally unique and has
+- [x] Every public `(scope kind, operation)` key is globally unique and has
   exactly one route, execution owner, and public catalog declaration.
-- [ ] Every dispatch entry has either a public specification or a documented
-  canonical internal declaration.
-- [ ] Public and internal registries are disjoint, and internal-visibility
+  [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] Every dispatch entry has either a public specification or a documented
+  canonical internal declaration. [Structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] Public and internal registries are disjoint, and internal-visibility
   routes are rejected at the console and manager-router chokepoints.
-- [ ] Exactly one catalog package owns all semantic domains; CLI projection
+  [Adapter evidence](phase-plan.md#phase8-adapter-matrix); [structural evidence](phase-plan.md#phase8-structural-matrix).
+- [x] Exactly one catalog package owns all semantic domains; CLI projection
   integrity tests prove both directions: every projected operation/argument
   exists, every public projected-domain operation has exactly one projection
-  entry, and every flag/position is unambiguous.
-- [ ] Concrete observability names survive end-to-end; `get_observability`
-  no longer exists anywhere, including the web console.
-- [ ] Internal routing and readiness identifiers have exactly one production
-  definition each.
+  entry, and every flag/position is unambiguous. [Structural evidence](phase-plan.md#phase8-structural-matrix); [adapter evidence](phase-plan.md#phase8-adapter-matrix).
+- [x] Concrete observability names survive end-to-end; `get_observability`
+  no longer exists anywhere, including the web console. [Structural evidence](phase-plan.md#phase8-structural-matrix); [adapter evidence](phase-plan.md#phase8-adapter-matrix).
+- [x] Internal routing and readiness identifiers have exactly one production
+  definition each. [Structural evidence](phase-plan.md#phase8-structural-matrix).
 
 ### Compatibility and proof
 
-- [ ] Existing binary names, CLI features, public operation
+- [x] Existing binary names, CLI features, public operation
   names/arguments, CLI-owned compatibility JSON, help text, errors/exit
   codes, MCP schemas, console APIs, and response shapes match the baseline,
-  modulo only the four approved behavior changes.
-- [ ] The production-LOC table has measured post-migration values for all 20
+  modulo only the four approved behavior changes. [Adapter evidence](phase-plan.md#phase8-adapter-matrix).
+- [x] The production-LOC table has measured post-migration values for all 20
   crates under `crates/`, plus the separate root `xtask` tooling row, using
-  the documented counting rule.
-- [ ] Workspace format, clippy, unit, integration, adapter, frontend, and
-  live E2E checks pass.
-- [ ] `bin/start-sandbox-docker-gateway --rebuild-binary` succeeds and the
+  the documented counting rule. [Measured LOC evidence](phase-plan.md#phase8-measured-loc).
+- [x] Workspace format, clippy, unit, integration, adapter, frontend, and
+  live E2E checks pass. [Standing-gate evidence](phase-plan.md#phase8-standing-gate); [adapter evidence](phase-plan.md#phase8-adapter-matrix); [live evidence](phase-plan.md#phase8-live-e2e).
+- [x] `bin/start-sandbox-docker-gateway --rebuild-binary` succeeds and the
   rebuilt gateway passes representative manual manager, runtime, and
-  observability CLI operations.
+  observability CLI operations. [Rebuild evidence](phase-plan.md#phase8-gateway-rebuild); [smoke evidence](phase-plan.md#phase8-live-smoke).
 
 ## Deliberate non-goals
 
