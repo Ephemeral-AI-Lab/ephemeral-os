@@ -19,7 +19,7 @@ const SNAPSHOT_SANDBOX_ID_ARG: ArgSpec = ArgSpec::optional(
 
 pub static SNAPSHOT_SPEC: OperationSpec = OperationSpec {
     name: "snapshot",
-    family: "observability",
+    family: "snapshot",
     summary: "Show live sandbox state.",
     description: "Show current state from the runtime registry for one sandbox, or \
 aggregate ready manager-known sandboxes when --sandbox-id is omitted: sandbox lifecycle \

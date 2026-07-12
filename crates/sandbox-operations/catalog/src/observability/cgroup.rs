@@ -10,7 +10,7 @@ pub const CGROUP: RoutedOperation = RoutedOperation {
 
 pub static CGROUP_SPEC: OperationSpec = OperationSpec {
     name: "cgroup",
-    family: "observability",
+    family: "cgroup",
     summary: "Resource series for a scope (cpu/mem/io + disk).",
     description: "Return a read-only resource time series. Sandbox scope reads CPU, memory, \
 and block-I/O counters from the host Docker Engine; workspace scopes retain daemon \

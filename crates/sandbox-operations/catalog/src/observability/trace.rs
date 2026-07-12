@@ -10,7 +10,7 @@ pub const TRACE: RoutedOperation = RoutedOperation {
 
 pub static TRACE_SPEC: OperationSpec = OperationSpec {
     name: "trace",
-    family: "observability",
+    family: "trace",
     summary: "Render one flow as a span waterfall.",
     description: "Fold the log into a span waterfall for one trace: spans nested by \
 parent, offset by start, with attached events inline. Use --trace-id last for the most \

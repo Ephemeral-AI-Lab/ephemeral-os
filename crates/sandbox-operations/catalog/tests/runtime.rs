@@ -14,7 +14,15 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "file"]
+        [
+            "command",
+            "file",
+            "daemon_http",
+            "network_isolation",
+            "reserved_paths",
+            "shell_security",
+            "workspace_session",
+        ]
     );
     assert_eq!(
         catalog

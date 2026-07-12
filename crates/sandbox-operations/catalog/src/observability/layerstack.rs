@@ -10,7 +10,7 @@ pub const LAYERSTACK: RoutedOperation = RoutedOperation {
 
 pub static LAYERSTACK_SPEC: OperationSpec = OperationSpec {
     name: "layerstack",
-    family: "observability",
+    family: "layerstack",
     summary: "Per-layer leasing/booking inventory, and stack series.",
     description: "Show the active manifest as a per-layer inventory: disk bytes, \
 how many workspaces lease each layer, and which leased layers book each base. \

@@ -18,13 +18,39 @@ use sandbox_operation_contract::{
 
 use crate::routed::{self, RoutedOperation};
 
-const OBSERVABILITY_FAMILY: OperationFamilySpec = OperationFamilySpec {
-    id: "observability",
-    title: "Observability",
-    summary: "Inspect traces, events, and resource stats for a sandbox.",
-    description: "Read a sandbox's observability stream — span waterfalls, domain \
-events, cgroup/disk resource series, and live state. Snapshot can also \
-aggregate ready manager-known sandboxes when --sandbox-id is omitted.",
+const SNAPSHOT_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "snapshot",
+    title: "Snapshot",
+    summary: "Inspect current sandbox state.",
+    description: "Read live sandbox state and aggregate ready manager-known sandboxes.",
+};
+
+const TRACE_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "trace",
+    title: "Trace",
+    summary: "Inspect a trace waterfall.",
+    description: "Render one sandbox observability trace as a span waterfall.",
+};
+
+const EVENTS_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "events",
+    title: "Events",
+    summary: "Inspect domain-fact events.",
+    description: "List sandbox observability events across traces.",
+};
+
+const CGROUP_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "cgroup",
+    title: "Cgroup",
+    summary: "Inspect resource series.",
+    description: "Read sandbox CPU, memory, I/O, and workspace disk resource series.",
+};
+
+const LAYERSTACK_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "layerstack",
+    title: "Layerstack",
+    summary: "Inspect layerstack inventory.",
+    description: "Read live layerstack leasing, booking, and stack-series state.",
 };
 
 pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
@@ -33,7 +59,13 @@ pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
     "Target sandbox id (selects the daemon to query).",
 );
 
-const FAMILIES: &[&OperationFamilySpec] = &[&OBSERVABILITY_FAMILY];
+const FAMILIES: &[&OperationFamilySpec] = &[
+    &SNAPSHOT_FAMILY,
+    &TRACE_FAMILY,
+    &EVENTS_FAMILY,
+    &CGROUP_FAMILY,
+    &LAYERSTACK_FAMILY,
+];
 
 const OPERATIONS: &[&RoutedOperation] = &[
     &snapshot::SNAPSHOT,

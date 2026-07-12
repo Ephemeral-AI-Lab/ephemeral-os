@@ -26,6 +26,11 @@ name = "sandbox-observability-cli"
 path = "src/bin/sandbox-observability-cli.rs"
 required-features = ["observability"]
 
+[[bin]]
+name = "sandbox-catalog-export"
+path = "src/bin/sandbox-catalog-export.rs"
+required-features = ["manager", "runtime", "observability"]
+
 [dependencies]
 clap = { workspace = true, optional = true }
 sandbox-operation-catalog.workspace = true

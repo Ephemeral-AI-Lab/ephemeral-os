@@ -10,7 +10,7 @@ pub const EVENTS: RoutedOperation = RoutedOperation {
 
 pub static EVENTS_SPEC: OperationSpec = OperationSpec {
     name: "events",
-    family: "observability",
+    family: "events",
     summary: "List domain-fact events across traces.",
     description: "Fold the log into a flat, cross-trace stream of point-in-time \
 events (lease, errors, …), newest first. Filter by exact name and/or a \

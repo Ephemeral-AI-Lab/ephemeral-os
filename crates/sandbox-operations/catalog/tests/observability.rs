@@ -16,8 +16,10 @@ fn observability_catalog_is_the_exact_public_set() {
         catalog.operation_execution_space,
         OperationDomain::Observability
     );
-    assert_eq!(catalog.families.len(), 1);
-    assert_eq!(catalog.families[0].id, "observability");
+    assert_eq!(
+        catalog.families.iter().map(|family| family.id).collect::<Vec<_>>(),
+        ["snapshot", "trace", "events", "cgroup", "layerstack"]
+    );
     assert_eq!(
         names,
         ["snapshot", "trace", "events", "cgroup", "layerstack"]
@@ -25,7 +27,8 @@ fn observability_catalog_is_the_exact_public_set() {
     assert!(catalog
         .operations
         .iter()
-        .all(|operation| operation.family == "observability"));
+        .zip(["snapshot", "trace", "events", "cgroup", "layerstack"])
+        .all(|(operation, family)| operation.family == family));
     let serialized = catalog_to_value(catalog).to_string();
     assert!(!serialized.contains("sandbox-manager-cli observability"));
 }
