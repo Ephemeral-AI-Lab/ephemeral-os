@@ -13,13 +13,34 @@ import sys
 
 import pytest
 
-from core import cleanup, gateway
+from core import catalog_mode, cleanup, gateway
 from core.cli import operation_timing_records, operation_timing_summary
 from core.root import REPO_ROOT
 from manager.management import helpers as mgmt
 
 _timing_log = logging.getLogger("e2e.timing")
 _test_seconds = {}
+E2E_ROOT = Path(__file__).resolve().parent
+
+
+def pytest_addoption(parser):
+    group = parser.getgroup("e2e catalog")
+    group.addoption("--e2e-catalog", action="store_true")
+    group.addoption("--e2e-catalog-output")
+    group.addoption("--e2e-stable-id-ledger")
+
+
+def pytest_configure(config):
+    catalog_mode.activate(config, REPO_ROOT, E2E_ROOT)
+
+
+def pytest_collection_finish(session):
+    catalog_mode.finish(session.config, REPO_ROOT, E2E_ROOT, session.items)
+
+
+def pytest_unconfigure(config):
+    if catalog_mode.is_catalog_mode(config):
+        catalog_mode.deactivate()
 
 
 def pytest_runtest_logreport(report):
@@ -32,6 +53,8 @@ def pytest_runtest_logreport(report):
 
 
 def pytest_sessionstart(session):
+    if catalog_mode.is_catalog_mode(session.config):
+        return
     if _is_squash_run(session.config):
         from manager.management.squash import measure
 
@@ -39,6 +62,8 @@ def pytest_sessionstart(session):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    if catalog_mode.is_catalog_mode(config):
+        return
     if _is_squash_run(config):
         from manager.management.squash import measure
 
@@ -154,6 +179,7 @@ def _is_export_run(config):
 @pytest.fixture(scope="session", autouse=True)
 def gateway_up():
     """Ensure a gateway is running before any test (reused across the session)."""
+    catalog_mode.forbid("gateway startup")
     gateway.ensure_up()
 
 
@@ -165,11 +191,10 @@ def _session_sandbox_cleanup(gateway_up):
     creates that failed before cleanup. Only suite-created ids are touched.
     """
     yield
-    for sandbox_id in cleanup.drain():
-        try:
-            mgmt.destroy_sandbox(sandbox_id)
-        except Exception:
-            pass
+    cleanup.run_all(
+        (f"destroy sandbox {sandbox_id}", lambda sandbox_id=sandbox_id: mgmt.destroy_sandbox(sandbox_id))
+        for sandbox_id in cleanup.drain()
+    )
 
 
 @pytest.fixture
@@ -214,12 +239,21 @@ def squash_sandbox_factory(tmp_path):
 
     yield create
 
-    for sandbox_id, rec in reversed(created):
-        try:
-            squash_helpers.harvest_observability(rec, sandbox_id)
-        except Exception:
-            pass
-        try:
-            squash_helpers.destroy_sandbox(rec, sandbox_id)
-        except Exception:
-            pass
+    cleanup.run_all(
+        action
+        for sandbox_id, rec in reversed(created)
+        for action in (
+            (
+                f"harvest squash observability {sandbox_id}",
+                lambda sandbox_id=sandbox_id, rec=rec: squash_helpers.harvest_observability(
+                    rec, sandbox_id
+                ),
+            ),
+            (
+                f"destroy squash sandbox {sandbox_id}",
+                lambda sandbox_id=sandbox_id, rec=rec: squash_helpers.destroy_sandbox(
+                    rec, sandbox_id
+                ),
+            ),
+        )
+    )

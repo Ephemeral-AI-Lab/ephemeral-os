@@ -1,0 +1,1502 @@
+{
+  "cases": [
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_mount_mask_hides_paths[baseline-hides-eos]",
+      "stable_id": "phase0.0bffa0a17b5a9e0581e6768f"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_mount_mask_hides_paths[baseline-shows-root]",
+      "stable_id": "phase0.471ff3707c6253c67673b0ad"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_mount_mask_hides_paths[extended-hides-root]",
+      "stable_id": "phase0.656392a05c1c5fcd55b2b832"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_observability_toggle",
+      "stable_id": "phase0.7c8e6cb1caeda7821c5181df"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_relocated_roots_functional",
+      "stable_id": "phase0.fc185cf4268e081816d81361"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_rewrite_applies_to_next_sandbox",
+      "stable_id": "phase0.e82b9ba1f71b9ee1268249cc"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_setup_timeout_tiny_fails_session",
+      "stable_id": "phase0.e841cede95e3ffd9e5209a44"
+    },
+    {
+      "pytest_nodeid": "config/test_daemon_reload.py::test_single_worker_thread_functional",
+      "stable_id": "phase0.4fa59f548a12705abeb8d122"
+    },
+    {
+      "pytest_nodeid": "config/test_manager_section.py::test_container_env_probe",
+      "stable_id": "phase0.05dfba4b759494beb4e25b8b"
+    },
+    {
+      "pytest_nodeid": "config/test_manager_section.py::test_explicit_image_flag_outranks_default_image",
+      "stable_id": "phase0.7bd749120f6a89c9ada3057c"
+    },
+    {
+      "pytest_nodeid": "config/test_manager_section.py::test_memory_bytes_cgroup_max",
+      "stable_id": "phase0.1a15edf3049972669ce58054"
+    },
+    {
+      "pytest_nodeid": "config/test_manager_section.py::test_privileged_arm_functional",
+      "stable_id": "phase0.662f08dce80bb8283c8f4a0f"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase1::test_export_apply_entry_cap_error",
+      "stable_id": "phase0.1aa8ac9074c3b41486cdee81"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase1::test_export_chunk_shape_invariance",
+      "stable_id": "phase0.912e631dcd54877c6cb67f31"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase1::test_export_stream_cap_error",
+      "stable_id": "phase0.11db9d7567dc480c73ad91d5"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase1::test_sweep_width_squash_invariance",
+      "stable_id": "phase0.fd146f600feadbd4df95c2c9"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase2::test_layer_delta_view_honors_default_limit",
+      "stable_id": "phase0.df09d255a4308e4bdff4e209"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase2::test_request_cap_rejects_oversized_write",
+      "stable_id": "phase0.6d2d24764b7ec0cba0d1005b"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase3::test_command_admission_cap",
+      "stable_id": "phase0.e1e3c8635fdc933760ae4cb1"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase3::test_file_edit_size_cap_error",
+      "stable_id": "phase0.1a062c1bccce4faa075f85d1"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase3::test_file_list_truncates_at_cap",
+      "stable_id": "phase0.e435dfddfc6422e8c447152b"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase3::test_file_read_default_lines",
+      "stable_id": "phase0.6e9f10a5c97a4142f9e3f5e8"
+    },
+    {
+      "pytest_nodeid": "config/test_phase_knobs.py::TestPhase3::test_terminal_retention_eviction",
+      "stable_id": "phase0.4ca68485652f8c133c749f4c"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_invalid_daemon_values_fail_create[exit-grace-negative]",
+      "stable_id": "phase0.68934fa57db7aee5aa27fe93"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_invalid_daemon_values_fail_create[filesystem-root-guard]",
+      "stable_id": "phase0.5934b7cc9787158ba65c7db8"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_invalid_daemon_values_fail_create[relative-scratch-root]",
+      "stable_id": "phase0.2ecc409df99212d0af6fb7fa"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_invalid_daemon_values_fail_create[setup-timeout-zero]",
+      "stable_id": "phase0.be820a35e387a87488c6fe44"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_invalid_manager_value_fails_gateway_start",
+      "stable_id": "phase0.e0e14ba1b2e3302de9808209"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_unknown_daemon_key_fails_create",
+      "stable_id": "phase0.b8d33fb68efad3e4d8c5df70"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_unknown_manager_key_fails_gateway_start",
+      "stable_id": "phase0.0a8c5b239c7e43f5d58ba763"
+    },
+    {
+      "pytest_nodeid": "config/test_validation.py::test_valid_config_recovers",
+      "stable_id": "phase0.40900bf10a83c455127cc766"
+    },
+    {
+      "pytest_nodeid": "core/test_cleanup.py::test_run_all_executes_every_action_and_reports_failures",
+      "stable_id": "phase0.7022e5c2693afd2bdc759b4a"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_allowlist_is_exact_and_rejects_before_side_effects",
+      "stable_id": "phase0.4412b9db6a7fef7fe86f61be"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_daemon_response_cannot_persist_auth_token",
+      "stable_id": "phase0.1dcdbd6ef105c4421e4bfd50"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_docker_failures_do_not_leak_secret[nonzero]",
+      "stable_id": "phase0.1d5b71b0b266599a0a60e35b"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_docker_failures_do_not_leak_secret[timeout]",
+      "stable_id": "phase0.4aab579eb695268782cb964c"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_missing_docker_label_fails_before_socket[<no value>\\n]",
+      "stable_id": "phase0.f5c2307737a5e07c145848f4"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_missing_docker_label_fails_before_socket[]",
+      "stable_id": "phase0.c86bca2a3fb6896f1a0e7523"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_non_json_daemon_output_is_not_echoed",
+      "stable_id": "phase0.1bf33a65a113671cd44bf8a0"
+    },
+    {
+      "pytest_nodeid": "core/test_direct_daemon.py::test_success_uses_inspect_and_label_without_persisting_token",
+      "stable_id": "phase0.6ba343db9c31611feeca00f2"
+    },
+    {
+      "pytest_nodeid": "core/test_root.py::test_find_repo_root_fails_without_markers",
+      "stable_id": "phase0.66c905c455f313405c042475"
+    },
+    {
+      "pytest_nodeid": "core/test_root.py::test_find_repo_root_skips_partial_marker_directory",
+      "stable_id": "phase0.28246ac72d225be18ba5f49a"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-0]",
+      "stable_id": "phase0.dcda9caad84fa48ad1526f7c"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-1M]",
+      "stable_id": "phase0.60fee47faf02bdb7e5337c05"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-20M]",
+      "stable_id": "phase0.d83a091a9275f9bf76d8624f"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-5M]",
+      "stable_id": "phase0.3e977b69d62f6da6f75401db"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-SHAPE-20M]",
+      "stable_id": "phase0.9ae1489be70b72de04759dd6"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_bench.py::test_export_bench_catalog[PERF-ZSTD-20M]",
+      "stable_id": "phase0.e6af043d632c4aa839b7a92a"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-01]",
+      "stable_id": "phase0.0c43cd76510f26aee2235363"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-02]",
+      "stable_id": "phase0.b6d73d0f39f08cc44f9d1359"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-03]",
+      "stable_id": "phase0.a31bce292aa4be8e904800a3"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-04]",
+      "stable_id": "phase0.679186801e31e68bb01d7073"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-05]",
+      "stable_id": "phase0.8316f41e3f14e0bf0a220fa3"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-06]",
+      "stable_id": "phase0.455e5c447a029bab5338dacf"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-07]",
+      "stable_id": "phase0.0d3c6df73cdc0db4d2b83369"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-08]",
+      "stable_id": "phase0.a065ccee9e3970085e09c9bd"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-09]",
+      "stable_id": "phase0.47335ab316a71a49dd9c6393"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_easy.py::test_export_easy_catalog[EZ-10]",
+      "stable_id": "phase0.103e8c5ee24529658516521f"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-01]",
+      "stable_id": "phase0.7d19d896e07b1e3292c534b2"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-02]",
+      "stable_id": "phase0.5147768fc02fa7b7c1a3a0e8"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-03]",
+      "stable_id": "phase0.d61836b5ee4aee3a2bff676d"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-04]",
+      "stable_id": "phase0.0b63fd19636427140731ed35"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-05]",
+      "stable_id": "phase0.ce2c2f08c541b9cf13e82650"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-06]",
+      "stable_id": "phase0.b56bf197be6eba8fd829f197"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-07]",
+      "stable_id": "phase0.5842f77bcf3e7119edfb23cf"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-08]",
+      "stable_id": "phase0.0eab9fb6694acd306a03bf5e"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-09]",
+      "stable_id": "phase0.8c2176e81306999fe67cb409"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_hard.py::test_export_hard_catalog[HRD-10]",
+      "stable_id": "phase0.153e37a0b625bce8fe39076a"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-01]",
+      "stable_id": "phase0.bbe31f00ddd433857d0bf60d"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-02]",
+      "stable_id": "phase0.58a02cfc1a12825f65b68adc"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-03]",
+      "stable_id": "phase0.0669804a936e0090bd3521b7"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-04]",
+      "stable_id": "phase0.b0eff9c7e03ef6f5c0e42707"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-05]",
+      "stable_id": "phase0.21a02ab804c35cb4d4dd7ff8"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-06]",
+      "stable_id": "phase0.aba2bbf6cd305e6b0459e7e2"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-07]",
+      "stable_id": "phase0.4cea71cb1daa43550fe2fe36"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-08]",
+      "stable_id": "phase0.59197ac6216057295a8fdc12"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-09]",
+      "stable_id": "phase0.a6ec9b76b2110fb9170a764e"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_medium.py::test_export_medium_catalog[MED-10]",
+      "stable_id": "phase0.8e4f1fa53ee10c394e465b66"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-01]",
+      "stable_id": "phase0.672942fe0e07aa36c97911ee"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-02]",
+      "stable_id": "phase0.ab459cd45817b456a1457a7e"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-03]",
+      "stable_id": "phase0.f1568957482398166dc3e338"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-04]",
+      "stable_id": "phase0.a72b0df5b0e23168f1ded755"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-05]",
+      "stable_id": "phase0.02088992bc022a27582b815b"
+    },
+    {
+      "pytest_nodeid": "manager/management/export/test_export_runnable.py::test_export_runnable_catalog[RUN-06]",
+      "stable_id": "phase0.742e27f04a0602548dcea1b7"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_bench.py::test_squash_bench_catalog[AB-BLOCKS]",
+      "stable_id": "phase0.5a5da0a97c04fffcc1f0947f"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_bench.py::test_squash_bench_catalog[AB-EQUIV]",
+      "stable_id": "phase0.5019c7b6333ce8c398e51852"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_bench.py::test_squash_bench_catalog[PERF-WIDTH]",
+      "stable_id": "phase0.e1f7064449725e87e24d7149"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-01]",
+      "stable_id": "phase0.0c9056a7485d14f583f0e1ce"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-02]",
+      "stable_id": "phase0.a9d4b025173101015276d679"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-03]",
+      "stable_id": "phase0.0ca02d8945dc8ef563a02159"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-04]",
+      "stable_id": "phase0.12d30192756b1bbf0e7a5dbc"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-05]",
+      "stable_id": "phase0.64626b9e5b3455de9f4541bf"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-06]",
+      "stable_id": "phase0.fcf5c4b09413b0a7b53582b0"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-07]",
+      "stable_id": "phase0.e8a3194bd44d56b22179913c"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-08]",
+      "stable_id": "phase0.729f05baf1eb8b42333d75e3"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-09]",
+      "stable_id": "phase0.b768afb552da0a8697697664"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-10]",
+      "stable_id": "phase0.d7accdceac6d77241eccf086"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-11]",
+      "stable_id": "phase0.ba7b6c3ad1168d4dd52cfd5d"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-12]",
+      "stable_id": "phase0.da63252310154c54d6335e3e"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-13]",
+      "stable_id": "phase0.cd980e7ecbcec5ecf83b3682"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-14]",
+      "stable_id": "phase0.5c35f4c0b34a011951d16ae2"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-15]",
+      "stable_id": "phase0.9870e7dd1eecb802347269cc"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-16]",
+      "stable_id": "phase0.1350abd8025543cccc2a2175"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-17]",
+      "stable_id": "phase0.080ddcf8d7de689a1c7e495c"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-18]",
+      "stable_id": "phase0.65b339b7080e39d9d8c65f55"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-19]",
+      "stable_id": "phase0.eed477276c555fb9baea8612"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[HRD-20]",
+      "stable_id": "phase0.5ba288d49f37d16bcfef5df1"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499-HTTP]",
+      "stable_id": "phase0.7ba63f5858c0713803e249a3"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-499]",
+      "stable_id": "phase0.7d5b19c334e74fa72956459a"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-COMBO-HTTP]",
+      "stable_id": "phase0.74144bf35b90dd04458380cb"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE-HTTP]",
+      "stable_id": "phase0.610049bb491523a8b34d3d68"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_hard.py::test_squash_hard_catalog[LOAD-LARGE]",
+      "stable_id": "phase0.8b7dede8e5845f8f51b92edf"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-01]",
+      "stable_id": "phase0.884b2388b89112e425d3456c"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[HTTP-02]",
+      "stable_id": "phase0.09bde74a4889b542ab787782"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-01]",
+      "stable_id": "phase0.77e4a8fe24bd40c177c3d21d"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-02]",
+      "stable_id": "phase0.d1e7bf8e8bd9b6fdb2c92ecb"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-03]",
+      "stable_id": "phase0.154cbe93340d744fa1608623"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-04]",
+      "stable_id": "phase0.15d4fb85ec903f6b3abbeba5"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-05]",
+      "stable_id": "phase0.932a8f6086fbeafe257e2d15"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-06]",
+      "stable_id": "phase0.e511cc9a5d723631ad270dc4"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-07]",
+      "stable_id": "phase0.1b2b9b8e8552cbd7a84c1b8a"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-08]",
+      "stable_id": "phase0.8b1f807af6ef9f2c0df4243b"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-09]",
+      "stable_id": "phase0.6ab7c761ff2c096e62890448"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-10]",
+      "stable_id": "phase0.f6f4798d5bc094f51e514ea8"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-11]",
+      "stable_id": "phase0.639a0c3d59627105d3c3dc75"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-12]",
+      "stable_id": "phase0.2b75e9aeb27aaf58cf824466"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-13]",
+      "stable_id": "phase0.3902bc41ace4824110e50c58"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-14]",
+      "stable_id": "phase0.f670af28adfd10d1712de980"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-15]",
+      "stable_id": "phase0.74075656800a4117367fe362"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-16]",
+      "stable_id": "phase0.4069d16873e4f28603bad96e"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-17]",
+      "stable_id": "phase0.b9c05b9560b5c432bdf69e3d"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-18]",
+      "stable_id": "phase0.3a5aeb410bef51a1ffa94010"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-19]",
+      "stable_id": "phase0.3d92d2a9516111ee5bdf366e"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_medium.py::test_squash_medium_catalog[MED-20]",
+      "stable_id": "phase0.9bf314d2d32b3a95375ee2d3"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-01]",
+      "stable_id": "phase0.001bf5977254495a57086a0c"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-02]",
+      "stable_id": "phase0.c4fdbb057020cd1db88d052d"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-03]",
+      "stable_id": "phase0.d004834da54a07c78a928881"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-04]",
+      "stable_id": "phase0.d789875b305fc1d169b42798"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-05]",
+      "stable_id": "phase0.2f80408b3e640f3f9d445f82"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-06]",
+      "stable_id": "phase0.4092d2cc60b3093b854f3bd0"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-07]",
+      "stable_id": "phase0.36571864a1a9744eb4b4ff01"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-08]",
+      "stable_id": "phase0.00de23dd00f924c0fabe3266"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-09]",
+      "stable_id": "phase0.d577c791e2d7307b218ec5f1"
+    },
+    {
+      "pytest_nodeid": "manager/management/squash/test_squash_smoke.py::test_squash_smoke_catalog[SMK-10]",
+      "stable_id": "phase0.04bd064c4986490f190e66c8"
+    },
+    {
+      "pytest_nodeid": "manager/management/test_management.py::test_sandbox_lifecycle",
+      "stable_id": "phase0.f84eaa24d8eb1c1cf2be32fe"
+    },
+    {
+      "pytest_nodeid": "observability/test_observability.py::test_aggregate_snapshot_includes_ready_sandbox",
+      "stable_id": "phase0.a67bb80023d113fed655fbfc"
+    },
+    {
+      "pytest_nodeid": "observability/test_observability.py::test_scoped_snapshot_returns_selected_sandbox",
+      "stable_id": "phase0.003f7b03d5969c5ab9752a4b"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_exec_command_layer_depth_benchmark.py::test_exec_command_layer_depth_shared_base_benchmark",
+      "stable_id": "phase0.bed7336af4cba54ee4a81ef1"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_01_two_agents_commit_different_files_rejects_cleanly",
+      "stable_id": "phase0.d5e2bb06af17a67f9ebd8c18"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_02_two_agents_commit_same_file_one_wins",
+      "stable_id": "phase0.c90445bb24a0350470e1dbf6"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_03_concurrent_refs_heads_main_do_not_interleave",
+      "stable_id": "phase0.9010847f820f287c1535404f"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_04_git_gc_churn_with_concurrent_commit_keeps_db_intact",
+      "stable_id": "phase0.21905e7d18b8fa042ee1e3ce"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_05_large_repo_import_is_unforbidden",
+      "stable_id": "phase0.634ba5838795a836e8685625"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_06_stale_destructive_delete_rejects_settled_delete_allowed",
+      "stable_id": "phase0.0ebf2d3602bc54cefe890971"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_07_routing_uses_base_gitignore_not_racing_one",
+      "stable_id": "phase0.73992059825af398d357521d"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_08_symlink_under_repo_routes_as_source",
+      "stable_id": "phase0.25390d56855d41c1f5ba6e23"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_09_interleaved_git_soak_keeps_invariants",
+      "stable_id": "phase0.54eec6bb20e42b46f120e099"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_complex.py::test_CX_10_destructive_policy_is_caller_prehook_not_layerstack",
+      "stable_id": "phase0.26c7718c38e223c2e9d3e59b"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_01_git_init_publishes_dotgit_as_source",
+      "stable_id": "phase0.56ae972ef1e6036198b5510b"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_02_git_commit_persists_into_fresh_exec",
+      "stable_id": "phase0.c8c50f22907d1243480e6775"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_03_git_tracked_working_file_has_line_attribution",
+      "stable_id": "phase0.8621ad2db26957f9ab9462e6"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_04_gitignore_is_source_and_drives_ignored_route",
+      "stable_id": "phase0.2e36219502d44f8d2a435339"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_05_dotgithub_gitattributes_gitmodules_are_source",
+      "stable_id": "phase0.7ced45e7f2ac683c0a7e4e6e"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_06_nested_repo_dotgit_is_source",
+      "stable_id": "phase0.0936ba975e6b3aae0fe7fb45"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_07_git_rm_publishes_deletion",
+      "stable_id": "phase0.6a6a3039bcdfa41f5c7f8981"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_08_git_mv_is_delete_old_write_new",
+      "stable_id": "phase0.8b1e08d1b22cbc721217d468"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_09_gitignored_build_output_uses_ignored_route",
+      "stable_id": "phase0.f0b564528c16623db17ffbf6"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_easy.py::test_EZ_10_protected_path_still_rejects",
+      "stable_id": "phase0.0c9c041c78ceeb02e98de529"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_01_first_writer_wins_on_tracked_file",
+      "stable_id": "phase0.ac2cd69d881a144251a7353c"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_02_last_writer_wins_on_gitignored_path",
+      "stable_id": "phase0.092975e12980181f4102a18a"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_03_git_reset_hard_revert_is_not_forbidden",
+      "stable_id": "phase0.8037036447b7b484e6ee21ae"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_04_git_clean_publishes_untracked_deletions",
+      "stable_id": "phase0.c90e06560bfb493f7f19d91d"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_05_binary_git_index_divergence_rejects_cleanly",
+      "stable_id": "phase0.3348e4b759ce859d5686f30b"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_06_text_git_log_divergence_merges_or_rejects",
+      "stable_id": "phase0.26f80cc088619e85c29b74e6"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_07_gitignored_dotgit_is_last_writer_wins",
+      "stable_id": "phase0.4a286e3f3a8a181b52dd8fe4"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_08_mixed_source_ignored_changeset_rejects_atomically",
+      "stable_id": "phase0.25d77d5f9bb921d1d0c87230"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_09_branch_switch_rewrites_worktree",
+      "stable_id": "phase0.d2291a5692cddff5633e540b"
+    },
+    {
+      "pytest_nodeid": "runtime/command/test_git_policy_medium.py::test_MED_10_protected_layer_metadata_rejects_and_discards",
+      "stable_id": "phase0.09457afe3bcedcadb59cce11"
+    },
+    {
+      "pytest_nodeid": "runtime/daemon_http/test_daemon_http.py::test_daemon_http_health",
+      "stable_id": "phase0.745ce20dba225dabc12fc688"
+    },
+    {
+      "pytest_nodeid": "runtime/daemon_http/test_daemon_http.py::test_file_list_and_removed_operation_routes",
+      "stable_id": "phase0.4d2f9820783e7993d4b44c58"
+    },
+    {
+      "pytest_nodeid": "runtime/daemon_http/test_daemon_http.py::test_forward_isolated_arbitrary_port",
+      "stable_id": "phase0.ea39327a0d635e37a2bb2d35"
+    },
+    {
+      "pytest_nodeid": "runtime/daemon_http/test_daemon_http.py::test_forward_rejects_invalid_routes",
+      "stable_id": "phase0.817622ea9b59238859288a1a"
+    },
+    {
+      "pytest_nodeid": "runtime/daemon_http/test_daemon_http.py::test_forward_shared_arbitrary_port",
+      "stable_id": "phase0.fdeb3d4c6d0f844268d89b3c"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_session.py::test_capture_deletion_mints_no_ownership",
+      "stable_id": "phase0.cd40dd7917fb0e1f7e073f9f"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_session.py::test_capture_insertion_shifts_without_reassigning",
+      "stable_id": "phase0.9297208357a3f15900e741b6"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_session.py::test_complex_deep_prepend_history_across_20_captures",
+      "stable_id": "phase0.5b6e67580a7778ab3b510f36"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_session.py::test_live_session_changes_are_invisible_to_blame",
+      "stable_id": "phase0.a47f534094341a328c4fe993"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_sessionless.py::test_blame_key_resolution_and_unaudited_paths",
+      "stable_id": "phase0.7177e2c4f09e76f89ad08d61"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_sessionless.py::test_complex_50_round_insert_delete_ladder_from_many_actors",
+      "stable_id": "phase0.3d44dbfc7bfe730f5667ee22"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_sessionless.py::test_complex_owner_turnover_across_30_wholesale_generations",
+      "stable_id": "phase0.ac8910853ffd571b54f244b0"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_sessionless.py::test_line_shift_on_insert_and_delete_preserves_untouched_owners",
+      "stable_id": "phase0.b1b78bb3f7a973112b160a49"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_sessionless.py::test_replace_all_multi_site_attribution_keeps_non_adjacent_ranges",
+      "stable_id": "phase0.0302d9621afca6e94dc65b78"
+    },
+    {
+      "pytest_nodeid": "runtime/file/blame/test_blame_sessionless.py::test_same_owner_coalescing_for_adjacent_lines_rewritten_in_one_edit",
+      "stable_id": "phase0.88dc54ec45134ef5aef23d5c"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_complex_capture_order_independence_line_disjoint_merges",
+      "stable_id": "phase0.ecab9c80f736fb125568436d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_complex_capture_races_sessionless_writers_hot_path",
+      "stable_id": "phase0.91b14ec29ac5bd2ee178ddce"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_complex_hot_file_storm_inside_one_session",
+      "stable_id": "phase0.6112359c0a8393f834a111ff"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_complex_long_session_disjoint_writes_visible_to_shell_then_destroy",
+      "stable_id": "phase0.b2bbea7755eb539d70a437c3"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_complex_same_path_conflicting_captures_publish_only_first",
+      "stable_id": "phase0.751134e947b24506a43464eb"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_destroy_workspace_session_races_running_exec",
+      "stable_id": "phase0.c4799490fff69611b6e36707"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_session_reads_race_in_session_atomic_mv_loop",
+      "stable_id": "phase0.c8d1ef6995f797d3098064f4"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_session_write_races_session_edit_same_path",
+      "stable_id": "phase0.542a5d5da944591dc7fa5c08"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_session.py::test_two_concurrent_session_writes_same_path_leave_no_tmp_artifacts",
+      "stable_id": "phase0.bccbee30e50210ab1aa5845d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_forty_way_disjoint_exec_and_file_write_race",
+      "stable_id": "phase0.6e53271e7ef49e8c63611c51"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_hundred_sessionless_writes_to_distinct_fanout_paths",
+      "stable_id": "phase0.a9b21b0e7c6171b295c28e9d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_large_same_path_writes_race_windowed_reads",
+      "stable_id": "phase0.ec915c06877a4388ac3a4f9c"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_mixed_fanout_hot_path_writes_reads_and_blame",
+      "stable_id": "phase0.55c16b9f608b77a4952aa02b"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_sustained_hot_path_churn_with_layerstack_poller",
+      "stable_id": "phase0.81b7616f561fda4b8c5433c7"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_twenty_disjoint_sessionless_edits_one_seeded_file",
+      "stable_id": "phase0.b4a1603e6a786608409a14bf"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_complex_twenty_sessionless_writes_to_one_path",
+      "stable_id": "phase0.589124570e4a8d40b5e86eba"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_concurrent_reads_race_sessionless_write_complete_snapshots",
+      "stable_id": "phase0.81373b27b293f000efebc1ff"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_file_blame_races_sessionless_write_same_path",
+      "stable_id": "phase0.f5fc800098fd9e633f929395"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_sessionless_edit_races_one_shot_exec_disjoint_line_merge",
+      "stable_id": "phase0.1ae5a9a3228ce1dc296d438b"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_sessionless_read_races_create_of_brand_new_path",
+      "stable_id": "phase0.497789adf66c4c1c770408cf"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_sessionless_write_beats_conflicting_one_shot_capture",
+      "stable_id": "phase0.a3da0f1a271f7bbfeeda2903"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_sessionless_write_races_sessionless_edit_same_path",
+      "stable_id": "phase0.9607f76ba871da956691a2ce"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_two_concurrent_sessionless_edits_same_unique_old_string",
+      "stable_id": "phase0.d1672ae06bcae139b205fa82"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_two_concurrent_sessionless_writes_to_disjoint_paths",
+      "stable_id": "phase0.52b2299e8d864adc7da8db6b"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_two_concurrent_sessionless_writes_to_same_path_serialize",
+      "stable_id": "phase0.df4ac8f893e9e8668c50ebb8"
+    },
+    {
+      "pytest_nodeid": "runtime/file/concurrent/test_concurrent_sessionless.py::test_two_identical_concurrent_sessionless_writes_publish_once",
+      "stable_id": "phase0.07af9972c2502e5a52d8d952"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_capture_after_base_advanced_clean_auto_merge",
+      "stable_id": "phase0.97ee508afd021e604644259c"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_capture_after_base_advanced_overlapping_conflict",
+      "stable_id": "phase0.1e3edb57a1e70140def1dfef"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_complex_capture_with_hundreds_of_changed_files",
+      "stable_id": "phase0.55f2ac6b1a4afd2e07693b78"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_complex_session_overlay_at_scale_through_mount",
+      "stable_id": "phase0.b2a07a28416dd7ec5f9b05f8"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_complex_two_sessions_from_one_base_captured_in_sequence",
+      "stable_id": "phase0.3ef2a8eb92e0829b77c5a0c2"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_destroy_discards_the_overlay",
+      "stable_id": "phase0.5cb2c62945ae326a7214c0a7"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_frozen_snapshot_mount_excludes_later_published_layers",
+      "stable_id": "phase0.2e8bdafecf88b925e76f4745"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_one_shot_capture_end_state",
+      "stable_id": "phase0.58078ba64138a8a75c43083e"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_session.py::test_session_delete_vs_sessionless_modify_rejects_atomically",
+      "stable_id": "phase0.f3a7b58c26954b53ca80b97e"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_blame_ladder_on_one_path_tracks_three_publish_owners",
+      "stable_id": "phase0.6c7e047adb98410d538619fb"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_blame_survives_deletion",
+      "stable_id": "phase0.c864c6233269df52aff62771"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_complex_deep_layer_stack_multi_path",
+      "stable_id": "phase0.ab2e6ef3944bda519b0fc72b"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_complex_deep_layer_stack_single_path_50_line_edits",
+      "stable_id": "phase0.52b3a015ef4b3c87bedcd272"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_complex_deep_whiteout_opaque_hierarchy",
+      "stable_id": "phase0.7076190fb802b6802e0ad5cf"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_complex_hundreds_of_files_in_one_captured_layer",
+      "stable_id": "phase0.5a8e9671dd464af35416e838"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_complex_large_file_windowed_reads_over_layer_boundary",
+      "stable_id": "phase0.1d49661ca712919a270645dd"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_complex_mixed_history_blame_at_scale",
+      "stable_id": "phase0.cdb49f675d8f7db887b7e94f"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_delete_via_exec_then_recreate_via_file_op",
+      "stable_id": "phase0.b72718239ee5124f3d80374a"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_first_sessionless_edit_of_workspace_base_uses_original_for_untouched",
+      "stable_id": "phase0.a4dc3e471cfd1a2865c4e21b"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_forbidden_publishes_do_not_advance_manifest",
+      "stable_id": "phase0.7ce2c61b3532fb5c55a65bab"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_gitignored_route_blame_is_wholesale",
+      "stable_id": "phase0.623963ee9817b2d326ccb97e"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_identical_content_repeated_at_head_is_noop_update",
+      "stable_id": "phase0.2c91975911705d2b363387b8"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_identical_content_rewrite_not_at_head_commits_but_keeps_original_owner",
+      "stable_id": "phase0.0d0ebfbe0ce5fad6d9ed0f14"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_no_change_capture_is_noop",
+      "stable_id": "phase0.edbda533807888f52c5b435d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_opaque_directory_hides_lower_children_and_allows_update",
+      "stable_id": "phase0.daca7917331878e0992e5dbc"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_parent_hidden_by_whiteout_can_be_recreated",
+      "stable_id": "phase0.eb647c38f8fbfc26a369f710"
+    },
+    {
+      "pytest_nodeid": "runtime/file/correctness/test_correctness_sessionless.py::test_three_distinct_sessionless_writes_prepend_three_layers",
+      "stable_id": "phase0.9848b4a85b912d82e2712c5d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_complex_large_in_session_volume_supports_windowed_reads",
+      "stable_id": "phase0.f2c24aedfd2b97064ad0a971"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_complex_long_interleaved_session_destroy_discards_all_changes",
+      "stable_id": "phase0.b2d274e270357950a5322408"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_complex_one_shot_capture_lifecycle_accepts_file_ops_before_exit",
+      "stable_id": "phase0.1143eb8db624188a53b8db76"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_interactive_session_shell_sees_file_ops_while_running",
+      "stable_id": "phase0.3cdbb34e27217500217c35f3"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_session_exec_file_edit_exec_round_trip_stays_unpublished",
+      "stable_id": "phase0.6a8050471ad92538482e0970"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_session_exec_remove_then_session_write_recreates_parent",
+      "stable_id": "phase0.465c2b951fc8fcb3f6242917"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_session_fifo_is_rejected_by_session_file_ops",
+      "stable_id": "phase0.5d10634d9f90eb57e014d982"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_session.py::test_session_write_preserves_existing_executable_mode",
+      "stable_id": "phase0.5c7a36cdfc9830d44b33c097"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_complex_large_text_file_rejects_edit_but_allows_small_read_window",
+      "stable_id": "phase0.5f0c93e7586efe0e47e80867"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_complex_long_sessionless_interleave_exec_append_then_file_edit",
+      "stable_id": "phase0.edb82e8b41f03fcb61327dcb"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_complex_multimeg_exec_file_supports_windowed_reads",
+      "stable_id": "phase0.a38f0995804dfabb59437495"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_complex_single_wide_line_fails_read_but_file_published",
+      "stable_id": "phase0.b5349b9fed3f38e9bfbdb9a1"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_complex_tar_pack_and_extract_exec_generated_tree",
+      "stable_id": "phase0.8ce0c28fcb5e98d37428d81e"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_complex_two_hundred_parts_then_exec_build_concatenates_all",
+      "stable_id": "phase0.958c5cf15d5881fb1b61c322"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_exec_written_bom_and_crlf_are_normalized_on_read",
+      "stable_id": "phase0.5fbd1a4b9ddbd273e2fb74cd"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_executable_bit_survives_one_shot_capture_and_projection",
+      "stable_id": "phase0.e42cc19df900868e63039500"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_file_write_script_then_one_shot_exec_side_effect_is_published",
+      "stable_id": "phase0.e3d61f29614a8f333d7ccab3"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_file_write_then_one_shot_sed_reassigns_only_edited_line",
+      "stable_id": "phase0.d81eaff73cc8b7fa2e01d70d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_non_utf8_exec_file_is_rejected_by_read_and_edit",
+      "stable_id": "phase0.689f63ebd122510fc2cf9e1e"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_one_shot_exec_consumes_published_file_write_content",
+      "stable_id": "phase0.79b0434b3eea5dd53bb24d20"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_one_shot_exec_creates_new_file_then_sessionless_read_and_blame",
+      "stable_id": "phase0.dd58e5523fa91a024492dcfe"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_one_shot_fifo_is_protected_drop_but_regular_note_publishes",
+      "stable_id": "phase0.24d97dc6cdabe0dd3403a289"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_one_shot_mv_over_published_file_reassigns_new_path_blame",
+      "stable_id": "phase0.acc9e70a0c8d0d0dacf20643"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_one_shot_rm_publishes_delete_whiteout_for_file_ops",
+      "stable_id": "phase0.81b71c5c6b2225c3a017189d"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_published_symlink_file_is_not_followed_by_file_ops",
+      "stable_id": "phase0.27127b15536c27a7abf880d1"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_published_symlink_parent_is_not_traversed_by_file_ops",
+      "stable_id": "phase0.c29e57384e1a51137c2a4448"
+    },
+    {
+      "pytest_nodeid": "runtime/file/file_exec/test_file_exec_sessionless.py::test_rm_rf_parent_whiteout_then_recreate_child_path",
+      "stable_id": "phase0.31f8cff318391a7d355f81b5"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_edit_smoke.py::test_ordered_multi_edit_applies_against_evolving_content",
+      "stable_id": "phase0.267061494614dfa4948295f6"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_edit_smoke.py::test_session_edit_visible_with_workspace_session_id_and_invisible_sessionless",
+      "stable_id": "phase0.7aef434316349c5a3b815864"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_edit_smoke.py::test_sessionless_edit_missing_old_string_returns_edit_not_found",
+      "stable_id": "phase0.fa8669a38d4df8a3305571ba"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_edit_smoke.py::test_sessionless_edit_replace_all_true_replaces_multiple_occurrences",
+      "stable_id": "phase0.916c2c6804959838db383059"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_edit_smoke.py::test_sessionless_edit_unique_replacement_and_read_sees_result",
+      "stable_id": "phase0.3eee2226168fce0492dff17b"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_read_smoke.py::test_session_read_of_file_created_by_session_file_write",
+      "stable_id": "phase0.b180a5054762d6df30da21ca"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_read_smoke.py::test_sessionless_read_of_file_created_by_sessionless_file_write",
+      "stable_id": "phase0.a9af17e774634e939a9d463c"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_read_smoke.py::test_sessionless_read_of_missing_file_returns_not_found",
+      "stable_id": "phase0.43e92c6cd6d6bdbdd8526300"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_read_smoke.py::test_sessionless_read_rejects_absolute_path_outside_workspace_root",
+      "stable_id": "phase0.45eee852ba27e44e2652b823"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_read_smoke.py::test_sessionless_read_with_offset_and_limit_over_multiline_file",
+      "stable_id": "phase0.4e125cfdc2c3209841ffdf8c"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_session_only_linux.py::test_session_edit_to_in_session_symlink_or_symlink_parent_is_rejected",
+      "stable_id": "phase0.baef571baf5c9b7cef27ff53"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_session_only_linux.py::test_session_write_to_in_session_directory_is_rejected",
+      "stable_id": "phase0.22bfeb00a992b12278ac9445"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_session_only_linux.py::test_session_write_to_in_session_symlink_is_rejected_and_not_followed",
+      "stable_id": "phase0.47c3c442cc83e5de1850b9a3"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_session_only_linux.py::test_session_write_to_in_session_symlink_parent_is_rejected",
+      "stable_id": "phase0.2a85f69e5eee1ae6cb95f04a"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_session_only_linux.py::test_session_write_updates_existing_executable_file_and_preserves_mode",
+      "stable_id": "phase0.7767860809e822f7d8f6b612"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_write_smoke.py::test_session_write_creates_missing_parent_directories",
+      "stable_id": "phase0.f69245d5305f3fbe2c9b7798"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_write_smoke.py::test_session_write_visible_with_workspace_session_id_and_invisible_sessionless",
+      "stable_id": "phase0.44d20c965b76df06ae306e86"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_write_smoke.py::test_sessionless_write_creates_new_file_and_sessionless_read_sees_it",
+      "stable_id": "phase0.5e9f89f9abe7e2df3a1e36cc"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_write_smoke.py::test_sessionless_write_updates_existing_file_and_file_blame_shows_operation_owner",
+      "stable_id": "phase0.5418d15ca74e092df595aaa4"
+    },
+    {
+      "pytest_nodeid": "runtime/file/smoke/test_write_smoke.py::test_write_to_existing_directory_is_rejected",
+      "stable_id": "phase0.c01ada0865d8a3af3f9c47e9"
+    },
+    {
+      "pytest_nodeid": "runtime/network_isolation/test_network_isolation.py::test_isolated_workspace_sessions_cannot_reach_each_other_on_same_port",
+      "stable_id": "phase0.38564e01cbb6b89300cbe70d"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_complex.py::test_CX_01_poisoned_session_never_disturbs_concurrent_session",
+      "stable_id": "phase0.0c6bdb2b9b1bdf09b0353313"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_complex.py::test_CX_02_squash_interplay_reservation_survives_squash",
+      "stable_id": "phase0.7a448a1c9e0b98ee2a48b8fa"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_complex.py::test_CX_03_reserved_name_storm_standing_invariants",
+      "stable_id": "phase0.e2305d72b21183304f5626a5"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_complex.py::test_CX_04_reject_on_a_deep_stack_is_prompt_and_clean",
+      "stable_id": "phase0.590e80776c0f3085a83d46fe"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_easy.py::test_EZ_01_session_file_named_wh_foo_never_deletes_foo",
+      "stable_id": "phase0.14e7a6eef663b3dccde8b876"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_easy.py::test_EZ_02_one_shot_exec_touch_wh_probe_rejects_and_discards",
+      "stable_id": "phase0.dcaedc59209a646e5abbdef1"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_easy.py::test_EZ_03_user_file_named_opaque_marker_never_masks_directory",
+      "stable_id": "phase0.8db3b3003f36c3b05a7ef87d"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_easy.py::test_EZ_04_sessionless_file_write_to_wh_foo_rejects_without_poisoning",
+      "stable_id": "phase0.646fa64ad69edad7a5d63711"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_easy.py::test_EZ_05_lookalike_names_are_ordinary_paths",
+      "stable_id": "phase0.80971e522b1d68eb63e9a2fb"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_easy.py::test_EZ_06_real_deletion_still_works_end_to_end",
+      "stable_id": "phase0.f980103600efc4ba994cf890"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_medium.py::test_MED_01_mixed_changeset_is_atomic",
+      "stable_id": "phase0.48035e0eb60be0f2ad6bd95c"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_medium.py::test_MED_02_rule_is_per_component_not_per_basename",
+      "stable_id": "phase0.6e9a6c8d6181563675dde9a2"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_medium.py::test_MED_03_symlink_named_wh_link_rejects",
+      "stable_id": "phase0.2f3c01fde6147c47b48a17a6"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_medium.py::test_MED_04_bare_wh_file_rejects_and_base_materialization_stays_intact",
+      "stable_id": "phase0.32edf1c4182a9802ca268802"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_medium.py::test_MED_05_wh_protected_name_is_one_clean_reject",
+      "stable_id": "phase0.4d40313dd7d5187289558cbe"
+    },
+    {
+      "pytest_nodeid": "runtime/reserved_paths/test_wh_reserved_medium.py::test_MED_06_rm_rf_and_recreate_round_trips",
+      "stable_id": "phase0.6254fce361921f97746919bc"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e01_normal_commands_still_work",
+      "stable_id": "phase0.2537b71377a542e5c1c8319f"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e02_workspace_write_path_unaffected",
+      "stable_id": "phase0.89ab46b9d95b61632c7b442b"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e03_no_new_privs_installed",
+      "stable_id": "phase0.5f03ae739da21fbbafc6a977"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e04_seccomp_filter_mode_active",
+      "stable_id": "phase0.7b28d1aec7634fc9cfacfa8a"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e05_mount_mutation_denied",
+      "stable_id": "phase0.74442978b8be054dba182f34"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e06_namespace_mutation_denied",
+      "stable_id": "phase0.81fa8e870547a89643b75a2a"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e07_device_node_char_denied",
+      "stable_id": "phase0.d6920f758f5b59c02e850c25"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e08_device_node_fifo_allowed",
+      "stable_id": "phase0.a7775bc30a1ccb4c6eef7236"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e09_kernel_surface_denied",
+      "stable_id": "phase0.aef78c3d8e194cf159fb0f7f"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_easy.py::test_ss_e10_clone3_forced_enosys",
+      "stable_id": "phase0.0785186f3356e83570623a8f"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h01_userns_escape_primitive_denied",
+      "stable_id": "phase0.1b6c10af9312cc8c7e40cbb6"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h02_clone_new_flag_mask_denies_exactly",
+      "stable_id": "phase0.4822bceeeb57aacaae7f35ef"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h03_clone3_blanket_enosys",
+      "stable_id": "phase0.c0bbf4c05645f0b5def79e5f"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h04_x32_abi_rejected",
+      "stable_id": "phase0.a6067df7b4b6dce75fdc008b"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h05_open_by_handle_at_denied",
+      "stable_id": "phase0.006a19c20f8389e655e6a120"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h06_new_mount_api_denied",
+      "stable_id": "phase0.fbf4091f6553bb3b3341b3e1"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h07_mount_mutation_family_denied",
+      "stable_id": "phase0.98c52f7ea15e09ecd15b650e"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h08_module_load_denied",
+      "stable_id": "phase0.c502b23e8dd2827da8d26140"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h09_io_uring_ring_closed",
+      "stable_id": "phase0.d1d8fe1e53d0f56cb24f70f0"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h10_kernel_lpe_surfaces_denied",
+      "stable_id": "phase0.5ba6e5e05e7bb747df6e964d"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h11_no_new_privs_neutralizes_setuid",
+      "stable_id": "phase0.030e77144439706c29b4715e"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h12_file_caps_defeated",
+      "stable_id": "phase0.652ee2dbf7c114f716af18a7"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h13_setns_denied_distinctly",
+      "stable_id": "phase0.cbd3d40e8777759614da0095"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h14_resource_dos_family_denied",
+      "stable_id": "phase0.75908b16e40ae63903fc9a0d"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_hard.py::test_ss_h15_same_pgid_subtree_all_denied",
+      "stable_id": "phase0.cd6dbe82573100cf99aef1d1"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m01_full_deny_set",
+      "stable_id": "phase0.06b29fd7c09723a02dc6f0f4"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m02_full_allow_set",
+      "stable_id": "phase0.5498cc25584c066d2773ded4"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m03_system_power_caps_dropped",
+      "stable_id": "phase0.cde90f97993fa86ebf4c3677"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m04_fs_identity_caps_kept",
+      "stable_id": "phase0.a189f8b432e3af0c18b76913"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m05_sys_admin_dropped_from_bounding_set",
+      "stable_id": "phase0.f60ec41f57128fafe862f7a1"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m06_image_unshare_denied",
+      "stable_id": "phase0.b80f4405d3f94d45c89eae24"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m07_image_mount_tools_denied",
+      "stable_id": "phase0.33606d0f86785d10f2b100ed"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m08_package_manager_starts",
+      "stable_id": "phase0.25e96586353ad38bbe9aa498"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m09_real_install_under_policy",
+      "stable_id": "phase0.3ca5dea3d573b39e7adbb897"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m10_dac_override_kept",
+      "stable_id": "phase0.b92fa88fed87a7301befb542"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m11_device_node_mode_filter_both_directions",
+      "stable_id": "phase0.7b175bb916514672daa942f7"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m12_rename_and_chmod_allowed",
+      "stable_id": "phase0.28be718328b1218f078f9707"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m13_ptrace_kept_within_pid_namespace",
+      "stable_id": "phase0.944badf226efcfca719768e8"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m14_every_child_independently_hardened",
+      "stable_id": "phase0.646ab3f20c9e63095a530a6d"
+    },
+    {
+      "pytest_nodeid": "runtime/shell_security/test_shell_security_medium.py::test_ss_m15_policy_scoped_to_shell_exec_child",
+      "stable_id": "phase0.9de5f149723a9593d1bd3b4c"
+    },
+    {
+      "pytest_nodeid": "runtime/test_squash_remount.py::test_boot_gate_enables_live_remount",
+      "stable_id": "phase0.9f2c9a34abff88a2e34f2f86"
+    },
+    {
+      "pytest_nodeid": "runtime/test_squash_remount.py::test_boot_reap_then_sweep_recovers",
+      "stable_id": "phase0.4a8d03eaa067c6654e38add3"
+    },
+    {
+      "pytest_nodeid": "runtime/test_squash_remount.py::test_cwd_pinned_session_stays_leased",
+      "stable_id": "phase0.b559d37006c7c7cf4f4dcca0"
+    },
+    {
+      "pytest_nodeid": "runtime/test_squash_remount.py::test_live_migration_shortens_idle_chain",
+      "stable_id": "phase0.e5ea2f749149a4bfa9817f05"
+    },
+    {
+      "pytest_nodeid": "runtime/test_squash_remount.py::test_squash_empty_and_idle_contract",
+      "stable_id": "phase0.d40d117f1dc53470723b2a04"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_01_implicit_exec_response_contract",
+      "stable_id": "phase0.0a021857a4d623505707e8e3"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_02_implicit_exec_publishes_then_destroys",
+      "stable_id": "phase0.e71891cd5bed6e99f7b7f88d"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_03_session_exec_carries_the_session_id",
+      "stable_id": "phase0.75bfa965da16d6404110bb41"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_04_rider_defers_finalization",
+      "stable_id": "phase0.e5875fdd1ad7a2814810ae25"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_05_publish_rejection_surfaces_on_terminal_response",
+      "stable_id": "phase0.5ab5d83879113f73d088860f"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_06_file_op_racing_last_completion_gets_not_found",
+      "stable_id": "phase0.7a1dd45bc535da464e84b82e"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_07_interrupt_and_timeout_paths_still_finalize",
+      "stable_id": "phase0.8b53a40685e535c8b745c1f0"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_EX_08_drain_retention_cap",
+      "stable_id": "phase0.f819b8be1f0456561482d5e8"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_FP_01_remount_sweep_cannot_finalize_idle_implicit_session",
+      "stable_id": "phase0.821e106d53e5e3c5fdd3222d"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_FP_02_empty_capture_skips_publish",
+      "stable_id": "phase0.af13a0df8dff9057d1abd175"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_FP_03_back_to_back_implicit_execs_are_independent",
+      "stable_id": "phase0.0537c12a765317aabbd3a960"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_exec_finalize.py::test_FP_04_finalize_vs_destroy_interleave_storm",
+      "stable_id": "phase0.3368783ac84e61a30339ea78"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_workspace_session.py::test_WS_01_create_response_contract",
+      "stable_id": "phase0.8cf6d29e1aa03eb81e8d9a42"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_workspace_session.py::test_WS_02_no_op_session_survives_command_completion",
+      "stable_id": "phase0.d18a50288ff8c8b1c86819a8"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_workspace_session.py::test_WS_03_destroy_refuses_while_command_runs",
+      "stable_id": "phase0.d8800c94b1c5221150ee37ce"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_workspace_session.py::test_WS_04_destroy_discards_and_sync_op_loses_cleanly",
+      "stable_id": "phase0.8b493927fb49f27b363907e8"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_workspace_session.py::test_WS_05_workspace_lifecycle_is_not_public",
+      "stable_id": "phase0.3e783a9735538a11a40c3ba0"
+    },
+    {
+      "pytest_nodeid": "runtime/workspace_session/test_workspace_session.py::test_WS_06_destroyed_id_stays_dead",
+      "stable_id": "phase0.11d3ab75c46e623b4942bdd1"
+    },
+    {
+      "pytest_nodeid": "test_smoke.py::test_gateway_responds_with_sandbox_list",
+      "stable_id": "phase0.ba148eaa52683ee2c974ec85"
+    }
+  ],
+  "kind": "phase0_stable_id_ledger",
+  "schema_version": 1
+}

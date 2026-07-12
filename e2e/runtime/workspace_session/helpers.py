@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from core.cli import cli, is_error, manager, observability, runtime
+from core.catalog_mode import is_catalog_mode
 from core.config import REPO_ROOT, SANDBOX_RUNTIME_CLI
 from core.direct_daemon import direct_daemon
 
@@ -233,7 +234,8 @@ def _atexit_summary():
         finalize_summary()
 
 
-atexit.register(_atexit_summary)
+if not is_catalog_mode():
+    atexit.register(_atexit_summary)
 
 
 def create_session(sandbox_id, *, network_profile=None):

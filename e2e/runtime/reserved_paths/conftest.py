@@ -2,6 +2,7 @@
 
 import pytest
 
+from core import catalog_mode
 from runtime.reserved_paths import helpers
 
 
@@ -12,6 +13,8 @@ def wh_reserved_preconditions(gateway_up):
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    if catalog_mode.is_catalog_mode(config):
+        return
     path = helpers.finalize_summary(exitstatus=exitstatus)
     terminalreporter.write_sep("-", "reserved .wh. namespace verdict summary")
     terminalreporter.write_line(f"wh-reserved verdict summary: {path}")

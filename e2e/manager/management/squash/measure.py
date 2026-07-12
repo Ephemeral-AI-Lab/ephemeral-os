@@ -13,6 +13,7 @@ import time
 import traceback
 from pathlib import Path
 
+from core.catalog_mode import is_catalog_mode
 from core.root import REPO_ROOT
 
 SUITE_DIR = Path(__file__).resolve().parent
@@ -357,4 +358,5 @@ def _append_final_iteration(counts, total, exitstatus):
         )
 
 
-atexit.register(lambda: finalize_summary(exitstatus="atexit"))
+if not is_catalog_mode():
+    atexit.register(lambda: finalize_summary(exitstatus="atexit"))

@@ -23,7 +23,7 @@ import traceback
 from contextlib import contextmanager
 from pathlib import Path
 
-from core import cleanup
+from core import catalog_mode, cleanup
 from core.cli import is_error, manager
 from core.config import IMAGE
 from runtime.file.correctness.test_correctness_sessionless import (
@@ -587,7 +587,8 @@ def finalize_summary(exitstatus=None):
         return REPORT_ROOT / "SUMMARY.md"
 
 
-atexit.register(finalize_summary)
+if not catalog_mode.is_catalog_mode():
+    atexit.register(finalize_summary)
 
 __all__ = [
     "CaseRecorder",
