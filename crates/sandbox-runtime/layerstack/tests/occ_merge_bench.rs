@@ -1079,11 +1079,11 @@ fn b8_nonoverlap_concurrent(r: &mut Report) {
     // The live resolver auto-merges this session's disjoint stale write.
     let resolved = st
         .publish_validated_changes(req(
-        m.clone(),
-        vec![LayerChange::Write {
-            path: lp("f.txt"),
-            content: command.clone(),
-        }],
+            m.clone(),
+            vec![LayerChange::Write {
+                path: lp("f.txt"),
+                content: command.clone(),
+            }],
         ))
         .expect("disjoint stale write must merge");
     let view = MergedView::new(f.root.clone());
