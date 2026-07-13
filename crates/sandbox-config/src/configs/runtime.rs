@@ -139,6 +139,9 @@ pub struct LayerstackConfig {
     pub export_chunk_bytes: u64,
     /// zstd compression level for the export spool.
     pub spool_zstd_level: i32,
+    /// Optional internal maintenance policies. Omitting the section keeps
+    /// autosquash disabled for custom configurations.
+    pub autosquash_policies: AutosquashPoliciesConfig,
 }
 
 impl Default for LayerstackConfig {
@@ -147,6 +150,7 @@ impl Default for LayerstackConfig {
             remount_sweep_width: 4,
             export_chunk_bytes: 2 * 1024 * 1024,
             spool_zstd_level: 3,
+            autosquash_policies: AutosquashPoliciesConfig::default(),
         }
     }
 }
@@ -172,8 +176,23 @@ impl LayerstackConfig {
             1,
             22,
             "runtime.layerstack.spool_zstd_level",
-        )
+        )?;
+        if let Some(threshold) = self.autosquash_policies.squash_at_n_layers {
+            require_usize_at_least(
+                threshold,
+                3,
+                "runtime.layerstack.autosquash_policies.squash_at_n_layers",
+            )?;
+        }
+        Ok(())
     }
+}
+
+/// Optional autosquash policy values. Each omitted policy is disabled.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct AutosquashPoliciesConfig {
+    pub squash_at_n_layers: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]

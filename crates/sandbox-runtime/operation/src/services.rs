@@ -21,6 +21,7 @@ pub struct SandboxRuntimeOperations {
     pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
     pub file: Arc<FileService>,
+    _autosquash_engine: Arc<crate::layerstack::autosquash_engine::AutosquashEngine>,
 }
 
 impl SandboxRuntimeOperations {
@@ -31,11 +32,18 @@ impl SandboxRuntimeOperations {
         layerstack: Arc<LayerStackService>,
         file: Arc<FileService>,
     ) -> Self {
+        let autosquash_engine = Arc::new(
+            crate::layerstack::autosquash_engine::AutosquashEngine::start(
+                Arc::clone(&layerstack),
+                Arc::clone(&workspace_session),
+            ),
+        );
         Self {
             command,
             workspace_session,
             layerstack,
             file,
+            _autosquash_engine: autosquash_engine,
         }
     }
 
@@ -388,6 +396,7 @@ pub struct LayerstackRuntimeConfig {
     pub remount_sweep_width: usize,
     pub export_chunk_bytes: u64,
     pub spool_zstd_level: i32,
+    pub autosquash_squash_at_n_layers: Option<usize>,
 }
 
 impl Default for LayerstackRuntimeConfig {
@@ -396,6 +405,7 @@ impl Default for LayerstackRuntimeConfig {
             remount_sweep_width: 4,
             export_chunk_bytes: 2 * 1024 * 1024,
             spool_zstd_level: 3,
+            autosquash_squash_at_n_layers: None,
         }
     }
 }

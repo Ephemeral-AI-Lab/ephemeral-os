@@ -13,6 +13,9 @@ runtime:
     rfc1918_egress: allow
   namespace_execution:
     scratch_root: /eos/namespace_execution
+  layerstack:
+    autosquash_policies:
+      squash_at_n_layers: 100
 
 runner:
   mount_mask:

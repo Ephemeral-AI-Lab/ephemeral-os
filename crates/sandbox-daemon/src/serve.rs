@@ -120,6 +120,11 @@ fn build_runtime_config(
             remount_sweep_width: config.runtime.layerstack.remount_sweep_width,
             export_chunk_bytes: config.runtime.layerstack.export_chunk_bytes,
             spool_zstd_level: config.runtime.layerstack.spool_zstd_level,
+            autosquash_squash_at_n_layers: config
+                .runtime
+                .layerstack
+                .autosquash_policies
+                .squash_at_n_layers,
         },
         command: sandbox_runtime::CommandRuntimeConfig {
             max_active: config.runtime.command.max_active,

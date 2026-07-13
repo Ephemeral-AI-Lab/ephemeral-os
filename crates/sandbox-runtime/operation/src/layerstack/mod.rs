@@ -1,3 +1,5 @@
+pub(crate) mod actions;
+pub(crate) mod autosquash_engine;
 mod error;
 mod service;
 

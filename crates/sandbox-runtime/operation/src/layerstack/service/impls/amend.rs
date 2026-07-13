@@ -43,6 +43,7 @@ impl LayerStackService {
         if !commit.origin.is_empty() {
             self.file
                 .record_layer_publish(owner, &commit.origin, &commit.changes);
+            self.notify_autosquash_layer_committed();
         }
         Ok(AmendOutcome {
             existed_before: commit.existed_before,

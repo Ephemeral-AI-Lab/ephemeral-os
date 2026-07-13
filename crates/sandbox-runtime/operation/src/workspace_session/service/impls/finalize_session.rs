@@ -36,10 +36,14 @@ impl WorkspaceSessionService {
                     handler.workspace_session_id.0.clone(),
                 );
                 let mut published = false;
+                let mut layer_committed = false;
                 match self.capture_finalize_changes(&handler) {
                     Ok(captured) if captured.changes.is_empty() => {}
                     Ok(captured) => match self.publish_finalize_changes(&handler, captured) {
-                        Ok(_) => published = true,
+                        Ok(result) => {
+                            published = true;
+                            layer_committed = !result.no_op;
+                        }
                         Err(error) => {
                             let publish_reject_class = publish_reject_class(&error);
                             let _ = finalize_outcome.set(FinalizeOutcome {
@@ -63,6 +67,9 @@ impl WorkspaceSessionService {
                 }
                 span.attr("published", published);
                 self.destroy_finalized_session(&handler);
+                if layer_committed {
+                    self.layerstack().notify_autosquash_layer_committed();
+                }
                 Ok(())
             });
         match result {

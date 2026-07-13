@@ -416,6 +416,7 @@ fn assert_enabled_squash_trace(live_sessions: usize) {
     let sampled = sample_layerstack(&root, WalkBudget::default());
     let mut expected_outer_keys = vec![
         "blocks",
+        "cause",
         "manifest_version",
         "s2_active_logical_bytes",
         "s2_layer_count",
@@ -430,6 +431,7 @@ fn assert_enabled_squash_trace(live_sessions: usize) {
     expected_outer_keys.sort_unstable();
     assert_eq!(sorted_attr_keys(squash), expected_outer_keys);
     assert_eq!(squash.attrs["manifest_version"], manifest.version);
+    assert_eq!(squash.attrs["cause"], "manual");
     assert_eq!(squash.attrs["blocks"], 1);
     assert_eq!(squash.attrs["swept"], live_sessions);
     assert_eq!(squash.attrs["sweep_width"], 4);

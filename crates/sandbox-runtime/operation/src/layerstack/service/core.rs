@@ -5,6 +5,9 @@ use std::sync::{Arc, Mutex};
 use sandbox_observability_telemetry::Observer;
 
 use crate::file::FileService;
+use crate::layerstack::autosquash_engine::{
+    internal_context, AutosquashQueue, AutosquashTriggerReason,
+};
 use crate::layerstack::LayerStackServiceError;
 use crate::services::LayerstackRuntimeConfig;
 
@@ -25,6 +28,8 @@ pub struct LayerStackService {
     pub(crate) obs: Observer,
     pub(crate) file: Arc<FileService>,
     pub(crate) audit_gate: Mutex<()>,
+    pub(crate) squash_gate: Mutex<()>,
+    pub(crate) autosquash_queue: Option<Arc<AutosquashQueue>>,
     pub(crate) export_spools: Mutex<HashMap<String, ExportSpool>>,
 }
 
@@ -42,6 +47,9 @@ impl LayerStackService {
                 error: error.to_string(),
             },
         )?;
+        let autosquash_queue = config
+            .autosquash_squash_at_n_layers
+            .map(|_| Arc::new(AutosquashQueue::new()));
         Ok(Self {
             layer_stack_root,
             scratch_root,
@@ -49,6 +57,8 @@ impl LayerStackService {
             obs,
             file,
             audit_gate: Mutex::new(()),
+            squash_gate: Mutex::new(()),
+            autosquash_queue,
             export_spools: Mutex::new(HashMap::new()),
         })
     }
@@ -61,5 +71,16 @@ impl LayerStackService {
     #[must_use]
     pub(crate) fn export_spool_dir(&self) -> PathBuf {
         self.scratch_root.join(EXPORT_SPOOL_DIR)
+    }
+
+    pub(crate) fn notify_autosquash_layer_committed(&self) {
+        let Some(queue) = &self.autosquash_queue else {
+            return;
+        };
+        let context = self
+            .obs
+            .context()
+            .unwrap_or_else(|| internal_context("layer-committed"));
+        queue.notify(context, AutosquashTriggerReason::LayerCommitted);
     }
 }

@@ -83,6 +83,14 @@ pub mod names {
     pub const LAYERSTACK_SQUASH_COMMIT: &str = "layerstack.squash.commit";
     /// Layerstack squash post-commit live-session remount sweep span.
     pub const LAYERSTACK_SQUASH_REMOUNT_SWEEP: &str = "layerstack.squash.remount_sweep";
+    /// Autosquash policy evaluation span.
+    pub const LAYERSTACK_AUTOSQUASH_EVALUATE: &str = "layerstack.autosquash.evaluate";
+    /// Autosquash lifecycle event emitted once an action is required.
+    pub const LAYERSTACK_AUTOSQUASH_TRIGGERED: &str = "layerstack.autosquash.triggered";
+    /// Autosquash lifecycle event emitted after successful convergence.
+    pub const LAYERSTACK_AUTOSQUASH_COMPLETED: &str = "layerstack.autosquash.completed";
+    /// Autosquash lifecycle event emitted after an evaluation or action failure.
+    pub const LAYERSTACK_AUTOSQUASH_FAILED: &str = "layerstack.autosquash.failed";
     /// Layerstack export span (fold + spool of the published delta).
     pub const LAYERSTACK_EXPORT: &str = "layerstack.export";
     /// Namespace file-op span (sync request/result).
