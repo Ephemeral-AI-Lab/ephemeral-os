@@ -194,7 +194,15 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
             .iter()
             .map(|family| family.id)
             .collect::<Vec<_>>(),
-        ["command", "file"]
+        [
+            "command",
+            "file",
+            "daemon_http",
+            "network_isolation",
+            "reserved_paths",
+            "shell_security",
+            "workspace_session",
+        ]
     );
     assert_eq!(
         names,
@@ -211,7 +219,7 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
 }
 
 #[test]
-fn service_graph_catalog_families_match_public_operations() {
+fn service_graph_catalog_contains_the_public_operation_families() {
     let catalog = sandbox_operation_catalog::runtime::runtime_catalog();
     let families = catalog
         .families
@@ -224,7 +232,8 @@ fn service_graph_catalog_families_match_public_operations() {
         .map(|spec| spec.family)
         .collect::<BTreeSet<_>>();
 
-    assert_eq!(families, used_families);
+    assert_eq!(used_families, BTreeSet::from(["command", "file"]));
+    assert!(used_families.is_subset(&families));
     assert!(catalog
         .operations
         .iter()

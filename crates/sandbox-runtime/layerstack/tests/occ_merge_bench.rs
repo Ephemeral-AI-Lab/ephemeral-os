@@ -1065,7 +1065,7 @@ fn b7_overlapping_reject(r: &mut Report) {
 }
 
 fn b8_nonoverlap_concurrent(r: &mut Report) {
-    r.say("\n## B8 non-overlapping concurrent edits (C1 false-conflict -> C2 merges)".to_owned());
+    r.say("\n## B8 non-overlapping concurrent edits auto-merge".to_owned());
     let base = b"top\nl2\nl3\nl4\nbottom\n";
     let active = replace_line(base, 0, "top-changed-by-active\n");
     let command = replace_line(base, 4, "bottom-changed-by-command\n");
@@ -1076,56 +1076,40 @@ fn b8_nonoverlap_concurrent(r: &mut Report) {
     // Another session advances active with its non-overlapping edit.
     publish_full(&mut st, "f.txt", &active);
 
-    // C1: OCC rejects this session's (disjoint) edit -> false conflict.
-    let c1 = st.publish_validated_changes(req(
+    // The live resolver auto-merges this session's disjoint stale write.
+    let resolved = st
+        .publish_validated_changes(req(
         m.clone(),
         vec![LayerChange::Write {
             path: lp("f.txt"),
             content: command.clone(),
         }],
-    ));
-    let c1_rejected = matches!(
-        c1,
-        Err(LayerStackError::PublishRejected(ref b)) if b.reason == PublishRejectReason::SourceConflict
-    );
-
-    // C2: three-way merge is clean; publish merged full-file on top of active.
-    let merge = three_way_merge(base, &active, &command, "ws-active", "ws-cmd");
-    let merged_ok = if let Merge::Clean { bytes, .. } = &merge {
-        let active_manifest = st.read_active_manifest().expect("active");
-        let t = Instant::now();
-        st.publish_validated_changes(req(
-            active_manifest,
-            vec![LayerChange::Write {
-                path: lp("f.txt"),
-                content: bytes.clone(),
-            }],
         ))
-        .expect("merged publish");
-        let us = t.elapsed().as_nanos();
-        let view = MergedView::new(f.root.clone());
-        let mm = st.read_active_manifest().expect("m");
-        let (got, _) = view.read_bytes("f.txt", &mm).expect("read");
-        let got = got.unwrap_or_default();
-        let has_both = String::from_utf8_lossy(&got).contains("top-changed-by-active")
-            && String::from_utf8_lossy(&got).contains("bottom-changed-by-command");
-        r.say(format!(
-            "C2 merged publish={:.1}us both_edits_present={has_both}",
-            us as f64 / 1000.0
-        ));
-        has_both
-    } else {
-        false
-    };
+        .expect("disjoint stale write must merge");
+    let view = MergedView::new(f.root.clone());
+    let (resolved_bytes, _) = view
+        .read_bytes("f.txt", &resolved.manifest)
+        .expect("read resolved merge");
+    let resolved_bytes = resolved_bytes.unwrap_or_default();
+    let resolved_has_both = String::from_utf8_lossy(&resolved_bytes)
+        .contains("top-changed-by-active")
+        && String::from_utf8_lossy(&resolved_bytes).contains("bottom-changed-by-command");
+
+    // The independent model must produce the same clean merge.
+    let merge = three_way_merge(base, &active, &command, "ws-active", "ws-cmd");
+    let model_matches = matches!(
+        &merge,
+        Merge::Clean { bytes, .. } if bytes == &resolved_bytes
+    );
     r.say(format!(
-        "C1_rejected(false conflict)={c1_rejected}  C2_merged_ok={merged_ok}"
+        "resolver_has_both={resolved_has_both}  model_matches={model_matches}"
     ));
     r.jrow(format!(
-        "{{\"case\":\"B8\",\"c1_rejected\":{c1_rejected},\"c2_merged_ok\":{merged_ok}}}"
+        "{{\"case\":\"B8\",\"resolver_has_both\":{resolved_has_both},\"model_matches\":{model_matches}}}"
     ));
     assert!(
-        c1_rejected && merged_ok,
-        "B8: C1 should reject, C2 should merge"
+        resolved_has_both && model_matches,
+        "B8: live resolver and model must produce the same disjoint merge"
     );
 }
 
