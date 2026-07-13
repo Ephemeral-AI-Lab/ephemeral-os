@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+launcher='. "$1/bin/sandbox-gateway-token"; sandbox_gateway_token_load; exec "$1/target/debug/sandbox-mcp" --set "$2"'
+
+command -v codex >/dev/null 2>&1 || { printf 'codex CLI not found on PATH\n' >&2; exit 1; }
+command -v cargo >/dev/null 2>&1 || { printf 'cargo not found on PATH\n' >&2; exit 1; }
+
+"$repo_root/bin/sandbox-gateway-token" ensure >/dev/null
+cargo build --quiet --manifest-path "$repo_root/Cargo.toml" -p sandbox-mcp --bin sandbox-mcp
+
+for set in management runtime observability; do
+    name=ephemeral-os-$set
+    if codex mcp get "$name" >/dev/null 2>&1; then
+        codex mcp remove "$name"
+    fi
+    codex mcp add "$name" -- /bin/sh -c "$launcher" sh "$repo_root" "$set"
+done
+
+codex mcp list
+printf '\nRestart Codex or open a new session to load the MCP tools.\n'
