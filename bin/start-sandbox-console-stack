@@ -5,7 +5,7 @@
 #   3. sandbox-console server (background, with the gateway's current auth token)
 #
 # The console reads the gateway auth token at startup, so it is always
-# (re)started after the gateway here — a gateway restart rotates the token.
+# (re)started after the gateway here.
 set -eu
 
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)

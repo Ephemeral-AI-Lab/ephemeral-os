@@ -3,6 +3,7 @@ set -eu
 
 script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
 repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+. "$script_dir/sandbox-gateway-token"
 
 export PATH="$repo_root/bin:$PATH"
 
@@ -10,7 +11,6 @@ config_yaml=${SANDBOX_GATEWAY_CONFIG_YAML:-$repo_root/config/prd.yml}
 default_socket=${SANDBOX_GATEWAY_SOCKET:-127.0.0.1:7878}
 pid_file=/tmp/eos-gateway.pid
 socket_path=$default_socket
-token_file=${SANDBOX_GATEWAY_TOKEN_FILE:-/tmp/eos-gateway.token}
 target_dir=${CARGO_TARGET_DIR:-$repo_root/target}
 case "$target_dir" in
     /*) ;;
@@ -210,16 +210,14 @@ stop_existing_gateway
 
 auth_token=${SANDBOX_GATEWAY_AUTH_TOKEN:-}
 if [ -z "$auth_token" ]; then
-    if command -v uuidgen >/dev/null 2>&1; then
-        auth_token=$(uuidgen)
-    else
-        auth_token=$(od -An -N16 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
-    fi
+    auth_token=$(sandbox_gateway_token_ensure)
+else
+    printf '%s\n' "$auth_token" | sandbox_gateway_token_write
 fi
 export SANDBOX_GATEWAY_AUTH_TOKEN="$auth_token"
+token_file=$(sandbox_gateway_token_path)
 
-mkdir -p "$(dirname "$pid_file")" "$(dirname "$log_file")" "$(dirname "$token_file")"
-printf '%s\n' "$auth_token" >"$token_file"
+mkdir -p "$(dirname "$pid_file")" "$(dirname "$log_file")"
 
 if command -v python3 >/dev/null 2>&1; then
     launcher_pid=$(
@@ -260,6 +258,6 @@ done
 printf 'sandbox-gateway starting in background via launcher pid %s\n' "$launcher_pid"
 printf 'pid file: %s\n' "$pid_file"
 printf 'address: %s\n' "$socket_path"
-printf 'auth token: %s (also written to %s)\n' "$auth_token" "$token_file"
+printf 'auth token file: %s\n' "$token_file"
 printf 'log: %s\n' "$log_file"
-printf 'all three bin/sandbox-*-cli wrappers read %s automatically; or: export SANDBOX_GATEWAY_AUTH_TOKEN=%s\n' "$token_file" "$auth_token"
+printf 'the console and bin/sandbox-*-cli wrappers read this token automatically\n'

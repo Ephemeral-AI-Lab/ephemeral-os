@@ -1,0 +1,161 @@
+#!/usr/bin/env sh
+
+sandbox_gateway_token_path() (
+    if [ -n "${SANDBOX_GATEWAY_TOKEN_FILE:-}" ]; then
+        printf '%s\n' "$SANDBOX_GATEWAY_TOKEN_FILE"
+    elif [ -n "${HOME:-}" ]; then
+        printf '%s/.ephemeral-sandbox/gateway.token\n' "$HOME"
+    else
+        printf 'HOME is unset; set SANDBOX_GATEWAY_TOKEN_FILE to a private token path\n' >&2
+        exit 1
+    fi
+)
+
+sandbox_gateway_token_mode() (
+    case "$(uname -s)" in
+        Darwin|*BSD) stat -L -f '%Lp' "$1" ;;
+        *) stat -L -c '%a' "$1" ;;
+    esac
+)
+
+sandbox_gateway_token_read() (
+    token_file=$(sandbox_gateway_token_path)
+    if [ ! -f "$token_file" ]; then
+        printf 'gateway token file not found: %s\n' "$token_file" >&2
+        exit 1
+    fi
+
+    token_mode=$(sandbox_gateway_token_mode "$token_file")
+    case "$token_mode" in
+        *00) ;;
+        *)
+            printf 'gateway token file must not be accessible by group or other users: %s (mode %s)\n' \
+                "$token_file" "$token_mode" >&2
+            exit 1
+            ;;
+    esac
+
+    if ! token=$(awk 'NR == 1 { token = $0; next } { extra = 1 } END { if (extra || token !~ /[^[:space:]]/) exit 1; print token }' "$token_file"); then
+        printf 'gateway token file must contain exactly one non-empty line: %s\n' "$token_file" >&2
+        exit 1
+    fi
+    printf '%s\n' "$token"
+)
+
+sandbox_gateway_token_prepare_dir() (
+    token_file=$(sandbox_gateway_token_path)
+    token_dir=$(dirname "$token_file")
+    umask 077
+    mkdir -p "$token_dir"
+    if [ -z "${SANDBOX_GATEWAY_TOKEN_FILE:-}" ]; then
+        chmod 700 "$token_dir"
+    fi
+)
+
+sandbox_gateway_token_store() (
+    token=$1
+    case "$token" in
+        *[![:space:]]*) ;;
+        *) printf 'gateway auth token must be non-empty\n' >&2; exit 1 ;;
+    esac
+
+    token_file=$(sandbox_gateway_token_path)
+    if [ -e "$token_file" ]; then
+        current_token=$(sandbox_gateway_token_read)
+        if [ "$current_token" = "$token" ]; then
+            exit
+        fi
+        if [ -n "${SANDBOX_GATEWAY_TOKEN_FILE:-}" ]; then
+            printf 'SANDBOX_GATEWAY_AUTH_TOKEN does not match the configured token file: %s\n' \
+                "$token_file" >&2
+            exit 1
+        fi
+    fi
+
+    sandbox_gateway_token_prepare_dir
+    token_dir=$(dirname "$token_file")
+    umask 077
+    temporary=$(mktemp "$token_dir/.gateway.token.XXXXXX")
+    trap 'rm -f "$temporary"' 0 1 2 3 15
+    printf '%s\n' "$token" >"$temporary"
+    chmod 600 "$temporary"
+    mv -f "$temporary" "$token_file"
+    temporary=
+    trap - 0 1 2 3 15
+)
+
+sandbox_gateway_token_write() (
+    token=
+    if ! IFS= read -r token && [ -z "$token" ]; then
+        printf 'gateway auth token must be non-empty\n' >&2
+        exit 1
+    fi
+    if IFS= read -r extra; then
+        printf 'gateway auth token must be a single line\n' >&2
+        exit 1
+    fi
+    sandbox_gateway_token_store "$token"
+)
+
+sandbox_gateway_token_ensure() (
+    token_file=$(sandbox_gateway_token_path)
+    if [ -e "$token_file" ]; then
+        sandbox_gateway_token_read
+        exit
+    fi
+
+    sandbox_gateway_token_prepare_dir
+    token_dir=$(dirname "$token_file")
+    token=$(od -An -N32 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')
+    case "$token" in
+        *[!0-9a-f]*|'') printf 'failed to generate a gateway auth token\n' >&2; exit 1 ;;
+    esac
+    if [ "${#token}" -ne 64 ]; then
+        printf 'failed to generate a gateway auth token\n' >&2
+        exit 1
+    fi
+
+    umask 077
+    temporary=$(mktemp "$token_dir/.gateway.token.XXXXXX")
+    trap 'rm -f "$temporary"' 0 1 2 3 15
+    printf '%s\n' "$token" >"$temporary"
+    chmod 600 "$temporary"
+    if ln "$temporary" "$token_file" 2>/dev/null; then
+        rm -f "$temporary"
+    elif [ -f "$token_file" ]; then
+        rm -f "$temporary"
+    else
+        printf 'failed to create gateway token file: %s\n' "$token_file" >&2
+        exit 1
+    fi
+    temporary=
+    trap - 0 1 2 3 15
+    sandbox_gateway_token_read
+)
+
+sandbox_gateway_token_load() {
+    if [ -n "${SANDBOX_GATEWAY_AUTH_TOKEN:-}" ]; then
+        return
+    fi
+
+    sandbox_gateway_token_load_file=$(sandbox_gateway_token_path)
+    if [ -e "$sandbox_gateway_token_load_file" ]; then
+        SANDBOX_GATEWAY_AUTH_TOKEN=$(sandbox_gateway_token_read)
+        export SANDBOX_GATEWAY_AUTH_TOKEN
+    fi
+    unset sandbox_gateway_token_load_file
+}
+
+if [ "${0##*/}" = sandbox-gateway-token ]; then
+    set -eu
+    case "${1:-}" in
+        path) sandbox_gateway_token_path ;;
+        read) sandbox_gateway_token_read ;;
+        ensure) sandbox_gateway_token_ensure ;;
+        write) sandbox_gateway_token_write ;;
+        *)
+            printf 'usage: sandbox-gateway-token {path|read|ensure|write}\n' >&2
+            exit 2
+            ;;
+    esac
+fi

@@ -138,6 +138,11 @@ cargo test -p sandbox-runtime
 cargo test -p sandbox-daemon
 ```
 
+The launchers share `~/.ephemeral-sandbox/gateway.token`; the gateway creates
+it once with private permissions and reuses it across restarts. Run
+`sandbox-gateway-token path` to resolve it, or set
+`SANDBOX_GATEWAY_TOKEN_FILE` for a system-managed service path.
+
 ## MCP registrations
 
 Register each authority independently. Replace `/absolute/path/to/ephemeral-os`

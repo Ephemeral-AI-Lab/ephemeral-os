@@ -43,7 +43,7 @@ Or piece by piece:
 
 ```sh
 cargo run -p xtask -- package-console       # build SPA into dist/console
-bin/start-sandbox-console                   # reads /tmp/eos-gateway.token
+bin/start-sandbox-console                   # reads ~/.ephemeral-sandbox/gateway.token
 # or explicitly:
 cargo run -p sandbox-console -- \
   --bind 127.0.0.1:7880 \
@@ -51,6 +51,11 @@ cargo run -p sandbox-console -- \
   --gateway-auth-token TOKEN \
   --assets dist/console
 ```
+
+The gateway creates that token once with private permissions and reuses it
+across restarts. All launchers resolve the path through
+`bin/sandbox-gateway-token`; set `SANDBOX_GATEWAY_TOKEN_FILE` when a service
+install needs a system-managed path.
 
 Config discovery: `--config-yaml` outranks `SANDBOX_CONSOLE_CONFIG_YAML` when
 selecting an optional YAML `console` section. Console values use flag > env
