@@ -1,10 +1,10 @@
-//! Read side: one private `scan()` primitive over primary + rotated logs, and
-//! thin public folds (`trace`/`samples`/`events`/`raw`) over it. The sort is
-//! intrinsic — within a file `ts` is not monotonic (a parent span is appended
-//! after its children), so every reader must sort by `ts` anyway; doing it once
-//! in `scan()` is strictly simpler.
+//! Read side over primary + rotated logs. Historical views fold a sorted
+//! `scan()`; latest-sample views stream the files and retain only two samples per
+//! requested scope so polling memory does not grow with persisted history.
 
+use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use serde::Serialize;
@@ -139,6 +139,50 @@ impl Reader {
             })
             .collect();
         sample_deltas(scope, in_window)
+    }
+
+    /// Latest sample per requested scope, including its delta from the previous
+    /// sample. Streams both logs once and retains at most two samples per scope.
+    #[must_use]
+    pub fn latest_samples(&self, scopes: &[&str]) -> HashMap<String, SampleDelta> {
+        let requested: HashSet<&str> = scopes.iter().copied().collect();
+        let mut samples: HashMap<String, Vec<(i64, Attrs)>> = HashMap::new();
+
+        for path in [&self.rotated, &self.primary] {
+            let Ok(file) = fs::File::open(path) else {
+                continue;
+            };
+            let mut reader = BufReader::new(file);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
+                }
+                let Ok(Record::Sample(sample)) = serde_json::from_str::<Record>(&line) else {
+                    continue;
+                };
+                if !requested.contains(sample.scope.as_str()) {
+                    continue;
+                }
+                let latest = samples.entry(sample.scope).or_default();
+                latest.push((sample.ts, sample.metrics));
+                latest.sort_by_key(|(ts, _)| *ts);
+                if latest.len() > 2 {
+                    latest.remove(0);
+                }
+            }
+        }
+
+        samples
+            .into_iter()
+            .filter_map(|(scope, samples)| {
+                sample_deltas(&scope, samples)
+                    .pop()
+                    .map(|sample| (scope, sample))
+            })
+            .collect()
     }
 
     /// Parsed `Event` records selected by the same filter shape as `raw`,

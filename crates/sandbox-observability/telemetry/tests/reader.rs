@@ -1,6 +1,6 @@
-//! Reader: every view folds one `scan()` over primary + rotated, sorted by `ts`;
-//! `trace` builds the tree + offsets resolving out-of-order records; `samples`
-//! Δs only emitter-tagged counters; `raw`/`events` filter by kind/name/trace/since.
+//! Reader: historical views fold one sorted `scan()` over primary + rotated;
+//! latest samples use a bounded streaming pass; `trace` resolves out-of-order
+//! records; `samples` Δs only emitter-tagged counters.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -142,6 +142,44 @@ fn samples_filter_by_window() {
     let recent = reader.samples("sandbox", 60_000);
     assert_eq!(recent.len(), 1, "only the in-window sample");
     assert_eq!(recent[0].metrics["cpu_usec"], 2);
+}
+
+#[test]
+fn latest_samples_keeps_only_the_newest_pair_per_requested_scope() {
+    let dir = temp_dir("latest-samples");
+    let primary = dir.join("observability.ndjson");
+    let rotated = dir.join("observability.ndjson.1");
+    write_lines(
+        &rotated,
+        &[
+            json!({ "kind": "sample", "ts": 100, "scope": "sandbox", "cpu_usec": 100, "_counters": ["cpu_usec"] }),
+            json!({ "kind": "sample", "ts": 150, "scope": "workspace-1", "disk_bytes": 1 }),
+            json!({ "kind": "sample", "ts": 500, "scope": "ignored", "cpu_usec": 9_999 }),
+        ],
+    );
+    write_lines(
+        &primary,
+        &[
+            json!({ "kind": "sample", "ts": 300, "scope": "sandbox", "cpu_usec": 250, "_counters": ["cpu_usec"] }),
+            json!({ "kind": "sample", "ts": 200, "scope": "sandbox", "cpu_usec": 150, "_counters": ["cpu_usec"] }),
+            json!({ "kind": "sample", "ts": 250, "scope": "workspace-1", "disk_bytes": 3 }),
+        ],
+    );
+
+    let reader = Reader::new(primary, rotated);
+    let latest = reader.latest_samples(&["sandbox", "workspace-1"]);
+
+    assert_eq!(latest.len(), 2, "unrequested scopes are not retained");
+    let sandbox = &latest["sandbox"];
+    assert_eq!(sandbox.ts, 300);
+    assert_eq!(sandbox.metrics["cpu_usec"], 250);
+    assert_eq!(sandbox.deltas["cpu_usec"], 100);
+    assert_eq!(sandbox.sample_delta_ms, Some(100));
+    let workspace = &latest["workspace-1"];
+    assert_eq!(workspace.ts, 250);
+    assert_eq!(workspace.metrics["disk_bytes"], 3);
+    assert!(workspace.deltas.is_empty());
+    assert_eq!(workspace.sample_delta_ms, Some(100));
 }
 
 #[test]

@@ -9,8 +9,6 @@ use crate::ports::{
     NamespaceExecutionSnapshot, ObservabilitySnapshot, QueryContext, WorkspaceSnapshot,
 };
 
-const LATEST_SAMPLE_WINDOW_MS: i64 = i64::MAX / 4;
-
 pub(crate) fn snapshot_value(context: &QueryContext, snapshot: ObservabilitySnapshot) -> Value {
     let ObservabilitySnapshot {
         workspaces,
@@ -22,6 +20,14 @@ pub(crate) fn snapshot_value(context: &QueryContext, snapshot: ObservabilitySnap
     } else {
         "partial"
     };
+    let mut scopes = Vec::with_capacity(workspaces.len() + 1);
+    scopes.push("sandbox");
+    scopes.extend(
+        workspaces
+            .iter()
+            .map(|workspace| workspace.workspace_id.as_str()),
+    );
+    let latest_samples = context.reader.latest_samples(&scopes);
     json!({
         "sandbox_id": context.sandbox_id,
         "lifecycle_state": "ready",
@@ -32,14 +38,14 @@ pub(crate) fn snapshot_value(context: &QueryContext, snapshot: ObservabilitySnap
             "daemon_pid": context.daemon_pid,
             "runtime_dir": context.runtime_dir,
         },
-        "resources": resource_bundle(&context.reader, "sandbox"),
+        "resources": resource_bundle(latest_samples.get("sandbox")),
         "workspaces": workspaces
             .iter()
             .map(|workspace| {
                 workspace_value(
-                    &context.reader,
                     workspace,
                     &active_namespace_executions,
+                    &latest_samples,
                 )
             })
             .collect::<Vec<_>>(),
@@ -183,15 +189,13 @@ pub(crate) fn layer_delta_value(layer_id: &str, delta: &LayerDeltaDescription) -
     })
 }
 
-fn resource_bundle(reader: &Reader, scope: &str) -> Value {
-    let latest = latest_sample(reader, scope)
-        .map(|delta| sample_delta_value(&delta))
-        .unwrap_or(Value::Null);
+fn resource_bundle(latest: Option<&SampleDelta>) -> Value {
+    let latest = latest.map(sample_delta_value).unwrap_or(Value::Null);
     json!({ "latest": latest, "history": [] })
 }
 
 fn latest_sample(reader: &Reader, scope: &str) -> Option<SampleDelta> {
-    reader.samples(scope, LATEST_SAMPLE_WINDOW_MS).pop()
+    reader.latest_samples(&[scope]).remove(scope)
 }
 
 fn sample_delta_value(delta: &SampleDelta) -> Value {
@@ -204,9 +208,9 @@ fn sample_delta_value(delta: &SampleDelta) -> Value {
 }
 
 fn workspace_value(
-    reader: &Reader,
     workspace: &WorkspaceSnapshot,
     executions: &[NamespaceExecutionSnapshot],
+    latest_samples: &HashMap<String, SampleDelta>,
 ) -> Value {
     json!({
         "workspace_id": workspace.workspace_id,
@@ -218,7 +222,7 @@ fn workspace_value(
             "layer_count": workspace.layer_count,
         },
         "namespace_fd_count": workspace.namespace_fd_count,
-        "resources": resource_bundle(reader, &workspace.workspace_id),
+        "resources": resource_bundle(latest_samples.get(&workspace.workspace_id)),
         "active_namespace_executions": executions
             .iter()
             .filter(|execution| execution.workspace_session_id == workspace.workspace_id)
