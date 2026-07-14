@@ -1,21 +1,23 @@
 # CLAUDE.md
 
-Guidance for working in this repository. Read `README.md` for the component map
-and boundary law; this file covers how to write and change code here.
+Guidance for working in this repository. Read
+`docs/maintainer-architecture.md` for the component map and boundary law; this
+file covers how to write and change code here.
 
 ## Project
 
 Rust workspace (edition 2021, rust-version 1.85) for the EphemeralOS sandbox.
-Crates live under `crates/`; see the component table in `README.md` for each
-crate's job and what it must never do. Respect those boundaries — a change that
-crosses them is wrong even if it compiles.
+Crates live under `crates/`; see the component table in
+`docs/maintainer-architecture.md` for each crate's job and what it must never
+do. Respect those boundaries — a change that crosses them is wrong even if it
+compiles.
 
 ## Engineering practice (required)
 
 - **SOLID, SRP first.** Every type, module, and function owns one
   responsibility. If you cannot name a unit's single job in one sentence, split
-  it. Keep crate boundaries from `README.md` intact; depend on the narrowest
-  abstraction, not a concrete implementation crate.
+  it. Keep crate boundaries from `docs/maintainer-architecture.md` intact;
+  depend on the narrowest abstraction, not a concrete implementation crate.
 - **Prefer less.** Fewer fields, fewer types, fewer methods, fewer round trips.
   Before adding a field/struct/method, check whether an existing one already
   carries the responsibility. Collapse redundant indirection and avoid extra
