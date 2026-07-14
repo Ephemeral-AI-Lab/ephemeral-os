@@ -1,6 +1,8 @@
 #![cfg(all(feature = "manager", feature = "runtime", feature = "observability"))]
 
-use sandbox_cli::input::{build_request_from_catalog_with_id, BuildRequestInput};
+use sandbox_cli::input::{
+    build_request_from_catalog, build_request_from_catalog_with_id, BuildRequestInput,
+};
 use sandbox_cli::projection::document::{catalog_document, CatalogDocument};
 use sandbox_operation_client::{build_request_from_values_with_id, BuildRequestValueInput};
 use sandbox_operation_contract::{OperationDomain, OperationScope, OperationSpecDocument};
@@ -134,6 +136,27 @@ fn runtime_selector_is_required_and_removed_from_operation_args() {
         request.args,
         json!({"command_session_id": "cmd-1", "start_offset": 0, "limit": 200})
     );
+}
+
+#[test]
+fn runtime_request_id_override_is_exact_and_default_remains_uuid_v4() {
+    let catalog = runtime_catalog_document();
+    let input = BuildRequestInput {
+        execution_space: OperationDomain::Runtime,
+        operation: "file_read".to_owned(),
+        operation_argv: vec!["--path".to_owned(), "index.html".to_owned()],
+        sandbox_id: Some("eos-runtime".to_owned()),
+    };
+    let default = build_request_from_catalog(input.clone(), &catalog).expect("default request");
+    let explicit = build_request_from_catalog_with_id(input, &catalog, "flashcart:A01.001:runtime")
+        .expect("explicit request");
+
+    let parsed = uuid::Uuid::parse_str(&default.request_id).expect("default UUID request id");
+    assert_eq!(parsed.get_version_num(), 4);
+    assert_eq!(explicit.request_id, "flashcart:A01.001:runtime");
+    assert_eq!(default.op, explicit.op);
+    assert_eq!(default.scope, explicit.scope);
+    assert_eq!(default.args, explicit.args);
 }
 
 #[test]

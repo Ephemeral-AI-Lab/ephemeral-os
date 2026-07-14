@@ -1507,6 +1507,7 @@ dependencies = [
  "sandbox-operation-contract",
  "serde_json",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

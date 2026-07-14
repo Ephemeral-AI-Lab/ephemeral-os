@@ -27,5 +27,20 @@ File
   file_blame
     Show per-line ownership for a published file.
 
+Daemon HTTP
+  Daemon HTTP capability boundary.
+
+Network isolation
+  Runtime network-isolation capability.
+
+Reserved paths
+  Reserved workspace-path capability.
+
+Shell security
+  Shell-security capability.
+
+Workspace session
+  Workspace-session lifecycle capability.
+
 Use:
-  sandbox-runtime-cli --sandbox-id ID OPERATION
+  sandbox-runtime-cli --sandbox-id ID [--request-id VALUE] OPERATION

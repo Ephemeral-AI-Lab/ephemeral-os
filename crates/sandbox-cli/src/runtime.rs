@@ -17,14 +17,16 @@ use clap::Parser;
 use crate::input::{resolve_runtime_sandbox_id, BuildRequestInput};
 use crate::output::{
     discover_config, render_error, render_help_command, render_request_error,
-    run_request_from_catalog, EXIT_SUCCESS, EXIT_USAGE,
+    run_request_from_catalog_with_id, EXIT_SUCCESS, EXIT_USAGE,
 };
 use crate::projection::document::catalog_document;
 use sandbox_operation_client::{GatewayClient, GatewayConfigOverrides, RequestBuildError};
 use sandbox_operation_contract::OperationDomain;
 
-const PROGRAM: &str = "sandbox-runtime-cli --sandbox-id ID";
+const PROGRAM: &str = "sandbox-runtime-cli --sandbox-id ID [--request-id VALUE]";
 const HELP_OP: &str = "help";
+const REQUEST_ID_ERROR: &str =
+    "--request-id must be 1-128 ASCII letters, digits, period, underscore, colon, or dash";
 
 #[derive(Debug, Parser)]
 #[command(name = "sandbox-runtime-cli", disable_help_subcommand = true)]
@@ -37,6 +39,14 @@ struct Cli {
 
     #[arg(long = "sandbox-id", value_name = "SANDBOX_ID", global = true)]
     sandbox_id: Option<String>,
+
+    #[arg(
+        long = "request-id",
+        value_name = "VALUE",
+        global = true,
+        allow_hyphen_values = true
+    )]
+    request_id: Option<String>,
 
     operation: Option<String>,
 
@@ -76,6 +86,13 @@ where
                 return EXIT_SUCCESS;
             }
             let _ = render_error("invalid_request", error.to_string(), stderr);
+            return EXIT_USAGE;
+        }
+    };
+    let request_id = match validate_request_id(cli.request_id) {
+        Ok(request_id) => request_id,
+        Err(error) => {
+            let _ = render_request_error(&error, stderr);
             return EXIT_USAGE;
         }
     };
@@ -119,7 +136,31 @@ where
         operation_argv: cli.operation_argv,
         sandbox_id: Some(sandbox_id),
     };
-    run_request_from_catalog(&client, request_input, &catalog, false, stdout, stderr).await
+    run_request_from_catalog_with_id(
+        &client,
+        request_input,
+        request_id,
+        &catalog,
+        false,
+        stdout,
+        stderr,
+    )
+    .await
+}
+
+fn validate_request_id(request_id: Option<String>) -> Result<Option<String>, RequestBuildError> {
+    let Some(request_id) = request_id else {
+        return Ok(None);
+    };
+    if request_id.len() > 128
+        || request_id.is_empty()
+        || !request_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"._:-".contains(&byte))
+    {
+        return Err(RequestBuildError::invalid(REQUEST_ID_ERROR));
+    }
+    Ok(Some(request_id))
 }
 
 fn client_from<WErr>(overrides: GatewayConfigOverrides, stderr: &mut WErr) -> Option<GatewayClient>

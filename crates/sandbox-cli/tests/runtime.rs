@@ -39,7 +39,8 @@ async fn help_lists_exact_runtime_catalog() {
             "file_blame",
         ]
     );
-    assert!(stdout.contains("Use:\n  sandbox-runtime-cli --sandbox-id ID OPERATION"));
+    assert!(stdout
+        .contains("Use:\n  sandbox-runtime-cli --sandbox-id ID [--request-id VALUE] OPERATION"));
 }
 
 #[tokio::test]
@@ -89,7 +90,145 @@ async fn bare_invocation_prints_runtime_catalog_help() {
     assert_eq!(code, 0);
     assert!(stderr.is_empty());
     assert!(stdout.contains("Sandbox Runtime Help"));
-    assert!(stdout.contains("Use:\n  sandbox-runtime-cli --sandbox-id ID OPERATION"));
+    assert!(stdout
+        .contains("Use:\n  sandbox-runtime-cli --sandbox-id ID [--request-id VALUE] OPERATION"));
+}
+
+#[tokio::test]
+async fn request_id_defaults_to_uuid_v4() {
+    let mut request_ids = Vec::new();
+
+    for _ in 0..2 {
+        let response = json!({"status": "exited", "exit_code": 0});
+        let (addr, received) = fake_gateway(response).await;
+        let (code, _stdout, stderr) = run(&[
+            "sandbox-runtime-cli",
+            "--gateway-socket",
+            &addr,
+            "--sandbox-id",
+            "eos-x",
+            "exec_command",
+            "pwd",
+        ])
+        .await;
+
+        assert_eq!(code, 0);
+        assert!(stderr.is_empty());
+        let request = received.await.expect("fake gateway task");
+        request_ids.push(
+            request["request_id"]
+                .as_str()
+                .expect("request id string")
+                .to_owned(),
+        );
+    }
+
+    for request_id in &request_ids {
+        let parsed = uuid::Uuid::parse_str(request_id).expect("request id UUID");
+        assert_eq!(parsed.get_version_num(), 4);
+    }
+    assert_ne!(request_ids[0], request_ids[1]);
+}
+
+#[tokio::test]
+async fn explicit_request_id_is_forwarded_unchanged() {
+    let response = json!({"status": "exited", "exit_code": 0});
+    let (addr, received) = fake_gateway(response).await;
+    let (code, _stdout, stderr) = run(&[
+        "sandbox-runtime-cli",
+        "--gateway-socket",
+        &addr,
+        "--sandbox-id",
+        "eos-x",
+        "--request-id",
+        "-demo-run_01:A01.001-1",
+        "exec_command",
+        "pwd",
+    ])
+    .await;
+
+    assert_eq!(code, 0);
+    assert!(stderr.is_empty());
+    let request = received.await.expect("fake gateway task");
+    assert_eq!(request["request_id"], "-demo-run_01:A01.001-1");
+}
+
+#[tokio::test]
+async fn duplicate_request_id_is_rejected() {
+    let (code, stdout, stderr) = run(&[
+        "sandbox-runtime-cli",
+        "--sandbox-id",
+        "eos-x",
+        "--request-id",
+        "first",
+        "--request-id",
+        "second",
+        "exec_command",
+        "pwd",
+    ])
+    .await;
+
+    assert_eq!(code, 2);
+    assert!(stdout.is_empty());
+    let error = parse_json_line(&stderr);
+    assert_eq!(error["error"]["kind"], "invalid_request");
+    assert!(error["error"]["message"]
+        .as_str()
+        .expect("error message")
+        .contains("cannot be used multiple times"));
+}
+
+#[tokio::test]
+async fn request_id_accepts_length_boundaries_and_rejects_invalid_values() {
+    for valid in ["a".to_owned(), "Z9._:-".repeat(21) + "Z9"] {
+        assert_eq!(valid.len(), if valid == "a" { 1 } else { 128 });
+        let response = json!({"status": "exited", "exit_code": 0});
+        let (addr, received) = fake_gateway(response).await;
+        let (code, _stdout, stderr) = run(&[
+            "sandbox-runtime-cli",
+            "--gateway-socket",
+            &addr,
+            "--sandbox-id",
+            "eos-x",
+            "--request-id",
+            &valid,
+            "exec_command",
+            "pwd",
+        ])
+        .await;
+        assert_eq!(code, 0, "valid request id {valid:?}");
+        assert!(stderr.is_empty());
+        let request = received.await.expect("fake gateway task");
+        assert_eq!(request["request_id"], valid);
+    }
+
+    let too_long = "a".repeat(129);
+    let mut invalid_values = vec![String::new(), too_long, "café".to_owned(), "🛒".to_owned()];
+    invalid_values.extend(
+        (0_u8..=127)
+            .filter(|byte| !(byte.is_ascii_alphanumeric() || b"._:-".contains(byte)))
+            .map(|byte| String::from_utf8(vec![b'a', byte, b'b']).expect("ASCII test value")),
+    );
+    for invalid in &invalid_values {
+        let (code, stdout, stderr) = run(&[
+            "sandbox-runtime-cli",
+            "--sandbox-id",
+            "eos-x",
+            "--request-id",
+            invalid,
+            "exec_command",
+            "pwd",
+        ])
+        .await;
+        assert_eq!(code, 2, "invalid request id {invalid:?}");
+        assert!(stdout.is_empty());
+        let error = parse_json_line(&stderr);
+        assert_eq!(error["error"]["kind"], "invalid_request");
+        assert_eq!(
+            error["error"]["message"],
+            "--request-id must be 1-128 ASCII letters, digits, period, underscore, colon, or dash"
+        );
+    }
 }
 
 #[tokio::test]

@@ -39,5 +39,8 @@ sandbox-operation-contract.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+uuid.workspace = true
+
 [lints]
 workspace = true

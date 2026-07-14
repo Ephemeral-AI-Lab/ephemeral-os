@@ -11,7 +11,11 @@ use serde_json::{json, Value};
 use sandbox_operation_contract::error_response_with_details;
 
 use crate::help::{render_catalog_help, render_operation_help};
-use crate::input::{build_request_from_catalog, BuildRequestInput};
+use crate::input::{
+    build_request_from_catalog,
+    build_request_from_catalog_with_id as build_request_from_catalog_with_explicit_id,
+    BuildRequestInput,
+};
 use crate::projection::document::CatalogDocument;
 
 pub const EXIT_SUCCESS: u8 = 0;
@@ -92,8 +96,39 @@ where
     WOut: Write,
     WErr: Write,
 {
+    run_request_from_catalog_with_id(
+        client,
+        request_input,
+        None,
+        catalog,
+        stream_logs,
+        stdout,
+        stderr,
+    )
+    .await
+}
+
+pub async fn run_request_from_catalog_with_id<WOut, WErr>(
+    client: &GatewayClient,
+    request_input: BuildRequestInput,
+    request_id: Option<String>,
+    catalog: &CatalogDocument,
+    stream_logs: bool,
+    stdout: &mut WOut,
+    stderr: &mut WErr,
+) -> u8
+where
+    WOut: Write,
+    WErr: Write,
+{
     let started = Instant::now();
-    let request = match build_request_from_catalog(request_input, catalog) {
+    let built_request = match request_id {
+        Some(request_id) => {
+            build_request_from_catalog_with_explicit_id(request_input, catalog, request_id)
+        }
+        None => build_request_from_catalog(request_input, catalog),
+    };
+    let request = match built_request {
         Ok(request) => request,
         Err(error) => {
             let _ = render_request_error(&error, stderr);
