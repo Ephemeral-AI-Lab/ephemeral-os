@@ -1,8 +1,23 @@
+<div align="center">
+
+
 # Ephemeral Sandbox
 
-<p align="center">
-  <img src="assets/mascot.png" alt="Ephemeral Sandbox mascot: a Siamese cat in a sandbox" width="320">
-</p>
+**Safe, isolated workspaces for parallel coding agents.**
+
+[Docs](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-docs) ·
+[Quick start](#quick-start) ·
+[MCP](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-docs/tree/main/mcp) ·
+[CLI](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-docs/tree/main/cli) ·
+[Architecture](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-docs/blob/main/architecture/00-foundations/01-system-overview.md) ·
+[Tests](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-test)
+
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-111111.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/WdDJ3tru9)
+
+<img src="assets/mascot.png" alt="Ephemeral Sandbox mascot: a Siamese cat in a sandbox" width="280">
+
+</div>
 
 Ephemeral Sandbox gives parallel coding agents isolated workspaces inside one
 shared sandbox. Agents share the same project history, work independently, and
@@ -10,11 +25,11 @@ publish only the changes they intend to keep.
 
 ## Why Ephemeral Sandbox?
 
-- Run multiple coding agents concurrently without letting their workspaces
-  overwrite one another.
-- Share one stable project base while each agent gets a private writable
-  session.
-- Inspect commands, files, runtime health, and the origin of published changes.
+- **Work in parallel.** Run multiple coding agents at the same time.
+- **Stay isolated.** Give every agent a private writable workspace over one
+  stable project base.
+- **Publish with confidence.** Inspect activity and change provenance before
+  publishing a complete resolved change set.
 
 ## Quick start
 
@@ -77,16 +92,25 @@ sandbox-mcp --set observability
 3. **Publish safely.** Ephemeral Sandbox checks concurrent changes before
    publishing the complete resolved change set, or publishes nothing.
 
-For crate ownership and dependency boundaries, see the
-[maintainer architecture](docs/maintainer-architecture.md).
+For the deeper design, see the
+[architecture overview](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-docs/blob/main/architecture/00-foundations/01-system-overview.md).
 
-## More documentation
+## Documentation
 
-- [Configuration](config/README.md)
-- [Daemon HTTP and application forwarding](docs/daemon-http/README.md)
-- [Maintainer architecture and component boundaries](docs/maintainer-architecture.md)
+- [Documentation](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-docs)
+  covers the overview, CLI, MCP, and architecture.
+- [External tests and benchmarks](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-test)
+  live in their own repository.
+- Repository-local notes cover [configuration](config/README.md),
+  [daemon HTTP](docs/daemon-http/README.md), and
+  [maintainer boundaries](docs/maintainer-architecture.md).
 - Run `sandbox-manager-cli help`, `sandbox-runtime-cli --sandbox-id ID help`,
   or `sandbox-observability-cli help` for installed command syntax.
+
+## Community
+
+Ask questions and share feedback in the
+[Ephemeral AI Lab Discord](https://discord.com/invite/WdDJ3tru9).
 
 ## How to contribute
 
@@ -104,4 +128,4 @@ you verified it in the pull request.
 
 ## License
 
-Ephemeral Sandbox is available under the [MIT License](LICENSE).
+Ephemeral Sandbox is available under the [Apache License 2.0](LICENSE).
