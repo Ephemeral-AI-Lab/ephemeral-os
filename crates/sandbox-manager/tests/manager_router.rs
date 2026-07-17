@@ -136,6 +136,17 @@ impl SandboxDaemonClient for RecordingDaemonClient {
                 "total": EXPORTED_BYTES.len(),
                 "eof": true,
             }),
+            "cgroup" => json!({
+                "forwarded": true,
+                "topology": {
+                    "available": false,
+                    "root": null,
+                    "self_cgroup": "0::/",
+                    "error": "cgroup root unavailable",
+                    "controllers": [],
+                    "groups": [],
+                },
+            }),
             _ => json!({"forwarded": true}),
         };
         Ok(OperationResponse::ok(result))
@@ -239,11 +250,10 @@ async fn manager_router_reads_sandbox_resource_metrics_from_the_runtime() {
         response["series"][0]["metrics"]["metrics_source"],
         "docker_engine"
     );
-    assert!(daemon_client
-        .invocations
-        .lock()
-        .expect("invocations lock")
-        .is_empty());
+    assert_eq!(response["topology"]["self_cgroup"], "0::/");
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, CGROUP_SPEC.name);
 }
 
 #[tokio::test]
@@ -277,11 +287,15 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
     assert!(metrics.get("cpu_usec").is_none());
     assert!(metrics.get("io_rbytes").is_none());
     assert!(metrics.get("io_wbytes").is_none());
-    assert!(daemon_client
-        .invocations
-        .lock()
-        .expect("invocations lock")
-        .is_empty());
+    assert_eq!(response["topology"]["error"], "cgroup root unavailable");
+    assert_eq!(
+        daemon_client
+            .invocations
+            .lock()
+            .expect("invocations lock")
+            .len(),
+        1
+    );
 }
 
 #[tokio::test]

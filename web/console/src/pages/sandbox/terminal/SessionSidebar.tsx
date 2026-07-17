@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ActionIcon,
   Button,
   Code,
   Divider,
@@ -38,27 +39,27 @@ export function SessionSidebar({
   onClose: () => void;
   onSelect: (sessionId: string | null) => void;
 }) {
-  const [destroyOpen, setDestroyOpen] = useState(false);
+  const [destroyTargetId, setDestroyTargetId] = useState<string | null>(null);
   const [destroyBusy, setDestroyBusy] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const queryClient = useQueryClient();
   const { showError } = useErrorToast();
 
-  const selectedWorkspace = useMemo(
-    () => workspaces.find((workspace) => workspace.workspace_id === selected) ?? null,
-    [selected, workspaces],
+  const destroyTarget = useMemo(
+    () => workspaces.find((workspace) => workspace.workspace_id === destroyTargetId) ?? null,
+    [destroyTargetId, workspaces],
   );
-  const activeCommands = selectedWorkspace?.active_namespace_executions.length ?? 0;
+  const activeCommands = destroyTarget?.active_namespace_executions.length ?? 0;
 
   const refreshSnapshot = () =>
     queryClient.invalidateQueries({ queryKey: ["sandbox", sandboxId, "snapshot"] });
 
   const destroySession = async () => {
     if (
-      !selectedWorkspace ||
+      !destroyTarget ||
       destroyBusy ||
       activeCommands > 0 ||
-      confirmation !== selectedWorkspace.workspace_id
+      confirmation !== destroyTarget.workspace_id
     ) {
       return;
     }
@@ -67,11 +68,11 @@ export function SessionSidebar({
       const output = await rpc<WorkspaceSessionDestroyed>(
         "destroy_workspace_session",
         sandboxScope(sandboxId),
-        { workspace_session_id: selectedWorkspace.workspace_id },
+        { workspace_session_id: destroyTarget.workspace_id },
       );
-      setDestroyOpen(false);
+      setDestroyTargetId(null);
       setConfirmation("");
-      onSelect(null);
+      if (selected === destroyTarget.workspace_id) onSelect(null);
       void refreshSnapshot();
       notifications.show({
         color: "success",
@@ -89,12 +90,10 @@ export function SessionSidebar({
     <SessionList
       workspaces={workspaces}
       selected={selected}
-      selectedWorkspace={selectedWorkspace}
-      activeCommands={activeCommands}
       narrow={narrow}
-      onDestroy={() => {
+      onDestroy={(workspaceId) => {
         setConfirmation("");
-        setDestroyOpen(true);
+        setDestroyTargetId(workspaceId);
       }}
       onSelect={onSelect}
     />
@@ -126,16 +125,16 @@ export function SessionSidebar({
       )}
 
       <Modal
-        opened={destroyOpen && selectedWorkspace !== null}
+        opened={destroyTarget !== null}
         onClose={() => {
-          if (!destroyBusy) setDestroyOpen(false);
+          if (!destroyBusy) setDestroyTargetId(null);
         }}
         closeButtonProps={{ "aria-label": "Close destroy workspace session", disabled: destroyBusy }}
         closeOnEscape={!destroyBusy}
         title="Destroy workspace session"
         centered
       >
-        {selectedWorkspace ? (
+        {destroyTarget ? (
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -144,7 +143,7 @@ export function SessionSidebar({
           >
             <Stack gap="md">
               <Text size="sm">
-                This permanently discards unpublished changes in <Code>{selectedWorkspace.workspace_id}</Code>.
+                This permanently discards unpublished changes in <Code>{destroyTarget.workspace_id}</Code>.
               </Text>
               <TextInput
                 autoComplete="off"
@@ -155,14 +154,14 @@ export function SessionSidebar({
                 styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
               />
               <Group justify="flex-end">
-                <Button variant="subtle" disabled={destroyBusy} onClick={() => setDestroyOpen(false)}>
+                <Button variant="subtle" disabled={destroyBusy} onClick={() => setDestroyTargetId(null)}>
                   Cancel
                 </Button>
                 <Button
                   color="danger"
                   type="submit"
                   loading={destroyBusy}
-                  disabled={confirmation !== selectedWorkspace.workspace_id || activeCommands > 0}
+                  disabled={confirmation !== destroyTarget.workspace_id || activeCommands > 0}
                   leftSection={<Trash2 size={14} />}
                 >
                   Destroy session
@@ -179,18 +178,14 @@ export function SessionSidebar({
 function SessionList({
   workspaces,
   selected,
-  selectedWorkspace,
-  activeCommands,
   narrow,
   onDestroy,
   onSelect,
 }: {
   workspaces: WorkspaceSnapshot[];
   selected: string | null;
-  selectedWorkspace: WorkspaceSnapshot | null;
-  activeCommands: number;
   narrow: boolean;
-  onDestroy: () => void;
+  onDestroy: (workspaceId: string) => void;
   onSelect: (sessionId: string | null) => void;
 }) {
   return (
@@ -198,53 +193,50 @@ function SessionList({
       {!narrow ? <Text fw={700} p="md" pb="sm" size="xs" tt="uppercase">Workspace sessions</Text> : null}
       <ScrollArea data-terminal-session-scroll style={{ flex: 1, minHeight: 0 }} type="auto">
         <Stack gap={2} px="sm" pb="sm">
-          {workspaces.map((workspace) => (
-            <NavLink
-              key={workspace.workspace_id}
-              active={selected === workspace.workspace_id}
-              description={`${workspace.network_profile} · ${workspace.layers.layer_count} layers`}
-              label={workspace.workspace_id}
-              onClick={() => onSelect(workspace.workspace_id)}
-              title={workspace.workspace_id}
-              styles={{
-                label: {
-                  fontFamily: "var(--mantine-font-family-monospace)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                },
-              }}
-            />
-          ))}
+          {workspaces.map((workspace) => {
+            const activeCommands = workspace.active_namespace_executions.length;
+            const destroyLabel = `Destroy workspace session ${workspace.workspace_id}`;
+            return (
+              <Group key={workspace.workspace_id} gap={4} wrap="nowrap">
+                <NavLink
+                  active={selected === workspace.workspace_id}
+                  aria-label={`Filter commands by workspace session ${workspace.workspace_id}`}
+                  description={`${workspace.network_profile} · ${workspace.layers.layer_count} layers`}
+                  label={workspace.workspace_id}
+                  onClick={() => onSelect(workspace.workspace_id)}
+                  title={workspace.workspace_id}
+                  styles={{
+                    root: { flex: 1, minWidth: 0 },
+                    label: {
+                      fontFamily: "var(--mantine-font-family-monospace)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    },
+                  }}
+                />
+                <ActionIcon
+                  aria-label={destroyLabel}
+                  color="danger"
+                  disabled={activeCommands > 0}
+                  onClick={() => onDestroy(workspace.workspace_id)}
+                  size={44}
+                  title={
+                    activeCommands > 0
+                      ? `Stop ${activeCommands === 1 ? "the active command" : `${activeCommands} active commands`} first`
+                      : destroyLabel
+                  }
+                  variant="subtle"
+                >
+                  <Trash2 aria-hidden="true" size={16} />
+                </ActionIcon>
+              </Group>
+            );
+          })}
           {workspaces.length === 0 ? (
             <Text c="dimmed" p="sm" size="xs">
               No live sessions. Create a retained session from the command bar when commands need to share private changes.
             </Text>
-          ) : null}
-          {selectedWorkspace ? (
-            <Paper data-terminal-selected-session-action mt="xs" p="sm" withBorder>
-              <Stack gap="xs">
-                <Text c="dimmed" size="xs">
-                  Selected session
-                </Text>
-                <Button
-                  color="danger"
-                  disabled={activeCommands > 0}
-                  leftSection={<Trash2 size={13} />}
-                  onClick={onDestroy}
-                  size="compact-sm"
-                  variant="light"
-                  fullWidth
-                >
-                  Destroy session
-                </Button>
-                {activeCommands > 0 ? (
-                  <Text c="danger" size="xs">
-                    Stop {activeCommands === 1 ? "the active command" : `${activeCommands} active commands`} first.
-                  </Text>
-                ) : null}
-              </Stack>
-            </Paper>
           ) : null}
           <Divider my="xs" />
           <NavLink

@@ -37,11 +37,35 @@ pub(crate) fn dispatch_resource_metrics(
         Ok(samples) => samples,
         Err(error) => return error.into_response(),
     };
+    let topology = daemon_topology(services, request);
     OperationResponse::ok(json!({
         "view": "cgroup",
         "scope": SANDBOX_SCOPE,
         "series": series_value(samples),
+        "topology": topology,
     }))
+}
+
+fn daemon_topology(services: &ManagerServices, request: &OperationRequest) -> Value {
+    match forward_sandbox_request(services, request.clone()) {
+        Ok(response) => response
+            .into_json_value()
+            .get("topology")
+            .cloned()
+            .unwrap_or_else(|| unavailable_topology("sandbox daemon did not report cgroup topology")),
+        Err(error) => unavailable_topology(format!("sandbox daemon topology unavailable: {error}")),
+    }
+}
+
+fn unavailable_topology(message: impl Into<String>) -> Value {
+    json!({
+        "available": false,
+        "root": null,
+        "self_cgroup": null,
+        "error": message.into(),
+        "controllers": [],
+        "groups": [],
+    })
 }
 
 fn resource_window_ms(request: &OperationRequest) -> Result<i64, OperationResponse> {
