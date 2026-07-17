@@ -17,8 +17,19 @@ fn observability_catalog_is_the_exact_public_set() {
         OperationDomain::Observability
     );
     assert_eq!(
-        catalog.families.iter().map(|family| family.id).collect::<Vec<_>>(),
-        ["snapshot", "trace", "events", "cgroup", "layerstack"]
+        catalog
+            .families
+            .iter()
+            .map(|family| family.id)
+            .collect::<Vec<_>>(),
+        [
+            "snapshot",
+            "trace",
+            "events",
+            "cgroup",
+            "layerstack",
+            "resource_isolation"
+        ]
     );
     assert_eq!(
         names,

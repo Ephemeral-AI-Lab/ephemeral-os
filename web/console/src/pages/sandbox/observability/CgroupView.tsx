@@ -25,7 +25,7 @@ export function CgroupView() {
   const { sandboxId } = useSandbox();
   const result = usePoll({
     key: ["observability", sandboxId, "cgroup", "topology"],
-    fn: () => fetchCgroup(sandboxId, "sandbox", TOPOLOGY_WINDOW_MS),
+    fn: (signal) => fetchCgroup(sandboxId, "sandbox", TOPOLOGY_WINDOW_MS, signal),
     mode: "slow",
   });
 

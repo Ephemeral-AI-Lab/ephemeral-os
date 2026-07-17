@@ -30,9 +30,10 @@ impl DaemonObservability {
                 proc: record::proc::DAEMON,
                 enabled: config.observability.enabled,
             },
-            Sink::new(
+            Sink::with_budget(
                 paths.log_path().to_path_buf(),
                 config.observability.max_line_bytes,
+                config.observability.max_disk_bytes,
             ),
         );
         Some(Self {
@@ -54,9 +55,12 @@ impl DaemonObservability {
     }
 
     pub(super) fn reader(&self) -> Reader {
-        Reader::new(
+        Reader::with_limits(
             self.paths.log_path().to_path_buf(),
             self.paths.rotated_log_path().to_path_buf(),
+            self.observer.max_line_bytes(),
+            sandbox_observability_telemetry::MAX_RESPONSE_RECORDS,
+            sandbox_observability_telemetry::MAX_RESPONSE_BYTES,
         )
     }
 

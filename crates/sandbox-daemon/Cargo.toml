@@ -31,10 +31,12 @@ http.workspace = true
 http-body-util.workspace = true
 bytes.workspace = true
 uuid.workspace = true
+rustix.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-layerstack.workspace = true
 sandbox-runtime-workspace.workspace = true
+sha2.workspace = true
 
 [lints]
 workspace = true

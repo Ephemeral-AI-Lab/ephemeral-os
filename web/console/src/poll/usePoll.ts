@@ -21,10 +21,11 @@ export interface PollTracking {
 
 interface PollOptions<T> {
   key: QueryKey;
-  fn: () => Promise<T>;
+  fn: (signal?: AbortSignal) => Promise<T>;
   mode?: PollMode | ((data: T | undefined) => PollMode);
-  enabled?: boolean;
+  enabled?: boolean | ((data: T | undefined) => boolean);
   retry?: boolean;
+  refetchOnWindowFocus?: boolean | "always";
 }
 
 export function pollInterval<T>(
@@ -60,14 +61,20 @@ export function usePoll<T>(options: PollOptions<T>) {
     typeof options.mode === "function"
       ? options.mode(data)
       : (options.mode ?? "slow");
+  const enabledFor = typeof options.enabled === "function" ? options.enabled : null;
   const changeRef = useRef<PollTracking>({ at: Date.now(), fingerprint: "" });
   return useQuery<T, Error, T, QueryKey>({
     queryKey: options.key,
-    queryFn: options.fn,
-    enabled: options.enabled ?? true,
+    queryFn: ({ signal }) => options.fn(signal),
+    enabled:
+      enabledFor
+        ? (query) => enabledFor(query.state.data as T | undefined)
+        : typeof options.enabled === "boolean"
+          ? options.enabled
+          : true,
     retry: options.retry ?? false,
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: "always",
+    refetchOnWindowFocus: options.refetchOnWindowFocus ?? "always",
     refetchIntervalInBackground: false,
     refetchInterval: (query) =>
       pollInterval(query.state.data, modeFor(query.state.data), changeRef.current),

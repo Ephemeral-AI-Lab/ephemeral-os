@@ -3,7 +3,8 @@ fn config_prd_observability_section_deserializes_and_validates() {
     let cfg = prd_config();
     cfg.validate().expect("prd observability config is valid");
     assert!(cfg.enabled);
-    assert_eq!(cfg.max_file_bytes, 8 * 1024 * 1024);
+    assert_eq!(cfg.max_disk_bytes, 4 * 1024 * 1024);
+    assert!(!cfg.used_legacy_max_file_bytes);
 }
 
 #[test]
@@ -24,7 +25,8 @@ fn config_observability_defaults_preserve_shipped_policy() {
 #[test]
 fn config_observability_overrides_deserialize() {
     let cfg = observability_config(
-        "  max_line_bytes: 1024
+        "  max_disk_bytes: 1048576
+  max_line_bytes: 1024
   sampling:
     max_walk_nodes: 8
   views:
@@ -34,12 +36,32 @@ fn config_observability_overrides_deserialize() {
     )
     .expect("observability overrides deserialize");
     cfg.validate().expect("observability overrides are valid");
+    assert_eq!(cfg.max_disk_bytes, 1024 * 1024);
     assert_eq!(cfg.max_line_bytes, 1024);
     assert_eq!(cfg.sampling.max_walk_nodes, 8);
     assert_eq!(cfg.sampling.max_walk_depth, 64);
     assert_eq!(cfg.views.layer_delta_default_limit, 3);
     assert_eq!(cfg.views.layer_delta_max_limit, 3);
     assert_eq!(cfg.views.resource_window_ms, 600_000);
+}
+
+#[test]
+fn legacy_per_segment_budget_is_doubled_clamped_and_marked_deprecated() {
+    let ordinary = observability_config("  max_file_bytes: 2097152\n")
+        .expect("legacy config deserializes");
+    assert_eq!(ordinary.max_disk_bytes, 4 * 1024 * 1024);
+    assert!(ordinary.used_legacy_max_file_bytes);
+
+    let clamped = observability_config("  max_file_bytes: 268435456\n")
+        .expect("oversized legacy config deserializes");
+    assert_eq!(clamped.max_disk_bytes, 16 * 1024 * 1024);
+    clamped.validate().expect("clamped legacy config validates");
+
+    let error = observability_config(
+        "  max_disk_bytes: 4194304\n  max_file_bytes: 2097152\n",
+    )
+    .expect_err("new and legacy budgets are mutually exclusive");
+    assert!(error.to_string().contains("cannot both be set"), "{error}");
 }
 
 #[test]
@@ -56,7 +78,19 @@ fn config_observability_rejects_unknown_keys() {
 #[test]
 fn config_validation_rejects_observability_edge_values() {
     let mut cfg = prd_config();
+    cfg.max_disk_bytes = 1024 * 1024 - 1;
+    assert_invalid(cfg, "observability.max_disk_bytes");
+
+    let mut cfg = prd_config();
+    cfg.max_disk_bytes = 16 * 1024 * 1024 + 1;
+    assert_invalid(cfg, "observability.max_disk_bytes");
+
+    let mut cfg = prd_config();
     cfg.max_line_bytes = 0;
+    assert_invalid(cfg, "observability.max_line_bytes");
+
+    let mut cfg = prd_config();
+    cfg.max_line_bytes = 16 * 1024 + 1;
     assert_invalid(cfg, "observability.max_line_bytes");
 
     let mut cfg = prd_config();

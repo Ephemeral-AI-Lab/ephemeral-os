@@ -1,26 +1,26 @@
-//! Read side over primary + rotated logs. Historical views fold a sorted
-//! `scan()`; latest-sample views stream the files and retain only two samples per
-//! requested scope so polling memory does not grow with persisted history.
+//! Streaming, bounded reads over the rotated and active event segments.
 
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::record::{Attrs, Event, Record, Span, COUNTERS_METRIC_KEY};
+use crate::lines::for_each_complete_line;
+use crate::record::{Attrs, Event, Record, Span, COUNTERS_METRIC_KEY, MAX_LINE_BYTES};
 use crate::unix_now_ms;
 
-/// Reader over the one append-only log and its single rotated sibling.
+pub const MAX_RESPONSE_RECORDS: usize = 500;
+pub const MAX_RESPONSE_BYTES: usize = 256 * 1024;
+
 pub struct Reader {
     primary: PathBuf,
     rotated: PathBuf,
+    max_line_bytes: usize,
+    max_records: usize,
+    max_response_bytes: usize,
 }
 
-/// Owned filter for the verbatim/event folds. `Default` lets call sites write
-/// `RawFilter { kind: Some("event".into()), ..Default::default() }`.
 #[derive(Default, Clone, Debug)]
 pub struct RawFilter {
     pub kind: Option<String>,
@@ -29,184 +29,273 @@ pub struct RawFilter {
     pub since_ms: i64,
 }
 
-/// One node of a `trace` forest: a span plus its start offset, child spans, and
-/// the events that attach directly under it.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SpanNode {
     pub span: Span,
-    /// `(ts - dur_ms) - trace_start`, in ms.
     pub offset_ms: f64,
     pub children: Vec<SpanNode>,
     pub events: Vec<EventNode>,
 }
 
-/// An event positioned within a trace by its offset from the trace start.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct EventNode {
-    /// `event.ts - trace_start`, in ms.
     pub offset_ms: f64,
     pub event: Event,
 }
 
-/// One windowed sample with read-time deltas for the keys the emitter tagged as
-/// counters (via the reserved `_counters` metric). Gauges and identity metrics
-/// carry no delta.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SampleDelta {
     pub ts: i64,
     pub scope: String,
-    /// Raw metric values with the internal `_counters` tag stripped; a
-    /// `_truncated` marker (set when the sample line was capped) is preserved as
-    /// the truncation signal.
     pub metrics: Attrs,
-    /// Counter deltas versus the previous in-window sample of this scope.
     pub deltas: Attrs,
-    /// `ts - previous.ts`; `None` for the first in-window sample.
     pub sample_delta_ms: Option<i64>,
+}
+
+struct Entry {
+    record: Record,
+    line: String,
 }
 
 impl Reader {
     #[must_use]
     pub fn new(primary: PathBuf, rotated: PathBuf) -> Self {
-        Self { primary, rotated }
+        Self::with_limits(
+            primary,
+            rotated,
+            MAX_LINE_BYTES,
+            MAX_RESPONSE_RECORDS,
+            MAX_RESPONSE_BYTES,
+        )
     }
 
-    /// The one primitive: parse every line of rotated + primary, skip malformed
-    /// lines, keep the verbatim line beside each record, and sort by `ts`.
-    fn scan(&self) -> Vec<(Record, String)> {
-        let mut scanned = Vec::new();
-        for path in [&self.rotated, &self.primary] {
-            let Ok(contents) = fs::read_to_string(path) else {
-                continue;
-            };
-            for line in contents.lines() {
-                if let Ok(record) = serde_json::from_str::<Record>(line) {
-                    scanned.push((record, line.to_owned()));
-                }
-            }
+    #[must_use]
+    pub fn with_limits(
+        primary: PathBuf,
+        rotated: PathBuf,
+        max_line_bytes: usize,
+        max_records: usize,
+        max_response_bytes: usize,
+    ) -> Self {
+        Self {
+            primary,
+            rotated,
+            max_line_bytes: max_line_bytes.min(MAX_LINE_BYTES),
+            max_records: max_records.min(MAX_RESPONSE_RECORDS),
+            max_response_bytes: max_response_bytes.min(MAX_RESPONSE_BYTES),
         }
-        scanned.sort_by_key(|(record, _)| record_ts(record));
-        scanned
     }
 
-    /// One flow as a span forest: filter by `trace`, build the tree by
-    /// `span`/`parent`, order siblings by start (`ts - dur_ms`), offset each node
-    /// from the trace start, and attach events under their `parent`. Resolves by
-    /// id, never by append order.
     #[must_use]
     pub fn trace(&self, id: &str) -> Vec<SpanNode> {
-        let mut spans = Vec::new();
-        let mut events = Vec::new();
-        for (record, _) in self.scan() {
-            match record {
-                Record::Span(span) if span.trace == id => spans.push(span),
-                Record::Event(event) if event.trace == id => events.push(event),
-                _ => {}
+        let mut entries = self.collect(|record| record_trace(record) == Some(id));
+        loop {
+            let (spans, events) = split_trace_entries(&entries);
+            let forest = build_trace_forest(spans, events);
+            if serialized_len(&forest) <= self.max_response_bytes || entries.is_empty() {
+                return forest;
             }
+            entries.remove(0);
         }
-        build_trace_forest(spans, events)
     }
 
-    /// The id of the most recently started root trace: the trace of the root
-    /// span (one with no `parent`) with the latest start (`ts - dur_ms`), or
-    /// `None` when the log holds no root span. Resolves the `trace --trace-id
-    /// last` sentinel.
     #[must_use]
     pub fn latest_root_trace(&self) -> Option<String> {
-        self.scan()
-            .into_iter()
-            .filter_map(|(record, _)| match record {
-                Record::Span(span) if span.parent.is_none() => Some(span),
-                _ => None,
-            })
-            .max_by(|a, b| span_start(a).total_cmp(&span_start(b)))
-            .map(|span| span.trace)
+        let mut latest: Option<Span> = None;
+        self.for_each_record(|record, _| {
+            let Record::Span(span) = record else { return };
+            if span.parent.is_some() {
+                return;
+            }
+            if latest
+                .as_ref()
+                .is_none_or(|candidate| span_start(&span) > span_start(candidate))
+            {
+                latest = Some(span);
+            }
+        });
+        latest.map(|span| span.trace)
     }
 
-    /// Per-scope sample series with read-time counter deltas, within
-    /// `now - window_ms`.
     #[must_use]
     pub fn samples(&self, scope: &str, window_ms: i64) -> Vec<SampleDelta> {
         let since = unix_now_ms().saturating_sub(window_ms);
-        let in_window: Vec<(i64, Attrs)> = self
-            .scan()
+        let entries = self.collect(|record| {
+            matches!(record, Record::Sample(sample) if sample.scope == scope && sample.ts >= since)
+        });
+        let values = entries
             .into_iter()
-            .filter_map(|(record, _)| match record {
-                Record::Sample(sample) if sample.scope == scope && sample.ts >= since => {
-                    Some((sample.ts, sample.metrics))
-                }
+            .filter_map(|entry| match entry.record {
+                Record::Sample(sample) => Some((sample.ts, sample.metrics)),
                 _ => None,
             })
             .collect();
-        sample_deltas(scope, in_window)
+        let mut samples = sample_deltas(scope, values);
+        trim_serialized(&mut samples, self.max_records, self.max_response_bytes);
+        samples
     }
 
-    /// Latest sample per requested scope, including its delta from the previous
-    /// sample. Streams both logs once and retains at most two samples per scope.
     #[must_use]
     pub fn latest_samples(&self, scopes: &[&str]) -> HashMap<String, SampleDelta> {
         let requested: HashSet<&str> = scopes.iter().copied().collect();
-        let mut samples: HashMap<String, Vec<(i64, Attrs)>> = HashMap::new();
-
-        for path in [&self.rotated, &self.primary] {
-            let Ok(file) = fs::File::open(path) else {
-                continue;
+        let mut samples: HashMap<String, Vec<(i64, Attrs, usize)>> = HashMap::new();
+        let mut retained_bytes = 2_usize;
+        self.for_each_record(|record, line| {
+            let Record::Sample(sample) = record else {
+                return;
             };
-            let mut reader = BufReader::new(file);
-            let mut line = String::new();
-            loop {
-                line.clear();
-                match reader.read_line(&mut line) {
-                    Ok(0) | Err(_) => break,
-                    Ok(_) => {}
-                }
-                let Ok(Record::Sample(sample)) = serde_json::from_str::<Record>(&line) else {
-                    continue;
+            if !requested.contains(sample.scope.as_str()) {
+                return;
+            }
+            let latest = samples.entry(sample.scope).or_default();
+            retained_bytes = retained_bytes.saturating_add(line.len() + 1);
+            latest.push((sample.ts, sample.metrics, line.len() + 1));
+            latest.sort_by_key(|(ts, _, _)| *ts);
+            if latest.len() > 2 {
+                let removed = latest.remove(0);
+                retained_bytes = retained_bytes.saturating_sub(removed.2);
+            }
+            while samples.len() > self.max_records || retained_bytes > self.max_response_bytes {
+                let Some(oldest) = samples
+                    .iter()
+                    .min_by_key(|(_, values)| values.last().map_or(i64::MIN, |(ts, _, _)| *ts))
+                    .map(|(scope, _)| scope.clone())
+                else {
+                    break;
                 };
-                if !requested.contains(sample.scope.as_str()) {
-                    continue;
-                }
-                let latest = samples.entry(sample.scope).or_default();
-                latest.push((sample.ts, sample.metrics));
-                latest.sort_by_key(|(ts, _)| *ts);
-                if latest.len() > 2 {
-                    latest.remove(0);
+                if let Some(removed) = samples.remove(&oldest) {
+                    retained_bytes = retained_bytes
+                        .saturating_sub(removed.iter().map(|(_, _, bytes)| *bytes).sum::<usize>());
                 }
             }
-        }
-
-        samples
+        });
+        let mut result: HashMap<String, SampleDelta> = samples
             .into_iter()
             .filter_map(|(scope, samples)| {
-                sample_deltas(&scope, samples)
-                    .pop()
-                    .map(|sample| (scope, sample))
+                sample_deltas(
+                    &scope,
+                    samples
+                        .into_iter()
+                        .map(|(ts, metrics, _)| (ts, metrics))
+                        .collect(),
+                )
+                .pop()
+                .map(|sample| (scope, sample))
             })
-            .collect()
+            .collect();
+        while serialized_len(&result) > self.max_response_bytes && !result.is_empty() {
+            let Some(oldest) = result
+                .iter()
+                .min_by_key(|(_, sample)| sample.ts)
+                .map(|(scope, _)| scope.clone())
+            else {
+                break;
+            };
+            result.remove(&oldest);
+        }
+        result
     }
 
-    /// Parsed `Event` records selected by the same filter shape as `raw`,
-    /// reusing `scan()`'s already-parsed records rather than re-parsing lines.
     #[must_use]
     pub fn events(&self, filter: RawFilter) -> Vec<Event> {
-        self.scan()
+        let mut events: Vec<Event> = self
+            .collect(
+                |record| matches!(record, Record::Event(event) if event_matches(event, &filter)),
+            )
             .into_iter()
-            .filter_map(|(record, _)| match record {
-                Record::Event(event) if event_matches(&event, &filter) => Some(event),
+            .filter_map(|entry| match entry.record {
+                Record::Event(event) => Some(event),
                 _ => None,
             })
-            .collect()
+            .collect();
+        trim_serialized(&mut events, self.max_records, self.max_response_bytes);
+        events
     }
 
-    /// Verbatim lines kept by `scan()`, filtered by `kind`/`name`/`trace`/`since`.
     #[must_use]
     pub fn raw(&self, filter: RawFilter) -> Vec<String> {
-        self.scan()
+        let mut lines: Vec<String> = self
+            .collect(|record| raw_matches(record, &filter))
             .into_iter()
-            .filter(|(record, _)| raw_matches(record, &filter))
-            .map(|(_, line)| line)
-            .collect()
+            .map(|entry| entry.line)
+            .collect();
+        trim_serialized(&mut lines, self.max_records, self.max_response_bytes);
+        lines
     }
+
+    fn collect(&self, matches: impl Fn(&Record) -> bool) -> Vec<Entry> {
+        let mut entries = Vec::new();
+        let mut retained_bytes = 2_usize;
+        self.for_each_record(|record, line| {
+            if !matches(&record) {
+                return;
+            }
+            retained_bytes = retained_bytes.saturating_add(line.len() + 1);
+            entries.push(Entry {
+                record,
+                line: line.to_owned(),
+            });
+            entries.sort_by_key(|entry| record_ts(&entry.record));
+            while entries.len() > self.max_records || retained_bytes > self.max_response_bytes {
+                if entries.is_empty() {
+                    break;
+                }
+                let removed = entries.remove(0);
+                retained_bytes = retained_bytes.saturating_sub(removed.line.len() + 1);
+            }
+        });
+        entries
+    }
+
+    fn for_each_record(&self, mut visit: impl FnMut(Record, &str)) {
+        for path in [&self.rotated, &self.primary] {
+            let _ = for_each_complete_line(path, self.max_line_bytes, |line| {
+                let Ok(text) = std::str::from_utf8(line) else {
+                    return Ok(());
+                };
+                let Ok(record) = serde_json::from_slice::<Record>(line) else {
+                    return Ok(());
+                };
+                visit(record, text);
+                Ok(())
+            });
+        }
+    }
+}
+
+fn serialized_len(value: &impl Serialize) -> usize {
+    struct Count(usize);
+    impl std::io::Write for Count {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0 = self.0.saturating_add(bytes.len());
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut count = Count(0);
+    let _ = serde_json::to_writer(&mut count, value);
+    count.0
+}
+
+fn trim_serialized<T: Serialize>(values: &mut Vec<T>, max_records: usize, max_bytes: usize) {
+    while (values.len() > max_records || serialized_len(values) > max_bytes) && !values.is_empty() {
+        values.remove(0);
+    }
+}
+
+fn split_trace_entries(entries: &[Entry]) -> (Vec<Span>, Vec<Event>) {
+    let mut spans = Vec::new();
+    let mut events = Vec::new();
+    for entry in entries {
+        match &entry.record {
+            Record::Span(span) => spans.push(span.clone()),
+            Record::Event(event) => events.push(event.clone()),
+            Record::Sample(_) => {}
+        }
+    }
+    (spans, events)
 }
 
 fn record_ts(record: &Record) -> i64 {
@@ -242,52 +331,38 @@ fn record_trace(record: &Record) -> Option<&str> {
 }
 
 fn raw_matches(record: &Record, filter: &RawFilter) -> bool {
-    if record_ts(record) < filter.since_ms {
-        return false;
-    }
-    if let Some(kind) = &filter.kind {
-        if record_kind(record) != kind {
-            return false;
-        }
-    }
-    if let Some(name) = &filter.name {
-        if record_name(record) != Some(name.as_str()) {
-            return false;
-        }
-    }
-    if let Some(trace) = &filter.trace {
-        if record_trace(record) != Some(trace.as_str()) {
-            return false;
-        }
-    }
-    true
+    record_ts(record) >= filter.since_ms
+        && filter
+            .kind
+            .as_ref()
+            .is_none_or(|kind| record_kind(record) == kind)
+        && filter
+            .name
+            .as_ref()
+            .is_none_or(|name| record_name(record) == Some(name.as_str()))
+        && filter
+            .trace
+            .as_ref()
+            .is_none_or(|trace| record_trace(record) == Some(trace.as_str()))
 }
 
 fn event_matches(event: &Event, filter: &RawFilter) -> bool {
-    if event.ts < filter.since_ms {
-        return false;
-    }
-    if let Some(name) = &filter.name {
-        if event.name != name.as_str() {
-            return false;
-        }
-    }
-    if let Some(trace) = &filter.trace {
-        if event.trace != trace.as_str() {
-            return false;
-        }
-    }
-    true
+    event.ts >= filter.since_ms
+        && filter
+            .name
+            .as_ref()
+            .is_none_or(|name| event.name == name.as_str())
+        && filter
+            .trace
+            .as_ref()
+            .is_none_or(|trace| event.trace == trace.as_str())
 }
 
 fn span_start(span: &Span) -> f64 {
     span.ts as f64 - span.dur_ms
 }
 
-/// The parent key a span attaches under within its own trace: its `parent` when
-/// that parent is itself present in the trace, otherwise `None` — a span whose
-/// parent lies outside this trace is re-rooted, not dropped.
-fn in_trace_parent(span: &Span, span_ids: &std::collections::HashSet<String>) -> Option<String> {
+fn in_trace_parent(span: &Span, span_ids: &HashSet<String>) -> Option<String> {
     match &span.parent {
         Some(parent) if span_ids.contains(parent) => Some(parent.clone()),
         _ => None,
@@ -299,25 +374,19 @@ fn build_trace_forest(spans: Vec<Span>, events: Vec<Event>) -> Vec<SpanNode> {
         return Vec::new();
     }
     let trace_start = spans.iter().map(span_start).fold(f64::INFINITY, f64::min);
-
-    let mut events_by_parent: std::collections::HashMap<Option<String>, Vec<Event>> =
-        std::collections::HashMap::new();
+    let mut events_by_parent: HashMap<Option<String>, Vec<Event>> = HashMap::new();
     for event in events {
         events_by_parent
             .entry(event.parent.clone())
             .or_default()
             .push(event);
     }
-
-    let span_ids: std::collections::HashSet<String> =
-        spans.iter().map(|span| span.span.clone()).collect();
-    let mut children_by_parent: std::collections::HashMap<Option<String>, Vec<Span>> =
-        std::collections::HashMap::new();
+    let span_ids: HashSet<String> = spans.iter().map(|span| span.span.clone()).collect();
+    let mut children_by_parent: HashMap<Option<String>, Vec<Span>> = HashMap::new();
     for span in spans {
         let key = in_trace_parent(&span, &span_ids);
         children_by_parent.entry(key).or_default().push(span);
     }
-
     build_nodes(
         None,
         trace_start,
@@ -329,8 +398,8 @@ fn build_trace_forest(spans: Vec<Span>, events: Vec<Event>) -> Vec<SpanNode> {
 fn build_nodes(
     parent: Option<&str>,
     trace_start: f64,
-    children_by_parent: &mut std::collections::HashMap<Option<String>, Vec<Span>>,
-    events_by_parent: &mut std::collections::HashMap<Option<String>, Vec<Event>>,
+    children_by_parent: &mut HashMap<Option<String>, Vec<Span>>,
+    events_by_parent: &mut HashMap<Option<String>, Vec<Event>>,
 ) -> Vec<SpanNode> {
     let key = parent.map(str::to_owned);
     let mut spans = children_by_parent.remove(&key).unwrap_or_default();

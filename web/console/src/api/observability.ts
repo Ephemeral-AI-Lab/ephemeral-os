@@ -49,8 +49,11 @@ export function fetchFleetSnapshot(): Promise<SnapshotResult> {
   return rpc<SnapshotResult>("snapshot", systemScope);
 }
 
-export function fetchSandboxSnapshot(sandboxId: string): Promise<SnapshotResult> {
-  return fetchObservabilityView<SandboxSnapshot>(sandboxId, "snapshot").then((snapshot) => ({
+export function fetchSandboxSnapshot(
+  sandboxId: string,
+  signal?: AbortSignal,
+): Promise<SnapshotResult> {
+  return fetchObservabilityView<SandboxSnapshot>(sandboxId, "snapshot", {}, signal).then((snapshot) => ({
     sandboxes: [snapshot],
   }));
 }
@@ -59,8 +62,9 @@ export function fetchObservabilityView<T = unknown>(
   sandboxId: string,
   operation: string,
   args: Record<string, unknown> = {},
+  signal?: AbortSignal,
 ): Promise<T> {
-  return rpc<T>(operation, sandboxScope(sandboxId), args);
+  return rpc<T>(operation, sandboxScope(sandboxId), args, signal);
 }
 
 export function inFlightCount(snapshot: SandboxSnapshot): number {
@@ -110,11 +114,12 @@ export function fetchCgroup(
   sandboxId: string,
   scope: string,
   windowMs: number,
+  signal?: AbortSignal,
 ): Promise<CgroupSeries> {
   return fetchObservabilityView<CgroupSeries>(sandboxId, "cgroup", {
     scope,
     window_ms: windowMs,
-  });
+  }, signal);
 }
 
 export interface TraceEvent {

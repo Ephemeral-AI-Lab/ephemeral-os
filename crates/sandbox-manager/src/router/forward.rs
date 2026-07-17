@@ -1,8 +1,8 @@
+use sandbox_operation_catalog::internal;
 use sandbox_operation_catalog::runtime::{
     CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC, EXEC_COMMAND_SPEC,
     FILE_EDIT_SPEC, FILE_WRITE_SPEC, WRITE_STDIN_SPEC,
 };
-use sandbox_operation_catalog::internal;
 use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScope};
 
 use crate::{ManagerError, ManagerServices, SandboxDaemonEndpoint, SandboxId, SandboxState};

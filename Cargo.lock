@@ -1549,6 +1549,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "hyper-util",
+ "rustix 0.38.44",
  "sandbox-config",
  "sandbox-observability-query",
  "sandbox-observability-telemetry",
@@ -1560,6 +1561,7 @@ dependencies = [
  "sandbox-runtime-namespace-process",
  "sandbox-runtime-workspace",
  "serde_json",
+ "sha2",
  "thiserror 2.0.18",
  "tokio",
  "tokio-util",
@@ -1629,6 +1631,7 @@ dependencies = [
 name = "sandbox-observability-telemetry"
 version = "0.1.0"
 dependencies = [
+ "rustix 0.38.44",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

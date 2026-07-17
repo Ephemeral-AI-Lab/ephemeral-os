@@ -48,6 +48,7 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
             sandbox_id: observability.sandbox_id().to_owned(),
             daemon_pid: std::process::id(),
             runtime_dir: observability.runtime_dir().to_string_lossy().into_owned(),
+            sink_stats: observability.observer().sink_stats(),
         })
     }
 

@@ -147,12 +147,20 @@ impl SandboxDaemonClient for RecordingDaemonClient {
             "cgroup" => json!({
                 "forwarded": true,
                 "topology": {
-                    "available": false,
-                    "root": null,
-                    "self_cgroup": "0::/",
-                    "error": "cgroup root unavailable",
-                    "controllers": [],
-                    "groups": [],
+                    "schema_version": 2,
+                    "available": true,
+                    "source": "proc_namespaces",
+                    "error": null,
+                    "truncated": false,
+                    "warnings": [],
+                    "workspaces": [{
+                        "workspace_id": "workspace-1",
+                        "state": "idle",
+                        "holder_pid": 41,
+                        "pid_namespace": "pid:[100]",
+                        "mount_namespace": "mnt:[200]",
+                        "processes": [],
+                    }],
                 },
             }),
             _ => json!({"forwarded": true}),
@@ -242,25 +250,35 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
 
 #[tokio::test]
 async fn manager_router_reads_sandbox_resource_metrics_from_the_host_ring_only() {
+    let sandbox = sandbox_id("sbox-host-ring");
     let runtime = Arc::new(FakeRuntime::default());
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
     store
         .insert(ready_record(
-            "sbox-1",
+            sandbox.as_str(),
             Some(SandboxDaemonEndpoint::new(
                 "127.0.0.1",
                 7000,
-                "token-sbox-1",
+                "token-sbox-host-ring",
             )),
         ))
         .expect("insert sandbox");
+    services
+        .resource_ring()
+        .remove(&sandbox)
+        .expect("remove stale resource ring");
     assert_eq!(services.sample_resources_once(), 1);
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
     let router = router(Arc::clone(&services));
 
     let response = router
         .dispatch_request(request(
             CGROUP_SPEC.name,
-            OperationScope::sandbox("sbox-1"),
+            OperationScope::sandbox(sandbox.as_str()),
             json!({}),
         ))
         .await
@@ -272,7 +290,9 @@ async fn manager_router_reads_sandbox_resource_metrics_from_the_host_ring_only()
         response["series"][0]["metrics"]["metrics_source"],
         "docker_engine"
     );
+    assert_eq!(response["topology"]["schema_version"], 2);
     assert_eq!(response["topology"]["available"], false);
+    assert_eq!(response["topology"]["workspaces"], json!([]));
     assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
     assert!(daemon_client
         .invocations
@@ -281,12 +301,13 @@ async fn manager_router_reads_sandbox_resource_metrics_from_the_host_ring_only()
         .is_empty());
     services
         .resource_ring()
-        .remove(&sandbox_id("sbox-1"))
+        .remove(&sandbox)
         .expect("clean resource ring");
 }
 
 #[tokio::test]
 async fn manager_router_does_not_report_unavailable_counters_as_zero() {
+    let sandbox = sandbox_id("sbox-unavailable-counters");
     let runtime = Arc::new(FakeRuntime {
         counters_available: false,
         ..FakeRuntime::default()
@@ -294,21 +315,25 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
     store
         .insert(ready_record(
-            "sbox-1",
+            sandbox.as_str(),
             Some(SandboxDaemonEndpoint::new(
                 "127.0.0.1",
                 7000,
-                "token-sbox-1",
+                "token-sbox-unavailable-counters",
             )),
         ))
         .expect("insert sandbox");
+    services
+        .resource_ring()
+        .remove(&sandbox)
+        .expect("remove stale resource ring");
     assert_eq!(services.sample_resources_once(), 1);
     let router = router(Arc::clone(&services));
 
     let response = router
         .dispatch_request(request(
             CGROUP_SPEC.name,
-            OperationScope::sandbox("sbox-1"),
+            OperationScope::sandbox(sandbox.as_str()),
             json!({}),
         ))
         .await
@@ -319,10 +344,7 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
     assert!(metrics.get("cpu_usec").is_none());
     assert!(metrics.get("io_rbytes").is_none());
     assert!(metrics.get("io_wbytes").is_none());
-    assert!(response["topology"]["error"]
-        .as_str()
-        .expect("topology error")
-        .contains("not queried"));
+    assert_eq!(response["topology"]["available"], false);
     assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
     assert!(daemon_client
         .invocations
@@ -331,12 +353,55 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
         .is_empty());
     services
         .resource_ring()
-        .remove(&sandbox_id("sbox-1"))
+        .remove(&sandbox)
+        .expect("clean resource ring");
+}
+
+#[tokio::test]
+async fn manager_preserves_resource_series_when_topology_transport_is_unavailable() {
+    let sandbox = sandbox_id("sbox-no-daemon");
+    let runtime = Arc::new(FakeRuntime::default());
+    let (services, store, daemon_client) = services_with_runtime(runtime);
+    store
+        .insert(ready_record(sandbox.as_str(), None))
+        .expect("insert sandbox");
+    services
+        .resource_ring()
+        .remove(&sandbox)
+        .expect("remove stale resource ring");
+    assert_eq!(services.sample_resources_once(), 1);
+    let router = router(Arc::clone(&services));
+
+    let response = router
+        .dispatch_request(request(
+            CGROUP_SPEC.name,
+            OperationScope::sandbox(sandbox.as_str()),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["series"].as_array().map(Vec::len), Some(1));
+    assert_eq!(response["topology"]["schema_version"], 2);
+    assert_eq!(response["topology"]["available"], false);
+    assert_eq!(response["topology"]["workspaces"], json!([]));
+    assert_eq!(
+        response["topology"]["error"],
+        "daemon topology is not queried by the manager resource route"
+    );
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+    services
+        .resource_ring()
+        .remove(&sandbox)
         .expect("clean resource ring");
 }
 
 #[test]
-fn manager_status_and_resource_reads_are_pure_for_ten_thousand_iterations() {
+fn manager_status_and_cgroup_reads_are_pure_for_ten_thousand_iterations() {
     let runtime = Arc::new(FakeRuntime::default());
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
     store
@@ -349,6 +414,10 @@ fn manager_status_and_resource_reads_are_pure_for_ten_thousand_iterations() {
             )),
         ))
         .expect("insert sandbox");
+    services
+        .resource_ring()
+        .remove(&sandbox_id("sbox-pure"))
+        .expect("remove stale resource ring");
     assert_eq!(services.sample_resources_once(), 1);
 
     let list = request("list_sandboxes", OperationScope::System, json!({}));
@@ -360,7 +429,7 @@ fn manager_status_and_resource_reads_are_pure_for_ten_thousand_iterations() {
     let resources = request(
         CGROUP_SPEC.name,
         OperationScope::sandbox("sbox-pure"),
-        json!({}),
+        json!({ "scope": "sandbox", "window_ms": 600_000 }),
     );
     let ring_path = services.resource_ring().path(&sandbox_id("sbox-pure"));
     let before = std::fs::read(&ring_path).expect("read ring before pure reads");
@@ -371,8 +440,7 @@ fn manager_status_and_resource_reads_are_pure_for_ten_thousand_iterations() {
         assert_eq!(listed["sandboxes"][0]["activity_revision"], 0);
         let inspected = sandbox_manager::dispatch_operation(&services, &inspect).into_json_value();
         assert_eq!(inspected["id"], "sbox-pure");
-        let sampled =
-            sandbox_manager::dispatch_operation(&services, &resources).into_json_value();
+        let sampled = sandbox_manager::dispatch_operation(&services, &resources).into_json_value();
         assert_eq!(sampled["series"].as_array().map(Vec::len), Some(1));
     }
 
@@ -380,7 +448,10 @@ fn manager_status_and_resource_reads_are_pure_for_ten_thousand_iterations() {
     let after_metadata = std::fs::metadata(&ring_path).expect("ring metadata after pure reads");
     assert_eq!(after, before, "pure reads must not change ring contents");
     assert_eq!(after_metadata.len(), before_metadata.len());
-    assert_eq!(after_metadata.modified().ok(), before_metadata.modified().ok());
+    assert_eq!(
+        after_metadata.modified().ok(),
+        before_metadata.modified().ok()
+    );
     assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
     assert!(daemon_client
         .invocations
@@ -423,7 +494,13 @@ async fn activity_revision_advances_only_after_successful_daemon_mutations() {
             .await
             .into_json_value();
         assert!(response.get("error").is_none(), "{operation}: {response}");
-        assert_eq!(store.inspect(&sandbox_id("sbox-revision")).unwrap().activity_revision, 0);
+        assert_eq!(
+            store
+                .inspect(&sandbox_id("sbox-revision"))
+                .expect("inspect sandbox")
+                .activity_revision,
+            0
+        );
     }
 
     for (expected, operation) in [
@@ -447,7 +524,10 @@ async fn activity_revision_advances_only_after_successful_daemon_mutations() {
             .into_json_value();
         assert!(response.get("error").is_none(), "{operation}: {response}");
         assert_eq!(
-            store.inspect(&sandbox_id("sbox-revision")).unwrap().activity_revision,
+            store
+                .inspect(&sandbox_id("sbox-revision"))
+                .expect("inspect sandbox")
+                .activity_revision,
             (expected + 1) as u64,
             "{operation}"
         );
@@ -464,7 +544,61 @@ async fn activity_revision_advances_only_after_successful_daemon_mutations() {
 }
 
 #[tokio::test]
-async fn manager_router_forwards_workspace_resource_metrics_to_the_daemon() {
+async fn failed_daemon_mutation_does_not_advance_activity_revision() {
+    struct FaultingClient;
+
+    impl SandboxDaemonClient for FaultingClient {
+        fn invoke(
+            &self,
+            _endpoint: &SandboxDaemonEndpoint,
+            _request: OperationRequest,
+            _timeout_override: Option<Duration>,
+        ) -> Result<OperationResponse, ManagerError> {
+            Ok(OperationResponse::fault(
+                error::OPERATION_FAILED,
+                "mutation rejected",
+            ))
+        }
+    }
+
+    let store = Arc::new(SandboxStore::new());
+    store
+        .insert(ready_record(
+            "sbox-failed-revision",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-failed-revision",
+            )),
+        ))
+        .expect("insert sandbox");
+    let services = Arc::new(ManagerServices::new(
+        Arc::clone(&store),
+        Arc::new(FakeRuntime::default()),
+        Arc::new(FakeInstaller),
+        Arc::new(FaultingClient),
+    ));
+    let response = router(services)
+        .dispatch_request(request(
+            EXEC_COMMAND_SPEC.name,
+            OperationScope::sandbox("sbox-failed-revision"),
+            json!({ "cmd": "false" }),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["error"]["kind"], error::OPERATION_FAILED);
+    assert_eq!(
+        store
+            .inspect(&sandbox_id("sbox-failed-revision"))
+            .expect("inspect sandbox")
+            .activity_revision,
+        0
+    );
+}
+
+#[tokio::test]
+async fn manager_router_rejects_workspace_resource_metrics_without_contacting_the_daemon() {
     let (router, daemon_client) = ready_router();
 
     let response = router
@@ -476,10 +610,9 @@ async fn manager_router_forwards_workspace_resource_metrics_to_the_daemon() {
         .await
         .into_json_value();
 
-    assert_eq!(response["forwarded"], true);
+    assert_eq!(response["error"]["kind"], error::INVALID_REQUEST);
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
-    assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].1, CGROUP_SPEC.name);
+    assert!(invocations.is_empty());
 }
 
 #[test]

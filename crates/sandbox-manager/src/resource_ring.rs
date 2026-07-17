@@ -110,12 +110,10 @@ impl ResourceRingStore {
         let record = encode_record(sample);
         let offset = HEADER_BYTES as u64 + u64::from(header.next) * RESOURCE_RECORD_BYTES as u64;
         write_all_at(&file, &record, offset)?;
-        file.sync_data()?;
         header.next = (header.next + 1) % CAPACITY;
         header.count = header.count.saturating_add(1).min(CAPACITY);
         header.sequence = header.sequence.saturating_add(1);
-        write_all_at(&file, &encode_header(header), 0)?;
-        file.sync_data()
+        write_all_at(&file, &encode_header(header), 0)
     }
 
     fn read_locked(&self, id: &SandboxId, window_ms: i64) -> std::io::Result<ResourceRingRead> {
@@ -168,6 +166,22 @@ impl ResourceRingStore {
             }
         }
         drop(file);
+        if header.count == CAPACITY
+            && samples
+                .first()
+                .zip(samples.get(1))
+                .is_some_and(|(first, second)| first.sampled_at_unix_ms > second.sampled_at_unix_ms)
+        {
+            samples.remove(0);
+            corrupt.get_or_insert_with(|| {
+                "uncommitted newest record was discarded after header tear".to_owned()
+            });
+        } else if samples
+            .windows(2)
+            .any(|pair| pair[0].sampled_at_unix_ms > pair[1].sampled_at_unix_ms)
+        {
+            corrupt.get_or_insert_with(|| "record timestamps are out of order".to_owned());
+        }
         if corrupt.is_some() {
             recreate(&path)?;
         }
@@ -206,6 +220,7 @@ fn open_or_recreate(path: &Path) -> std::io::Result<(File, Header)> {
         .read(true)
         .write(true)
         .create(true)
+        .truncate(false)
         .open(path)?;
     match read_header(&file) {
         Ok(header) => Ok((file, header)),

@@ -2,6 +2,8 @@
 // events without collecting or retaining resource samples on request paths.
 
 use std::error::Error;
+use std::fs;
+use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -18,6 +20,7 @@ use sandbox_runtime::{
     RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, WorkspaceSessionId,
 };
 use serde_json::{json, Value};
+use sha2::{Digest as _, Sha256};
 
 type TestResult<T = ()> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -80,7 +83,10 @@ async fn runtime_request_completion_does_not_create_resource_history() -> TestRe
             false,
         )
         .await;
-    assert_eq!(response, sandbox_operation_contract::OperationResponse::unknown_op());
+    assert_eq!(
+        response,
+        sandbox_operation_contract::OperationResponse::unknown_op()
+    );
 
     let paths = ObservabilityPaths::from_socket_path(&server.config.socket_path)?;
     let samples = sandbox_observability_telemetry::Reader::new(
@@ -88,7 +94,10 @@ async fn runtime_request_completion_does_not_create_resource_history() -> TestRe
         paths.rotated_log_path().to_path_buf(),
     )
     .samples("sandbox", 600_000);
-    assert!(samples.is_empty(), "request completion retained resource history");
+    assert!(
+        samples.is_empty(),
+        "request completion retained resource history"
+    );
     Ok(())
 }
 
@@ -110,6 +119,79 @@ async fn snapshot_and_cgroup_reads_do_not_create_a_store() -> TestResult {
 
     assert!(!paths.log_path().exists());
     assert!(!paths.rotated_log_path().exists());
+    Ok(())
+}
+
+#[tokio::test]
+async fn every_observability_read_is_pure_for_ten_thousand_iterations() -> TestResult {
+    let root = test_root("all-observability-read-purity");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    let paths = ObservabilityPaths::from_socket_path(&server.config.socket_path)?;
+    fs::create_dir_all(paths.observability_dir())?;
+    fs::write(
+        paths.rotated_log_path(),
+        concat!(
+            "{\"kind\":\"span\",\"ts\":1,\"trace\":\"trace-1\",",
+            "\"span\":\"d-1\",\"name\":\"command.exec\",\"dur_ms\":1.0,",
+            "\"status\":\"completed\",\"attrs\":{}}\n"
+        ),
+    )?;
+    fs::write(
+        paths.log_path(),
+        concat!(
+            "{\"kind\":\"event\",\"ts\":2,\"trace\":\"trace-1\",",
+            "\"parent\":\"d-1\",\"name\":\"command.finished\",\"attrs\":{}}\n",
+            "{\"kind\":\"sample\",\"ts\":3,\"scope\":\"sandbox\",",
+            "\"cpu_usec\":10,\"mem_cur\":1024}\n"
+        ),
+    )?;
+
+    let requests = [
+        request_bytes(SNAPSHOT_SPEC.name, "read-snapshot", json!({}))?,
+        request_bytes(
+            CGROUP_SPEC.name,
+            "read-cgroup",
+            json!({ "scope": "sandbox", "window_ms": 600_000 }),
+        )?,
+        request_bytes(
+            TRACE_SPEC.name,
+            "read-trace",
+            json!({ "trace_id": "trace-1" }),
+        )?,
+        request_bytes(EVENTS_SPEC.name, "read-events", json!({}))?,
+        request_bytes(LAYERSTACK_SPEC.name, "read-layerstack", json!({}))?,
+    ];
+    let before = [
+        fingerprint(paths.rotated_log_path())?,
+        fingerprint(paths.log_path())?,
+    ];
+
+    for _ in 0..10_000 {
+        for request in &requests {
+            let response = server.dispatch_bytes(request.clone(), false).await;
+            assert!(
+                response.as_json_value().get("error").is_none(),
+                "observability read failed: {}",
+                response.as_json_value()
+            );
+        }
+    }
+
+    let after = [
+        fingerprint(paths.rotated_log_path())?,
+        fingerprint(paths.log_path())?,
+    ];
+    assert_eq!(after, before, "observability reads mutated the event store");
+    assert_eq!(
+        server
+            .observability
+            .as_ref()
+            .expect("configured observability")
+            .observer()
+            .sink_stats(),
+        Default::default(),
+        "read paths must not attempt an event append"
+    );
     Ok(())
 }
 
@@ -136,6 +218,14 @@ async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
     assert!(snapshot["sampled_at_unix_ms"].is_u64());
     assert!(snapshot["daemon"]["daemon_pid"].is_u64());
     assert!(snapshot["daemon"]["runtime_dir"].is_string());
+    assert_eq!(
+        snapshot["daemon"]["event_store"],
+        json!({
+            "dropped_storage": 0,
+            "dropped_oversized": 0,
+            "truncated_records": 0,
+        })
+    );
     assert!(snapshot["stack"]["layer_count"].is_u64());
     assert!(snapshot["stack"]["layers_bytes"].is_u64());
     assert_eq!(snapshot["stack"]["active_leases"], 0);
@@ -288,6 +378,27 @@ fn runtime_config(root: &Path) -> TestResult<sandbox_runtime::SandboxRuntimeConf
         layerstack: sandbox_runtime::LayerstackRuntimeConfig::default(),
         command: sandbox_runtime::CommandRuntimeConfig::default(),
         file: sandbox_runtime::FileRuntimeConfig::default(),
+    })
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct FileFingerprint {
+    len: u64,
+    allocated_blocks: u64,
+    modified_seconds: i64,
+    modified_nanoseconds: i64,
+    sha256: [u8; 32],
+}
+
+fn fingerprint(path: &Path) -> TestResult<FileFingerprint> {
+    let metadata = fs::metadata(path)?;
+    let digest = Sha256::digest(fs::read(path)?);
+    Ok(FileFingerprint {
+        len: metadata.len(),
+        allocated_blocks: metadata.blocks(),
+        modified_seconds: metadata.mtime(),
+        modified_nanoseconds: metadata.mtime_nsec(),
+        sha256: digest.into(),
     })
 }
 

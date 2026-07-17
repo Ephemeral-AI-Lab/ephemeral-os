@@ -37,6 +37,7 @@ pub(crate) fn snapshot_value(context: &QueryContext, snapshot: ObservabilitySnap
         "daemon": {
             "daemon_pid": context.daemon_pid,
             "runtime_dir": context.runtime_dir,
+            "event_store": context.sink_stats,
         },
         "resources": resource_bundle(latest_samples.get("sandbox")),
         "workspaces": workspaces

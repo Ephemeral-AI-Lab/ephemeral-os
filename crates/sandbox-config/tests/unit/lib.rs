@@ -309,7 +309,7 @@ runner:
 
 observability:
   enabled: true
-  max_file_bytes: 8388608
+  max_disk_bytes: 4194304
   max_line_bytes: 16384
   sampling:
     max_walk_nodes: 1024

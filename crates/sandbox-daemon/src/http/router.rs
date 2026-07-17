@@ -16,7 +16,7 @@ use super::{api, forward, health};
 pub(crate) async fn route(state: Arc<HttpState>, req: Request<Incoming>) -> Response<BoxBody> {
     let path = req.uri().path();
     if req.method() == Method::GET && path == "/health" {
-        return health::respond();
+        return health::respond(state.observer.sink_stats());
     }
     if path == "/files/list" {
         return api::handle(state, req).await;

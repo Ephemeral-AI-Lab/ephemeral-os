@@ -2,7 +2,6 @@ use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use serde_json::{json, Map, Value};
 
 use crate::operations::{ManagerServices, MAX_RESOURCE_HISTORY_MS};
-use crate::router::forward_sandbox_request;
 use crate::{ManagerError, ResourceRingRead, ResourceSample, SandboxId, SandboxResourceMetrics};
 
 const SANDBOX_SCOPE: &str = "sandbox";
@@ -17,10 +16,10 @@ pub(crate) fn dispatch_resource_metrics(
         Err(response) => return response,
     };
     if scope != SANDBOX_SCOPE {
-        return match forward_sandbox_request(services, request.clone()) {
-            Ok(response) => response,
-            Err(error) => error.into_response(),
-        };
+        return OperationResponse::fault(
+            error::INVALID_REQUEST,
+            "manager-owned resource metrics support sandbox scope only",
+        );
     }
 
     let window_ms = match resource_window_ms(request) {
@@ -32,29 +31,33 @@ pub(crate) fn dispatch_resource_metrics(
         Err(response) => return response,
     };
     let read = resource_samples(services, &id, window_ms);
-    let availability = if read.error.is_some() {
-        "partial"
-    } else {
+    let errors = read.error.into_iter().collect::<Vec<_>>();
+    let availability = if errors.is_empty() {
         "available"
+    } else {
+        "partial"
     };
     OperationResponse::ok(json!({
         "view": "cgroup",
         "scope": SANDBOX_SCOPE,
         "availability": availability,
-        "errors": read.error.into_iter().collect::<Vec<_>>(),
+        "errors": errors,
         "series": series_value(read.samples),
-        "topology": unavailable_topology("daemon topology is not queried by the manager resource route"),
+        "topology": unavailable_topology(
+            "daemon topology is not queried by the manager resource route"
+        ),
     }))
 }
 
 fn unavailable_topology(message: impl Into<String>) -> Value {
     json!({
+        "schema_version": 2,
         "available": false,
-        "root": null,
-        "self_cgroup": null,
+        "source": null,
         "error": message.into(),
-        "controllers": [],
-        "groups": [],
+        "truncated": false,
+        "warnings": [],
+        "workspaces": [],
     })
 }
 

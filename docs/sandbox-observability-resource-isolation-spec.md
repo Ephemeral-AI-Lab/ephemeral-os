@@ -1,6 +1,6 @@
 # Sandbox observability resource isolation specification
 
-Status: Draft  
+Status: Implemented  
 Owners: `sandbox-daemon`, `sandbox-manager`, `sandbox-provider-docker`, `sandbox-observability-telemetry`, `sandbox-console`  
 Target: observability storage v2
 

@@ -35,6 +35,7 @@ mod gate_probe;
 mod holder;
 mod runner;
 mod serve;
+mod thp;
 
 use anyhow::{anyhow, Result};
 
@@ -47,10 +48,24 @@ fn main() -> Result<()> {
             println!("sandbox-daemon {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
-        Some("serve") => serve::run(args),
-        Some("ns-runner") => runner::run(args),
-        Some("ns-holder") => holder::run(args),
-        Some("gate-probe") => gate_probe::run(args),
+        Some("serve") => {
+            if let Err(error) = thp::set_daemon_policy(true) {
+                eprintln!("sandbox-daemon: failed to disable transparent huge pages: {error}");
+            }
+            serve::run(args)
+        }
+        Some("ns-runner") => {
+            restore_workload_thp_policy();
+            runner::run(args)
+        }
+        Some("ns-holder") => {
+            restore_workload_thp_policy();
+            holder::run(args)
+        }
+        Some("gate-probe") => {
+            restore_workload_thp_policy();
+            gate_probe::run(args)
+        }
         Some(other) => Err(anyhow!(
             "unknown subcommand {other:?}; expected {}",
             expected_subcommands()
@@ -59,6 +74,12 @@ fn main() -> Result<()> {
             "missing subcommand; expected {}",
             expected_subcommands()
         )),
+    }
+}
+
+fn restore_workload_thp_policy() {
+    if let Err(error) = thp::set_daemon_policy(false) {
+        eprintln!("sandbox-daemon child: failed to restore transparent huge pages: {error}");
     }
 }
 

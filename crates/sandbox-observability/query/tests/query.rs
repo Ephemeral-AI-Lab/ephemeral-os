@@ -11,7 +11,7 @@ use sandbox_observability_telemetry::collect::process_topology::{
     WorkspaceProcess, WorkspaceProcessKind, WorkspaceProcessState, WorkspaceProcessTopology,
     WorkspaceProcesses,
 };
-use sandbox_observability_telemetry::{LayerBytes, LayerStackBytes, Reader};
+use sandbox_observability_telemetry::{LayerBytes, LayerStackBytes, Reader, SinkStats};
 use sandbox_operation_contract::{
     OperationRequest, OperationScope, OperationScopeKind, OperationVisibility,
 };
@@ -29,6 +29,7 @@ struct FakeInput {
     delta: Result<LayerDeltaDescription, String>,
     limits: QueryLimits,
     topology: WorkspaceProcessTopology,
+    sink_stats: SinkStats,
     described_path: RefCell<Option<String>>,
     described_limit: Cell<Option<usize>>,
 }
@@ -55,6 +56,7 @@ impl Default for FakeInput {
                 layer_delta_max_limit: 5_000,
             },
             topology: WorkspaceProcessTopology::unavailable("procfs unavailable"),
+            sink_stats: SinkStats::default(),
             described_path: RefCell::new(None),
             described_limit: Cell::new(None),
         }
@@ -69,6 +71,7 @@ impl ObservabilityInput for FakeInput {
             sandbox_id: "sandbox-1".to_owned(),
             daemon_pid: 42,
             runtime_dir: "/run/ephemeral/sandbox-1".to_owned(),
+            sink_stats: self.sink_stats,
         })
     }
 
@@ -173,6 +176,11 @@ fn snapshot_renders_neutral_runtime_state_and_latest_resources() {
             storage_allocated_bytes: Some(8192),
             staging_entry_count: Some(0),
         },
+        sink_stats: SinkStats {
+            dropped_storage: 7,
+            dropped_oversized: 11,
+            truncated_records: 13,
+        },
         ..FakeInput::default()
     };
 
@@ -182,6 +190,14 @@ fn snapshot_renders_neutral_runtime_state_and_latest_resources() {
     assert_eq!(value["availability"], "partial");
     assert_eq!(value["errors"][0], "partial workspace projection failed");
     assert_eq!(value["daemon"]["daemon_pid"], 42);
+    assert_eq!(
+        value["daemon"]["event_store"],
+        json!({
+            "dropped_storage": 7,
+            "dropped_oversized": 11,
+            "truncated_records": 13,
+        })
+    );
     assert_eq!(value["workspaces"][0]["workspace_id"], "workspace-1");
     assert_eq!(
         value["workspaces"][0]["active_namespace_executions"][0]["namespace_execution_id"],

@@ -1,46 +1,96 @@
 //! Typed schema for the `observability` section of `eos-sandbox/config/prd.yml`.
 //!
 //! `sandbox-config` owns deserialization only. The daemon reads this section and
-//! maps `enabled`, `max_line_bytes`, and the sampling budget plus
-//! `record::proc::DAEMON` into leaf-owned types, keeping `max_file_bytes` as
-//! daemon-owned rotation policy and `views` as daemon-owned view limits. The
+//! maps `enabled`, the total disk/line bounds, and the sampling budget plus
+//! `record::proc::DAEMON` into leaf-owned types. The
 //! `sandbox-observability-telemetry` never imports this crate.
 
-use serde::Deserialize;
+use serde::de::Error as _;
+use serde::{Deserialize, Deserializer};
 
 use crate::configs::validate::{require_u64_at_least, require_usize_at_least, ConfigFieldError};
 
-/// Default rotation threshold: ~8 MiB. With one rotated sibling the log holds
-/// ≈ `2 × max_file_bytes`, sized so a max-window resource query stays answerable.
-const DEFAULT_MAX_FILE_BYTES: u64 = 8 * 1024 * 1024;
+const DEFAULT_MAX_DISK_BYTES: u64 = 4 * 1024 * 1024;
+const MIN_MAX_DISK_BYTES: u64 = 1024 * 1024;
+const MAX_MAX_DISK_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_MAX_LINE_BYTES: usize = 16 * 1024;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObservabilityConfig {
     /// Whether the in-sandbox daemon emits spans/events/samples. Default on.
-    #[serde(default = "default_true")]
     pub enabled: bool,
-    /// Soft size cap that triggers daemon-owned rotation of the log.
-    #[serde(default = "default_max_file_bytes")]
-    pub max_file_bytes: u64,
+    /// Hard total cap across the active and one rotated event segment.
+    pub max_disk_bytes: u64,
     /// Per-record NDJSON line cap; oversized `attrs`/`metrics` truncate.
-    #[serde(default = "default_max_line_bytes")]
     pub max_line_bytes: usize,
-    #[serde(default)]
     pub sampling: SamplingConfig,
-    #[serde(default)]
     pub views: ViewsConfig,
+    /// True only when the compatibility `max_file_bytes` key supplied the cap.
+    pub used_legacy_max_file_bytes: bool,
 }
 
 impl Default for ObservabilityConfig {
     fn default() -> Self {
         Self {
             enabled: default_true(),
-            max_file_bytes: default_max_file_bytes(),
+            max_disk_bytes: DEFAULT_MAX_DISK_BYTES,
+            max_line_bytes: default_max_line_bytes(),
+            sampling: SamplingConfig::default(),
+            views: ViewsConfig::default(),
+            used_legacy_max_file_bytes: false,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct RawObservabilityConfig {
+    enabled: bool,
+    max_disk_bytes: Option<u64>,
+    max_file_bytes: Option<u64>,
+    max_line_bytes: usize,
+    sampling: SamplingConfig,
+    views: ViewsConfig,
+}
+
+impl Default for RawObservabilityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_true(),
+            max_disk_bytes: None,
+            max_file_bytes: None,
             max_line_bytes: default_max_line_bytes(),
             sampling: SamplingConfig::default(),
             views: ViewsConfig::default(),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for ObservabilityConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = RawObservabilityConfig::deserialize(deserializer)?;
+        if raw.max_disk_bytes.is_some() && raw.max_file_bytes.is_some() {
+            return Err(D::Error::custom(
+                "max_disk_bytes and deprecated max_file_bytes cannot both be set",
+            ));
+        }
+        let used_legacy_max_file_bytes = raw.max_file_bytes.is_some();
+        let max_disk_bytes = raw.max_disk_bytes.unwrap_or_else(|| {
+            raw.max_file_bytes.map_or(DEFAULT_MAX_DISK_BYTES, |legacy| {
+                legacy.saturating_mul(2).min(MAX_MAX_DISK_BYTES)
+            })
+        });
+        Ok(Self {
+            enabled: raw.enabled,
+            max_disk_bytes,
+            max_line_bytes: raw.max_line_bytes,
+            sampling: raw.sampling,
+            views: raw.views,
+            used_legacy_max_file_bytes,
+        })
     }
 }
 
@@ -50,8 +100,24 @@ impl ObservabilityConfig {
     /// # Errors
     /// Returns an error when a field violates observability policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_u64_at_least(self.max_file_bytes, 1, "observability.max_file_bytes")?;
+        require_u64_at_least(
+            self.max_disk_bytes,
+            MIN_MAX_DISK_BYTES,
+            "observability.max_disk_bytes",
+        )?;
+        if self.max_disk_bytes > MAX_MAX_DISK_BYTES {
+            return Err(ConfigFieldError::new(
+                "observability.max_disk_bytes",
+                "must not exceed 16777216",
+            ));
+        }
         require_usize_at_least(self.max_line_bytes, 1, "observability.max_line_bytes")?;
+        if self.max_line_bytes > MAX_MAX_LINE_BYTES {
+            return Err(ConfigFieldError::new(
+                "observability.max_line_bytes",
+                "must not exceed 16384",
+            ));
+        }
         require_usize_at_least(
             self.sampling.max_walk_nodes,
             1,
@@ -131,10 +197,6 @@ fn default_true() -> bool {
     true
 }
 
-fn default_max_file_bytes() -> u64 {
-    DEFAULT_MAX_FILE_BYTES
-}
-
 fn default_max_line_bytes() -> usize {
-    16 * 1024
+    MAX_MAX_LINE_BYTES
 }

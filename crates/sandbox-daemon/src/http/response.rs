@@ -36,16 +36,6 @@ pub(crate) fn text(status: StatusCode, message: &str) -> Response<BoxBody> {
     response
 }
 
-/// An `application/json` response with the given status.
-pub(crate) fn json(status: StatusCode, body: &'static str) -> Response<BoxBody> {
-    let mut response = Response::new(full(Bytes::from_static(body.as_bytes())));
-    *response.status_mut() = status;
-    response
-        .headers_mut()
-        .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-    response
-}
-
 pub(crate) fn json_value(status: StatusCode, value: &Value) -> Response<BoxBody> {
     let body = serde_json::to_vec(value).unwrap_or_default();
     let mut response = Response::new(full(body));

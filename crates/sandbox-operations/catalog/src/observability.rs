@@ -53,6 +53,13 @@ const LAYERSTACK_FAMILY: OperationFamilySpec = OperationFamilySpec {
     description: "Read live layerstack leasing, booking, and stack-series state.",
 };
 
+const RESOURCE_ISOLATION_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "resource_isolation",
+    title: "Resource isolation",
+    summary: "Qualify observability memory and storage isolation.",
+    description: "Verify bounded resource use and read-only observability behavior.",
+};
+
 pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
     "sandbox_id",
     ArgKind::String,
@@ -65,6 +72,7 @@ const FAMILIES: &[&OperationFamilySpec] = &[
     &EVENTS_FAMILY,
     &CGROUP_FAMILY,
     &LAYERSTACK_FAMILY,
+    &RESOURCE_ISOLATION_FAMILY,
 ];
 
 const OPERATIONS: &[&RoutedOperation] = &[
