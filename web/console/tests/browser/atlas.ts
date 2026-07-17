@@ -74,8 +74,8 @@ const topology = {
       pid_namespace: "pid:[1001]",
       mount_namespace: "mnt:[2001]",
       processes: [
-        { pid: 201, namespace_pid: 1, parent_pid: 101, name: "ns-init", state: "S (sleeping)", kind: "namespace_init", cgroup_memberships: ["0::/"] },
-        { pid: 233, namespace_pid: 2, parent_pid: 201, name: "bash", state: "S (sleeping)", kind: "process", cgroup_memberships: ["0::/"] },
+        { pid: 201, namespace_pid: 1, parent_pid: 101, name: "ns-init", state: "S (sleeping)", kind: "namespace_init", cgroup_memberships: ["0::/"], resident_memory_bytes: 2_097_152, cpu_time_us: 100_000, start_time_ticks: 101 },
+        { pid: 233, namespace_pid: 2, parent_pid: 201, name: "bash", state: "S (sleeping)", kind: "process", cgroup_memberships: ["0::/"], resident_memory_bytes: 12_582_912, cpu_time_us: 2_000_000, start_time_ticks: 202 },
       ],
     },
   ],

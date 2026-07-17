@@ -380,6 +380,9 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
                     state: "S (sleeping)".to_owned(),
                     kind: WorkspaceProcessKind::Process,
                     cgroup_memberships: vec!["0::/".to_owned()],
+                    resident_memory_bytes: Some(2_097_152),
+                    cpu_time_us: Some(750_000),
+                    start_time_ticks: Some(12_345),
                 }],
             }],
         },
@@ -404,6 +407,18 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
     assert_eq!(
         response["topology"]["workspaces"][0]["processes"][0]["cgroup_memberships"][0],
         "0::/"
+    );
+    assert_eq!(
+        response["topology"]["workspaces"][0]["processes"][0]["resident_memory_bytes"],
+        2_097_152
+    );
+    assert_eq!(
+        response["topology"]["workspaces"][0]["processes"][0]["cpu_time_us"],
+        750_000
+    );
+    assert_eq!(
+        response["topology"]["workspaces"][0]["processes"][0]["start_time_ticks"],
+        12_345
     );
 }
 

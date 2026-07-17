@@ -1,6 +1,6 @@
-//! Reader: historical views fold one sorted `scan()` over primary + rotated;
-//! latest samples use a bounded streaming pass; `trace` resolves out-of-order
-//! records; `samples` Δs only emitter-tagged counters.
+//! Reader: historical trace/event views fold one sorted `scan()` over primary +
+//! rotated; sample views use bounded streaming passes; `trace` resolves
+//! out-of-order records; `samples` Δs only emitter-tagged counters.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -142,6 +142,38 @@ fn samples_filter_by_window() {
     let recent = reader.samples("sandbox", 60_000);
     assert_eq!(recent.len(), 1, "only the in-window sample");
     assert_eq!(recent[0].metrics["cpu_usec"], 2);
+}
+
+#[test]
+fn samples_orders_only_matching_windowed_records_across_both_logs() {
+    let dir = temp_dir("streamed-window");
+    let primary = dir.join("observability.ndjson");
+    let rotated = dir.join("observability.ndjson.1");
+    let now = now_ms();
+    write_lines(
+        &rotated,
+        &[
+            json!({ "kind": "span", "ts": now - 500, "trace": "ignored", "span": "d-1", "name": "ignored", "dur_ms": 1.0, "status": "completed", "attrs": { "payload": "unrelated history" } }),
+            json!({ "kind": "sample", "ts": now - 100, "scope": "sandbox", "cpu_usec": 20, "_counters": ["cpu_usec"] }),
+            json!({ "kind": "sample", "ts": now - 300, "scope": "other", "cpu_usec": 9_999 }),
+        ],
+    );
+    write_lines(
+        &primary,
+        &[
+            json!({ "kind": "sample", "ts": now - 200, "scope": "sandbox", "cpu_usec": 10, "_counters": ["cpu_usec"] }),
+            json!({ "kind": "sample", "ts": now - 120_000, "scope": "sandbox", "cpu_usec": 1 }),
+        ],
+    );
+
+    let reader = Reader::new(primary, rotated);
+    let series = reader.samples("sandbox", 60_000);
+
+    assert_eq!(series.len(), 2);
+    assert_eq!(series[0].metrics["cpu_usec"], 10);
+    assert_eq!(series[1].metrics["cpu_usec"], 20);
+    assert_eq!(series[1].deltas["cpu_usec"], 10);
+    assert_eq!(series[1].sample_delta_ms, Some(100));
 }
 
 #[test]

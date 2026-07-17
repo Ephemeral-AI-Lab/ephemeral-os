@@ -8,6 +8,7 @@ use serde::Serialize;
 const PROCESS_LIMIT: usize = 512;
 const WARNING_LIMIT: usize = 16;
 const STATUS_LIMIT: usize = 64 * 1024;
+const STAT_LIMIT: usize = 4 * 1024;
 const COMM_LIMIT: usize = 256;
 const CGROUP_LIMIT: usize = 64 * 1024;
 
@@ -55,6 +56,9 @@ pub struct WorkspaceProcess {
     pub state: String,
     pub kind: WorkspaceProcessKind,
     pub cgroup_memberships: Vec<String>,
+    pub resident_memory_bytes: Option<u64>,
+    pub cpu_time_us: Option<u64>,
+    pub start_time_ticks: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -115,6 +119,11 @@ impl WorkspaceProcessTopology {
     ) -> Self {
         inputs.sort_by(|left, right| left.workspace_id.cmp(&right.workspace_id));
         let mut warnings = WarningBuffer::default();
+        let clock_ticks_per_second = clock_ticks_per_second();
+        if clock_ticks_per_second.is_none() {
+            warnings
+                .push("processor clock tick rate unavailable; CPU estimates omitted".to_owned());
+        }
         inputs.dedup_by(|right, left| {
             let duplicate = left.workspace_id == right.workspace_id;
             if duplicate {
@@ -183,7 +192,8 @@ impl WorkspaceProcessTopology {
                 builders[index].partial = true;
                 continue;
             }
-            let process = match read_process(&pid_root, pid, &mut warnings) {
+            let process = match read_process(&pid_root, pid, clock_ticks_per_second, &mut warnings)
+            {
                 Ok(process) => process,
                 Err(error) if is_proc_race(&error) => continue,
                 Err(error) => {
@@ -312,6 +322,7 @@ fn process_namespace_identity(
 fn read_process(
     pid_root: &Path,
     pid: u32,
+    clock_ticks_per_second: Option<u64>,
     warnings: &mut WarningBuffer,
 ) -> io::Result<WorkspaceProcess> {
     let status = read_bounded(&pid_root.join("status"), STATUS_LIMIT)?;
@@ -337,6 +348,7 @@ fn read_process(
         warnings.push(format!("process {pid} cgroup membership truncated"));
     }
     let cgroup_memberships = complete_nonempty_lines(&cgroup.text, cgroup.truncated);
+    let usage = read_process_usage(pid_root, pid, clock_ticks_per_second, warnings);
     Ok(WorkspaceProcess {
         pid,
         namespace_pid: metadata.namespace_pid,
@@ -353,7 +365,99 @@ fn read_process(
             WorkspaceProcessKind::Process
         },
         cgroup_memberships,
+        resident_memory_bytes: metadata.resident_memory_bytes,
+        cpu_time_us: usage.cpu_time_us,
+        start_time_ticks: usage.start_time_ticks,
     })
+}
+
+#[derive(Default)]
+struct ProcessUsage {
+    cpu_time_us: Option<u64>,
+    start_time_ticks: Option<u64>,
+}
+
+fn read_process_usage(
+    pid_root: &Path,
+    pid: u32,
+    clock_ticks_per_second: Option<u64>,
+    warnings: &mut WarningBuffer,
+) -> ProcessUsage {
+    let Some(clock_ticks_per_second) = clock_ticks_per_second else {
+        return ProcessUsage::default();
+    };
+    let stat = match read_bounded(&pid_root.join("stat"), STAT_LIMIT) {
+        Ok(stat) if !stat.truncated => stat,
+        Ok(_) => {
+            warnings.push(format!("process {pid} stat exceeded the read limit"));
+            return ProcessUsage::default();
+        }
+        Err(error) if is_proc_race(&error) => return ProcessUsage::default(),
+        Err(error) => {
+            warnings.push(format!("process {pid} stat read failed: {error}"));
+            return ProcessUsage::default();
+        }
+    };
+    match parse_proc_stat(&stat.text) {
+        Ok((cpu_time_ticks, start_time_ticks)) => ProcessUsage {
+            cpu_time_us: Some(ticks_to_microseconds(
+                cpu_time_ticks,
+                clock_ticks_per_second,
+            )),
+            start_time_ticks: Some(start_time_ticks),
+        },
+        Err(error) => {
+            warnings.push(format!("process {pid} stat parse failed: {error}"));
+            ProcessUsage::default()
+        }
+    }
+}
+
+fn parse_proc_stat(stat: &str) -> io::Result<(u64, u64)> {
+    let (_, fields) = stat.rsplit_once(')').ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "stat command delimiter is missing",
+        )
+    })?;
+    let mut fields = fields.split_whitespace();
+    let parse = |value: Option<&str>, name: &str| {
+        value
+            .and_then(|value| value.parse::<u64>().ok())
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("stat {name} is missing"),
+                )
+            })
+    };
+    let user_ticks = parse(fields.nth(11), "utime")?;
+    let system_ticks = parse(fields.next(), "stime")?;
+    let start_time_ticks = parse(fields.nth(6), "starttime")?;
+    let cpu_time_ticks = user_ticks
+        .checked_add(system_ticks)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "stat CPU time overflowed"))?;
+    Ok((cpu_time_ticks, start_time_ticks))
+}
+
+fn ticks_to_microseconds(ticks: u64, clock_ticks_per_second: u64) -> u64 {
+    let micros = u128::from(ticks)
+        .saturating_mul(1_000_000)
+        .checked_div(u128::from(clock_ticks_per_second))
+        .unwrap_or_default();
+    u64::try_from(micros).unwrap_or(u64::MAX)
+}
+
+#[cfg(unix)]
+fn clock_ticks_per_second() -> Option<u64> {
+    // SAFETY: `sysconf` reads the fixed process clock-tick configuration and does not dereference pointers.
+    let ticks = unsafe { libc::sysconf(libc::_SC_CLK_TCK) };
+    u64::try_from(ticks).ok().filter(|ticks| *ticks > 0)
+}
+
+#[cfg(not(unix))]
+fn clock_ticks_per_second() -> Option<u64> {
+    None
 }
 
 #[derive(Default)]
@@ -393,12 +497,14 @@ struct ProcessStatus {
     namespace_pid: u32,
     parent_pid: u32,
     state: char,
+    resident_memory_bytes: Option<u64>,
 }
 
 fn parse_status(status: &str) -> io::Result<ProcessStatus> {
     let mut namespace_pid = None;
     let mut parent_pid = None;
     let mut state = None;
+    let mut resident_memory_bytes = None;
     for line in status.lines() {
         if let Some(value) = line.strip_prefix("NSpid:") {
             namespace_pid = value
@@ -409,6 +515,8 @@ fn parse_status(status: &str) -> io::Result<ProcessStatus> {
             parent_pid = value.trim().parse::<u32>().ok();
         } else if let Some(value) = line.strip_prefix("State:") {
             state = value.trim().chars().next();
+        } else if let Some(value) = line.strip_prefix("VmRSS:") {
+            resident_memory_bytes = parse_kibibytes(value);
         }
     }
     match (namespace_pid, parent_pid, state) {
@@ -416,12 +524,21 @@ fn parse_status(status: &str) -> io::Result<ProcessStatus> {
             namespace_pid,
             parent_pid,
             state,
+            resident_memory_bytes,
         }),
         _ => Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "required status fields are missing",
         )),
     }
+}
+
+fn parse_kibibytes(value: &str) -> Option<u64> {
+    let mut fields = value.split_whitespace();
+    let kibibytes = fields.next()?.parse::<u64>().ok()?;
+    (fields.next()? == "kB")
+        .then(|| kibibytes.checked_mul(1024))
+        .flatten()
 }
 
 #[cfg(unix)]

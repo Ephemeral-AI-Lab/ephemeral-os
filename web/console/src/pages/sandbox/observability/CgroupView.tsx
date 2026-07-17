@@ -16,8 +16,14 @@ import {
   type WorkspaceProcesses,
   type WorkspaceProcessTopology,
 } from "@/api/observability";
+import { formatBytes } from "@/lib/format";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
+import {
+  estimateWorkspaceResources,
+  type WorkspaceResourceEstimate,
+} from "@/pages/sandbox/observability/processEstimates";
 import { usePoll } from "@/poll/usePoll";
+import { useEffect, useRef, useState } from "react";
 
 const TOPOLOGY_WINDOW_MS = 60_000;
 
@@ -28,6 +34,30 @@ export function CgroupView() {
     fn: () => fetchCgroup(sandboxId, "sandbox", TOPOLOGY_WINDOW_MS),
     mode: "slow",
   });
+  const previousRef = useRef<{
+    sandboxId: string;
+    topology: WorkspaceProcessTopology;
+    observedAt: number;
+  } | undefined>(undefined);
+  const [estimates, setEstimates] = useState<Record<string, WorkspaceResourceEstimate>>({});
+
+  useEffect(() => {
+    setEstimates({});
+  }, [sandboxId]);
+
+  useEffect(() => {
+    const topology = result.data?.topology;
+    if (!topology?.available || result.isPlaceholderData) return;
+
+    const observedAt = performance.now();
+    const previous = previousRef.current?.sandboxId === sandboxId ? previousRef.current : undefined;
+    setEstimates(estimateWorkspaceResources(
+      previous?.topology,
+      topology,
+      previous === undefined ? null : observedAt - previous.observedAt,
+    ));
+    previousRef.current = { sandboxId, topology, observedAt };
+  }, [result.data?.topology, result.dataUpdatedAt, result.isPlaceholderData, sandboxId]);
 
   return (
     <Stack gap="md" p="md" data-process-topology>
@@ -40,6 +70,7 @@ export function CgroupView() {
       <ProcessTopologyPanel
         topology={result.data?.topology}
         pending={result.data === undefined && !result.isError}
+        estimates={estimates}
       />
     </Stack>
   );
@@ -48,9 +79,11 @@ export function CgroupView() {
 function ProcessTopologyPanel({
   topology,
   pending,
+  estimates,
 }: {
   topology?: WorkspaceProcessTopology;
   pending: boolean;
+  estimates: Record<string, WorkspaceResourceEstimate>;
 }) {
   return (
     <Paper withBorder p="md" component="section" aria-labelledby="process-topology-title">
@@ -74,7 +107,7 @@ function ProcessTopologyPanel({
       {pending ? (
         <Text size="sm" c="dimmed" mt="md" role="status">Loading process topology…</Text>
       ) : topology?.available ? (
-        <AvailableTopology topology={topology} />
+        <AvailableTopology topology={topology} estimates={estimates} />
       ) : (
         <Alert color="red" mt="md" role="alert" title="Process topology unavailable">
           {topology?.error ?? "Topology was not reported by this daemon."} The view will retry automatically.
@@ -84,7 +117,13 @@ function ProcessTopologyPanel({
   );
 }
 
-function AvailableTopology({ topology }: { topology: WorkspaceProcessTopology }) {
+function AvailableTopology({
+  topology,
+  estimates,
+}: {
+  topology: WorkspaceProcessTopology;
+  estimates: Record<string, WorkspaceResourceEstimate>;
+}) {
   return (
     <Stack gap="md" mt="md">
       {topology.truncated ? (
@@ -105,14 +144,24 @@ function AvailableTopology({ topology }: { topology: WorkspaceProcessTopology })
         </Text>
       ) : (
         topology.workspaces.map((workspace) => (
-          <WorkspaceCard key={workspace.workspace_id} workspace={workspace} />
+          <WorkspaceCard
+            key={workspace.workspace_id}
+            workspace={workspace}
+            estimate={estimates[workspace.workspace_id]}
+          />
         ))
       )}
     </Stack>
   );
 }
 
-function WorkspaceCard({ workspace }: { workspace: WorkspaceProcesses }) {
+function WorkspaceCard({
+  workspace,
+  estimate,
+}: {
+  workspace: WorkspaceProcesses;
+  estimate: WorkspaceResourceEstimate | undefined;
+}) {
   const hasWorkload = workspace.processes.some((process) => process.kind === "process");
   return (
     <Paper withBorder p="sm" component="article" data-workspace-id={workspace.workspace_id}>
@@ -130,6 +179,26 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceProcesses }) {
         <TopologyField label="PID namespace" value={workspace.pid_namespace ?? "unavailable"} />
         <TopologyField label="Mount namespace" value={workspace.mount_namespace ?? "unavailable"} />
       </SimpleGrid>
+
+      <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs" mt="sm">
+        <Paper withBorder p="xs" data-workspace-rss-estimate>
+          <Text size="xs" c="dimmed">RSS (estimated)</Text>
+          <Text fw={600} ff="monospace" size="sm">
+            {estimate?.residentMemoryBytes === null || estimate === undefined
+              ? "Unavailable"
+              : formatBytes(estimate.residentMemoryBytes)}
+          </Text>
+        </Paper>
+        <Paper withBorder p="xs" data-workspace-cpu-estimate>
+          <Text size="xs" c="dimmed">CPU (estimated)</Text>
+          <Text fw={600} ff="monospace" size="sm">
+            {formatCpuEstimate(estimate?.cpuPercent)}
+          </Text>
+        </Paper>
+      </SimpleGrid>
+      <Text size="xs" c="dimmed" mt={4} data-resource-estimate-note>
+        Live procfs estimates. RSS can count shared pages more than once; CPU can miss processes that start and exit between refreshes.
+      </Text>
 
       {workspace.state === "partial" ? (
         <Alert color="dark" mt="sm" role="status" title="Workspace topology is partial">
@@ -236,4 +305,11 @@ function formatKind(kind: WorkspaceProcess["kind"]) {
 
 function formatSource(source: WorkspaceProcessTopology["source"]) {
   return source === "proc_namespaces" ? "proc namespaces" : "unknown source";
+}
+
+function formatCpuEstimate(cpuPercent: number | null | undefined) {
+  if (cpuPercent === null || cpuPercent === undefined || !Number.isFinite(cpuPercent)) {
+    return "Waiting for next refresh";
+  }
+  return `${cpuPercent.toFixed(1)}%`;
 }

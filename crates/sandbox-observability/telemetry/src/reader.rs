@@ -1,6 +1,6 @@
-//! Read side over primary + rotated logs. Historical views fold a sorted
-//! `scan()`; latest-sample views stream the files and retain only two samples per
-//! requested scope so polling memory does not grow with persisted history.
+//! Read side over primary + rotated logs. Historical trace/event views fold a
+//! sorted `scan()`; sample views stream the files and retain only matching
+//! samples so polling memory does not grow with unrelated persisted history.
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -128,16 +128,28 @@ impl Reader {
     #[must_use]
     pub fn samples(&self, scope: &str, window_ms: i64) -> Vec<SampleDelta> {
         let since = unix_now_ms().saturating_sub(window_ms);
-        let in_window: Vec<(i64, Attrs)> = self
-            .scan()
-            .into_iter()
-            .filter_map(|(record, _)| match record {
-                Record::Sample(sample) if sample.scope == scope && sample.ts >= since => {
-                    Some((sample.ts, sample.metrics))
+        let mut in_window = Vec::new();
+        for path in [&self.rotated, &self.primary] {
+            let Ok(file) = fs::File::open(path) else {
+                continue;
+            };
+            let mut reader = BufReader::new(file);
+            let mut line = String::new();
+            loop {
+                line.clear();
+                match reader.read_line(&mut line) {
+                    Ok(0) | Err(_) => break,
+                    Ok(_) => {}
                 }
-                _ => None,
-            })
-            .collect();
+                let Ok(Record::Sample(sample)) = serde_json::from_str::<Record>(&line) else {
+                    continue;
+                };
+                if sample.scope == scope && sample.ts >= since {
+                    in_window.push((sample.ts, sample.metrics));
+                }
+            }
+        }
+        in_window.sort_by_key(|(ts, _)| *ts);
         sample_deltas(scope, in_window)
     }
 

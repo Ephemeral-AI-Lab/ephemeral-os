@@ -103,6 +103,9 @@ export interface WorkspaceProcess {
   state: string;
   kind: "namespace_init" | "process";
   cgroup_memberships: string[];
+  resident_memory_bytes?: number | null;
+  cpu_time_us?: number | null;
+  start_time_ticks?: number | null;
 }
 
 export function fetchCgroup(

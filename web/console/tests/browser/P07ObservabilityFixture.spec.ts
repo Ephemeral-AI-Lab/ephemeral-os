@@ -46,8 +46,8 @@ const topology: WorkspaceProcessTopology = {
       pid_namespace: "pid:[1001]",
       mount_namespace: "mnt:[2001]",
       processes: [
-        { pid: 201, namespace_pid: 1, parent_pid: 101, name: "ns-init", state: "S (sleeping)", kind: "namespace_init", cgroup_memberships: ["0::/"] },
-        { pid: 233, namespace_pid: 2, parent_pid: 201, name: "bash", state: "S (sleeping)", kind: "process", cgroup_memberships: ["0::/", "2:cpu:/fixture"] },
+        { pid: 201, namespace_pid: 1, parent_pid: 101, name: "ns-init", state: "S (sleeping)", kind: "namespace_init", cgroup_memberships: ["0::/"], resident_memory_bytes: 2_097_152, cpu_time_us: 100_000, start_time_ticks: 101 },
+        { pid: 233, namespace_pid: 2, parent_pid: 201, name: "bash", state: "S (sleeping)", kind: "process", cgroup_memberships: ["0::/", "2:cpu:/fixture"], resident_memory_bytes: 12_582_912, cpu_time_us: 2_000_000, start_time_ticks: 202 },
       ],
     },
     {
@@ -57,7 +57,7 @@ const topology: WorkspaceProcessTopology = {
       pid_namespace: "pid:[1002]",
       mount_namespace: "mnt:[2002]",
       processes: [
-        { pid: 301, namespace_pid: 1, parent_pid: 102, name: "ns-init", state: "S (sleeping)", kind: "namespace_init", cgroup_memberships: [] },
+        { pid: 301, namespace_pid: 1, parent_pid: 102, name: "ns-init", state: "S (sleeping)", kind: "namespace_init", cgroup_memberships: [], resident_memory_bytes: 1_048_576, cpu_time_us: 50_000, start_time_ticks: 303 },
       ],
     },
     {
@@ -327,12 +327,25 @@ test("P07 resource charts retain accessible summaries through a resize", async (
 
 test("P07 cgroup view shows process placement reported by the daemon", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
-  await openView(page, "cgroup");
+  const api = await openView(page, "cgroup");
   await expect(page.locator("[data-process-topology]")).toContainText("Workspace process topology");
   await expect(page.locator('[data-workspace-id="workspace-active"]')).toContainText("pid:[1001]");
   const worker = page.locator('[data-workspace-id="workspace-active"] [data-process-pid="233"]:visible');
   await expect(worker).toContainText("bash");
   await expect(worker).toContainText("2:cpu:/fixture");
+  await expect(page.locator('[data-workspace-id="workspace-active"] [data-workspace-rss-estimate]')).toContainText("14MiB");
+  api.setTopology({
+    ...topology,
+    workspaces: topology.workspaces.map((workspace) => ({
+      ...workspace,
+      processes: workspace.processes.map((process) => ({
+        ...process,
+        cpu_time_us: (process.cpu_time_us ?? 0) + 500_000,
+      })),
+    })),
+  });
+  await expect(page.locator('[data-workspace-id="workspace-active"] [data-workspace-cpu-estimate]')).toContainText("%", { timeout: 4_000 });
+  await expect(page.locator('[data-workspace-id="workspace-active"] [data-resource-estimate-note]')).toContainText("shared pages");
   await expect(page.locator('[data-workspace-id="workspace-idle"] [data-workspace-idle]')).toBeVisible();
   await expect(page.locator('[data-workspace-id="workspace-partial"]')).toContainText("Workspace topology is partial");
   await expect(page.locator("[data-process-topology]")).not.toContainText("delegated");

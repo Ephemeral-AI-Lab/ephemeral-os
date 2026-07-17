@@ -12,7 +12,7 @@ Replace the current delegated-cgroup topology view with workspace process topolo
 
 Every open workspace already has a namespace holder process. The runtime knows the stable mapping from `workspace_id` to `holder_pid`. A process belongs to that workspace when its PID namespace matches the holder's `pid_for_children` namespace and its mount namespace matches the holder's mount namespace. `/proc/<pid>/cgroup` remains useful diagnostic metadata, but neither writable cgroups nor one child cgroup per workspace is required.
 
-The existing public URL and operation name stay stable. The console presents the route as **Processes** and renders workspace sessions, their namespace init, and their current processes. Read-only cgroup mounts, a root cgroup such as `0::/`, or the absence of delegated child cgroups must not produce an `unavailable` topology.
+The existing public URL and operation name stay stable. The console presents the route as **Processes** and renders workspace sessions, their namespace init, their current processes, and explicitly estimated current RSS and CPU usage. Read-only cgroup mounts, a root cgroup such as `0::/`, or the absence of delegated child cgroups must not produce an `unavailable` topology.
 
 ## Problem
 
@@ -37,6 +37,7 @@ even though the daemon can read `/proc`, knows every workspace holder, and can d
 - Depend only on Linux `/proc` facilities already required by the namespace runner.
 - Preserve the existing `cgroup` operation and `/observability/cgroup` route.
 - Expose `/proc/<pid>/cgroup` membership as optional diagnostics on each process.
+- Expose optional process RSS and cumulative CPU counters so the console can derive current per-workspace estimates without background collector state.
 - Distinguish an idle workspace from unavailable topology.
 - Handle normal `/proc` process races without failing the whole response.
 - Keep collection on demand, bounded, deterministic, and free of background work.
@@ -47,6 +48,7 @@ even though the daemon can read `/proc`, knows every workspace holder, and can d
 - Enforcing per-workspace CPU, memory, PID, or I/O limits.
 - Replacing manager-owned sandbox resource series on the Resources page.
 - Producing lifetime-accurate per-workspace resource accounting. Processes that exit between samples are not recoverable from `/proc` alone.
+- Treating summed process RSS or sampled CPU deltas as authoritative cgroup accounting.
 - Supporting native Windows containers. EOS workspace isolation already depends on Linux namespaces. Linux containers on Docker Desktop for macOS or Windows are supported.
 - Reading process environment variables or exposing command arguments.
 
@@ -58,7 +60,7 @@ Required runtime facilities:
 
 - procfs mounted and readable at `/proc`;
 - readable namespace handles under `/proc/<pid>/ns`;
-- readable `/proc/<pid>/status` and `/proc/<pid>/comm` for processes visible to the daemon;
+- readable `/proc/<pid>/status`, `/proc/<pid>/comm`, and `/proc/<pid>/stat` for complete process metadata; individual resource fields remain nullable when a racing process file cannot be read;
 - the workspace holder mapping retained by the running daemon.
 
 Writable `/sys/fs/cgroup`, cgroup namespace mode, cgroup v1 versus v2, and `CAP_SYS_ADMIN` are not topology prerequisites.
@@ -108,7 +110,7 @@ Collection is performed once per explicit topology request:
 3. Enumerate numeric entries in `/proc` once.
 4. For each candidate PID, stat its `pid` and `mnt` namespace handles.
 5. Skip candidates whose namespace pair is not present in the reverse map.
-6. For matches, read bounded metadata from `status`, `comm`, and `cgroup`.
+6. For matches, read bounded metadata from `status`, `comm`, `stat`, and `cgroup`.
 7. Group processes by workspace, sort workspaces by `workspace_id`, and sort processes by host PID.
 8. Return all open workspaces, including those with no workload processes.
 
@@ -124,8 +126,13 @@ For each matched process, collect:
 - one-character Linux process state from `State`;
 - process name from `/proc/<pid>/comm`;
 - all readable cgroup membership lines.
+- current resident set size from `VmRSS` in `/proc/<pid>/status` as `resident_memory_bytes`;
+- cumulative user plus system CPU time from `/proc/<pid>/stat` as `cpu_time_us`;
+- process start time from `/proc/<pid>/stat` as `start_time_ticks` so samples cannot join across PID reuse.
 
-Do not read `environ`. Do not return `cmdline` in v1 of this contract. `comm` is bounded by the kernel and is enough for an operational topology view without exposing arguments that may contain secrets.
+Resource fields are nullable and never determine placement or topology availability. Convert CPU ticks using the runtime's `_SC_CLK_TCK`; parse `stat` from the final closing parenthesis around `comm`, since process names can contain spaces or parentheses.
+
+Do not read `environ`. Do not return `cmdline` in this contract. `comm` is bounded by the kernel and is enough for an operational topology view without exposing arguments that may contain secrets.
 
 ### Workspace state
 
@@ -140,7 +147,7 @@ The namespace init is returned with `kind: "namespace_init"`. Every other row us
 - Scan numeric proc entries once; do not repeatedly scan per workspace.
 - Return at most 512 process rows across the sandbox.
 - Return at most 16 structured collection warnings.
-- Bound all proc file reads; `status` and `cgroup` reads must reject or truncate unexpectedly large data.
+- Bound all proc file reads; `status`, `stat`, and `cgroup` reads must reject or truncate unexpectedly large data.
 - Set `truncated: true` when the process-row cap is reached.
 - Do not cache PIDs between requests.
 - Do not add a topology background task or persistent state.
@@ -185,7 +192,10 @@ Replace the delegated-cgroup topology payload with schema version 2:
           "name": "ns-init",
           "state": "S",
           "kind": "namespace_init",
-          "cgroup_memberships": ["0::/"]
+          "cgroup_memberships": ["0::/"],
+          "resident_memory_bytes": 2097152,
+          "cpu_time_us": 120000,
+          "start_time_ticks": 9182
         },
         {
           "pid": 164,
@@ -194,7 +204,10 @@ Replace the delegated-cgroup topology payload with schema version 2:
           "name": "sleep",
           "state": "S",
           "kind": "process",
-          "cgroup_memberships": ["0::/"]
+          "cgroup_memberships": ["0::/"],
+          "resident_memory_bytes": 7340032,
+          "cpu_time_us": 810000,
+          "start_time_ticks": 9211
         }
       ]
     }
@@ -213,6 +226,8 @@ Contract rules:
 - namespace strings are diagnostics from `readlink`; matching still uses stat identity.
 - `processes` is present for every workspace and may be empty for a partial holder race.
 - cgroup membership may be empty and may contain several v1 controller lines.
+- `resident_memory_bytes`, `cpu_time_us`, and `start_time_ticks` are optional nullable diagnostics. Failure to read them does not hide the process or make topology unavailable.
+- these additive nullable fields do not change `schema_version: 2`; consumers must tolerate them being absent from an older schema-v2 daemon during rolling replacement.
 
 The old `root`, `controllers`, and `groups` fields are removed from schema version 2. Console and browser fixtures must migrate in the same change. The public operation and route remain stable, which limits migration to response consumers.
 
@@ -232,7 +247,7 @@ The following must not make topology unavailable:
 - no workspace is open;
 - an open workspace is idle;
 - a candidate process exits during scanning;
-- a process's `comm`, `status`, or `cgroup` file disappears during scanning.
+- a process's `comm`, `status`, `stat`, or `cgroup` file disappears during scanning.
 
 `ENOENT`/`ESRCH` after a PID was enumerated is a normal proc race and is skipped. A holder that disappears while still present in the runtime snapshot produces a `partial` workspace and a warning. Other permission or parse failures are bounded warnings unless they prevent all namespace matching.
 
@@ -296,6 +311,7 @@ Manager-to-daemon transport failures remain a valid top-level unavailable respon
 | Manager response | `crates/sandbox-manager/src/management/service/impls/resource_metrics.rs` | Merge manager series with daemon topology instead of synthesizing unavailable |
 | Console contract | `web/console/src/api/observability.ts` | Replace delegated-cgroup types with process-topology types |
 | Console page | `web/console/src/pages/sandbox/observability/CgroupView.tsx` | Render workspace and process placement |
+| Console estimates | `web/console/src/pages/sandbox/observability/processEstimates.ts` | Sum current RSS and derive PID-reuse-safe CPU deltas between successful refreshes |
 | Console navigation | observability tab and shell route labels | Display Processes while preserving the route |
 | Browser fixtures | `web/console/tests/browser/P07ObservabilityFixture.spec.ts` | Migrate fixtures and state coverage to schema version 2 |
 
@@ -311,6 +327,7 @@ Page content:
 - existing auto-refresh control;
 - one card/section per workspace;
 - status badge (`active`, `idle`, or `partial`), process count, holder PID, and namespace diagnostics;
+- compact **RSS (estimated)** and **CPU (estimated)** values for each workspace;
 - process table with Name, PID, Namespace PID, State, Kind, and Cgroup membership;
 - optional cgroup membership displayed as monospace diagnostic text, not as hierarchy.
 
@@ -321,7 +338,7 @@ Empty and failure states:
 - partial workspace: keep visible data and show a non-blocking warning in that workspace.
 - top-level unavailable: show the actual proc/runtime/transport cause and retain auto-refresh.
 
-Remove CPU, memory, and child-cgroup columns from this topology panel. Sandbox resource charts remain on Resources; this view must not imply that `/proc` process sums provide authoritative lifetime accounting.
+Do not restore delegated child-cgroup hierarchy or resource columns. The compact workspace estimates are derived from the processes visible in two topology samples: RSS is the current sum and may double-count shared pages, while CPU is the cumulative-counter delta divided by the refresh interval and may miss processes that start and exit between samples. The first successful sample shows RSS and waits for a second sample before displaying CPU. Match CPU samples by `(pid, start_time_ticks)` and never carry estimates across sandboxes. Sandbox resource charts remain on Resources, and the UI must label these values as estimates rather than authoritative lifetime accounting.
 
 Responsive behavior:
 
@@ -337,6 +354,9 @@ Accessibility and stable test hooks:
 - page root: `data-process-topology="true"`;
 - workspace container: `data-workspace-id="<id>"`;
 - process row: `data-process-pid="<pid>"`.
+- workspace RSS estimate: `data-workspace-rss-estimate="true"`;
+- workspace CPU estimate: `data-workspace-cpu-estimate="true"`;
+- estimate limitations: `data-resource-estimate-note="true"`.
 
 ## Security and privacy
 
@@ -359,6 +379,8 @@ Use a fixture proc tree and deterministic namespace-stat abstraction to cover:
 - forked descendants remain assigned;
 - process exit races are skipped;
 - missing cgroup membership is non-fatal;
+- VmRSS and CPU/start parsing, including a `stat` process name containing `)`;
+- missing or racing `stat` omits estimates without hiding the process;
 - cgroup v1 and v2 membership lines are retained;
 - holder disappearance yields a partial workspace;
 - deterministic ordering and 512-row truncation.
@@ -384,6 +406,7 @@ Update browser fixtures and cover:
 - active, idle, partial, empty, and unavailable states;
 - cgroup membership with v1 multiple-line and v2 root values;
 - backend-started commands appearing on refresh;
+- immediate RSS aggregation, CPU deltas after two refreshes, and PID-reuse rejection;
 - responsive rendering and stable tab routing;
 - no legacy delegated-cgroup language.
 
@@ -409,4 +432,5 @@ No migration of stored sandbox state is required. Topology is generated from the
 - No topology code requires writable cgroups or `CAP_SYS_ADMIN` beyond capabilities already required for workspace creation.
 - The manager returns daemon topology instead of a hardcoded unavailable value.
 - The console no longer presents missing delegated cgroups as an availability failure.
+- The console labels current per-workspace RSS and CPU as estimates, waits for two samples before CPU, and states their shared-page and short-lived-process limitations.
 - Product tests and the linked live E2E suite pass.

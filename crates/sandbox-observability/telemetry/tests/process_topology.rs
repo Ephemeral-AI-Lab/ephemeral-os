@@ -198,6 +198,41 @@ fn process_exit_races_and_missing_cgroup_membership_are_nonfatal() {
 }
 
 #[test]
+fn process_resource_estimates_include_rss_cpu_and_start_identity() {
+    let root = fixture("resource-estimates");
+    let mut namespaces = FakeNamespaceReader::default();
+    namespaces.holder(&root, 55, 155, 255);
+    namespaces.process(&root, 551, 155, 255);
+    write_process_with_usage(&root, 551, 2, 55, "worker) name", 'R', 1_536, 25, 15, 900);
+
+    let topology = collect(&root, vec![workspace("workspace-a", 55)], &namespaces);
+
+    let process = &topology.workspaces[0].processes[0];
+    assert_eq!(process.resident_memory_bytes, Some(1_536 * 1_024));
+    assert!(process.cpu_time_us.is_some_and(|value| value > 0));
+    assert_eq!(process.start_time_ticks, Some(900));
+}
+
+#[test]
+fn missing_process_stat_omits_cpu_estimate_without_hiding_process() {
+    let root = fixture("missing-stat");
+    let mut namespaces = FakeNamespaceReader::default();
+    namespaces.holder(&root, 56, 156, 256);
+    namespaces.process(&root, 561, 156, 256);
+    write_process(&root, 561, 1, 56, "ns-init", 'S', None);
+    std::fs::remove_file(root.join("561/stat")).expect("remove stat fixture");
+
+    let topology = collect(&root, vec![workspace("workspace-a", 56)], &namespaces);
+
+    assert!(topology.available);
+    let process = &topology.workspaces[0].processes[0];
+    assert_eq!(process.pid, 561);
+    assert_eq!(process.resident_memory_bytes, Some(256 * 1_024));
+    assert_eq!(process.cpu_time_us, None);
+    assert_eq!(process.start_time_ticks, None);
+}
+
+#[test]
 fn missing_holder_is_partial_without_hiding_the_workspace() {
     let root = fixture("missing-holder");
 
@@ -266,17 +301,51 @@ fn write_process(
     state: char,
     cgroup: Option<&str>,
 ) {
+    write_process_with_usage(
+        root,
+        pid,
+        namespace_pid,
+        parent_pid,
+        name,
+        state,
+        256,
+        10,
+        5,
+        u64::from(pid) * 100,
+    );
+    if let Some(cgroup) = cgroup {
+        std::fs::write(root.join(pid.to_string()).join("cgroup"), cgroup).expect("cgroup");
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn write_process_with_usage(
+    root: &Path,
+    pid: u32,
+    namespace_pid: u32,
+    parent_pid: u32,
+    name: &str,
+    state: char,
+    resident_kibibytes: u64,
+    user_ticks: u64,
+    system_ticks: u64,
+    start_time_ticks: u64,
+) {
     let pid_root = root.join(pid.to_string());
     std::fs::create_dir_all(&pid_root).expect("proc pid directory");
     std::fs::write(
         pid_root.join("status"),
-        format!("Name:\t{name}\nState:\t{state} (state)\nPPid:\t{parent_pid}\nNSpid:\t{pid} {namespace_pid}\n"),
+        format!("Name:\t{name}\nState:\t{state} (state)\nPPid:\t{parent_pid}\nNSpid:\t{pid} {namespace_pid}\nVmRSS:\t{resident_kibibytes} kB\n"),
     )
     .expect("status");
     std::fs::write(pid_root.join("comm"), format!("{name}\n")).expect("comm");
-    if let Some(cgroup) = cgroup {
-        std::fs::write(pid_root.join("cgroup"), cgroup).expect("cgroup");
-    }
+    std::fs::write(
+        pid_root.join("stat"),
+        format!(
+            "{pid} ({name}) {state} {parent_pid} 0 0 0 0 0 0 0 0 0 {user_ticks} {system_ticks} 0 0 0 0 1 0 {start_time_ticks}\n"
+        ),
+    )
+    .expect("stat");
 }
 
 fn fixture(label: &str) -> PathBuf {
