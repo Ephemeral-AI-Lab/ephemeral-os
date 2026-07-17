@@ -277,6 +277,8 @@ async fn concrete_cgroup_operation_returns_series() -> TestResult {
 
     assert_eq!(response["view"], "cgroup");
     assert_eq!(response["scope"], "sandbox");
+    assert_eq!(response["topology"]["available"], false);
+    assert_eq!(response["topology"]["error"], "cgroup root unavailable");
     assert_eq!(response["series"].as_array().map(Vec::len), Some(1));
     assert_eq!(response["series"][0]["metrics"]["cgroup_available"], false);
     assert_eq!(

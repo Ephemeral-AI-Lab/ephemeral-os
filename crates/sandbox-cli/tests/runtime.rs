@@ -37,6 +37,8 @@ async fn help_lists_exact_runtime_catalog() {
             "file_write",
             "file_edit",
             "file_blame",
+            "create_workspace_session",
+            "destroy_workspace_session",
         ]
     );
     assert!(stdout
@@ -264,8 +266,6 @@ async fn runtime_rejects_other_set_and_internal_operations() {
         "snapshot",
         "squash_layerstack",
         "file_list",
-        "create_workspace_session",
-        "destroy_workspace_session",
     ] {
         let (code, stdout, stderr) =
             run(&["sandbox-runtime-cli", "--sandbox-id", "eos-x", operation]).await;

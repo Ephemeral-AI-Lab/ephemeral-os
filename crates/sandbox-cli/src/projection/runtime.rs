@@ -42,6 +42,16 @@ const FILE_EDIT_ARGUMENTS: &[ArgumentProjection] = &[
 
 const FILE_BLAME_ARGUMENTS: &[ArgumentProjection] = &[ArgumentProjection::flag("path", "--path")];
 
+const CREATE_WORKSPACE_SESSION_ARGUMENTS: &[ArgumentProjection] = &[ArgumentProjection::flag(
+    "network_profile",
+    "--network-profile",
+)];
+
+const DESTROY_WORKSPACE_SESSION_ARGUMENTS: &[ArgumentProjection] = &[
+    ArgumentProjection::flag("workspace_session_id", "--workspace-session-id"),
+    ArgumentProjection::flag("grace_s", "--grace-s"),
+];
+
 const OPERATIONS: &[OperationProjection] = &[
     OperationProjection {
         name: "exec_command",
@@ -109,6 +119,25 @@ const OPERATIONS: &[OperationProjection] = &[
         usage: "sandbox-runtime-cli --sandbox-id ID file_blame --path FILE",
         examples: &["sandbox-runtime-cli --sandbox-id ID file_blame --path README.md"],
         arguments: FILE_BLAME_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "create_workspace_session",
+        path: &["runtime", "create_workspace_session"],
+        usage: "sandbox-runtime-cli --sandbox-id ID create_workspace_session [--network-profile PROFILE]",
+        examples: &[
+            "sandbox-runtime-cli --sandbox-id ID create_workspace_session",
+            "sandbox-runtime-cli --sandbox-id ID create_workspace_session --network-profile isolated",
+        ],
+        arguments: CREATE_WORKSPACE_SESSION_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "destroy_workspace_session",
+        path: &["runtime", "destroy_workspace_session"],
+        usage: "sandbox-runtime-cli --sandbox-id ID destroy_workspace_session --workspace-session-id ID [--grace-s SECONDS]",
+        examples: &[
+            "sandbox-runtime-cli --sandbox-id ID destroy_workspace_session --workspace-session-id ws-1",
+        ],
+        arguments: DESTROY_WORKSPACE_SESSION_ARGUMENTS,
     },
 ];
 

@@ -7,6 +7,7 @@ import { MemoryRouter, Outlet, Route, Routes } from "react-router";
 import { EventsView } from "../../src/pages/sandbox/observability/EventsView";
 import { LayerStackView } from "../../src/pages/sandbox/observability/LayerStackView";
 import { ResourcesView } from "../../src/pages/sandbox/observability/ResourcesView";
+import { CgroupView } from "../../src/pages/sandbox/observability/CgroupView";
 import { TracesView } from "../../src/pages/sandbox/observability/TracesView";
 import { ephemeralosTheme } from "../../src/theme";
 import "@mantine/core/styles.css";
@@ -57,6 +58,7 @@ function Fixture() {
               <Route element={<SandboxContext />}>
                 <Route path="/events" element={<EventsView />} />
                 <Route path="/resources" element={<ResourcesView />} />
+                <Route path="/cgroup" element={<CgroupView />} />
                 <Route path="/traces" element={<TracesView />} />
                 <Route path="/traces/:traceId" element={<TracesView />} />
                 <Route path="/layers" element={<LayerStackView />} />

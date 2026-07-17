@@ -43,6 +43,7 @@ pub(crate) fn cgroup(
         "view": "cgroup",
         "scope": scope,
         "series": response::cgroup_series(&context.reader, &scope, window_ms),
+        "topology": input.cgroup_topology(),
     }))
 }
 

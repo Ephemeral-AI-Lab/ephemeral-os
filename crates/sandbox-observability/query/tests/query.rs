@@ -7,6 +7,7 @@ use sandbox_observability_query::ports::{
     QueryLimits, WorkspaceSnapshot,
 };
 use sandbox_observability_query::{dispatch_operation, observability_handler_keys};
+use sandbox_observability_telemetry::collect::cgroup::CgroupTopology;
 use sandbox_observability_telemetry::{LayerBytes, LayerStackBytes, Reader};
 use sandbox_operation_contract::{
     OperationRequest, OperationScope, OperationScopeKind, OperationVisibility,
@@ -24,6 +25,7 @@ struct FakeInput {
     bytes: LayerStackBytes,
     delta: Result<LayerDeltaDescription, String>,
     limits: QueryLimits,
+    topology: CgroupTopology,
     described_path: RefCell<Option<String>>,
     described_limit: Cell<Option<usize>>,
 }
@@ -49,6 +51,10 @@ impl Default for FakeInput {
                 layer_delta_default_limit: 500,
                 layer_delta_max_limit: 5_000,
             },
+            topology: CgroupTopology::unavailable(
+                std::path::Path::new("/missing-proc"),
+                "cgroup root unavailable",
+            ),
             described_path: RefCell::new(None),
             described_limit: Cell::new(None),
         }
@@ -68,6 +74,10 @@ impl ObservabilityInput for FakeInput {
 
     fn query_limits(&self) -> QueryLimits {
         self.limits
+    }
+
+    fn cgroup_topology(&self) -> CgroupTopology {
+        self.topology.clone()
     }
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot {
@@ -298,6 +308,8 @@ fn configured_queries_fold_cgroup_events_and_trace_records() {
     )
     .into_json_value();
     assert_eq!(cgroup["view"], "cgroup");
+    assert_eq!(cgroup["topology"]["available"], false);
+    assert_eq!(cgroup["topology"]["error"], "cgroup root unavailable");
     assert_eq!(cgroup["series"][1]["deltas"]["cpu_usec"], 600);
     assert!(cgroup["series"][1]["deltas"].get("mem_cur").is_none());
 

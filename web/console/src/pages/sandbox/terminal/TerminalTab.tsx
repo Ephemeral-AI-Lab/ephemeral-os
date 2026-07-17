@@ -160,6 +160,7 @@ export function TerminalTab() {
     <TranscriptPollProvider>
       <Flex data-terminal-workspace h="100%" mih={0} miw={0} style={{ flex: 1, overflow: "hidden" }}>
       <SessionSidebar
+        sandboxId={sandboxId}
         workspaces={workspaces}
         selected={selectedSession}
         narrow={narrow}

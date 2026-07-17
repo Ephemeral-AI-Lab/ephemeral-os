@@ -70,8 +70,6 @@ fn assert_projection_integrity(catalog: OperationCatalog, projection: CatalogPro
     }
 
     for internal in [
-        "create_workspace_session",
-        "destroy_workspace_session",
         "squash_layerstack",
         "export_layerstack",
         "read_export_chunk",

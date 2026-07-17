@@ -3,6 +3,7 @@ use sandbox_observability_query::ports::{
     NamespaceExecutionSnapshot, ObservabilityInput, ObservabilitySnapshot, QueryContext,
     QueryLimits, WorkspaceSnapshot,
 };
+use sandbox_observability_telemetry::collect::cgroup::CgroupTopology;
 use sandbox_observability_telemetry::{sample_layerstack, LayerStackBytes, WalkBudget};
 use sandbox_runtime::{
     LayerDeltaDescription, RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot,
@@ -15,6 +16,7 @@ pub(crate) struct DaemonObservabilityAdapter<'a> {
     state: (
         &'a SandboxRuntimeOperations,
         Option<&'a DaemonObservability>,
+        Option<&'a std::path::Path>,
     ),
 }
 
@@ -22,9 +24,10 @@ impl<'a> DaemonObservabilityAdapter<'a> {
     pub(crate) const fn new(
         operations: &'a SandboxRuntimeOperations,
         observability: Option<&'a DaemonObservability>,
+        cgroup_root: Option<&'a std::path::Path>,
     ) -> Self {
         Self {
-            state: (operations, observability),
+            state: (operations, observability, cgroup_root),
         }
     }
 
@@ -34,6 +37,10 @@ impl<'a> DaemonObservabilityAdapter<'a> {
 
     fn observability(&self) -> Option<&DaemonObservability> {
         self.state.1
+    }
+
+    fn cgroup_root(&self) -> Option<&std::path::Path> {
+        self.state.2
     }
 }
 
@@ -57,6 +64,18 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
             layer_delta_default_limit: views.layer_delta_default_limit,
             layer_delta_max_limit: views.layer_delta_max_limit,
         }
+    }
+
+    fn cgroup_topology(&self) -> CgroupTopology {
+        self.cgroup_root().map_or_else(
+            || {
+                CgroupTopology::unavailable(
+                    std::path::Path::new("/proc"),
+                    "cgroup root unavailable",
+                )
+            },
+            |root| CgroupTopology::read(root, std::path::Path::new("/proc")),
+        )
     }
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot {

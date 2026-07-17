@@ -2,9 +2,13 @@
 
 mod command;
 mod file;
+mod workspace_session;
 
 pub use command::{COMMAND_FAMILY, EXEC_COMMAND_SPEC, READ_LINES_SPEC, WRITE_STDIN_SPEC};
 pub use file::{FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_FAMILY, FILE_READ_SPEC, FILE_WRITE_SPEC};
+pub use workspace_session::{
+    CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC, WORKSPACE_SESSION_FAMILY,
+};
 
 use sandbox_operation_contract::{
     OperationCatalog, OperationDomain, OperationFamilySpec, OperationRouteSpec, OperationSpec,
@@ -44,13 +48,6 @@ const SHELL_SECURITY_FAMILY: OperationFamilySpec = OperationFamilySpec {
     description: "Runtime capability that enforces shell execution policy.",
 };
 
-const WORKSPACE_SESSION_FAMILY: OperationFamilySpec = OperationFamilySpec {
-    id: "workspace_session",
-    title: "Workspace session",
-    summary: "Workspace-session lifecycle capability.",
-    description: "Runtime capability that owns workspace-session lifecycle and finalization.",
-};
-
 const FAMILIES: &[&OperationFamilySpec] = &[
     &COMMAND_FAMILY,
     &FILE_FAMILY,
@@ -69,6 +66,8 @@ const OPERATIONS: &[&RoutedOperation] = &[
     &file::FILE_WRITE,
     &file::FILE_EDIT,
     &file::FILE_BLAME,
+    &workspace_session::CREATE_WORKSPACE_SESSION,
+    &workspace_session::DESTROY_WORKSPACE_SESSION,
 ];
 
 const SPECS: [&OperationSpec; OPERATIONS.len()] = routed::specs(OPERATIONS);

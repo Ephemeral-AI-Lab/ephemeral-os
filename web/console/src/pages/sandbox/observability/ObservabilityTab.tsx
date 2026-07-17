@@ -4,13 +4,14 @@ import { useSandbox } from "@/pages/sandbox/SandboxContext";
 
 const VIEWS = [
   { path: "resources", label: "Resources" },
+  { path: "cgroup", label: "Cgroups" },
   { path: "traces", label: "Traces" },
   { path: "events", label: "Events" },
   { path: "layerstack", label: "Layers" },
 ];
 
 /**
- * Observability sub-navigation mirrors the observability catalog's four
+ * Observability sub-navigation mirrors the observability catalog's
  * per-sandbox views. Bare `/observability` redirects to `resources` in the
  * route tree, and all tabs retain directly addressable paths.
  */

@@ -6,31 +6,27 @@ use crate::workspace_session::{
     CreateSessionRequest, FinalizePolicy, WorkspaceSessionError, WorkspaceSessionHandler,
 };
 use crate::SandboxRuntimeOperations;
-use sandbox_operation_catalog::internal::runtime::{
-    CREATE_WORKSPACE_SESSION, DESTROY_WORKSPACE_SESSION,
+use sandbox_operation_catalog::runtime::{
+    CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC,
 };
-use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScopeKind};
+use sandbox_operation_contract::{OperationRequest, OperationResponse};
 
-const CREATE_WORKSPACE_SESSION_ENTRY: OperationEntry = OperationEntry {
-    scope_kind: OperationScopeKind::Sandbox,
-    name: CREATE_WORKSPACE_SESSION,
-    spec: None,
-    dispatch: dispatch_create_workspace_session,
-};
-const DESTROY_WORKSPACE_SESSION_ENTRY: OperationEntry = OperationEntry {
-    scope_kind: OperationScopeKind::Sandbox,
-    name: DESTROY_WORKSPACE_SESSION,
-    spec: None,
-    dispatch: dispatch_destroy_workspace_session,
-};
+const CREATE_WORKSPACE_SESSION_ENTRY: OperationEntry = OperationEntry::public(
+    &CREATE_WORKSPACE_SESSION_SPEC,
+    dispatch_create_workspace_session,
+);
+const DESTROY_WORKSPACE_SESSION_ENTRY: OperationEntry = OperationEntry::public(
+    &DESTROY_WORKSPACE_SESSION_SPEC,
+    dispatch_destroy_workspace_session,
+);
 
-const INTERNAL_OPERATIONS: &[OperationEntry] = &[
+const PUBLIC_OPERATIONS: &[OperationEntry] = &[
     CREATE_WORKSPACE_SESSION_ENTRY,
     DESTROY_WORKSPACE_SESSION_ENTRY,
 ];
 
-pub(crate) const fn internal_operation_entries() -> &'static [OperationEntry] {
-    INTERNAL_OPERATIONS
+pub(crate) const fn public_operation_entries() -> &'static [OperationEntry] {
+    PUBLIC_OPERATIONS
 }
 
 fn dispatch_create_workspace_session(

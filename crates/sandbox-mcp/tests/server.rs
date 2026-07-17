@@ -244,6 +244,8 @@ fn expected_names(set: OperationSet) -> &'static [&'static str] {
             "file_write",
             "file_edit",
             "file_blame",
+            "create_workspace_session",
+            "destroy_workspace_session",
         ],
         OperationSet::Observability => &["snapshot", "trace", "events", "cgroup", "layerstack"],
     }
@@ -412,8 +414,6 @@ fn lifecycle_and_tools_list_match_all_three_catalogs() {
 
         for hidden in [
             "file_list",
-            "create_workspace_session",
-            "destroy_workspace_session",
             "squash_layerstack",
             "export_layerstack",
             "read_export_chunk",
@@ -525,6 +525,16 @@ fn mcp_requests_match_the_shared_builder() {
             OperationSet::Runtime,
             "exec_command",
             json!({"sandbox_id": "sbox-runtime", "cmd": "pwd"}),
+        ),
+        (
+            OperationSet::Runtime,
+            "create_workspace_session",
+            json!({"sandbox_id": "sbox-runtime", "network_profile": "isolated"}),
+        ),
+        (
+            OperationSet::Runtime,
+            "destroy_workspace_session",
+            json!({"sandbox_id": "sbox-runtime", "workspace_session_id": "workspace-1"}),
         ),
         (
             OperationSet::Observability,
@@ -689,13 +699,13 @@ fn invalid_and_hidden_calls_fail_before_gateway_dispatch() {
         ),
         (
             "create_workspace_session",
-            json!({"sandbox_id": "sbox"}),
-            "unknown operation: create_workspace_session",
+            json!({"sandbox_id": "sbox", "network_profile": 7}),
+            "network_profile must be a string",
         ),
         (
             "destroy_workspace_session",
             json!({"sandbox_id": "sbox"}),
-            "unknown operation: destroy_workspace_session",
+            "workspace_session_id is required for destroy_workspace_session",
         ),
         (
             "create_sandbox",

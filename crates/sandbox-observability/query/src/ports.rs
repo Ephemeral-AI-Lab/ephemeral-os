@@ -1,3 +1,4 @@
+use sandbox_observability_telemetry::collect::cgroup::CgroupTopology;
 use sandbox_observability_telemetry::{LayerStackBytes, Reader};
 use sandbox_runtime_layerstack::service::StackObservation;
 use sandbox_runtime_layerstack::LayerDeltaDescription;
@@ -45,6 +46,8 @@ pub trait ObservabilityInput {
     fn query_context(&self) -> Option<QueryContext>;
 
     fn query_limits(&self) -> QueryLimits;
+
+    fn cgroup_topology(&self) -> CgroupTopology;
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot;
 

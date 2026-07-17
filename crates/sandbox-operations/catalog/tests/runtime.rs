@@ -38,6 +38,8 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
             "file_write",
             "file_edit",
             "file_blame",
+            "create_workspace_session",
+            "destroy_workspace_session",
         ]
     );
     let edits = catalog
@@ -59,6 +61,19 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
         .and_then(|args| args.iter().find(|arg| arg["name"] == "edits"))
         .expect("encoded edits argument");
     assert_eq!(encoded_edits["kind"], "json_array");
+
+    let network_profile = catalog
+        .operations
+        .iter()
+        .find(|operation| operation.name == "create_workspace_session")
+        .and_then(|operation| {
+            operation
+                .args
+                .iter()
+                .find(|arg| arg.name == "network_profile")
+        })
+        .expect("create_workspace_session network_profile argument");
+    assert_eq!(network_profile.default, Some("shared"));
 }
 
 #[test]
@@ -66,8 +81,6 @@ fn internal_runtime_operations_do_not_leak_into_the_public_catalog() {
     let encoded = catalog_to_value(runtime_catalog()).to_string();
 
     for internal in [
-        "create_workspace_session",
-        "destroy_workspace_session",
         "file_list",
         "squash_layerstack",
         "export_layerstack",

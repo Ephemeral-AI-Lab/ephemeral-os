@@ -56,6 +56,13 @@ export interface CommandOutput {
 export interface WorkspaceSessionCreated {
   workspace_session_id: string;
   network_profile: "shared" | "isolated";
+  finalize_policy: "no_op";
+}
+
+export interface WorkspaceSessionDestroyed {
+  workspace_session_id: string;
+  destroyed: true;
+  evicted_upperdir_bytes: number;
 }
 
 export interface HealthProbe {

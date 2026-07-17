@@ -23,6 +23,7 @@ const TAB_LABELS: Record<string, string> = {
 
 const OBSERVABILITY_LABELS: Record<string, string> = {
   resources: "Resources",
+  cgroup: "Cgroups",
   traces: "Traces",
   events: "Events",
   layerstack: "Layers",
@@ -49,7 +50,7 @@ function crumbs(pathname: string): Crumb[] {
     { label: decodePathSegment(parts[1]), to: sandboxPath },
   ];
   const tab = parts[2];
-  if (!tab) return [...result, { label: "Overview" }];
+  if (!tab) return [...result, { label: "Terminal" }];
   if (TAB_LABELS[tab]) result.push({ label: TAB_LABELS[tab] });
   if (tab === "observability" && parts[3] && OBSERVABILITY_LABELS[parts[3]]) {
     result.push({ label: OBSERVABILITY_LABELS[parts[3]] });
@@ -75,11 +76,11 @@ function navigationItems(pathname: string): NavigationItem[] {
 
   return [
     fleet,
-    item("Overview"),
     item("Terminal", "terminal"),
     item("Files", "files"),
     item("Observability", "observability"),
     item("Resources", "observability/resources", true),
+    item("Cgroups", "observability/cgroup", true),
     item("Traces", "observability/traces", true),
     item("Events", "observability/events", true),
     item("Layers", "observability/layerstack", true),

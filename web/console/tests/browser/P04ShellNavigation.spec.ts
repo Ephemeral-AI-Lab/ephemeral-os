@@ -34,6 +34,17 @@ test("P04 canonicalizes the legacy Layers deep link without losing search or has
   await expect(page.getByRole("tab", { name: "Layers" })).toHaveAttribute("aria-selected", "true");
 });
 
+test("P04 redirects the sandbox root to Terminal", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openAtlas(page, `/sandboxes/${SANDBOX_ID}`);
+
+  await expect(page.getByText("No commands yet")).toBeVisible();
+  await expect(page.locator("[data-atlas-location]")).toHaveText(
+    `/sandboxes/${SANDBOX_ID}/terminal`,
+  );
+  await expect(page.getByRole("tab", { name: "Terminal" })).toHaveAttribute("aria-selected", "true");
+});
+
 test("P04 supports skip focus, scoped tabs, and bounded route scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await openAtlas(page, `/sandboxes/${SANDBOX_ID}/observability/layerstack`);

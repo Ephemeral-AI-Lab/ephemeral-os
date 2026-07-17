@@ -28,6 +28,52 @@ const samples = Array.from({ length: 16 }, (_, index) => ({
   deltas: { cpu_usec: 10_000 + index * 500, io_rbytes: 500 + index * 10, io_wbytes: 200 + index * 5 },
 }));
 
+const topology = {
+  available: true,
+  root: "/sys/fs/cgroup",
+  self_cgroup: "0::/_daemon",
+  error: null,
+  controllers: ["cpu", "io", "memory", "pids"],
+  groups: [
+    {
+      path: "/",
+      role: "root",
+      cpu_usage_usec: 9_128_300,
+      memory_current_bytes: 62_914_560,
+      memory_max_bytes: 536_870_912,
+      memory_max_unlimited: false,
+      error: null,
+      processes: [{ pid: 1, name: "init", membership: "0::/" }],
+    },
+    {
+      path: "/_daemon",
+      role: "daemon",
+      cpu_usage_usec: 2_184_100,
+      memory_current_bytes: 27_262_976,
+      memory_max_bytes: 536_870_912,
+      memory_max_unlimited: false,
+      error: null,
+      processes: [
+        { pid: 19, name: "sandboxd", membership: "0::/_daemon" },
+        { pid: 32, name: "namespace-holder", membership: "0::/_daemon" },
+      ],
+    },
+    {
+      path: "/workspace-workspace-fixture",
+      role: "workspace",
+      cpu_usage_usec: 6_944_200,
+      memory_current_bytes: 35_651_584,
+      memory_max_bytes: 268_435_456,
+      memory_max_unlimited: false,
+      error: null,
+      processes: [
+        { pid: 201, name: "ns-runner", membership: "0::/workspace-workspace-fixture" },
+        { pid: 233, name: "bash", membership: "0::/workspace-workspace-fixture" },
+      ],
+    },
+  ],
+};
+
 function traceFor(fixtureEvents: typeof events) {
   return {
   view: "trace",
@@ -56,7 +102,11 @@ function traceFor(fixtureEvents: typeof events) {
 
 const trace = traceFor(events);
 
-async function installObservabilityApi(page: Page, eventCount = 2_000): Promise<FixtureApi> {
+async function installObservabilityApi(
+  page: Page,
+  eventCount = 2_000,
+  includeTopology = false,
+): Promise<FixtureApi> {
   const fixtureEvents = eventCount === 2_000 ? events : makeEvents(eventCount);
   const fixtureTrace = eventCount === 2_000 ? trace : traceFor(fixtureEvents);
   let eventsFail = false;
@@ -77,7 +127,15 @@ async function installObservabilityApi(page: Page, eventCount = 2_000): Promise<
       return;
     }
     if (op === "cgroup") {
-      await route.fulfill({ contentType: "application/json", body: JSON.stringify({ view: "cgroup", scope: String(args.scope ?? "sandbox"), series: samples }) });
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          view: "cgroup",
+          scope: String(args.scope ?? "sandbox"),
+          series: samples,
+          ...(includeTopology ? { topology } : {}),
+        }),
+      });
       return;
     }
     if (op === "layerstack") {
@@ -110,13 +168,19 @@ async function installObservabilityApi(page: Page, eventCount = 2_000): Promise<
   return { eventCalls: () => eventsCalls, failEvents: () => { eventsFail = true; } };
 }
 
-async function openView(page: Page, view: "events" | "resources" | "traces" | "layers", eventCount = 2_000) {
-  const api = await installObservabilityApi(page, eventCount);
+async function openView(
+  page: Page,
+  view: "events" | "resources" | "cgroup" | "traces" | "layers",
+  eventCount = 2_000,
+  includeTopology = false,
+) {
+  const api = await installObservabilityApi(page, eventCount, includeTopology || view === "cgroup");
   await page.clock.setFixedTime(NOW);
   await page.goto(`/p07-observability.html?view=${view}`);
   const ready = {
     events: `event-${String(eventCount - 1).padStart(4, "0")}`,
     resources: "CPU (Δ cpu_usec / s)",
+    cgroup: "Cgroup topology",
     traces: "fixture.root",
     layers: "fixture-layer-2",
   }[view];
@@ -130,7 +194,7 @@ for (const [width, height] of [
   [1024, 768],
   [1440, 900],
 ] as const) {
-  for (const view of ["events", "resources", "traces", "layers"] as const) {
+  for (const view of ["events", "resources", "cgroup", "traces", "layers"] as const) {
     test(`P07 ${view} Mantine surface at ${width}x${height} @visual`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await openView(page, view);
@@ -253,6 +317,18 @@ test("P07 resource charts retain accessible summaries through a resize", async (
   await expect(page.locator("[data-resources-view] canvas")).toHaveCount(4);
 });
 
+test("P07 cgroup view shows process placement reported by the daemon", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await openView(page, "cgroup");
+  await expect(page.locator("[data-cgroup-topology]")).toContainText("Cgroup topology");
+  await expect(page.locator('[data-cgroup-path="/_daemon"]')).toContainText(
+    "19 · sandboxd · 0::/_daemon",
+  );
+  await expect(page.locator('[data-cgroup-path="/workspace-workspace-fixture"]')).toContainText(
+    "201 · ns-runner · 0::/workspace-workspace-fixture",
+  );
+});
+
 test("P12 keeps uPlot chart resize repainting below the input-to-paint budget", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openView(page, "resources");
@@ -273,7 +349,7 @@ test("P07 layers makes the backend's first-500 limit explicit", async ({ page })
   await expect(page.locator('[data-layer-row="fixture-layer-1"]')).toHaveAttribute("aria-pressed", "true");
 });
 
-for (const view of ["events", "resources", "traces", "layers"] as const) {
+for (const view of ["events", "resources", "cgroup", "traces", "layers"] as const) {
   test(`P07 ${view} has no Axe violations @a11y`, async ({ page }) => {
     await openView(page, view);
     expect((await new AxeBuilder({ page }).disableRules("page-has-heading-one").analyze()).violations).toEqual([]);

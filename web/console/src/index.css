@@ -231,16 +231,6 @@ body {
   overflow: auto;
 }
 
-[data-overview-record-fields] {
-  display: grid;
-  gap: var(--mantine-spacing-xs) var(--mantine-spacing-md);
-  grid-template-columns: auto minmax(0, 1fr);
-}
-
-[data-overview-resource-workspace] {
-  border-top: 1px solid var(--mantine-color-neutral-3);
-}
-
 @media (min-width: 48em) {
   [data-fleet-card],
   [data-fleet-creation-card] {

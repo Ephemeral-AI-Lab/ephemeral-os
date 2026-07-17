@@ -3,6 +3,9 @@ import { expect, test, type Page } from "@playwright/test";
 import { measureFromTimestampToPaintP95 } from "./performance";
 
 type TerminalApi = {
+  createdProfiles: string[];
+  destroyedSessions: string[];
+  execArgs: Record<string, unknown>[];
   stdinWrites: string[];
   readCalls: number;
   failedReadCalls: number;
@@ -31,6 +34,9 @@ async function installTerminalApi(page: Page, failInitially = false): Promise<Te
   let readCalls = 0;
   let failedReadCalls = 0;
   const stdinWrites: string[] = [];
+  const createdProfiles: string[] = [];
+  const destroyedSessions: string[] = [];
+  const execArgs: Record<string, unknown>[] = [];
 
   await page.route("**/api/rpc", async (route) => {
     const { op, args } = route.request().postDataJSON() as {
@@ -80,6 +86,7 @@ async function installTerminalApi(page: Page, failInitially = false): Promise<Te
     }
 
     if (op === "exec_command") {
+      execArgs.push(args);
       await route.fulfill({
         contentType: "application/json",
         body: JSON.stringify({
@@ -99,6 +106,32 @@ async function installTerminalApi(page: Page, failInitially = false): Promise<Te
       return;
     }
 
+    if (op === "create_workspace_session") {
+      createdProfiles.push(String(args.network_profile ?? "shared"));
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          workspace_session_id: "workspace-created",
+          network_profile: args.network_profile ?? "shared",
+          finalize_policy: "no_op",
+        }),
+      });
+      return;
+    }
+
+    if (op === "destroy_workspace_session") {
+      destroyedSessions.push(String(args.workspace_session_id ?? ""));
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          workspace_session_id: args.workspace_session_id,
+          destroyed: true,
+          evicted_upperdir_bytes: 4096,
+        }),
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 400,
       contentType: "application/json",
@@ -107,6 +140,9 @@ async function installTerminalApi(page: Page, failInitially = false): Promise<Te
   });
 
   return {
+    createdProfiles,
+    destroyedSessions,
+    execArgs,
     stdinWrites,
     get readCalls() {
       return readCalls;
@@ -140,7 +176,7 @@ for (const [width, height] of [
     if (width < 768) {
       await expect(page.locator("[data-terminal-session-rail]")).toHaveCount(0);
       await page.getByRole("button", { name: "Open sessions" }).click();
-      await expect(page.getByRole("dialog", { name: "Session history" })).toBeVisible();
+      await expect(page.getByRole("dialog", { name: "Workspace sessions" })).toBeVisible();
     } else {
       await expect(page.locator("[data-terminal-session-rail]")).toBeVisible();
     }
@@ -156,18 +192,65 @@ test("P06 separates history filtering from execution targeting and blocks invali
   await openTerminal(page);
 
   await page.getByRole("button", { name: "Open sessions" }).click();
-  const drawer = page.getByRole("dialog", { name: "Session history" });
+  const drawer = page.getByRole("dialog", { name: "Workspace sessions" });
   await drawer.getByText("workspace-beta", { exact: true }).click();
   await expect(drawer).toBeHidden();
   await expect(page.locator("[data-terminal-command]")).toHaveCount(1);
-  await expect(page.getByRole("combobox", { name: "Execution target" })).toHaveValue("auto-publish");
+  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText("Automatic");
 
+  await page.getByRole("button", { name: "Command options" }).click();
   const timeout = page.getByLabel("Timeout in seconds");
   await timeout.fill("0");
   await expect(page.getByText("Enter a positive timeout.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Run" })).toBeDisabled();
   await page.getByRole("textbox", { name: "Command" }).focus();
   await expect(page).toHaveScreenshot("p06-terminal-invalid-timeout-375x812.png", { animations: "disabled" });
+});
+
+test("P06 creates and safely destroys explicit workspace sessions", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const api = await openTerminal(page);
+
+  await page.getByRole("button", { name: "Workspace session" }).click();
+  await page.getByText("Create isolated session", { exact: true }).click();
+  await expect.poll(() => api.createdProfiles).toEqual(["isolated"]);
+  await expect(page.getByText("Workspace session created")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText("workspace-created");
+  await expect(page.getByText("history: all commands")).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Command" }).fill("pwd");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect.poll(() => api.execArgs.at(-1)?.workspace_session_id).toBe("workspace-created");
+
+    const sessionRail = page.locator("[data-terminal-session-rail]");
+    await sessionRail.getByText("workspace-alpha", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "Destroy session" })).toBeDisabled();
+  await expect(page.getByText("Stop the active command first.")).toBeVisible();
+
+    await sessionRail.getByText("workspace-beta", { exact: true }).click();
+  await page.getByRole("button", { name: "Destroy session" }).click();
+  const destroyDialog = page.getByRole("dialog", { name: "Destroy workspace session" });
+  const confirm = destroyDialog.getByLabel("Type the workspace session ID to confirm");
+  await expect(destroyDialog.getByRole("button", { name: "Destroy session" })).toBeDisabled();
+  await confirm.fill("workspace-beta");
+  await destroyDialog.getByRole("button", { name: "Destroy session" }).click();
+  await expect.poll(() => api.destroyedSessions).toEqual(["workspace-beta"]);
+  await expect(page.getByText("Workspace session destroyed")).toBeVisible();
+  await expect(page.getByText("history: all commands")).toBeVisible();
+});
+
+test("P06 automatic execution omits the workspace session id", async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  const api = await openTerminal(page);
+
+  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText(
+    "Automatic · shared · auto-publish",
+  );
+  await page.getByRole("textbox", { name: "Command" }).fill("pwd");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect.poll(() => api.execArgs).toHaveLength(1);
+  expect(api.execArgs[0]).toMatchObject({ cmd: "pwd", yield_time_ms: 0 });
+  expect(api.execArgs[0]).not.toHaveProperty("workspace_session_id");
 });
 
 test("P06 keeps stale transcript output, authoritative publish rejection, and one control write visible @visual", async ({ page }) => {

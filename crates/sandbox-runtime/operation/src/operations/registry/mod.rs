@@ -7,10 +7,10 @@ use super::dispatch::OperationEntry;
 const PUBLIC_OPERATION_ENTRY_GROUPS: &[&[OperationEntry]] = &[
     command_operations::public_operation_entries(),
     file_operations::public_operation_entries(),
+    workspace_session_operations::public_operation_entries(),
 ];
 
 const INTERNAL_OPERATION_ENTRY_GROUPS: &[&[OperationEntry]] = &[
-    workspace_session_operations::internal_operation_entries(),
     crate::layerstack::squash_operation_entries(),
     crate::layerstack::export_operation_entries(),
 ];

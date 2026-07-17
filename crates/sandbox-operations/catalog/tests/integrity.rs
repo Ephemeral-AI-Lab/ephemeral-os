@@ -37,8 +37,8 @@ fn public_catalogs_are_route_complete() {
         );
     }
 
-    assert_eq!(operation_count, 20);
-    assert_eq!(routes::public_routes().count(), 21);
+    assert_eq!(operation_count, 22);
+    assert_eq!(routes::public_routes().count(), 23);
 }
 
 #[test]
@@ -173,6 +173,20 @@ fn public_route_manifest_is_exact_and_policy_consistent() {
                 OperationVisibility::Public
             ),
             (
+                "create_workspace_session",
+                OperationScopePolicy::SandboxRequired,
+                OperationScopeKind::Sandbox,
+                OperationExecutionOwner::Runtime,
+                OperationVisibility::Public
+            ),
+            (
+                "destroy_workspace_session",
+                OperationScopePolicy::SandboxRequired,
+                OperationScopeKind::Sandbox,
+                OperationExecutionOwner::Runtime,
+                OperationVisibility::Public
+            ),
+            (
                 "snapshot",
                 OperationScopePolicy::SystemOrSandbox,
                 OperationScopeKind::System,
@@ -256,8 +270,6 @@ fn internal_route_sets_are_exact() {
             ))
             .collect::<Vec<_>>(),
         [
-            internal_runtime_route("create_workspace_session"),
-            internal_runtime_route("destroy_workspace_session"),
             internal_runtime_route("squash_layerstack"),
             internal_runtime_route("export_layerstack"),
             internal_runtime_route("read_export_chunk"),

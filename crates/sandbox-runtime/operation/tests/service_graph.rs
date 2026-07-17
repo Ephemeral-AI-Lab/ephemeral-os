@@ -214,6 +214,8 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
             "file_write",
             "file_edit",
             "file_blame",
+            "create_workspace_session",
+            "destroy_workspace_session",
         ]
     );
 }
@@ -232,7 +234,10 @@ fn service_graph_catalog_contains_the_public_operation_families() {
         .map(|spec| spec.family)
         .collect::<BTreeSet<_>>();
 
-    assert_eq!(used_families, BTreeSet::from(["command", "file"]));
+    assert_eq!(
+        used_families,
+        BTreeSet::from(["command", "file", "workspace_session"])
+    );
     assert!(used_families.is_subset(&families));
     assert!(catalog
         .operations
@@ -261,8 +266,6 @@ fn service_graph_catalog_keeps_internal_helpers_out() {
         "status_lookup",
         "finalize_command",
         "file_list",
-        "create_workspace_session",
-        "destroy_workspace_session",
     ] {
         assert!(!names.contains(&helper), "{helper} leaked into catalog");
     }
@@ -291,7 +294,7 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
     let adapter = include_str!("../src/operations/registry/workspace_session_operations.rs");
     assert!(adapter.contains(".create_workspace_session("));
     assert!(adapter.contains(".guarded_destroy("));
-    assert_eq!(adapter.matches("spec: None").count(), 2);
+    assert_eq!(adapter.matches("OperationEntry::public").count(), 2);
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 

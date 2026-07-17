@@ -73,6 +73,33 @@ export interface CgroupSeries {
   view: "cgroup";
   scope: string;
   series: ResourceSample[];
+  topology?: CgroupTopology;
+}
+
+export interface CgroupTopology {
+  available: boolean;
+  root: string | null;
+  self_cgroup: string | null;
+  error: string | null;
+  controllers: string[];
+  groups: CgroupGroup[];
+}
+
+export interface CgroupGroup {
+  path: string;
+  role: "root" | "daemon" | "workspace" | "other";
+  cpu_usage_usec: number | null;
+  memory_current_bytes: number | null;
+  memory_max_bytes: number | null;
+  memory_max_unlimited: boolean | null;
+  error: string | null;
+  processes: CgroupProcess[];
+}
+
+export interface CgroupProcess {
+  pid: number;
+  name: string;
+  membership: string | null;
 }
 
 export function fetchCgroup(

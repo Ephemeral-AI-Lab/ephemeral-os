@@ -1,20 +1,24 @@
-import { useRef, useState } from "react";
-import { Play } from "lucide-react";
-import { Box, Button, Group, Paper, Select, TextInput } from "@mantine/core";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Play, SlidersHorizontal } from "lucide-react";
+import { Box, Button, Group, Paper, Popover, TextInput } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { rpc, sandboxScope } from "@/api/rpc";
-import type { CommandOutput } from "@/api/types";
+import type { CommandOutput, WorkspaceSessionCreated } from "@/api/types";
 import type { WorkspaceSnapshot } from "@/api/observability";
 import { useErrorToast } from "@/components/ErrorToast";
-
-const AUTO_PUBLISH = "__auto_publish__";
+import {
+  SessionTargetPicker,
+  type CreatedSessionTarget,
+  type NetworkProfile,
+} from "@/pages/sandbox/terminal/SessionTargetPicker";
 
 /**
  * The prompt line. Fires exec_command with `yield_time_ms: 0` — an
  * agent-tool affordance a polling browser never needs, so it is pinned and
- * hidden. `timeout_ms` is semantic and stays user-visible, but optional:
- * an empty timeout omits the argument entirely (never 0). The "implicit"
- * target creates a one-shot session that captures and publishes on
- * completion, labelled auto-publish.
+ * hidden. An empty timeout omits `timeout_ms` entirely. The automatic target
+ * omits `workspace_session_id`, creating the runtime's shared auto-publishing
+ * session.
  */
 export function CommandComposer({
   sandboxId,
@@ -26,10 +30,14 @@ export function CommandComposer({
   onLaunched: (cmd: string, workspaceSessionId: string | null, output: CommandOutput) => void;
 }) {
   const [cmd, setCmd] = useState("");
-  const [target, setTarget] = useState<string>(AUTO_PUBLISH);
+  const [workspaceSessionId, setWorkspaceSessionId] = useState<string | null>(null);
+  const [createdSession, setCreatedSession] = useState<CreatedSessionTarget | null>(null);
+  const [createBusy, setCreateBusy] = useState(false);
   const [timeoutSeconds, setTimeoutSeconds] = useState("");
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
   const { showError } = useErrorToast();
 
   const timeout = timeoutSeconds.trim();
@@ -37,10 +45,53 @@ export function CommandComposer({
     ? "Enter a positive timeout."
     : null;
 
+  useEffect(() => {
+    if (
+      createdSession &&
+      workspaces.some((workspace) => workspace.workspace_id === createdSession.workspaceSessionId)
+    ) {
+      setCreatedSession(null);
+    }
+    if (
+      workspaceSessionId &&
+      createdSession?.workspaceSessionId !== workspaceSessionId &&
+      !workspaces.some((workspace) => workspace.workspace_id === workspaceSessionId)
+    ) {
+      setWorkspaceSessionId(null);
+    }
+  }, [createdSession, workspaceSessionId, workspaces]);
+
+  const createSession = async (networkProfile: NetworkProfile) => {
+    if (createBusy) return;
+    setCreateBusy(true);
+    try {
+      const output = await rpc<WorkspaceSessionCreated>(
+        "create_workspace_session",
+        sandboxScope(sandboxId),
+        { network_profile: networkProfile },
+      );
+      const target = {
+        workspaceSessionId: output.workspace_session_id,
+        networkProfile: output.network_profile,
+      };
+      setCreatedSession(target);
+      setWorkspaceSessionId(target.workspaceSessionId);
+      void queryClient.invalidateQueries({ queryKey: ["sandbox", sandboxId, "snapshot"] });
+      notifications.show({
+        color: "success",
+        title: "Workspace session created",
+        message: `${target.workspaceSessionId} · ${target.networkProfile}`,
+      });
+    } catch (error) {
+      showError(error);
+    } finally {
+      setCreateBusy(false);
+    }
+  };
+
   const submit = async () => {
     const text = cmd.trim();
     if (text === "" || busy || timeoutError) return;
-    const workspaceSessionId = target === AUTO_PUBLISH ? null : target;
     const args: Record<string, unknown> = { cmd: text, yield_time_ms: 0 };
     if (workspaceSessionId) args["workspace_session_id"] = workspaceSessionId;
     if (timeout !== "") {
@@ -89,31 +140,43 @@ export function CommandComposer({
             autoFocus
           />
         </Box>
-        <Select
-          aria-label="Execution target"
-          label="Execution target"
-          value={target}
-          w={{ base: "100%", sm: 224 }}
-          onChange={(value) => setTarget(value ?? AUTO_PUBLISH)}
-          data={[
-            { value: AUTO_PUBLISH, label: "auto-publish" },
-            ...workspaces.map((workspace) => ({
-              value: workspace.workspace_id,
-              label: `${workspace.workspace_id} (${workspace.network_profile})`,
-            })),
-          ]}
-        />
-        <TextInput
-          aria-label="Timeout in seconds"
-          error={timeoutError}
-          inputMode="numeric"
-          label="Timeout (seconds)"
-          placeholder="none"
-          value={timeoutSeconds}
-          w={{ base: "100%", sm: 132 }}
-          onChange={(event) => setTimeoutSeconds(event.target.value)}
-          styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
-        />
+        <Box style={{ flex: "0 1 20rem" }} w={{ base: "100%", sm: 320 }}>
+          <SessionTargetPicker
+            createdSession={createdSession}
+            creating={createBusy}
+            value={workspaceSessionId}
+            workspaces={workspaces}
+            onChange={setWorkspaceSessionId}
+            onCreate={(networkProfile) => void createSession(networkProfile)}
+          />
+        </Box>
+        <Popover opened={optionsOpen} onChange={setOptionsOpen} position="top-end" width={248} withArrow>
+          <Popover.Target>
+            <Button
+              aria-label={timeout === "" ? "Command options" : `Command options, timeout ${timeout} seconds`}
+              color={timeoutError ? "danger" : undefined}
+              leftSection={<SlidersHorizontal size={13} />}
+              type="button"
+              variant="default"
+              onClick={() => setOptionsOpen((opened) => !opened)}
+            >
+              {timeout === "" ? "Options" : `Timeout ${timeout}s`}
+            </Button>
+          </Popover.Target>
+          <Popover.Dropdown>
+            <TextInput
+              aria-label="Timeout in seconds"
+              description="Leave empty to use the runtime default."
+              error={timeoutError}
+              inputMode="numeric"
+              label="Timeout (seconds)"
+              placeholder="No timeout"
+              value={timeoutSeconds}
+              onChange={(event) => setTimeoutSeconds(event.target.value)}
+              styles={{ input: { fontFamily: "var(--mantine-font-family-monospace)" } }}
+            />
+          </Popover.Dropdown>
+        </Popover>
         <Button
           type="submit"
           variant="filled"

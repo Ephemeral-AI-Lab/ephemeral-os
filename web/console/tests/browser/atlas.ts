@@ -59,6 +59,46 @@ const snapshot = {
   ],
 };
 
+const topology = {
+  available: true,
+  root: "/sys/fs/cgroup",
+  self_cgroup: "0::/_daemon",
+  error: null,
+  controllers: ["cpu", "io", "memory", "pids"],
+  groups: [
+    {
+      path: "/",
+      role: "root",
+      cpu_usage_usec: 9_128_300,
+      memory_current_bytes: 62_914_560,
+      memory_max_bytes: 536_870_912,
+      memory_max_unlimited: false,
+      error: null,
+      processes: [{ pid: 1, name: "init", membership: "0::/" }],
+    },
+    {
+      path: "/_daemon",
+      role: "daemon",
+      cpu_usage_usec: 2_184_100,
+      memory_current_bytes: 27_262_976,
+      memory_max_bytes: 536_870_912,
+      memory_max_unlimited: false,
+      error: null,
+      processes: [{ pid: 19, name: "sandboxd", membership: "0::/_daemon" }],
+    },
+    {
+      path: "/workspace-workspace-fixture",
+      role: "workspace",
+      cpu_usage_usec: 6_944_200,
+      memory_current_bytes: 35_651_584,
+      memory_max_bytes: 268_435_456,
+      memory_max_unlimited: false,
+      error: null,
+      processes: [{ pid: 201, name: "ns-runner", membership: "0::/workspace-workspace-fixture" }],
+    },
+  ],
+};
+
 const events = {
   view: "events",
   events: [
@@ -104,7 +144,7 @@ export async function installAtlasApi(page: Page) {
         body = scope.kind === "sandbox" ? snapshot.sandboxes[0] : snapshot;
         break;
       case "cgroup":
-        body = { view: "cgroup", scope: String(args.scope ?? "sandbox"), series: samples };
+        body = { view: "cgroup", scope: String(args.scope ?? "sandbox"), series: samples, topology };
         break;
       case "events":
         body = events;
@@ -172,9 +212,9 @@ export async function waitForAtlasRoute(page: Page, ready: string) {
 
 export const atlasRoutes = [
   { name: "fleet", path: "/", ready: "fixture-sandbox" },
-  { name: "overview", path: `/sandboxes/${SANDBOX_ID}`, ready: "Workspace sessions" },
   { name: "terminal", path: `/sandboxes/${SANDBOX_ID}/terminal`, ready: "No commands yet" },
   { name: "resources", path: `/sandboxes/${SANDBOX_ID}/observability/resources`, ready: "CPU (Δ cpu_usec / s)" },
+  { name: "cgroup", path: `/sandboxes/${SANDBOX_ID}/observability/cgroup`, ready: "Cgroup topology" },
   { name: "events", path: `/sandboxes/${SANDBOX_ID}/observability/events`, ready: "workspace.published" },
   { name: "traces", path: `/sandboxes/${SANDBOX_ID}/observability/traces`, ready: "fixture.operation" },
   { name: "layers", path: `/sandboxes/${SANDBOX_ID}/layerstack`, ready: "fixture-layer-2" },

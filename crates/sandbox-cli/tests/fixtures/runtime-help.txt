@@ -40,7 +40,13 @@ Shell security
   Shell-security capability.
 
 Workspace session
-  Workspace-session lifecycle capability.
+  Create and destroy explicit workspace sessions.
+
+  create_workspace_session
+    Create an explicit workspace session.
+
+  destroy_workspace_session
+    Destroy an explicit workspace session.
 
 Use:
   sandbox-runtime-cli --sandbox-id ID [--request-id VALUE] OPERATION

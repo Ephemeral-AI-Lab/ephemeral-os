@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Box, Tabs } from "@mantine/core";
+import { Alert, Box, Tabs } from "@mantine/core";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { rpc, systemScope } from "@/api/rpc";
 import type { SandboxRecord } from "@/api/types";
@@ -9,7 +9,6 @@ import { useErrorToast } from "@/components/ErrorToast";
 import { SandboxHeader } from "@/pages/sandbox/SandboxHeader";
 
 const TABS = [
-  { value: "overview", path: "", label: "Overview" },
   { value: "terminal", path: "terminal", label: "Terminal" },
   { value: "files", path: "files", label: "Files" },
   { value: "observability", path: "observability", label: "Observability" },
@@ -19,10 +18,9 @@ const TABS = [
 function currentTab(pathname: string, basePath: string): string {
   const match = TABS.find(
     (tab) =>
-      (tab.path === "" && pathname === basePath) ||
-      (tab.path !== "" && (pathname === `${basePath}/${tab.path}` || pathname.startsWith(`${basePath}/${tab.path}/`))),
+      pathname === `${basePath}/${tab.path}` || pathname.startsWith(`${basePath}/${tab.path}/`),
   );
-  return match?.value ?? "overview";
+  return match?.value ?? "terminal";
 }
 
 export function SandboxDetail() {
@@ -66,6 +64,16 @@ export function SandboxDetail() {
           record={record.data ?? null}
           snapshot={snapshot.data}
         />
+        {record.data && record.data.state !== "ready" ? (
+          <Alert
+            color={record.data.state === "failed" ? "danger" : "warning"}
+            m="md"
+            title={`Sandbox ${record.data.state}`}
+            variant="light"
+          >
+            Daemon-backed tools are unavailable until this sandbox is ready.
+          </Alert>
+        ) : null}
         <Tabs
           onChange={(value) => {
             const tab = TABS.find((item) => item.value === value);

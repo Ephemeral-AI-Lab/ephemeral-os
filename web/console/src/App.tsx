@@ -4,12 +4,12 @@ import { Shell } from "@/shell/Shell";
 import { FleetBoard } from "@/pages/fleet/FleetBoard";
 import { NotFound } from "@/pages/NotFound";
 import { SandboxDetail } from "@/pages/sandbox/SandboxDetail";
-import { OverviewTab } from "@/pages/sandbox/overview/OverviewTab";
 import { TerminalTab } from "@/pages/sandbox/terminal/TerminalTab";
 import { FilesTab } from "@/pages/sandbox/files/FilesTab";
 import { PreviewTab } from "@/pages/sandbox/preview/PreviewTab";
 import { ObservabilityTab } from "@/pages/sandbox/observability/ObservabilityTab";
 import { ResourcesView } from "@/pages/sandbox/observability/ResourcesView";
+import { CgroupView } from "@/pages/sandbox/observability/CgroupView";
 import { TracesView } from "@/pages/sandbox/observability/TracesView";
 import { EventsView } from "@/pages/sandbox/observability/EventsView";
 import { LayerStackView } from "@/pages/sandbox/observability/LayerStackView";
@@ -38,7 +38,7 @@ export default function App() {
           <Route element={<Shell />}>
             <Route index element={<FleetBoard />} />
             <Route path="sandboxes/:sandboxId" element={<SandboxDetail />}>
-              <Route index element={<OverviewTab />} />
+              <Route index element={<Navigate to="terminal" replace />} />
               <Route path="terminal" element={<TerminalTab />} />
               <Route path="files" element={<FilesTab />} />
               <Route path="layerstack" element={<LegacyLayerStackRedirect />} />
@@ -46,6 +46,7 @@ export default function App() {
               <Route path="observability" element={<ObservabilityTab />}>
                 <Route index element={<Navigate to="resources" replace />} />
                 <Route path="resources" element={<ResourcesView />} />
+                <Route path="cgroup" element={<CgroupView />} />
                 <Route path="traces" element={<TracesView />} />
                 <Route path="traces/:traceId" element={<TracesView />} />
                 <Route path="events" element={<EventsView />} />

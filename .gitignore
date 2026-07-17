@@ -20,9 +20,8 @@
 *.profraw
 *.tmp
 
-# Rust build output
+# Rust/Cargo build output, including cross-compilation targets
 target/
-**/target/
 target-linux-container-gnu/
 
 # Generated reports, caches, and local tool state

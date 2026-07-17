@@ -1,9 +1,21 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router";
 import uPlot from "uplot";
-import { Alert, Box, Group, Paper, Select, SimpleGrid, Stack, Text } from "@mantine/core";
+import {
+  Alert,
+  Box,
+  Group,
+  Paper,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+} from "@mantine/core";
 import "uplot/dist/uPlot.min.css";
-import { fetchCgroup, type ResourceSample } from "@/api/observability";
+import {
+  fetchCgroup,
+  type ResourceSample,
+} from "@/api/observability";
 import { usePoll } from "@/poll/usePoll";
 import { useSandbox } from "@/pages/sandbox/SandboxContext";
 
