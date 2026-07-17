@@ -443,4 +443,14 @@ fn raw_and_events_filter_by_kind_name_trace_since() {
     });
     assert_eq!(events.len(), 1, "events fold reuses parsed Event records");
     assert_eq!(events[0].attrs["layer_id"], "l0");
+
+    let raw_events = reader.raw_json_events(RawFilter {
+        trace: Some("t1".to_owned()),
+        ..Default::default()
+    });
+    let mut encoded = String::new();
+    raw_events.write_json_array(&mut encoded, Some(1), 256 * 1024);
+    let encoded: serde_json::Value = serde_json::from_str(&encoded).expect("raw events parse");
+    assert_eq!(encoded.as_array().map(Vec::len), Some(1));
+    assert_eq!(encoded[0]["name"], "lease.acquired");
 }

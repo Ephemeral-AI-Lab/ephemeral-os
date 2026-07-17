@@ -123,6 +123,23 @@ fn response_codec_preserves_payload_owned_shape() {
 }
 
 #[test]
+fn response_codec_streams_raw_json_and_decodes_compatibly() {
+    let response =
+        OperationResponse::from_raw_json(r#"{"view":"events","events":[{"ts":1}]}"#.to_owned())
+            .expect("raw response validates");
+
+    let line = response_line(&response);
+
+    assert_eq!(line, b"{\"view\":\"events\",\"events\":[{\"ts\":1}]}\n");
+    assert_eq!(
+        decode_response_line(&line)
+            .expect("raw response decodes")
+            .into_json_value()["events"][0]["ts"],
+        1
+    );
+}
+
+#[test]
 fn readiness_handshake_is_canonical_and_authenticated() {
     let line = daemon_readiness_request_line("sbox-1", "tok-1").expect("handshake encodes");
     let value: serde_json::Value = serde_json::from_slice(&line).expect("valid json");

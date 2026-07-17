@@ -309,6 +309,40 @@ fn oversized_record_writes_one_bounded_marker_for_escaped_utf8() {
 }
 
 #[test]
+fn recovery_accounts_one_oversized_escaped_utf8_line() {
+    let path = temp_log("recover-oversized-escaped-utf8");
+    fs::create_dir_all(path.parent().expect("parent")).expect("create parent");
+    let max_line = 512;
+    let budget = 4_096;
+    let oversized = serde_json::to_vec(&sample(
+        6,
+        format!("{}{}", "\\\"\n".repeat(400), "🦀".repeat(400)),
+    ))
+    .expect("serialize fixture");
+    assert!(oversized.len() > max_line);
+    assert!(
+        oversized.len() as u64 > budget / 2,
+        "legacy recovery is entered only when a segment exceeds its half-budget"
+    );
+    let mut fixture = oversized;
+    fixture.push(b'\n');
+    fs::write(&path, fixture).expect("write oversized fixture");
+
+    let sink = Sink::with_budget(path.clone(), max_line, budget);
+    sink.append(&sample(7, "recovered".to_owned()))
+        .expect("recovery append");
+
+    assert_eq!(sink.stats().dropped_oversized, 1);
+    let contents = fs::read_to_string(&path).expect("read recovered store");
+    let lines: Vec<&str> = contents.lines().collect();
+    assert_eq!(lines.len(), 1);
+    serde_json::from_str::<Record>(lines[0]).expect("recovered line parses");
+    assert!(lines[0].len() < max_line);
+
+    let _ = fs::remove_dir_all(path.parent().expect("parent"));
+}
+
+#[test]
 fn marker_that_cannot_fit_is_dropped_once() {
     let path = temp_log("marker-drop");
     let sink = Sink::with_budget(path.clone(), 8, 4_096);

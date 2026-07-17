@@ -143,8 +143,13 @@ impl Sink {
     }
 
     fn append_locked(&self, line: &[u8], segment_cap: u64) -> io::Result<()> {
-        compact_segment(&self.rotated, segment_cap, self.max_line_bytes)?;
-        compact_segment(&self.path, segment_cap, self.max_line_bytes)?;
+        let skipped_oversized =
+            compact_segment(&self.rotated, segment_cap, self.max_line_bytes)?.saturating_add(
+                compact_segment(&self.path, segment_cap, self.max_line_bytes)?,
+            );
+        self.counters
+            .dropped_oversized
+            .fetch_add(skipped_oversized, Ordering::Relaxed);
 
         let active_len = file_len(&self.path)?;
         if active_len.saturating_add(line.len() as u64) > segment_cap {
@@ -168,10 +173,10 @@ impl Sink {
     }
 }
 
-fn compact_segment(path: &Path, cap: u64, max_line_bytes: usize) -> io::Result<()> {
+fn compact_segment(path: &Path, cap: u64, max_line_bytes: usize) -> io::Result<u64> {
     let input_len = file_len(path)?;
     if input_len == 0 {
-        return Ok(());
+        return Ok(0);
     }
     if input_len <= cap {
         let mut input = File::open(path)?;
@@ -179,7 +184,7 @@ fn compact_segment(path: &Path, cap: u64, max_line_bytes: usize) -> io::Result<(
         let mut tail = [0_u8; 1];
         input.read_exact(&mut tail)?;
         if tail == [b'\n'] {
-            return Ok(());
+            return Ok(0);
         }
     }
 
@@ -188,8 +193,8 @@ fn compact_segment(path: &Path, cap: u64, max_line_bytes: usize) -> io::Result<(
         accepted = accepted.saturating_add((line.len() + 1) as u64);
         Ok(())
     })?;
-    if input_len <= cap && scan.complete_bytes == input_len && !scan.skipped_oversized {
-        return Ok(());
+    if input_len <= cap && scan.complete_bytes == input_len && scan.skipped_oversized == 0 {
+        return Ok(0);
     }
 
     let skip = accepted.saturating_sub(cap);
@@ -211,7 +216,8 @@ fn compact_segment(path: &Path, cap: u64, max_line_bytes: usize) -> io::Result<(
     })?;
     output.sync_data()?;
     drop(output);
-    fs::rename(&temporary, path)
+    fs::rename(&temporary, path)?;
+    Ok(scan.skipped_oversized)
 }
 
 fn file_len(path: &Path) -> io::Result<u64> {

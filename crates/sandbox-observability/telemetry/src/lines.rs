@@ -5,7 +5,7 @@ use std::path::Path;
 #[derive(Debug, Default)]
 pub(crate) struct LineScan {
     pub(crate) complete_bytes: u64,
-    pub(crate) skipped_oversized: bool,
+    pub(crate) skipped_oversized: u64,
 }
 
 /// Stream complete newline-terminated lines with a fixed-capacity line buffer.
@@ -34,7 +34,7 @@ pub(crate) fn for_each_complete_line(
             if *byte == b'\n' {
                 scan.complete_bytes = scan.complete_bytes.saturating_add((line.len() + 1) as u64);
                 if oversized {
-                    scan.skipped_oversized = true;
+                    scan.skipped_oversized = scan.skipped_oversized.saturating_add(1);
                 } else {
                     visit(&line)?;
                 }

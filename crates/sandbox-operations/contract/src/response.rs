@@ -1,28 +1,55 @@
-use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::value::RawValue;
 use serde_json::{json, Value};
 
 use crate::error::{OperationError, OPERATION_FAILED};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Debug)]
 pub struct OperationResponse {
-    value: Value,
+    body: ResponseBody,
+}
+
+#[derive(Debug)]
+enum ResponseBody {
+    Value(Value),
+    Raw {
+        json: Box<RawValue>,
+        parsed: OnceLock<Value>,
+    },
 }
 
 impl OperationResponse {
     #[must_use]
     pub fn ok(result: Value) -> Self {
-        Self { value: result }
+        Self {
+            body: ResponseBody::Value(result),
+        }
     }
 
     #[must_use]
     pub fn from_json_value(value: Value) -> Self {
-        Self { value }
+        Self {
+            body: ResponseBody::Value(value),
+        }
+    }
+
+    /// Preserve one already-encoded JSON response without materializing a
+    /// `serde_json::Value` tree. Deserialization remains value-backed, so raw
+    /// responses are an internal producer-side memory optimization only.
+    pub fn from_raw_json(json: String) -> Result<Self, serde_json::Error> {
+        Ok(Self {
+            body: ResponseBody::Raw {
+                json: RawValue::from_string(json)?,
+                parsed: OnceLock::new(),
+            },
+        })
     }
 
     #[must_use]
     pub fn running(result: Value) -> Self {
-        Self { value: result }
+        Self::from_json_value(result)
     }
 
     #[must_use]
@@ -47,18 +74,67 @@ impl OperationResponse {
         details: Value,
     ) -> Self {
         Self {
-            value: OperationError::new(kind, message, details).into_json_value(),
+            body: ResponseBody::Value(
+                OperationError::new(kind, message, details).into_json_value(),
+            ),
         }
     }
 
     #[must_use]
     pub fn into_json_value(self) -> Value {
-        self.value
+        match self.body {
+            ResponseBody::Value(value) => value,
+            ResponseBody::Raw { json, parsed } => parsed.into_inner().unwrap_or_else(|| {
+                serde_json::from_str(json.get()).expect("RawValue has already validated the JSON")
+            }),
+        }
     }
 
     #[must_use]
     pub fn as_json_value(&self) -> &Value {
-        &self.value
+        match &self.body {
+            ResponseBody::Value(value) => value,
+            ResponseBody::Raw { json, parsed } => parsed.get_or_init(|| {
+                serde_json::from_str(json.get()).expect("RawValue has already validated the JSON")
+            }),
+        }
+    }
+}
+
+impl Clone for OperationResponse {
+    fn clone(&self) -> Self {
+        match &self.body {
+            ResponseBody::Value(value) => Self::from_json_value(value.clone()),
+            ResponseBody::Raw { json, .. } => Self::from_raw_json(json.get().to_owned())
+                .expect("RawValue has already validated the JSON"),
+        }
+    }
+}
+
+impl PartialEq for OperationResponse {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_json_value() == other.as_json_value()
+    }
+}
+
+impl Serialize for OperationResponse {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match &self.body {
+            ResponseBody::Value(value) => value.serialize(serializer),
+            ResponseBody::Raw { json, .. } => json.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for OperationResponse {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Value::deserialize(deserializer).map(Self::from_json_value)
     }
 }
 

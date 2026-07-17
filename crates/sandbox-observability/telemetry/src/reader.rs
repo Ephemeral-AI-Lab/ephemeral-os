@@ -1,13 +1,16 @@
 //! Streaming, bounded reads over the rotated and active event segments.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::path::PathBuf;
 
-use serde::Serialize;
+use serde::de::{IgnoredAny, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
 use crate::lines::for_each_complete_line;
-use crate::record::{Attrs, Event, Record, Span, COUNTERS_METRIC_KEY, MAX_LINE_BYTES};
+use crate::record::{Attrs, Event, Record, Span, SpanStatus, COUNTERS_METRIC_KEY, MAX_LINE_BYTES};
 use crate::unix_now_ms;
 
 pub const MAX_RESPONSE_RECORDS: usize = 500;
@@ -52,9 +55,348 @@ pub struct SampleDelta {
     pub sample_delta_ms: Option<i64>,
 }
 
-struct Entry {
-    record: Record,
+struct LineEntry {
+    ts: i64,
     line: String,
+}
+
+#[derive(Clone, Copy)]
+struct RawLineEntry {
+    ts: i64,
+    sequence: usize,
+    start: usize,
+    len: usize,
+}
+
+/// Valid JSON records retained in one bounded byte arena. Metadata is fixed by
+/// the response record cap; discarded history never owns a line allocation.
+pub struct RawJsonRecords {
+    storage: Vec<u8>,
+    entries: Vec<RawLineEntry>,
+}
+
+impl RawJsonRecords {
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Exact JSON-array length after applying the newest-record and byte caps.
+    #[must_use]
+    pub fn json_array_len(&self, last_n: Option<usize>, max_bytes: usize) -> usize {
+        let (_, len) = self.selection(last_n, max_bytes);
+        len
+    }
+
+    /// Append a JSON array of the newest selected records without parsing them
+    /// into separately allocated `Value` trees.
+    pub fn write_json_array(&self, output: &mut String, last_n: Option<usize>, max_bytes: usize) {
+        let (start, _) = self.selection(last_n, max_bytes);
+        output.push('[');
+        for (index, entry) in self.entries[start..].iter().enumerate() {
+            if index != 0 {
+                output.push(',');
+            }
+            let line = std::str::from_utf8(
+                &self.storage[entry.start..entry.start.saturating_add(entry.len)],
+            )
+            .expect("record headers only accept UTF-8 JSON lines");
+            output.push_str(line);
+        }
+        output.push(']');
+    }
+
+    fn selection(&self, last_n: Option<usize>, max_bytes: usize) -> (usize, usize) {
+        let requested = last_n.unwrap_or(self.entries.len()).min(self.entries.len());
+        let mut start = self.entries.len().saturating_sub(requested);
+        let mut count = self.entries.len().saturating_sub(start);
+        let mut len = 2_usize
+            .saturating_add(
+                self.entries[start..]
+                    .iter()
+                    .map(|entry| entry.len)
+                    .sum::<usize>(),
+            )
+            .saturating_add(count.saturating_sub(1));
+        while len > max_bytes && start < self.entries.len() {
+            len = len.saturating_sub(self.entries[start].len);
+            if count > 1 {
+                len = len.saturating_sub(1);
+            }
+            start += 1;
+            count -= 1;
+        }
+        (start, len.max(2))
+    }
+}
+
+struct RawLineArena {
+    storage: Vec<u8>,
+    entries: Vec<RawLineEntry>,
+    max_records: usize,
+    max_bytes: usize,
+    retained_bytes: usize,
+    next_sequence: usize,
+}
+
+impl RawLineArena {
+    fn new(max_records: usize, max_bytes: usize) -> Self {
+        Self {
+            storage: Vec::with_capacity(max_bytes.min(MAX_RESPONSE_BYTES)),
+            entries: Vec::with_capacity(max_records.min(MAX_RESPONSE_RECORDS)),
+            max_records,
+            max_bytes,
+            retained_bytes: 2,
+            next_sequence: 0,
+        }
+    }
+
+    fn insert(&mut self, ts: i64, line: &[u8]) {
+        if self.max_records == 0
+            || self.max_bytes < 2
+            || line.len().saturating_add(2) > self.max_bytes
+        {
+            return;
+        }
+        let sequence = self.next_sequence;
+        self.next_sequence = self.next_sequence.saturating_add(1);
+        let candidate_bytes = line.len().saturating_add(1);
+        let needs_room = self.entries.len() >= self.max_records
+            || self.retained_bytes.saturating_add(candidate_bytes) > self.max_bytes;
+        if needs_room
+            && self
+                .entries
+                .iter()
+                .min_by_key(|entry| (entry.ts, entry.sequence))
+                .is_some_and(|oldest| (ts, sequence) < (oldest.ts, oldest.sequence))
+        {
+            return;
+        }
+
+        let mut reusable = None;
+        while self.entries.len() >= self.max_records
+            || self.retained_bytes.saturating_add(candidate_bytes) > self.max_bytes
+        {
+            let Some(oldest_index) = self
+                .entries
+                .iter()
+                .enumerate()
+                .min_by_key(|(_, entry)| (entry.ts, entry.sequence))
+                .map(|(index, _)| index)
+            else {
+                return;
+            };
+            let removed = self.entries.remove(oldest_index);
+            self.retained_bytes = self.retained_bytes.saturating_sub(removed.len + 1);
+            if removed.len >= line.len()
+                && reusable
+                    .as_ref()
+                    .is_none_or(|candidate: &RawLineEntry| removed.len < candidate.len)
+            {
+                reusable = Some(removed);
+            }
+        }
+
+        let start = if let Some(slot) = reusable {
+            self.storage[slot.start..slot.start + line.len()].copy_from_slice(line);
+            slot.start
+        } else {
+            if self.storage.len().saturating_add(line.len()) > self.max_bytes {
+                self.compact();
+            }
+            let start = self.storage.len();
+            self.storage.extend_from_slice(line);
+            start
+        };
+        self.entries.push(RawLineEntry {
+            ts,
+            sequence,
+            start,
+            len: line.len(),
+        });
+        self.retained_bytes = self.retained_bytes.saturating_add(candidate_bytes);
+    }
+
+    fn compact(&mut self) {
+        self.entries.sort_by_key(|entry| entry.start);
+        let mut cursor = 0;
+        for entry in &mut self.entries {
+            let end = entry.start.saturating_add(entry.len);
+            if entry.start != cursor {
+                self.storage.copy_within(entry.start..end, cursor);
+                entry.start = cursor;
+            }
+            cursor = cursor.saturating_add(entry.len);
+        }
+        self.storage.truncate(cursor);
+    }
+
+    fn finish(mut self) -> RawJsonRecords {
+        self.entries.sort_by_key(|entry| (entry.ts, entry.sequence));
+        RawJsonRecords {
+            storage: self.storage,
+            entries: self.entries,
+        }
+    }
+}
+
+enum RecordHeader<'a> {
+    Span {
+        ts: i64,
+        trace: Cow<'a, str>,
+        parent: Option<Cow<'a, str>>,
+        name: Cow<'a, str>,
+        dur_ms: f64,
+    },
+    Event {
+        ts: i64,
+        trace: Cow<'a, str>,
+        name: Cow<'a, str>,
+    },
+    Sample {
+        ts: i64,
+        scope: Cow<'a, str>,
+    },
+}
+
+impl RecordHeader<'_> {
+    fn ts(&self) -> i64 {
+        match self {
+            Self::Span { ts, .. } | Self::Event { ts, .. } | Self::Sample { ts, .. } => *ts,
+        }
+    }
+
+    fn kind(&self) -> &'static str {
+        match self {
+            Self::Span { .. } => "span",
+            Self::Event { .. } => "event",
+            Self::Sample { .. } => "sample",
+        }
+    }
+
+    fn name(&self) -> Option<&str> {
+        match self {
+            Self::Span { name, .. } | Self::Event { name, .. } => Some(name),
+            Self::Sample { .. } => None,
+        }
+    }
+
+    fn trace(&self) -> Option<&str> {
+        match self {
+            Self::Span { trace, .. } | Self::Event { trace, .. } => Some(trace),
+            Self::Sample { .. } => None,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct KindHeader<'a> {
+    #[serde(borrow)]
+    kind: Cow<'a, str>,
+}
+
+#[derive(Deserialize)]
+struct SpanHeader<'a> {
+    ts: i64,
+    #[serde(borrow)]
+    trace: Cow<'a, str>,
+    #[serde(rename = "span", borrow)]
+    _span: Cow<'a, str>,
+    #[serde(default, borrow)]
+    parent: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    name: Cow<'a, str>,
+    dur_ms: f64,
+    #[serde(rename = "status")]
+    _status: SpanStatus,
+    #[serde(rename = "attrs")]
+    _attrs: IgnoredObject,
+}
+
+#[derive(Deserialize)]
+struct EventHeader<'a> {
+    ts: i64,
+    #[serde(borrow)]
+    trace: Cow<'a, str>,
+    #[serde(default, rename = "parent", borrow)]
+    _parent: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    name: Cow<'a, str>,
+    #[serde(rename = "attrs")]
+    _attrs: IgnoredObject,
+}
+
+#[derive(Deserialize)]
+struct SampleHeader<'a> {
+    ts: i64,
+    #[serde(borrow)]
+    scope: Cow<'a, str>,
+}
+
+struct IgnoredObject;
+
+impl<'de> Deserialize<'de> for IgnoredObject {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct ObjectVisitor;
+
+        impl<'de> Visitor<'de> for ObjectVisitor {
+            type Value = IgnoredObject;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                formatter.write_str("a JSON object")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: MapAccess<'de>,
+            {
+                while map.next_entry::<IgnoredAny, IgnoredAny>()?.is_some() {}
+                Ok(IgnoredObject)
+            }
+        }
+
+        deserializer.deserialize_map(ObjectVisitor)
+    }
+}
+
+fn record_header(line: &[u8]) -> Option<RecordHeader<'_>> {
+    let kind = serde_json::from_slice::<KindHeader<'_>>(line).ok()?;
+    match kind.kind.as_ref() {
+        "span" => {
+            let span = serde_json::from_slice::<SpanHeader<'_>>(line).ok()?;
+            Some(RecordHeader::Span {
+                ts: span.ts,
+                trace: span.trace,
+                parent: span.parent,
+                name: span.name,
+                dur_ms: span.dur_ms,
+            })
+        }
+        "event" => {
+            let event = serde_json::from_slice::<EventHeader<'_>>(line).ok()?;
+            Some(RecordHeader::Event {
+                ts: event.ts,
+                trace: event.trace,
+                name: event.name,
+            })
+        }
+        "sample" => {
+            let sample = serde_json::from_slice::<SampleHeader<'_>>(line).ok()?;
+            Some(RecordHeader::Sample {
+                ts: sample.ts,
+                scope: sample.scope,
+            })
+        }
+        _ => None,
+    }
 }
 
 impl Reader {
@@ -88,47 +430,70 @@ impl Reader {
 
     #[must_use]
     pub fn trace(&self, id: &str) -> Vec<SpanNode> {
-        let mut entries = self.collect(|record| record_trace(record) == Some(id));
+        let mut records = self
+            .collect_lines(|header| header.trace() == Some(id))
+            .into_iter()
+            .filter_map(|entry| serde_json::from_str::<Record>(&entry.line).ok())
+            .collect::<Vec<_>>();
         loop {
-            let (spans, events) = split_trace_entries(&entries);
+            let (spans, events) = split_trace_records(&records);
             let forest = build_trace_forest(spans, events);
-            if serialized_len(&forest) <= self.max_response_bytes || entries.is_empty() {
+            if serialized_len(&forest) <= self.max_response_bytes || records.is_empty() {
                 return forest;
             }
-            entries.remove(0);
+            records.remove(0);
         }
     }
 
     #[must_use]
     pub fn latest_root_trace(&self) -> Option<String> {
-        let mut latest: Option<Span> = None;
-        self.for_each_record(|record, _| {
-            let Record::Span(span) = record else { return };
-            if span.parent.is_some() {
+        let mut latest_start = f64::NEG_INFINITY;
+        let mut latest = None::<String>;
+        self.for_each_header(|header, _| {
+            let RecordHeader::Span {
+                ts,
+                trace,
+                parent,
+                dur_ms,
+                ..
+            } = header
+            else {
+                return;
+            };
+            if parent.is_some() {
                 return;
             }
-            if latest
-                .as_ref()
-                .is_none_or(|candidate| span_start(&span) > span_start(candidate))
-            {
-                latest = Some(span);
+            let start = ts as f64 - dur_ms;
+            if start > latest_start {
+                latest_start = start;
+                let value = latest.get_or_insert_with(String::new);
+                value.clear();
+                value.push_str(&trace);
             }
         });
-        latest.map(|span| span.trace)
+        latest
     }
 
     #[must_use]
     pub fn samples(&self, scope: &str, window_ms: i64) -> Vec<SampleDelta> {
         let since = unix_now_ms().saturating_sub(window_ms);
-        let entries = self.collect(|record| {
-            matches!(record, Record::Sample(sample) if sample.scope == scope && sample.ts >= since)
-        });
-        let values = entries
-            .into_iter()
-            .filter_map(|entry| match entry.record {
-                Record::Sample(sample) => Some((sample.ts, sample.metrics)),
-                _ => None,
+        let values = self
+            .collect_lines(|header| {
+                matches!(
+                    header,
+                    RecordHeader::Sample {
+                        ts,
+                        scope: candidate,
+                    } if candidate == scope && *ts >= since
+                )
             })
+            .into_iter()
+            .filter_map(
+                |entry| match serde_json::from_str::<Record>(&entry.line).ok()? {
+                    Record::Sample(sample) => Some((sample.ts, sample.metrics)),
+                    _ => None,
+                },
+            )
             .collect();
         let mut samples = sample_deltas(scope, values);
         trim_serialized(&mut samples, self.max_records, self.max_response_bytes);
@@ -139,36 +504,22 @@ impl Reader {
     pub fn latest_samples(&self, scopes: &[&str]) -> HashMap<String, SampleDelta> {
         let requested: HashSet<&str> = scopes.iter().copied().collect();
         let mut samples: HashMap<String, Vec<(i64, Attrs, usize)>> = HashMap::new();
-        let mut retained_bytes = 2_usize;
-        self.for_each_record(|record, line| {
-            let Record::Sample(sample) = record else {
-                return;
+        for entry in self.collect_lines(|header| {
+            matches!(
+                header,
+                RecordHeader::Sample { scope, .. } if requested.contains(scope.as_ref())
+            )
+        }) {
+            let Ok(Record::Sample(sample)) = serde_json::from_str::<Record>(&entry.line) else {
+                continue;
             };
-            if !requested.contains(sample.scope.as_str()) {
-                return;
-            }
             let latest = samples.entry(sample.scope).or_default();
-            retained_bytes = retained_bytes.saturating_add(line.len() + 1);
-            latest.push((sample.ts, sample.metrics, line.len() + 1));
+            latest.push((sample.ts, sample.metrics, entry.line.len() + 1));
             latest.sort_by_key(|(ts, _, _)| *ts);
             if latest.len() > 2 {
-                let removed = latest.remove(0);
-                retained_bytes = retained_bytes.saturating_sub(removed.2);
+                latest.remove(0);
             }
-            while samples.len() > self.max_records || retained_bytes > self.max_response_bytes {
-                let Some(oldest) = samples
-                    .iter()
-                    .min_by_key(|(_, values)| values.last().map_or(i64::MIN, |(ts, _, _)| *ts))
-                    .map(|(scope, _)| scope.clone())
-                else {
-                    break;
-                };
-                if let Some(removed) = samples.remove(&oldest) {
-                    retained_bytes = retained_bytes
-                        .saturating_sub(removed.iter().map(|(_, _, bytes)| *bytes).sum::<usize>());
-                }
-            }
-        });
+        }
         let mut result: HashMap<String, SampleDelta> = samples
             .into_iter()
             .filter_map(|(scope, samples)| {
@@ -199,23 +550,37 @@ impl Reader {
     #[must_use]
     pub fn events(&self, filter: RawFilter) -> Vec<Event> {
         let mut events: Vec<Event> = self
-            .collect(
-                |record| matches!(record, Record::Event(event) if event_matches(event, &filter)),
-            )
+            .collect_lines(|header| event_header_matches(header, &filter))
             .into_iter()
-            .filter_map(|entry| match entry.record {
-                Record::Event(event) => Some(event),
-                _ => None,
-            })
+            .filter_map(
+                |entry| match serde_json::from_str::<Record>(&entry.line).ok()? {
+                    Record::Event(event) => Some(event),
+                    _ => None,
+                },
+            )
             .collect();
         trim_serialized(&mut events, self.max_records, self.max_response_bytes);
         events
     }
 
+    /// Retain filtered event records in a single capped arena for direct JSON
+    /// response encoding. This is the daemon query hot path; `events` remains
+    /// the typed compatibility API.
+    #[must_use]
+    pub fn raw_json_events(&self, filter: RawFilter) -> RawJsonRecords {
+        let mut records = RawLineArena::new(self.max_records, self.max_response_bytes);
+        self.for_each_header(|header, line| {
+            if event_header_matches(&header, &filter) {
+                records.insert(header.ts(), line.as_bytes());
+            }
+        });
+        records.finish()
+    }
+
     #[must_use]
     pub fn raw(&self, filter: RawFilter) -> Vec<String> {
         let mut lines: Vec<String> = self
-            .collect(|record| raw_matches(record, &filter))
+            .collect_lines(|header| raw_header_matches(header, &filter))
             .into_iter()
             .map(|entry| entry.line)
             .collect();
@@ -223,40 +588,75 @@ impl Reader {
         lines
     }
 
-    fn collect(&self, matches: impl Fn(&Record) -> bool) -> Vec<Entry> {
-        let mut entries = Vec::new();
+    fn collect_lines(&self, matches: impl Fn(&RecordHeader<'_>) -> bool) -> Vec<LineEntry> {
+        if self.max_records == 0 || self.max_response_bytes < 2 {
+            return Vec::new();
+        }
+        let mut entries: Vec<LineEntry> = Vec::new();
         let mut retained_bytes = 2_usize;
-        self.for_each_record(|record, line| {
-            if !matches(&record) {
+        self.for_each_header(|header, line| {
+            if !matches(&header) {
                 return;
             }
-            retained_bytes = retained_bytes.saturating_add(line.len() + 1);
-            entries.push(Entry {
-                record,
-                line: line.to_owned(),
-            });
-            entries.sort_by_key(|entry| record_ts(&entry.record));
-            while entries.len() > self.max_records || retained_bytes > self.max_response_bytes {
-                if entries.is_empty() {
-                    break;
+            let candidate_bytes = line.len().saturating_add(1);
+            if candidate_bytes.saturating_add(2) > self.max_response_bytes {
+                return;
+            }
+
+            let needs_room = entries.len() >= self.max_records
+                || retained_bytes.saturating_add(candidate_bytes) > self.max_response_bytes;
+            let mut reusable = None;
+            if needs_room {
+                let Some((oldest_index, oldest)) =
+                    entries.iter().enumerate().min_by_key(|(_, entry)| entry.ts)
+                else {
+                    return;
+                };
+                if header.ts() < oldest.ts {
+                    return;
                 }
-                let removed = entries.remove(0);
+                let removed = entries.swap_remove(oldest_index);
+                retained_bytes = retained_bytes.saturating_sub(removed.line.len() + 1);
+                reusable = Some(removed.line);
+            }
+            while entries.len() >= self.max_records
+                || retained_bytes.saturating_add(candidate_bytes) > self.max_response_bytes
+            {
+                let Some(oldest_index) = entries
+                    .iter()
+                    .enumerate()
+                    .min_by_key(|(_, entry)| entry.ts)
+                    .map(|(index, _)| index)
+                else {
+                    return;
+                };
+                let removed = entries.swap_remove(oldest_index);
                 retained_bytes = retained_bytes.saturating_sub(removed.line.len() + 1);
             }
+
+            let mut owned = reusable.unwrap_or_default();
+            owned.clear();
+            owned.push_str(line);
+            entries.push(LineEntry {
+                ts: header.ts(),
+                line: owned,
+            });
+            retained_bytes = retained_bytes.saturating_add(candidate_bytes);
         });
+        entries.sort_by_key(|entry| entry.ts);
         entries
     }
 
-    fn for_each_record(&self, mut visit: impl FnMut(Record, &str)) {
+    fn for_each_header(&self, mut visit: impl FnMut(RecordHeader<'_>, &str)) {
         for path in [&self.rotated, &self.primary] {
             let _ = for_each_complete_line(path, self.max_line_bytes, |line| {
                 let Ok(text) = std::str::from_utf8(line) else {
                     return Ok(());
                 };
-                let Ok(record) = serde_json::from_slice::<Record>(line) else {
+                let Some(header) = record_header(line) else {
                     return Ok(());
                 };
-                visit(record, text);
+                visit(header, text);
                 Ok(())
             });
         }
@@ -285,11 +685,11 @@ fn trim_serialized<T: Serialize>(values: &mut Vec<T>, max_records: usize, max_by
     }
 }
 
-fn split_trace_entries(entries: &[Entry]) -> (Vec<Span>, Vec<Event>) {
+fn split_trace_records(records: &[Record]) -> (Vec<Span>, Vec<Event>) {
     let mut spans = Vec::new();
     let mut events = Vec::new();
-    for entry in entries {
-        match &entry.record {
+    for record in records {
+        match record {
             Record::Span(span) => spans.push(span.clone()),
             Record::Event(event) => events.push(event.clone()),
             Record::Sample(_) => {}
@@ -298,64 +698,33 @@ fn split_trace_entries(entries: &[Entry]) -> (Vec<Span>, Vec<Event>) {
     (spans, events)
 }
 
-fn record_ts(record: &Record) -> i64 {
-    match record {
-        Record::Span(span) => span.ts,
-        Record::Event(event) => event.ts,
-        Record::Sample(sample) => sample.ts,
-    }
-}
-
-fn record_kind(record: &Record) -> &'static str {
-    match record {
-        Record::Span(_) => "span",
-        Record::Event(_) => "event",
-        Record::Sample(_) => "sample",
-    }
-}
-
-fn record_name(record: &Record) -> Option<&str> {
-    match record {
-        Record::Span(span) => Some(&span.name),
-        Record::Event(event) => Some(&event.name),
-        Record::Sample(_) => None,
-    }
-}
-
-fn record_trace(record: &Record) -> Option<&str> {
-    match record {
-        Record::Span(span) => Some(&span.trace),
-        Record::Event(event) => Some(&event.trace),
-        Record::Sample(_) => None,
-    }
-}
-
-fn raw_matches(record: &Record, filter: &RawFilter) -> bool {
-    record_ts(record) >= filter.since_ms
+fn raw_header_matches(header: &RecordHeader<'_>, filter: &RawFilter) -> bool {
+    header.ts() >= filter.since_ms
         && filter
             .kind
             .as_ref()
-            .is_none_or(|kind| record_kind(record) == kind)
+            .is_none_or(|kind| header.kind() == kind)
         && filter
             .name
             .as_ref()
-            .is_none_or(|name| record_name(record) == Some(name.as_str()))
+            .is_none_or(|name| header.name() == Some(name.as_str()))
         && filter
             .trace
             .as_ref()
-            .is_none_or(|trace| record_trace(record) == Some(trace.as_str()))
+            .is_none_or(|trace| header.trace() == Some(trace.as_str()))
 }
 
-fn event_matches(event: &Event, filter: &RawFilter) -> bool {
-    event.ts >= filter.since_ms
+fn event_header_matches(header: &RecordHeader<'_>, filter: &RawFilter) -> bool {
+    matches!(header, RecordHeader::Event { .. })
+        && header.ts() >= filter.since_ms
         && filter
             .name
             .as_ref()
-            .is_none_or(|name| event.name == name.as_str())
+            .is_none_or(|name| header.name() == Some(name.as_str()))
         && filter
             .trace
             .as_ref()
-            .is_none_or(|trace| event.trace == trace.as_str())
+            .is_none_or(|trace| header.trace() == Some(trace.as_str()))
 }
 
 fn span_start(span: &Span) -> f64 {

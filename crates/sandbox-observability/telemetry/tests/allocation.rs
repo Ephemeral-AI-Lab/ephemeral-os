@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use sandbox_observability_telemetry::{
     Attrs, RawFilter, Reader, Record, Sample, Sink, DEFAULT_MAX_DISK_BYTES, MAX_LINE_BYTES,
+    MAX_RESPONSE_BYTES,
 };
 use serde_json::json;
 
@@ -146,6 +147,7 @@ fn encoder_and_streaming_reader_have_fixed_allocation_bounds() {
 
     let line = serde_json::to_vec(&sample("reader".repeat(8))).expect("serialize fixture");
     let mut peaks = Vec::new();
+    let mut allocations = Vec::new();
     for count in [1_usize, 10, 1_000] {
         let path = temp_log(&format!("reader-{count}"));
         fs::create_dir_all(path.parent().expect("parent")).expect("create reader parent");
@@ -167,15 +169,20 @@ fn encoder_and_streaming_reader_have_fixed_allocation_bounds() {
             1,
             256 * 1024,
         );
-        let (result, _, peak) = measure(|| reader.raw(RawFilter::default()));
+        let (result, allocation_count, peak) = measure(|| reader.raw(RawFilter::default()));
         assert_eq!(result.len(), 1);
         assert!(
             peak < MAX_LINE_BYTES + 8 * 1024,
             "{count} records used {peak} peak bytes"
         );
         peaks.push(peak);
+        allocations.push(allocation_count);
         fs::remove_dir_all(path.parent().expect("parent")).expect("cleanup reader fixture");
     }
+    assert_eq!(
+        allocations[1], allocations[2],
+        "discarded history lines must not allocate: {allocations:?}"
+    );
     assert!(
         peaks[1].abs_diff(peaks[2]) <= 128,
         "reader peak grew from 10 to 1,000 records: {peaks:?}"
@@ -183,6 +190,91 @@ fn encoder_and_streaming_reader_have_fixed_allocation_bounds() {
     assert!(
         peaks[0].abs_diff(peaks[1]) <= 2 * 1024,
         "one fixed incoming-candidate cost was exceeded: {peaks:?}"
+    );
+
+    let event_line = br#"{"kind":"event","ts":1,"trace":"reader","name":"reader.event","attrs":{"payload":"fixed"}}"#;
+    let mut event_allocations = Vec::new();
+    for count in [10_usize, 1_000] {
+        let path = temp_log(&format!("events-{count}"));
+        fs::create_dir_all(path.parent().expect("parent")).expect("create event parent");
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&path)
+            .expect("open event fixture");
+        for _ in 0..count {
+            file.write_all(event_line).expect("write event line");
+            file.write_all(b"\n").expect("write event newline");
+        }
+        drop(file);
+        let reader = Reader::with_limits(
+            path.clone(),
+            path.with_extension("absent"),
+            MAX_LINE_BYTES,
+            1,
+            256 * 1024,
+        );
+        let (result, allocation_count, peak) = measure(|| reader.events(RawFilter::default()));
+        assert_eq!(result.len(), 1);
+        assert!(
+            peak < MAX_LINE_BYTES + 8 * 1024,
+            "{count} event records used {peak} peak bytes"
+        );
+        event_allocations.push(allocation_count);
+        fs::remove_dir_all(path.parent().expect("parent")).expect("cleanup event fixture");
+    }
+    assert_eq!(
+        event_allocations[0], event_allocations[1],
+        "discarded event history lines must not allocate: {event_allocations:?}"
+    );
+
+    let mut raw_arena_allocations = Vec::new();
+    for count in [500_usize, 10_000] {
+        let path = temp_log(&format!("raw-events-{count}"));
+        fs::create_dir_all(path.parent().expect("parent")).expect("create raw event parent");
+        let mut file = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&path)
+            .expect("open raw event fixture");
+        for _ in 0..count {
+            file.write_all(event_line).expect("write raw event line");
+            file.write_all(b"\n").expect("write raw event newline");
+        }
+        drop(file);
+        let reader = Reader::with_limits(
+            path.clone(),
+            path.with_extension("absent"),
+            MAX_LINE_BYTES,
+            500,
+            256 * 1024,
+        );
+        let (records, allocation_count, peak) =
+            measure(|| reader.raw_json_events(RawFilter::default()));
+        assert_eq!(records.len(), 500);
+        assert!(
+            peak <= MAX_RESPONSE_BYTES + 2 * MAX_LINE_BYTES,
+            "{count} raw event records used {peak} peak bytes"
+        );
+        let array_len = records.json_array_len(None, 256 * 1024);
+        let mut encoded = String::with_capacity(array_len);
+        records.write_json_array(&mut encoded, None, 256 * 1024);
+        assert_eq!(encoded.len(), array_len);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&encoded)
+                .expect("raw array parses")
+                .as_array()
+                .map(Vec::len),
+            Some(500)
+        );
+        raw_arena_allocations.push(allocation_count);
+        fs::remove_dir_all(path.parent().expect("parent")).expect("cleanup raw event fixture");
+    }
+    assert_eq!(
+        raw_arena_allocations[0], raw_arena_allocations[1],
+        "discarded raw event history must not allocate: {raw_arena_allocations:?}"
     );
 
     let maximum_path = temp_log("reader-maximum-store");
