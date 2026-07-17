@@ -75,6 +75,7 @@ impl DockerSandboxRuntime {
                 id,
                 workspace_root: PathBuf::from(container.host_workspace_root),
                 state: SandboxState::Ready,
+                activity_revision: 0,
                 daemon: Some(endpoint),
                 daemon_http: Some(SandboxHttpEndpoint::new(
                     ENDPOINT_HOST,

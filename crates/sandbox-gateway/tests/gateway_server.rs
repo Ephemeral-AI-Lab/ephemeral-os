@@ -151,6 +151,7 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
         id: sandbox_id(value),
         workspace_root: PathBuf::from("/testbed"),
         state: SandboxState::Ready,
+        activity_revision: 0,
         daemon,
         daemon_http: None,
         shared_base: None,

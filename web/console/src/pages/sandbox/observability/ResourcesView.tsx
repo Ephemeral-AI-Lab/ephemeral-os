@@ -76,7 +76,7 @@ export function ResourcesView() {
 
   const series = usePoll({
     key: ["observability", sandboxId, "cgroup", scope, windowMs],
-    fn: () => fetchCgroup(sandboxId, scope, windowMs),
+    fn: (signal) => fetchCgroup(sandboxId, scope, windowMs, signal),
     mode: "slow",
   });
 

@@ -24,6 +24,8 @@ export interface SandboxRecord {
   daemon: Endpoint | null;
   daemon_http: Endpoint | null;
   shared_base: SharedBase | null;
+  /** Absent only while connected to a pre-revision manager. */
+  activity_revision?: number;
 }
 
 export interface SandboxList {
@@ -63,9 +65,4 @@ export interface WorkspaceSessionDestroyed {
   workspace_session_id: string;
   destroyed: true;
   evicted_upperdir_bytes: number;
-}
-
-export interface HealthProbe {
-  status: "ok" | "unreachable";
-  detail?: string;
 }

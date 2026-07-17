@@ -3,8 +3,11 @@ import { Alert, Box, Tabs } from "@mantine/core";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { rpc, systemScope } from "@/api/rpc";
 import type { SandboxRecord } from "@/api/types";
-import { fetchSandboxSnapshot } from "@/api/observability";
 import { usePoll } from "@/poll/usePoll";
+import {
+  snapshotHasActivity,
+  useSandboxSnapshot,
+} from "@/poll/useSandboxSnapshot";
 import { useErrorToast } from "@/components/ErrorToast";
 import { SandboxHeader } from "@/pages/sandbox/SandboxHeader";
 
@@ -39,14 +42,7 @@ export function SandboxDetail() {
     enabled: sandboxId !== "",
   });
 
-  const ready = record.data?.state === "ready";
-  const snapshot = usePoll({
-    key: ["sandbox", sandboxId, "snapshot"],
-    fn: () => fetchSandboxSnapshot(sandboxId),
-    mode: (data) =>
-      snapshotHasActivity(record.data ?? null, data ?? null) ? "fast" : "slow",
-    enabled: sandboxId !== "" && ready,
-  });
+  const snapshot = useSandboxSnapshot(sandboxId, record.data ?? null);
 
   useEffect(() => {
     if (record.error && !toastShownRef.current) {
@@ -105,16 +101,4 @@ export function SandboxDetail() {
   );
 }
 
-export function snapshotHasActivity(
-  record: SandboxRecord | null,
-  snapshot?: Awaited<ReturnType<typeof fetchSandboxSnapshot>> | null,
-): boolean {
-  if (record?.state !== "ready") return false;
-  return (snapshot?.sandboxes ?? []).some(
-    (sandbox) =>
-      sandbox.sandbox_id === record.id &&
-      sandbox.workspaces.some(
-        (workspace) => workspace.active_namespace_executions.length > 0,
-      ),
-  );
-}
+export { snapshotHasActivity };

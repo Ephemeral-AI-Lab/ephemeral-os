@@ -91,18 +91,6 @@ impl SandboxDaemonServer {
     pub(crate) fn observer(&self) -> Observer {
         resolve_observer(self.observability.as_ref())
     }
-
-    pub(crate) fn trigger_observability_collection(&self) {
-        let Some(observability) = self.observability.clone() else {
-            return;
-        };
-        let config = self.config.clone();
-        let operations = Arc::clone(&self.operations);
-        let handle = tokio::task::spawn_blocking(move || {
-            observability.collect(&config, &operations);
-        });
-        drop(handle);
-    }
 }
 
 /// The one process `Observer`, or a disabled no-op when no observability stack is

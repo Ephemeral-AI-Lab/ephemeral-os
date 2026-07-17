@@ -100,7 +100,7 @@ async function installTerminalApi(page: Page, failInitially = false): Promise<Te
           original_token_count: 0,
           output: "",
           command_session_id: "launched-command",
-          workspace_session_id: "workspace-alpha",
+          workspace_session_id: args.workspace_session_id ?? "workspace-automatic",
         }),
       });
       return;
@@ -163,6 +163,15 @@ async function openTerminal(page: Page, large = false, failInitially = false) {
   return api;
 }
 
+async function openExternalTerminal(page: Page) {
+  const api = await installTerminalApi(page);
+  await page.clock.setFixedTime(FIXTURE_NOW);
+  await page.goto("/p06-terminal.html?external=1");
+  await expect(page.locator("[data-terminal-workspace]")).toBeVisible();
+  await expect(page.locator("[data-terminal-command]")).toHaveCount(1);
+  return api;
+}
+
 for (const [width, height] of [
   [375, 812],
   [768, 1024],
@@ -187,21 +196,39 @@ for (const [width, height] of [
   });
 }
 
-test("P06 separates history filtering from execution targeting and blocks invalid timeouts @visual", async ({ page }) => {
+test("P06 sidebar selection sets the execution target and blocks invalid inline timeouts @visual", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await openTerminal(page);
+  const api = await openTerminal(page);
 
   await page.getByRole("button", { name: "Open sessions" }).click();
   const drawer = page.getByRole("dialog", { name: "Workspace sessions" });
   await drawer.getByText("workspace-beta", { exact: true }).click();
   await expect(drawer).toBeHidden();
   await expect(page.locator("[data-terminal-command]")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText("Automatic");
+  await expect(page.getByText("Command in workspace-beta", { exact: true })).toBeVisible();
+  await expect(page.locator("[data-terminal-session-picker]")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Command options" }).click();
+  await page.getByRole("textbox", { name: "Command" }).fill("pwd");
+  await page.getByLabel("Timeout in seconds").fill("45");
+  await page.getByRole("button", { name: "Run" }).click();
+  await expect.poll(() => api.execArgs.at(-1)).toMatchObject({
+    cmd: "pwd",
+    timeout_ms: 45_000,
+    workspace_session_id: "workspace-beta",
+  });
+
+  await page.getByRole("button", { name: "Open sessions" }).click();
+  await page.getByRole("dialog", { name: "Workspace sessions" }).getByText("All commands", { exact: true }).click();
+  await expect(page.locator("[data-terminal-command]")).toHaveCount(4);
+  await expect(page.locator("[data-terminal-composer]")).toHaveCount(0);
+  await expect(page.getByText("Choose a workspace session or Quick run to run a command.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Open sessions" }).click();
+  await page.getByRole("dialog", { name: "Workspace sessions" }).getByText("workspace-beta", { exact: true }).click();
+
   const timeout = page.getByLabel("Timeout in seconds");
   await timeout.fill("0");
-  await expect(page.getByText("Enter a positive timeout.")).toBeVisible();
+  await expect(page.getByText("Enter 1–86400 seconds.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Run" })).toBeDisabled();
   await page.getByRole("textbox", { name: "Command" }).focus();
   await expect(page).toHaveScreenshot("p06-terminal-invalid-timeout-375x812.png", { animations: "disabled" });
@@ -211,16 +238,17 @@ test("P06 creates and safely destroys explicit workspace sessions", async ({ pag
   await page.setViewportSize({ width: 1440, height: 900 });
   const api = await openTerminal(page);
 
-  await page.getByRole("button", { name: "Workspace session" }).click();
-  await page.getByText("Create isolated session", { exact: true }).click();
+  await page.getByRole("button", { name: "New workspace session" }).click();
+  await page.getByText("Isolated session", { exact: true }).click();
   await expect.poll(() => api.createdProfiles).toEqual(["isolated"]);
   await expect(page.getByText("Workspace session created")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText("workspace-created");
-  await expect(page.getByText("history: all commands")).toBeVisible();
+  await expect(page.getByText("Command in workspace-created", { exact: true })).toBeVisible();
+  await expect(page.getByText("history: workspace-created")).toBeVisible();
 
   await page.getByRole("textbox", { name: "Command" }).fill("pwd");
   await page.getByRole("button", { name: "Run" }).click();
   await expect.poll(() => api.execArgs.at(-1)?.workspace_session_id).toBe("workspace-created");
+  expect(api.execArgs.at(-1)?.timeout_ms).toBe(300_000);
 
   const sessionRail = page.locator("[data-terminal-session-rail]");
   const activeSessionDestroy = sessionRail.getByRole("button", {
@@ -247,14 +275,28 @@ test("P06 automatic execution omits the workspace session id", async ({ page }) 
   await page.setViewportSize({ width: 1024, height: 768 });
   const api = await openTerminal(page);
 
-  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText(
-    "Automatic · shared · auto-publish",
-  );
+  await expect(page.getByText("Quick run", { exact: true }).last()).toBeVisible();
+  await expect(page.locator("[data-terminal-session-picker]")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Command" }).fill("pwd");
+  await page.getByLabel("Timeout in seconds").press("Enter");
+  await expect.poll(() => api.execArgs).toHaveLength(0);
+  await expect(page.getByRole("textbox", { name: "Command" })).toBeFocused();
   await page.getByRole("button", { name: "Run" }).click();
   await expect.poll(() => api.execArgs).toHaveLength(1);
-  expect(api.execArgs[0]).toMatchObject({ cmd: "pwd", yield_time_ms: 0 });
+  expect(api.execArgs[0]).toMatchObject({ cmd: "pwd", timeout_ms: 300_000, yield_time_ms: 0 });
   expect(api.execArgs[0]).not.toHaveProperty("workspace_session_id");
+});
+
+test("P06 hydrates and accepts stdin for a command started outside the browser", async ({ page }) => {
+  const api = await openExternalTerminal(page);
+  const toggle = page.getByRole("button", { name: "Expand command backend-interactive-loop" });
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+
+  const frame = page.locator("#terminal-running-command");
+  await frame.getByRole("textbox", { name: "Standard input" }).fill("hello from browser");
+  await frame.getByRole("button", { name: "Send line" }).click();
+  await expect.poll(() => api.stdinWrites).toEqual(["hello from browser\n"]);
 });
 
 test("P06 keeps stale transcript output, authoritative publish rejection, and one control write visible @visual", async ({ page }) => {

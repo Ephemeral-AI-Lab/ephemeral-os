@@ -10,7 +10,10 @@ import { useSandbox } from "@/pages/sandbox/SandboxContext";
 import { previewScopes } from "@/pages/sandbox/SandboxHeader";
 import { CommandCard } from "@/pages/sandbox/terminal/CommandCard";
 import { CommandComposer } from "@/pages/sandbox/terminal/CommandComposer";
-import { SessionSidebar } from "@/pages/sandbox/terminal/SessionSidebar";
+import {
+  SessionSidebar,
+  type TerminalMode,
+} from "@/pages/sandbox/terminal/SessionSidebar";
 import { TranscriptPollProvider } from "@/pages/sandbox/terminal/TranscriptPollProvider";
 import {
   entryFromExec,
@@ -27,6 +30,11 @@ export function TerminalTab() {
   const queryClient = useQueryClient();
 
   const selectedSession = searchParams.get("session");
+  const mode: TerminalMode = selectedSession
+    ? "session"
+    : searchParams.get("view") === "all"
+      ? "all"
+      : "quick";
   const [ledger, setLedger] = useState<LedgerEntry[]>(() => loadLedger(sandboxId));
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sessionsOpen, setSessionsOpen] = useState(false);
@@ -47,12 +55,19 @@ export function TerminalTab() {
     () => snapshot?.sandboxes[0]?.workspaces ?? [],
     [snapshot],
   );
+  const selectedWorkspace = useMemo(
+    () => workspaces.find((workspace) => workspace.workspace_id === selectedSession) ?? null,
+    [selectedSession, workspaces],
+  );
 
   const inFlight = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, { workspaceId: string; command: string | null }>();
     for (const workspace of workspaces) {
       for (const execution of workspace.active_namespace_executions) {
-        map.set(execution.namespace_execution_id, workspace.workspace_id);
+        map.set(execution.namespace_execution_id, {
+          workspaceId: workspace.workspace_id,
+          command: execution.command ?? null,
+        });
       }
     }
     return map;
@@ -61,18 +76,30 @@ export function TerminalTab() {
   useEffect(() => {
     if (!snapshot) return;
     setLedger((current) => {
+      let changed = false;
+      const reconciled = current.map((entry) => {
+        if (!entry.commandSessionId) return entry;
+        const execution = inFlight.get(entry.commandSessionId);
+        if (!execution?.command || execution.command === entry.cmd) return entry;
+        changed = true;
+        return { ...entry, cmd: execution.command };
+      });
       const known = new Set(
-        current
+        reconciled
           .map((entry) => entry.commandSessionId)
           .filter((id): id is string => id !== null),
       );
       const additions: LedgerEntry[] = [];
-      for (const [commandSessionId, workspaceId] of inFlight) {
+      for (const [commandSessionId, execution] of inFlight) {
         if (!known.has(commandSessionId)) {
-          additions.push(entryFromSnapshot(commandSessionId, workspaceId));
+          additions.push(entryFromSnapshot(
+            commandSessionId,
+            execution.workspaceId,
+            execution.command,
+          ));
         }
       }
-      return additions.length > 0 ? [...current, ...additions] : current;
+      return additions.length > 0 || changed ? [...reconciled, ...additions] : current;
     });
   }, [snapshot, inFlight]);
 
@@ -150,31 +177,46 @@ export function TerminalTab() {
     [queryClient, sandboxId],
   );
 
-  const visibleLedger = selectedSession
+  const visibleLedger = mode === "session"
     ? ledger.filter((entry) => entry.workspaceSessionId === selectedSession)
-    : ledger;
+    : mode === "quick"
+      ? ledger.filter((entry) => entry.autoPublish)
+      : ledger;
+
+  const historyLabel = mode === "session"
+    ? selectedSession
+    : mode === "quick"
+      ? "quick run · shared · auto-publish"
+      : "all commands";
 
   const scopes = previewScopes(snapshot ?? undefined);
 
   return (
     <TranscriptPollProvider>
       <Flex data-terminal-workspace h="100%" mih={0} miw={0} style={{ flex: 1, overflow: "hidden" }}>
-      <SessionSidebar
-        sandboxId={sandboxId}
-        workspaces={workspaces}
-        selected={selectedSession}
-        narrow={narrow}
-        opened={sessionsOpen}
-        onClose={() => setSessionsOpen(false)}
-        onSelect={(sessionId) => {
-          const next = new URLSearchParams(searchParams);
-          if (sessionId) next.set("session", sessionId);
-          else next.delete("session");
-          setSearchParams(next, { replace: true });
-          setSessionsOpen(false);
-        }}
-      />
-      <Flex direction="column" mih={0} miw={0} style={{ flex: 1 }}>
+        <SessionSidebar
+          sandboxId={sandboxId}
+          workspaces={workspaces}
+          mode={mode}
+          selected={selectedSession}
+          narrow={narrow}
+          opened={sessionsOpen}
+          onClose={() => setSessionsOpen(false)}
+          onSelect={(nextMode, sessionId) => {
+            const next = new URLSearchParams(searchParams);
+            if (nextMode === "session" && sessionId) {
+              next.set("session", sessionId);
+              next.delete("view");
+            } else {
+              next.delete("session");
+              if (nextMode === "all") next.set("view", "all");
+              else next.delete("view");
+            }
+            setSearchParams(next, { replace: true });
+            setSessionsOpen(false);
+          }}
+        />
+        <Flex direction="column" mih={0} miw={0} style={{ flex: 1 }}>
         <Paper component="header" data-terminal-toolbar px="md" py="sm" radius={0} withBorder>
           <Group justify="space-between" wrap="wrap">
             <Group gap="sm" wrap="nowrap">
@@ -190,7 +232,7 @@ export function TerminalTab() {
               <Box>
                 <Title order={2} size="sm">Terminal ledger</Title>
                 <Text c="dimmed" size="xs">
-                  history: {selectedSession ?? "all commands"}
+                  history: {historyLabel}
                 </Text>
               </Box>
             </Group>
@@ -205,9 +247,11 @@ export function TerminalTab() {
               <Paper maw={480} p="xl" ta="center" withBorder>
                 <Title order={3} size="sm">No commands yet</Title>
                 <Text c="dimmed" mt="xs" size="xs">
-                {selectedSession
-                  ? `Nothing has run in ${selectedSession} from this browser.`
-                  : "Run the first command below — each command opens its own terminal."}
+                  {mode === "session"
+                    ? `Nothing has run in ${selectedSession} from this browser.`
+                    : mode === "quick"
+                      ? "Run the first one-off command below — each command opens its own terminal."
+                      : "No commands have been recorded in this browser."}
                 </Text>
               </Paper>
             </Center>
@@ -234,12 +278,21 @@ export function TerminalTab() {
             </Stack>
           )}
         </Box>
-        <CommandComposer
-          sandboxId={sandboxId}
-          workspaces={workspaces}
-          onLaunched={onLaunched}
-        />
-      </Flex>
+        {mode === "all" ? (
+          <Paper data-terminal-context-prompt px="md" py="sm" radius={0} ta="center" withBorder>
+            <Text c="dimmed" size="sm">
+              Choose a workspace session or Quick run to run a command.
+            </Text>
+          </Paper>
+        ) : (
+          <CommandComposer
+            sandboxId={sandboxId}
+            workspaceSessionId={mode === "session" ? selectedSession : null}
+            workspace={selectedWorkspace}
+            onLaunched={onLaunched}
+          />
+        )}
+        </Flex>
       </Flex>
     </TranscriptPollProvider>
   );

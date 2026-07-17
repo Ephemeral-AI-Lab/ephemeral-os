@@ -111,6 +111,46 @@ fn source_occ_publish_succeeds_when_active_matches_base(
 }
 
 #[test]
+fn publishes_empty_directory_as_source_change(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("empty-directory")?;
+    let base = fixture.build_base()?;
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![LayerChange::Directory { path: lp("abc") }],
+    ))?;
+
+    assert!(!result.no_op);
+    assert_eq!(result.route_summary.source_count, 1);
+    assert!(matches!(
+        MergedView::new(fixture.root.clone()).read_entry("abc", &result.manifest)?,
+        crate::stack::projection::MergedEntry::Directory
+    ));
+    Ok(())
+}
+
+#[test]
+fn directory_change_keeps_lower_descendants_visible(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("directory-keeps-descendants")?;
+    std::fs::create_dir_all(fixture.workspace.join("abc"))?;
+    std::fs::write(fixture.workspace.join("abc/existing.txt"), "existing\n")?;
+    let base = fixture.build_base()?;
+
+    let result = fixture.stack()?.publish_validated_changes(request(
+        base,
+        vec![LayerChange::Directory { path: lp("abc") }],
+    ))?;
+
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "abc/existing.txt")?,
+        Some("existing\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
 fn source_occ_conflict_rejects_without_publishing_ignored_changes(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = PublishFixture::new("source-conflict")?;

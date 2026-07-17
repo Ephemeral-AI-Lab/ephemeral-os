@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SandboxRecord } from "@/api/types";
 import type { SnapshotResult } from "@/api/observability";
 import { snapshotHasActivity } from "@/pages/sandbox/SandboxDetail";
+import { shouldRequestSandboxSnapshot } from "@/poll/useSandboxSnapshot";
 
 const readyRecord: SandboxRecord = {
   id: "sandbox-a",
@@ -10,6 +11,7 @@ const readyRecord: SandboxRecord = {
   daemon: null,
   daemon_http: null,
   shared_base: null,
+  activity_revision: 7,
 };
 
 const activeSnapshot: SnapshotResult = {
@@ -47,5 +49,39 @@ const activeSnapshot: SnapshotResult = {
 describe("sandbox snapshot polling contract", () => {
   it("uses fast polling for a ready sandbox with active work", () => {
     expect(snapshotHasActivity(readyRecord, activeSnapshot)).toBe(true);
+  });
+
+  it("treats an active layer lease as work", () => {
+    const lease = structuredClone(activeSnapshot);
+    lease.sandboxes[0].workspaces[0].active_namespace_executions = [];
+    lease.sandboxes[0].stack.active_leases = 1;
+    expect(snapshotHasActivity(readyRecord, lease)).toBe(true);
+  });
+
+  it("ignores timestamp and resource-counter churn at a stable revision", () => {
+    const idle = structuredClone(activeSnapshot);
+    idle.sandboxes[0].workspaces[0].active_namespace_executions = [];
+    const changed = structuredClone(idle);
+    changed.sandboxes[0].sampled_at_unix_ms = 99_999;
+    changed.sandboxes[0].resources.latest = {
+      ts: 99_999,
+      sample_delta_ms: 2_000,
+      metrics: { mem_cur: 123_456 },
+      deltas: { cpu_usec: 1_000 },
+    };
+
+    expect(shouldRequestSandboxSnapshot(readyRecord, idle, 7)).toBe(false);
+    expect(shouldRequestSandboxSnapshot(readyRecord, changed, 7)).toBe(false);
+  });
+
+  it("requests exactly when the manager activity revision changes", () => {
+    const idle = structuredClone(activeSnapshot);
+    idle.sandboxes[0].workspaces[0].active_namespace_executions = [];
+    expect(shouldRequestSandboxSnapshot(readyRecord, undefined, undefined)).toBe(true);
+    expect(shouldRequestSandboxSnapshot(readyRecord, undefined, 7)).toBe(false);
+    expect(shouldRequestSandboxSnapshot(readyRecord, idle, 7)).toBe(false);
+    expect(
+      shouldRequestSandboxSnapshot({ ...readyRecord, activity_revision: 8 }, idle, 7),
+    ).toBe(true);
   });
 });

@@ -205,6 +205,7 @@ fn read_command_bytes(change: &LayerChange) -> Result<Vec<u8>, LayerStackError> 
         }
         LayerChange::Delete { .. }
         | LayerChange::Symlink { .. }
+        | LayerChange::Directory { .. }
         | LayerChange::OpaqueDir { .. } => Ok(Vec::new()),
     }
 }

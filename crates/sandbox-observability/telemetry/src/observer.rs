@@ -187,6 +187,16 @@ impl Observer {
         (!path.as_os_str().is_empty()).then(|| path.to_path_buf())
     }
 
+    #[must_use]
+    pub fn sink_stats(&self) -> crate::SinkStats {
+        self.core.sink.stats()
+    }
+
+    #[must_use]
+    pub fn max_line_bytes(&self) -> usize {
+        self.core.sink.max_line_bytes()
+    }
+
     /// Set the thread-local context for `f`, then restore the previous one —
     /// even if `f` unwinds, and even when `ctx` is `None` (which makes any
     /// span/event inside `f` no-op rather than emit an orphan).

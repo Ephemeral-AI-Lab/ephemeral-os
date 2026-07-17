@@ -372,6 +372,7 @@ fn sandbox_record(
         id: id(value),
         workspace_root: PathBuf::from("/testbed"),
         state,
+        activity_revision: 0,
         daemon,
         daemon_http: None,
         shared_base: None,
@@ -576,12 +577,23 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
     );
     assert_eq!(inspected["id"], "container-1");
 
+    assert_eq!(services.sample_resources_once(), 1);
+    let ring_path = services.resource_ring().path(&id("container-1"));
+    assert!(
+        ring_path.is_file(),
+        "sampler must create the host resource ring"
+    );
+
     let destroyed = dispatch(
         &services,
         "destroy_sandbox",
         json!({"sandbox_id": "container-1"}),
     );
     assert_eq!(destroyed["state"], "stopped");
+    assert!(
+        !ring_path.exists(),
+        "teardown must delete the resource ring"
+    );
 
     let listed = dispatch(&services, "list_sandboxes", json!({}));
     assert_eq!(
@@ -796,12 +808,18 @@ fn observability_snapshot_enriches_ready_nodes_with_host_resource_metrics() {
         ))
         .expect("insert ready sandbox");
 
+    assert_eq!(services.sample_resources_once(), 1);
+
     let response = dispatch(&services, "snapshot", json!({}));
     let metrics = &response["sandboxes"][0]["resources"]["latest"]["metrics"];
 
     assert_eq!(metrics["metrics_source"], "docker_engine");
     assert_eq!(metrics["cpu_usec"], 12_000);
     assert_eq!(metrics["mem_cur"], 24_000_000);
+    services
+        .resource_ring()
+        .remove(&id("sbox-1"))
+        .expect("clean resource ring");
 }
 
 #[test]

@@ -1,10 +1,9 @@
 # Benchmark gateway+daemon config for the squash remount-sweep width sweep.
 #
 # Derived from config/prd.yml with two benchmark-only additions:
-#   1. observability.max_file_bytes raised (256 MiB) so high-N span capture does
-#      not rotate away early invocations — the 8 MiB default evicted spans at
-#      N=200 (RESULTS.md "200 sessions"). ObservabilityConfig has
-#      deny_unknown_fields, so only `enabled` / `max_file_bytes` may appear here.
+#   1. observability.max_disk_bytes uses the 16 MiB hard safety maximum. High-N
+#      benchmark evidence must stream while the run is active instead of
+#      bypassing the production per-sandbox storage cap.
 #   2. runtime.layerstack.remount_sweep_width sets the in-container daemon's
 #      remount-sweep width — the A/B / PERF-WIDTH knob. The Docker installer
 #      uploads this file per create_sandbox, so the daemon reads the width from
@@ -42,7 +41,7 @@ runner:
 
 observability:
   enabled: true
-  max_file_bytes: 268435456
+  max_disk_bytes: 16777216
 
 manager:
   docker:

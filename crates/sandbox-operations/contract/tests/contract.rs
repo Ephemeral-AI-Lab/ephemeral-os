@@ -54,6 +54,23 @@ fn responses_preserve_payload_owned_shape() {
 }
 
 #[test]
+fn raw_responses_serialize_without_changing_the_wire_shape() {
+    let response =
+        OperationResponse::from_raw_json(r#"{"view":"events","events":[{"ts":1}]}"#.to_owned())
+            .expect("valid raw response");
+
+    assert_eq!(
+        serde_json::to_string(&response).expect("serialize raw response"),
+        r#"{"view":"events","events":[{"ts":1}]}"#
+    );
+    assert_eq!(response.as_json_value()["events"][0]["ts"], 1);
+    let round_trip: OperationResponse =
+        serde_json::from_str(r#"{"view":"events","events":[{"ts":1}]}"#)
+            .expect("decode value-backed response");
+    assert_eq!(round_trip, response);
+}
+
+#[test]
 fn scope_preserves_sandbox_id_and_kind() {
     let scope = OperationScope::sandbox("sbox-1");
 

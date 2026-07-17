@@ -46,6 +46,10 @@ pub(in crate::stack) fn write_layer_changes(
                 let target = prepare_layer_target(layer_dir, path.as_str())?;
                 std::os::unix::fs::symlink(source_path, target)?;
             }
+            LayerChange::Directory { path } => {
+                let dir = join_layer_path(layer_dir, path.as_str());
+                std::fs::create_dir_all(dir)?;
+            }
             LayerChange::OpaqueDir { path } => {
                 let dir = join_layer_path(layer_dir, path.as_str());
                 std::fs::create_dir_all(&dir)?;

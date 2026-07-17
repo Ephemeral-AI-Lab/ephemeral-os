@@ -4,9 +4,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use http_body_util::BodyExt as _;
+use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use sandbox_config::configs::observability::ObservabilityConfig;
 use sandbox_observability_telemetry::Observer;
-use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::command::{CommandConfig, CommandOperationService};
 use sandbox_runtime::file::FileService;
@@ -24,7 +24,7 @@ use sandbox_runtime_workspace::{
     NetworkProfile, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
@@ -53,7 +53,6 @@ impl HttpTestServer {
             listener,
             server_config(&root),
             operations,
-            None,
             Observer::disabled(),
             shutdown.clone(),
         );
@@ -81,11 +80,22 @@ struct RawResponse {
 
 #[tokio::test]
 async fn health_is_fixed_without_runtime_initialization() -> TestResult {
-    let response = crate::http::health::respond();
+    let response = crate::http::health::respond(Default::default());
     assert_eq!(response.status(), 200);
     assert_eq!(response.headers()["content-type"], "application/json");
     let body = response.into_body().collect().await?.to_bytes();
-    assert_eq!(body, br#"{"status":"ok","service":"daemon_http"}"#[..]);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&body)?,
+        json!({
+            "status": "ok",
+            "service": "daemon_http",
+            "observability": {
+                "dropped_storage": 0,
+                "dropped_oversized": 0,
+                "truncated_records": 0,
+            },
+        })
+    );
     Ok(())
 }
 
@@ -95,7 +105,18 @@ async fn health_and_router_are_an_exact_allowlist() -> TestResult {
 
     let health = send_request(server.addr, "GET", "/health", &[], b"").await?;
     assert_eq!(health.status, 200);
-    assert_eq!(health.body, br#"{"status":"ok","service":"daemon_http"}"#);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&health.body)?,
+        json!({
+            "status": "ok",
+            "service": "daemon_http",
+            "observability": {
+                "dropped_storage": 0,
+                "dropped_oversized": 0,
+                "truncated_records": 0,
+            },
+        })
+    );
     assert!(
         health
             .head

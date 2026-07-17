@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use sandbox_observability_telemetry::{RawFilter, Reader};
+use sandbox_observability_telemetry::{Attrs, RawFilter, Reader, Record, Sample, MAX_LINE_BYTES};
 use serde_json::{json, Value};
 
 static NEXT: AtomicU64 = AtomicU64::new(0);
@@ -25,6 +25,23 @@ fn temp_dir(label: &str) -> PathBuf {
 fn write_lines(path: &Path, lines: &[Value]) {
     let body: String = lines.iter().map(|line| format!("{line}\n")).collect();
     fs::write(path, body).expect("write log");
+}
+
+fn write_records(path: &Path, records: &[Record]) {
+    let mut body = Vec::new();
+    for record in records {
+        serde_json::to_writer(&mut body, record).expect("serialize record");
+        body.push(b'\n');
+    }
+    fs::write(path, body).expect("write records");
+}
+
+fn sample_record(ts: i64, scope: &str, metrics: Value) -> Record {
+    Record::Sample(Sample {
+        ts,
+        scope: scope.to_owned(),
+        metrics: metrics.as_object().cloned().unwrap_or_else(Attrs::new),
+    })
 }
 
 fn now_ms() -> i64 {
@@ -92,6 +109,79 @@ fn scan_skips_malformed_lines() {
         1,
         "half-written tail skipped"
     );
+}
+
+#[test]
+fn scan_skips_invalid_utf8_oversized_and_partial_lines() {
+    let dir = temp_dir("invalid-lines");
+    let primary = dir.join("observability.ndjson");
+    let rotated = dir.join("observability.ndjson.1");
+    let valid = serde_json::to_vec(&sample_record(7, "sandbox", json!({ "ok": true })))
+        .expect("valid record");
+    let mut body = Vec::new();
+    body.extend_from_slice(b"{malformed}\n");
+    body.extend_from_slice(&[0xff, 0xfe, b'\n']);
+    body.extend(std::iter::repeat_n(b'x', MAX_LINE_BYTES));
+    body.push(b'\n');
+    body.extend_from_slice(&valid);
+    body.push(b'\n');
+    body.extend_from_slice(b"{\"kind\":\"sample\"");
+    fs::write(&primary, body).expect("write mixed input");
+
+    let raw = Reader::new(primary, rotated).raw(RawFilter::default());
+    assert_eq!(raw.len(), 1);
+    assert_eq!(
+        serde_json::from_str::<Value>(&raw[0]).expect("parse")["ts"],
+        7
+    );
+}
+
+#[test]
+fn maximum_escaped_record_split_across_internal_buffers_is_read() {
+    let dir = temp_dir("split-buffer");
+    let primary = dir.join("observability.ndjson");
+    let rotated = dir.join("observability.ndjson.1");
+    let record = sample_record(9, "sandbox", json!({ "escaped": "\\\"\n🦀".repeat(1_300) }));
+    let encoded = serde_json::to_vec(&record).expect("serialize");
+    assert!(encoded.len() > 8 * 1024, "crosses the internal read buffer");
+    assert!(encoded.len() < MAX_LINE_BYTES, "within line cap");
+    write_records(&primary, &[record]);
+
+    let raw = Reader::new(primary, rotated).raw(RawFilter::default());
+    assert_eq!(raw.len(), 1);
+    assert_eq!(raw[0].as_bytes(), encoded);
+}
+
+#[test]
+fn segment_order_does_not_change_timestamp_order() {
+    for reversed in [false, true] {
+        let dir = temp_dir(if reversed {
+            "order-reversed"
+        } else {
+            "order-normal"
+        });
+        let primary = dir.join("observability.ndjson");
+        let rotated = dir.join("observability.ndjson.1");
+        let older = json!({ "kind": "sample", "ts": 10, "scope": "sandbox" });
+        let newer = json!({ "kind": "sample", "ts": 20, "scope": "sandbox" });
+        if reversed {
+            write_lines(&primary, &[older]);
+            write_lines(&rotated, &[newer]);
+        } else {
+            write_lines(&rotated, &[older]);
+            write_lines(&primary, &[newer]);
+        }
+        let order: Vec<i64> = Reader::new(primary, rotated)
+            .raw(RawFilter::default())
+            .into_iter()
+            .map(|line| {
+                serde_json::from_str::<Value>(&line).expect("parse")["ts"]
+                    .as_i64()
+                    .expect("ts")
+            })
+            .collect();
+        assert_eq!(order, vec![10, 20]);
+    }
 }
 
 #[test]
@@ -252,6 +342,88 @@ fn trace_builds_tree_with_offsets_resolving_out_of_order() {
 }
 
 #[test]
+fn trace_records_straddling_rotation_build_one_tree() {
+    let dir = temp_dir("trace-rotation");
+    let primary = dir.join("observability.ndjson");
+    let rotated = dir.join("observability.ndjson.1");
+    write_lines(
+        &rotated,
+        &[
+            json!({ "kind": "span", "ts": 100, "trace": "cross", "span": "d-0", "name": "daemon.dispatch", "dur_ms": 100.0, "status": "completed", "attrs": {} }),
+        ],
+    );
+    write_lines(
+        &primary,
+        &[
+            json!({ "kind": "span", "ts": 80, "trace": "cross", "span": "d-1", "parent": "d-0", "name": "command.exec", "dur_ms": 20.0, "status": "completed", "attrs": {} }),
+            json!({ "kind": "event", "ts": 70, "trace": "cross", "parent": "d-1", "name": "lease.acquired", "attrs": {} }),
+        ],
+    );
+
+    let forest = Reader::new(primary, rotated).trace("cross");
+    assert_eq!(forest.len(), 1);
+    assert_eq!(forest[0].children.len(), 1);
+    assert_eq!(forest[0].children[0].events.len(), 1);
+}
+
+#[test]
+fn every_view_enforces_record_and_encoded_byte_limits() {
+    let dir = temp_dir("response-limits");
+    let primary = dir.join("observability.ndjson");
+    let rotated = dir.join("observability.ndjson.1");
+    let now = now_ms();
+    let mut body = String::new();
+    for index in 0..20 {
+        body.push_str(&format!(
+            "{{\"kind\":\"event\",\"ts\":{},\"trace\":\"events\",\"parent\":\"d-0\",\"name\":\"event.{index}\",\"attrs\":{{\"blob\":\"{}\"}}}}\n",
+            now + index,
+            "x".repeat(80)
+        ));
+        body.push_str(&format!(
+            "{{\"kind\":\"span\",\"ts\":{},\"trace\":\"trace\",\"span\":\"d-{index}\",\"name\":\"command.exec\",\"dur_ms\":1.0,\"status\":\"completed\",\"attrs\":{{\"blob\":\"{}\"}}}}\n",
+            now + 100 + index,
+            "y".repeat(80)
+        ));
+        body.push_str(&format!(
+            "{{\"kind\":\"sample\",\"ts\":{},\"scope\":\"scope-{index}\",\"value\":{index},\"blob\":\"{}\"}}\n",
+            now + 200 + index,
+            "z".repeat(80)
+        ));
+    }
+    fs::write(&primary, body).expect("write bounded-view fixture");
+    let max_records = 3;
+    let max_bytes = 420;
+    let reader = Reader::with_limits(primary, rotated, MAX_LINE_BYTES, max_records, max_bytes);
+
+    let raw = reader.raw(RawFilter::default());
+    assert!(raw.len() <= max_records);
+    assert!(serde_json::to_vec(&raw).expect("raw response").len() <= max_bytes);
+
+    let events = reader.events(RawFilter::default());
+    assert!(events.len() <= max_records);
+    assert!(serde_json::to_vec(&events).expect("events response").len() <= max_bytes);
+
+    let trace = reader.trace("trace");
+    assert!(trace.len() <= max_records);
+    assert!(serde_json::to_vec(&trace).expect("trace response").len() <= max_bytes);
+
+    let samples = reader.samples("scope-19", 600_000);
+    assert!(samples.len() <= max_records);
+    assert!(
+        serde_json::to_vec(&samples)
+            .expect("samples response")
+            .len()
+            <= max_bytes
+    );
+
+    let scopes: Vec<String> = (0..20).map(|index| format!("scope-{index}")).collect();
+    let scope_refs: Vec<&str> = scopes.iter().map(String::as_str).collect();
+    let latest = reader.latest_samples(&scope_refs);
+    assert!(latest.len() <= max_records);
+    assert!(serde_json::to_vec(&latest).expect("latest response").len() <= max_bytes);
+}
+
+#[test]
 fn raw_and_events_filter_by_kind_name_trace_since() {
     let dir = temp_dir("filters");
     let primary = dir.join("observability.ndjson");
@@ -303,4 +475,14 @@ fn raw_and_events_filter_by_kind_name_trace_since() {
     });
     assert_eq!(events.len(), 1, "events fold reuses parsed Event records");
     assert_eq!(events[0].attrs["layer_id"], "l0");
+
+    let raw_events = reader.raw_json_events(RawFilter {
+        trace: Some("t1".to_owned()),
+        ..Default::default()
+    });
+    let mut encoded = String::new();
+    raw_events.write_json_array(&mut encoded, Some(1), 256 * 1024);
+    let encoded: serde_json::Value = serde_json::from_str(&encoded).expect("raw events parse");
+    assert_eq!(encoded.as_array().map(Vec::len), Some(1));
+    assert_eq!(encoded[0]["name"], "lease.acquired");
 }

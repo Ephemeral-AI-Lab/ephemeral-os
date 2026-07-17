@@ -48,6 +48,7 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
             sandbox_id: observability.sandbox_id().to_owned(),
             daemon_pid: std::process::id(),
             runtime_dir: observability.runtime_dir().to_string_lossy().into_owned(),
+            sink_stats: observability.observer().sink_stats(),
         })
     }
 
@@ -139,5 +140,6 @@ fn map_namespace_execution(
         namespace_execution_id: execution.namespace_execution_id.0,
         workspace_session_id: execution.workspace_session_id.0,
         operation_name: execution.operation_name,
+        command: execution.command,
     }
 }

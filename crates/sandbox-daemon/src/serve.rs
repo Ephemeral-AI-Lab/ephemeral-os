@@ -158,6 +158,12 @@ pub(crate) fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
     observability
         .validate()
         .context("validate observability config")?;
+    if observability.used_legacy_max_file_bytes {
+        eprintln!(
+            "warning: observability.max_file_bytes is deprecated; use max_disk_bytes (effective total: {})",
+            observability.max_disk_bytes
+        );
+    }
     Ok(DaemonRuntimeConfig {
         daemon,
         runtime,

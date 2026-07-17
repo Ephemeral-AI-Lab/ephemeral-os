@@ -68,6 +68,38 @@ fn disabled_observer_writes_nothing() {
 }
 
 #[test]
+fn storage_failure_never_fails_business_operation() {
+    let path = temp_log("storage-failure");
+    let obs = observer(&path, proc::DAEMON, true);
+    let parent = path.parent().expect("parent");
+    std::fs::remove_dir_all(parent).expect("remove pre-created directory");
+    std::fs::write(parent, b"not a directory").expect("replace directory with file");
+
+    obs.sample("sandbox", json!({ "attempt": 1 }));
+    obs.sample("sandbox", json!({ "attempt": 2 }));
+
+    assert_eq!(
+        obs.sink_stats().dropped_storage,
+        2,
+        "ordinary observer calls swallow storage errors and count once per attempt"
+    );
+    std::fs::remove_file(parent).expect("cleanup blocker");
+}
+
+#[test]
+fn missing_store_directory_is_recreated_without_a_drop() {
+    let path = temp_log("missing-directory");
+    let obs = observer(&path, proc::DAEMON, true);
+    std::fs::remove_dir_all(path.parent().expect("parent")).expect("remove parent");
+
+    obs.sample("sandbox", json!({ "value": 1 }));
+
+    assert!(path.exists());
+    assert_eq!(obs.sink_stats().dropped_storage, 0);
+    std::fs::remove_dir_all(path.parent().expect("parent")).expect("cleanup");
+}
+
+#[test]
 fn span_records_on_drop_with_attrs_and_status() {
     let path = temp_log("span-drop");
     let obs = observer(&path, proc::DAEMON, true);

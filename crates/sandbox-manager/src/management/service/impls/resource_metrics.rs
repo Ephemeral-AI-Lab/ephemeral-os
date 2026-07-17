@@ -1,11 +1,8 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use serde_json::{json, Map, Value};
 
-use crate::operations::{ManagerServices, ResourceSample, MAX_RESOURCE_HISTORY_MS};
-use crate::router::forward_sandbox_request;
-use crate::{ManagerError, SandboxId, SandboxResourceMetrics};
+use crate::operations::{ManagerServices, MAX_RESOURCE_HISTORY_MS};
+use crate::{ManagerError, ResourceRingRead, ResourceSample, SandboxId, SandboxResourceMetrics};
 
 const SANDBOX_SCOPE: &str = "sandbox";
 const DEFAULT_RESOURCE_WINDOW_MS: i64 = 60_000;
@@ -19,10 +16,10 @@ pub(crate) fn dispatch_resource_metrics(
         Err(response) => return response,
     };
     if scope != SANDBOX_SCOPE {
-        return match forward_sandbox_request(services, request.clone()) {
-            Ok(response) => response,
-            Err(error) => error.into_response(),
-        };
+        return OperationResponse::fault(
+            error::INVALID_REQUEST,
+            "manager-owned resource metrics support sandbox scope only",
+        );
     }
 
     let window_ms = match resource_window_ms(request) {
@@ -33,30 +30,23 @@ pub(crate) fn dispatch_resource_metrics(
         Ok(id) => id,
         Err(response) => return response,
     };
-    let samples = match resource_samples(services, id, window_ms) {
-        Ok(samples) => samples,
-        Err(error) => return error.into_response(),
+    let read = resource_samples(services, &id, window_ms);
+    let errors = read.error.into_iter().collect::<Vec<_>>();
+    let availability = if errors.is_empty() {
+        "available"
+    } else {
+        "partial"
     };
-    let topology = daemon_topology(services, request);
     OperationResponse::ok(json!({
         "view": "cgroup",
         "scope": SANDBOX_SCOPE,
-        "series": series_value(samples),
-        "topology": topology,
+        "availability": availability,
+        "errors": errors,
+        "series": series_value(read.samples),
+        "topology": unavailable_topology(
+            "daemon topology is not queried by the manager resource route"
+        ),
     }))
-}
-
-fn daemon_topology(services: &ManagerServices, request: &OperationRequest) -> Value {
-    match forward_sandbox_request(services, request.clone()) {
-        Ok(response) => response
-            .into_json_value()
-            .get("topology")
-            .cloned()
-            .unwrap_or_else(|| {
-                unavailable_topology("sandbox daemon did not report cgroup topology")
-            }),
-        Err(error) => unavailable_topology(format!("sandbox daemon topology unavailable: {error}")),
-    }
 }
 
 fn unavailable_topology(message: impl Into<String>) -> Value {
@@ -88,30 +78,20 @@ pub(crate) fn latest_resource_value(
     services: &ManagerServices,
     id: &SandboxId,
 ) -> Result<Value, ManagerError> {
-    Ok(series_value(resource_samples(
-        services,
-        id.clone(),
-        DEFAULT_RESOURCE_WINDOW_MS,
-    )?)
-    .into_iter()
-    .last()
-    .unwrap_or(Value::Null))
+    Ok(
+        series_value(resource_samples(services, id, MAX_RESOURCE_HISTORY_MS).samples)
+            .into_iter()
+            .last()
+            .unwrap_or(Value::Null),
+    )
 }
 
 fn resource_samples(
     services: &ManagerServices,
-    id: SandboxId,
+    id: &SandboxId,
     window_ms: i64,
-) -> Result<Vec<ResourceSample>, ManagerError> {
-    let metrics = services.runtime.read_sandbox_resource_metrics(&id)?;
-    Ok(services.resource_history.record(
-        id,
-        ResourceSample {
-            sampled_at_unix_ms: now_unix_ms(),
-            metrics,
-        },
-        window_ms,
-    ))
+) -> ResourceRingRead {
+    services.resource_ring.read_window(id, window_ms)
 }
 
 fn sandbox_id(request: &OperationRequest) -> Result<SandboxId, OperationResponse> {
@@ -125,15 +105,6 @@ fn sandbox_id(request: &OperationRequest) -> Result<SandboxId, OperationResponse
         }
     };
     SandboxId::new(sandbox_id.clone()).map_err(ManagerError::into_response)
-}
-
-fn now_unix_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis()
-        .try_into()
-        .unwrap_or(i64::MAX)
 }
 
 fn series_value(samples: Vec<ResourceSample>) -> Vec<Value> {

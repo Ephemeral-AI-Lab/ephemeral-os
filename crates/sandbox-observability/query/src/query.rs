@@ -1,4 +1,4 @@
-use sandbox_observability_telemetry::RawFilter;
+use sandbox_observability_telemetry::{RawFilter, MAX_RESPONSE_BYTES};
 use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use sandbox_runtime_layerstack::LayerRef;
 use serde_json::{json, Value};
@@ -62,15 +62,17 @@ pub(crate) fn events(
         Ok(last_n) => last_n,
         Err(response) => return response,
     };
-    let mut events = context.reader.events(filter);
-    if let Some(last_n) = last_n {
-        let keep = usize::try_from(last_n)
-            .unwrap_or(usize::MAX)
-            .min(events.len());
-        events.drain(..events.len() - keep);
-    }
-    let events = serde_json::to_value(events).unwrap_or_else(|_| Value::Array(Vec::new()));
-    OperationResponse::ok(json!({ "view": "events", "events": events }))
+    const PREFIX: &str = r#"{"view":"events","events":"#;
+    const SUFFIX: &str = "}";
+    let records = context.reader.raw_json_events(filter);
+    let keep = last_n.map(|value| usize::try_from(value).unwrap_or(usize::MAX));
+    let array_limit = MAX_RESPONSE_BYTES.saturating_sub(PREFIX.len() + SUFFIX.len());
+    let array_len = records.json_array_len(keep, array_limit);
+    let mut response = String::with_capacity(PREFIX.len() + array_len + SUFFIX.len());
+    response.push_str(PREFIX);
+    records.write_json_array(&mut response, keep, array_limit);
+    response.push_str(SUFFIX);
+    OperationResponse::from_raw_json(response).unwrap_or_else(OperationResponse::service_error)
 }
 
 pub(crate) fn trace(

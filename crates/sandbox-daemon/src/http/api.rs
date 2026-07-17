@@ -43,10 +43,7 @@ async fn handle_file_list(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> 
         })
     });
     match task.await {
-        Ok(value) => {
-            collect_observability(&state);
-            response::json_value(StatusCode::OK, &value)
-        }
+        Ok(value) => response::json_value(StatusCode::OK, &value),
         Err(err) if err.is_cancelled() => protocol_error("daemon request cancelled"),
         Err(err) => protocol_error(&format!("daemon request failed: {err}")),
     }
@@ -92,18 +89,6 @@ fn protocol_request(state: &HttpState, args: Value) -> OperationRequest {
         OperationScope::sandbox(state.sandbox_id()),
         args,
     )
-}
-
-fn collect_observability(state: &Arc<HttpState>) {
-    let Some(observability) = state.observability.clone() else {
-        return;
-    };
-    let config = state.config.clone();
-    let operations = Arc::clone(&state.operations);
-    let handle = tokio::task::spawn_blocking(move || {
-        observability.collect(&config, &operations);
-    });
-    drop(handle);
 }
 
 fn transport_error(status: StatusCode, kind: &str, message: &str) -> Response<BoxBody> {

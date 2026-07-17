@@ -13,7 +13,9 @@ import "@mantine/notifications/styles.css";
 import "../../src/index.css";
 
 const sandboxId = "terminal-fixture";
-const large = new URL(window.location.href).searchParams.has("large");
+const fixtureParams = new URL(window.location.href).searchParams;
+const large = fixtureParams.has("large");
+const external = fixtureParams.has("external");
 
 const snapshot: SnapshotResult = {
   sandboxes: [
@@ -38,6 +40,7 @@ const snapshot: SnapshotResult = {
               namespace_execution_id: large ? "large-command" : "running-command",
               operation: "exec_command",
               lifecycle_state: "running",
+              command: external ? "backend-interactive-loop" : null,
             },
           ],
         },
@@ -72,13 +75,16 @@ function entry(partial: Partial<LedgerEntry> & Pick<LedgerEntry, "localId" | "cm
   };
 }
 
-const entries: LedgerEntry[] = large
+const entries: LedgerEntry[] = external
+  ? []
+  : large
   ? [
       entry({
         localId: "large-local",
         commandSessionId: "large-command",
         cmd: "generate 10,000 diagnostic lines",
         workspaceSessionId: "workspace-alpha",
+        autoPublish: true,
         status: "running",
         exitCode: null,
         endedAt: null,
@@ -90,6 +96,7 @@ const entries: LedgerEntry[] = large
         commandSessionId: "running-command",
         cmd: "tail -f /var/log/fixture.log",
         workspaceSessionId: "workspace-alpha",
+        autoPublish: true,
         status: "running",
         exitCode: null,
         endedAt: null,
@@ -99,6 +106,7 @@ const entries: LedgerEntry[] = large
         commandSessionId: "rejected-command",
         cmd: "write protected output",
         workspaceSessionId: "workspace-alpha",
+        autoPublish: true,
         publishRejected: true,
         publishRejectClass: "protected_path",
       }),
@@ -106,6 +114,7 @@ const entries: LedgerEntry[] = large
         localId: "completed-local",
         cmd: "echo completed elsewhere",
         workspaceSessionId: "workspace-beta",
+        autoPublish: true,
       }),
     ];
 
@@ -135,7 +144,9 @@ function Fixture() {
     <MantineProvider forceColorScheme="light" theme={ephemeralosTheme}>
       <Notifications limit={4} position="bottom-right" />
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[`/terminal#cmd-${commandSessionId}`]}>
+        <MemoryRouter
+          initialEntries={[external ? "/terminal?session=workspace-alpha" : `/terminal#cmd-${commandSessionId}`]}
+        >
           <Box component="main" h="100%">
             <Routes>
               <Route path="/terminal" element={<TerminalContext />}>

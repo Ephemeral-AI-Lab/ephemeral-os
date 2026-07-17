@@ -96,6 +96,68 @@ fn mutations_survive_reload() {
 }
 
 #[test]
+fn activity_revision_is_monotonic_and_survives_reload() {
+    let dir = RegistryDir::new("activity-revision");
+    let path = dir.snapshot_path();
+    let store = load(&path);
+    store
+        .insert(ready_record("alpha", 7100))
+        .expect("insert alpha");
+
+    assert_eq!(
+        store
+            .advance_activity_revision(&id("alpha"))
+            .expect("first revision")
+            .activity_revision,
+        1
+    );
+    assert_eq!(
+        store
+            .advance_activity_revision(&id("alpha"))
+            .expect("second revision")
+            .activity_revision,
+        2
+    );
+    drop(store);
+
+    assert_eq!(
+        load(&path)
+            .inspect(&id("alpha"))
+            .expect("reloaded alpha")
+            .activity_revision,
+        2
+    );
+}
+
+#[test]
+fn registry_without_activity_revision_loads_as_revision_zero() {
+    let dir = RegistryDir::new("legacy-activity-revision");
+    let path = dir.snapshot_path();
+    std::fs::create_dir_all(path.parent().expect("snapshot parent")).expect("create parent");
+    std::fs::write(
+        &path,
+        br#"[{"id":"legacy","workspace_root":"/tmp/ws","state":"ready","daemon":null,"daemon_http":null,"shared_base":null}]"#,
+    )
+    .expect("write legacy snapshot");
+
+    let store = load(&path);
+    assert_eq!(
+        store
+            .inspect(&id("legacy"))
+            .expect("legacy record")
+            .activity_revision,
+        0
+    );
+    assert_eq!(
+        store
+            .advance_activity_revision(&id("legacy"))
+            .expect("advance migrated revision")
+            .activity_revision,
+        1
+    );
+}
+
+#[test]
 fn remove_is_persisted() {
     let dir = RegistryDir::new("remove");
     let path = dir.snapshot_path();

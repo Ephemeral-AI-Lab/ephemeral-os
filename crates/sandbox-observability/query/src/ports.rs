@@ -1,5 +1,5 @@
 use sandbox_observability_telemetry::collect::process_topology::WorkspaceProcessTopology;
-use sandbox_observability_telemetry::{LayerStackBytes, Reader};
+use sandbox_observability_telemetry::{LayerStackBytes, Reader, SinkStats};
 use sandbox_runtime_layerstack::service::StackObservation;
 use sandbox_runtime_layerstack::LayerDeltaDescription;
 
@@ -8,6 +8,7 @@ pub struct QueryContext {
     pub sandbox_id: String,
     pub daemon_pid: u32,
     pub runtime_dir: String,
+    pub sink_stats: SinkStats,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +41,7 @@ pub struct NamespaceExecutionSnapshot {
     pub namespace_execution_id: String,
     pub workspace_session_id: String,
     pub operation_name: String,
+    pub command: Option<String>,
 }
 
 pub trait ObservabilityInput {

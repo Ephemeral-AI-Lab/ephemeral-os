@@ -52,6 +52,7 @@ export async function rpc<T = unknown>(
   op: string,
   scope: Scope,
   args: Record<string, unknown> = {},
+  signal?: AbortSignal,
 ): Promise<T> {
   let response: Response;
   try {
@@ -59,6 +60,7 @@ export async function rpc<T = unknown>(
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ op, scope, args }),
+      signal,
     });
   } catch (error) {
     throw new RpcError({

@@ -1,6 +1,6 @@
 # Sandbox observability resource isolation specification
 
-Status: Draft  
+Status: Implemented
 Owners: `sandbox-daemon`, `sandbox-manager`, `sandbox-provider-docker`, `sandbox-observability-telemetry`, `sandbox-console`  
 Target: observability storage v2
 
@@ -158,6 +158,12 @@ sample resources as a side effect. The cgroup/resource operation reads the ring
 only. Consequently, repeated reads do not change sample count, timestamps, or
 file contents.
 
+When `manager.registry_path` is configured, the resource-ring root is the
+`observability-resources/` sibling under that registry's parent directory. The
+platform state directory is used otherwise. Deriving the path from an existing
+manager-owned root keeps production state colocated and lets live tests use a
+run-owned temporary root without adding a test-only configuration field.
+
 The host ring uses a fixed layout:
 
 - magic and format version;
@@ -294,6 +300,23 @@ are exposed in health output and reset only on daemon restart.
 
 ## Test specification
 
+Test ownership is deliberately split:
+
+- deterministic Rust unit, allocation, and application integration tests live
+  with the owning product crates in this repository;
+- console polling tests live with the console and use fake timers and request
+  counters;
+- every backend test requiring a real packaged daemon and a real Docker
+  sandbox lives in
+  `/Users/yifanxu/Ephemeral-AI-Lab/ephemeral-sandbox-test/e2e/observability`.
+
+The detailed external live catalog, measurement format, artifact limits,
+cleanup contract, and CI admission rules are defined in
+[`e2e/observability/test_spec.md`](../../ephemeral-sandbox-test/e2e/observability/test_spec.md).
+In this document, “live” always means a sandbox created through that external
+harness and reached through the public backend CLI/gateway path. It does not
+mean a mocked daemon, an in-process service, or a browser test.
+
 ### 1. Deterministic unit tests
 
 Add these tests under existing crate `tests/` directories. No test helpers or
@@ -384,9 +407,14 @@ Use fake timers and request counters:
 
 ### 3. Live memory conformance test
 
-Run the packaged Linux daemon used in production, not a host debug build. Test
+Implement this section in
+`ephemeral-sandbox-test/e2e/observability/resource_isolation`. Run the packaged
+Linux daemon used in production, not a host debug build. Test
 observability-enabled and observability-disabled sandboxes as an A/B pair with
 the same image, limits, workload, and start order alternated between runs.
+Product behavior is invoked only through the public CLI/gateway path. Docker
+and `/proc` access are permitted only for out-of-band measurement and
+deterministic fixture installation.
 
 Collect once per second:
 
@@ -397,20 +425,29 @@ Collect once per second:
   `Private_Dirty`, and `AnonHugePages`;
 - daemon CPU usage and IO bytes;
 - event-store logical and allocated bytes;
-- manager-to-daemon invocation counts.
+- manager host-ring logical and allocated bytes.
 
 Use three repetitions for nightly tests and five for release qualification.
-Retain every raw sample as a test artifact.
+Stream every raw sample immediately to a bounded JSONL artifact; the Python
+test process must not retain a sample list proportional to test duration.
 
 #### Phases
 
 1. Start and warm both sandboxes for five minutes.
 2. Leave both idle with no console for thirty minutes.
-3. Keep the sandbox detail page open for thirty minutes.
-4. Keep the Resources view open for thirty minutes.
+3. Poll the public aggregate and scoped snapshot backend routes for thirty
+   minutes at the console's active cadence.
+4. Poll the public manager-owned Resources/cgroup backend route for thirty
+   minutes at the console's active cadence.
 5. Run 100,000 bounded event-producing operations.
-6. Close the console and allow a ten-minute cooldown.
+6. Stop backend polling and allow a ten-minute cooldown.
 7. Request cgroup reclaim where supported, then capture the final five minutes.
+
+No browser is required for these backend phases. Console request scheduling is
+covered separately with fake timers. Exact manager-to-daemon invocation counts
+are proved by the application integration tests with a counting fake; live E2E
+proves the consequence by observing no daemon CPU/IO work, memory trend, or
+event-store mutation.
 
 #### Memory gates
 
@@ -428,8 +465,9 @@ RSS alone. RSS includes reclaimable file-backed pages.
 - `AnonHugePages` and cgroup `anon_thp` must remain zero.
 - Idle daemon CPU difference between enabled and disabled must be below one
   scheduler tick per minute.
-- Detail and Resources phases must show zero manager-to-daemon observability
-  invocations after initial resolution.
+- Public manager polling must produce no daemon storage IO and no post-warmup
+  anonymous-memory trend; exact zero invocation count is the integration-test
+  gate above.
 - Event-store bytes must remain exactly unchanged throughout both idle phases.
 
 A run fails if any individual repetition breaches a hard bound. Slope and
@@ -456,6 +494,10 @@ comparisons unreliable.
 
 ### 5. Disk conformance and fault tests
 
+Cases involving real sandboxes belong in the external observability suite;
+deterministic crash-point injection remains in product tests until the external
+harness has a run-scoped restart/fault primitive.
+
 1. Sustain maximum-size event production for one hour; assert the event store
    never exceeds its configured total at any sample.
 2. Verify logical bytes and allocated blocks independently.
@@ -463,23 +505,25 @@ comparisons unreliable.
    than the sum of their declared budgets.
 4. Destroy all 100 sandboxes and assert host ring files are gone and Docker
    writable-layer usage returns to its pre-test tolerance.
-5. Mount the store on a deliberately tiny filesystem, force `ENOSPC`, and prove
-   runtime commands still succeed without a retry storm.
-6. Kill the daemon repeatedly during append and rotation; assert restart
-   recovery, parseable complete records, and the hard budget.
+5. Give the current test sandbox an isolated tiny store filesystem or quota,
+   force `ENOSPC`, and prove runtime commands still succeed without a retry
+   storm. Never fill Docker's global disk or a shared host filesystem.
+6. Use deterministic product fault points for append/rotation crash tests. Add
+   a live restart test only after the harness can target and recover the
+   current run's sandbox safely; a timed best-effort `SIGKILL` is forbidden.
 7. Start with legacy logs larger than the new cap. Migration must stream from
    disk, retain only the newest complete records that fit, and never exceed the
    memory gates.
 
 ### 6. CI tiers
 
-| Tier | Frequency | Coverage |
-|---|---|---|
-| Unit | Every change | Sink, reader, ring, allocation harness, polling logic |
-| Integration | Every change | Read purity, routing counts, console fake timers |
-| Smoke | Every change touching observability | Five-minute idle A/B and one rotation |
-| Nightly | Nightly | Three-run 90-minute memory test, concurrency, fault injection |
-| Release | Before release | Five-run memory and Node GC tests, six-hour disk soak, 100-sandbox cleanup |
+| Tier | Owner | Frequency | Coverage |
+|---|---|---|---|
+| Unit | Product repository | Every change | Sink, reader, ring, allocation harness, polling logic |
+| Integration | Product repository | Every change | Read purity, routing counts, console fake timers |
+| Smoke | External live E2E | Every observability change | Real sandbox public contracts plus five-minute idle/polling regression |
+| Nightly | External live E2E | Nightly | Three-run memory test, read purity, strict disk cap |
+| Release | External live E2E | Before release | Five-run A/B and Node GC tests, six-hour disk soak, 100-sandbox cleanup, isolated faults |
 
 Passing unit tests is not sufficient for conformance. A release is
 memory-isolation compliant only after the packaged daemon passes the release
@@ -516,4 +560,5 @@ The work is complete only when all of the following are true:
   on teardown;
 - storage failures cannot fail or materially delay runtime operations;
 - the packaged production daemon, not only unit-test components, passes the
-  nightly and release conformance suites.
+  nightly and release conformance suites under
+  `ephemeral-sandbox-test/e2e/observability`.

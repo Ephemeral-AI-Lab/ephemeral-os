@@ -408,6 +408,7 @@ pub enum ChangedPathKind {
     Write,
     Delete,
     Symlink,
+    Directory,
     OpaqueDir,
 }
 
@@ -418,6 +419,7 @@ impl From<&sandbox_runtime_layerstack::LayerChange> for ChangedPathKind {
             | sandbox_runtime_layerstack::LayerChange::WriteFile { .. } => Self::Write,
             sandbox_runtime_layerstack::LayerChange::Delete { .. } => Self::Delete,
             sandbox_runtime_layerstack::LayerChange::Symlink { .. } => Self::Symlink,
+            sandbox_runtime_layerstack::LayerChange::Directory { .. } => Self::Directory,
             sandbox_runtime_layerstack::LayerChange::OpaqueDir { .. } => Self::OpaqueDir,
         }
     }

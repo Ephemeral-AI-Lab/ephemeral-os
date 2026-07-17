@@ -20,7 +20,7 @@ the operation never mutates cgroups.",
         ArgSpec::optional(
             "scope",
             ArgKind::String,
-            "Resource scope: 'sandbox' or a workspace id.",
+            "Resource scope. Only 'sandbox' is supported by the manager-owned ring.",
             Some("sandbox"),
         ),
         ArgSpec::optional(

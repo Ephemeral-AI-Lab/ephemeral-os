@@ -9,4 +9,5 @@ pub struct RuntimeNamespaceExecutionSnapshot {
     pub namespace_execution_id: NamespaceExecutionId,
     pub workspace_session_id: WorkspaceSessionId,
     pub operation_name: String,
+    pub command: Option<String>,
 }

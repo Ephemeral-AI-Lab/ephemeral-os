@@ -37,6 +37,7 @@ pub(crate) fn snapshot_value(context: &QueryContext, snapshot: ObservabilitySnap
         "daemon": {
             "daemon_pid": context.daemon_pid,
             "runtime_dir": context.runtime_dir,
+            "event_store": context.sink_stats,
         },
         "resources": resource_bundle(latest_samples.get("sandbox")),
         "workspaces": workspaces
@@ -236,6 +237,7 @@ fn namespace_execution_value(execution: &NamespaceExecutionSnapshot) -> Value {
         "namespace_execution_id": execution.namespace_execution_id,
         "operation": execution.operation_name,
         "lifecycle_state": "running",
+        "command": execution.command,
     })
 }
 
