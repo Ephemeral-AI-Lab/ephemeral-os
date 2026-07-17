@@ -51,6 +51,13 @@ describe("sandbox snapshot polling contract", () => {
     expect(snapshotHasActivity(readyRecord, activeSnapshot)).toBe(true);
   });
 
+  it("treats an active layer lease as work", () => {
+    const lease = structuredClone(activeSnapshot);
+    lease.sandboxes[0].workspaces[0].active_namespace_executions = [];
+    lease.sandboxes[0].stack.active_leases = 1;
+    expect(snapshotHasActivity(readyRecord, lease)).toBe(true);
+  });
+
   it("ignores timestamp and resource-counter churn at a stable revision", () => {
     const idle = structuredClone(activeSnapshot);
     idle.sandboxes[0].workspaces[0].active_namespace_executions = [];
@@ -70,7 +77,8 @@ describe("sandbox snapshot polling contract", () => {
   it("requests exactly when the manager activity revision changes", () => {
     const idle = structuredClone(activeSnapshot);
     idle.sandboxes[0].workspaces[0].active_namespace_executions = [];
-    expect(shouldRequestSandboxSnapshot(readyRecord, undefined, null)).toBe(true);
+    expect(shouldRequestSandboxSnapshot(readyRecord, undefined, undefined)).toBe(true);
+    expect(shouldRequestSandboxSnapshot(readyRecord, undefined, 7)).toBe(false);
     expect(shouldRequestSandboxSnapshot(readyRecord, idle, 7)).toBe(false);
     expect(
       shouldRequestSandboxSnapshot({ ...readyRecord, activity_revision: 8 }, idle, 7),

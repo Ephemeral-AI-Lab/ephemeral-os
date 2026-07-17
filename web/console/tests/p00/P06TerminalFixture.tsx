@@ -84,6 +84,7 @@ const entries: LedgerEntry[] = external
         commandSessionId: "large-command",
         cmd: "generate 10,000 diagnostic lines",
         workspaceSessionId: "workspace-alpha",
+        autoPublish: true,
         status: "running",
         exitCode: null,
         endedAt: null,
@@ -95,6 +96,7 @@ const entries: LedgerEntry[] = external
         commandSessionId: "running-command",
         cmd: "tail -f /var/log/fixture.log",
         workspaceSessionId: "workspace-alpha",
+        autoPublish: true,
         status: "running",
         exitCode: null,
         endedAt: null,
@@ -104,6 +106,7 @@ const entries: LedgerEntry[] = external
         commandSessionId: "rejected-command",
         cmd: "write protected output",
         workspaceSessionId: "workspace-alpha",
+        autoPublish: true,
         publishRejected: true,
         publishRejectClass: "protected_path",
       }),
@@ -111,6 +114,7 @@ const entries: LedgerEntry[] = external
         localId: "completed-local",
         cmd: "echo completed elsewhere",
         workspaceSessionId: "workspace-beta",
+        autoPublish: true,
       }),
     ];
 
@@ -141,7 +145,7 @@ function Fixture() {
       <Notifications limit={4} position="bottom-right" />
       <QueryClientProvider client={queryClient}>
         <MemoryRouter
-          initialEntries={[external ? "/terminal" : `/terminal#cmd-${commandSessionId}`]}
+          initialEntries={[external ? "/terminal?session=workspace-alpha" : `/terminal#cmd-${commandSessionId}`]}
         >
           <Box component="main" h="100%">
             <Routes>

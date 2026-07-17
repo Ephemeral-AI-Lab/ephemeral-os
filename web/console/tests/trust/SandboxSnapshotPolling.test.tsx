@@ -171,4 +171,22 @@ describe("revision-gated sandbox snapshots", () => {
     expect(inspect).toHaveBeenCalledTimes(inspectBeforeHide + 1);
     expect(mocks.fetchSandboxSnapshot).toHaveBeenCalledTimes(1);
   });
+
+  it("does not turn a failed initial snapshot into an idle retry loop", async () => {
+    mocks.fetchSandboxSnapshot.mockRejectedValueOnce(new Error("unavailable"));
+    const view = render(<SnapshotHarness record={record} />, {
+      wrapper: createWrapper(),
+    });
+    await flush();
+    expect(mocks.fetchSandboxSnapshot).toHaveBeenCalledTimes(1);
+
+    await flush(10_000);
+    expect(mocks.fetchSandboxSnapshot).toHaveBeenCalledTimes(1);
+
+    view.rerender(
+      <SnapshotHarness record={{ ...record, activity_revision: 1 }} />,
+    );
+    await flush();
+    expect(mocks.fetchSandboxSnapshot).toHaveBeenCalledTimes(2);
+  });
 });

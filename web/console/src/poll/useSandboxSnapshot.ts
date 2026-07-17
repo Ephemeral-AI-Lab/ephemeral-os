@@ -14,19 +14,26 @@ export function snapshotHasActivity(
   return (snapshot?.sandboxes ?? []).some(
     (sandbox) =>
       sandbox.sandbox_id === record.id &&
-      sandbox.workspaces.some(
-        (workspace) => workspace.active_namespace_executions.length > 0,
-      ),
+      (sandbox.stack.active_leases > 0 ||
+        sandbox.workspaces.some(
+          (workspace) => workspace.active_namespace_executions.length > 0,
+        )),
   );
 }
 
 export function shouldRequestSandboxSnapshot(
   record: SandboxRecord | null,
   snapshot: SnapshotResult | undefined,
-  lastSnapshotRevision: number | null,
+  lastSnapshotRevision: number | null | undefined,
 ): boolean {
   if (record?.state !== "ready") return false;
-  if (snapshot === undefined) return true;
+  if (snapshot === undefined) {
+    if (lastSnapshotRevision === undefined) return true;
+    return (
+      typeof record.activity_revision === "number" &&
+      record.activity_revision !== lastSnapshotRevision
+    );
+  }
   if (snapshotHasActivity(record, snapshot)) return true;
   return (
     typeof record.activity_revision === "number" &&
@@ -44,13 +51,15 @@ export function useSandboxSnapshot(
   sandboxId: string,
   record: SandboxRecord | null,
 ) {
-  const lastSnapshotRevision = useRef<number | null>(null);
+  const lastSnapshotRevision = useRef<number | null | undefined>(undefined);
   return usePoll<SnapshotResult>({
     key: ["sandbox", sandboxId, "snapshot"],
     fn: async (signal) => {
       const revision = record?.activity_revision;
-      const result = await fetchSandboxSnapshot(sandboxId, signal);
+      // Record the attempt before I/O. A failed initial lookup must not become
+      // an unbounded idle retry loop, but a later revision may try once again.
       lastSnapshotRevision.current = typeof revision === "number" ? revision : null;
+      const result = await fetchSandboxSnapshot(sandboxId, signal);
       return result;
     },
     mode: (data) => (snapshotHasActivity(record, data) ? "fast" : "slow"),
