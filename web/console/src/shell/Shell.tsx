@@ -23,7 +23,7 @@ const TAB_LABELS: Record<string, string> = {
 
 const OBSERVABILITY_LABELS: Record<string, string> = {
   resources: "Resources",
-  cgroup: "Cgroups",
+  cgroup: "Processes",
   traces: "Traces",
   events: "Events",
   layerstack: "Layers",
@@ -80,7 +80,7 @@ function navigationItems(pathname: string): NavigationItem[] {
     item("Files", "files"),
     item("Observability", "observability"),
     item("Resources", "observability/resources", true),
-    item("Cgroups", "observability/cgroup", true),
+    item("Processes", "observability/cgroup", true),
     item("Traces", "observability/traces", true),
     item("Events", "observability/events", true),
     item("Layers", "observability/layerstack", true),
