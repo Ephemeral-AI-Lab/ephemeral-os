@@ -74,11 +74,12 @@ export function entryFromExec(
 export function entryFromSnapshot(
   commandSessionId: string,
   workspaceSessionId: string,
+  command?: string | null,
 ): LedgerEntry {
   return {
     localId: crypto.randomUUID(),
     commandSessionId,
-    cmd: `(running command ${commandSessionId} — started outside this browser)`,
+    cmd: command || `(running command ${commandSessionId} — started outside this browser)`,
     workspaceSessionId,
     autoPublish: false,
     startedAt: Date.now(),

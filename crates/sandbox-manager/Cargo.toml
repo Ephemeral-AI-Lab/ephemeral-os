@@ -8,7 +8,7 @@ license.workspace = true
 [dependencies]
 base64.workspace = true
 sandbox-operation-contract.workspace = true
-sandbox-operation-catalog = { workspace = true, features = ["manager", "observability"] }
+sandbox-operation-catalog = { workspace = true, features = ["manager", "observability", "runtime"] }
 sandbox-runtime-layerstack.workspace = true
 rustix.workspace = true
 serde.workspace = true

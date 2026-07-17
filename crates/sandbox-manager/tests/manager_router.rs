@@ -15,6 +15,11 @@ use sandbox_operation_catalog::{
     manager::EXPORT_CHANGES_SPEC,
     observability::{CGROUP_SPEC, SNAPSHOT_SPEC},
     routes,
+    runtime::{
+        CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC, EXEC_COMMAND_SPEC,
+        FILE_BLAME_SPEC, FILE_EDIT_SPEC, FILE_READ_SPEC, FILE_WRITE_SPEC, READ_LINES_SPEC,
+        WRITE_STDIN_SPEC,
+    },
 };
 use sandbox_operation_contract::{
     error, OperationExecutionOwner, OperationRequest, OperationResponse, OperationScope,
@@ -24,12 +29,14 @@ use serde_json::{json, Value};
 
 struct FakeRuntime {
     counters_available: bool,
+    resource_reads: AtomicU64,
 }
 
 impl Default for FakeRuntime {
     fn default() -> Self {
         Self {
             counters_available: true,
+            resource_reads: AtomicU64::new(0),
         }
     }
 }
@@ -56,6 +63,7 @@ impl SandboxRuntime for FakeRuntime {
         &self,
         _id: &SandboxId,
     ) -> Result<SandboxResourceMetrics, ManagerError> {
+        self.resource_reads.fetch_add(1, Ordering::SeqCst);
         Ok(SandboxResourceMetrics {
             cpu_usage_usec: self.counters_available.then_some(42),
             memory_current_bytes: Some(1_024),
@@ -197,6 +205,7 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
         id: sandbox_id(value),
         workspace_root: PathBuf::from("/testbed"),
         state: SandboxState::Ready,
+        activity_revision: 0,
         daemon,
         daemon_http: None,
         shared_base: None,
@@ -232,8 +241,21 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
 }
 
 #[tokio::test]
-async fn manager_router_reads_sandbox_resource_metrics_from_the_runtime() {
-    let (router, daemon_client) = ready_router();
+async fn manager_router_reads_sandbox_resource_metrics_from_the_host_ring_only() {
+    let runtime = Arc::new(FakeRuntime::default());
+    let (services, store, daemon_client) = services_with_runtime(runtime.clone());
+    store
+        .insert(ready_record(
+            "sbox-1",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-1",
+            )),
+        ))
+        .expect("insert sandbox");
+    assert_eq!(services.sample_resources_once(), 1);
+    let router = router(Arc::clone(&services));
 
     let response = router
         .dispatch_request(request(
@@ -250,17 +272,26 @@ async fn manager_router_reads_sandbox_resource_metrics_from_the_runtime() {
         response["series"][0]["metrics"]["metrics_source"],
         "docker_engine"
     );
-    assert_eq!(response["topology"]["self_cgroup"], "0::/");
-    let invocations = daemon_client.invocations.lock().expect("invocations lock");
-    assert_eq!(invocations.len(), 1);
-    assert_eq!(invocations[0].1, CGROUP_SPEC.name);
+    assert_eq!(response["topology"]["available"], false);
+    assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+    services
+        .resource_ring()
+        .remove(&sandbox_id("sbox-1"))
+        .expect("clean resource ring");
 }
 
 #[tokio::test]
 async fn manager_router_does_not_report_unavailable_counters_as_zero() {
-    let (services, store, daemon_client) = services_with_runtime(Arc::new(FakeRuntime {
+    let runtime = Arc::new(FakeRuntime {
         counters_available: false,
-    }));
+        ..FakeRuntime::default()
+    });
+    let (services, store, daemon_client) = services_with_runtime(runtime.clone());
     store
         .insert(ready_record(
             "sbox-1",
@@ -271,7 +302,8 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
             )),
         ))
         .expect("insert sandbox");
-    let router = router(services);
+    assert_eq!(services.sample_resources_once(), 1);
+    let router = router(Arc::clone(&services));
 
     let response = router
         .dispatch_request(request(
@@ -287,14 +319,147 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
     assert!(metrics.get("cpu_usec").is_none());
     assert!(metrics.get("io_rbytes").is_none());
     assert!(metrics.get("io_wbytes").is_none());
-    assert_eq!(response["topology"]["error"], "cgroup root unavailable");
+    assert!(response["topology"]["error"]
+        .as_str()
+        .expect("topology error")
+        .contains("not queried"));
+    assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+    services
+        .resource_ring()
+        .remove(&sandbox_id("sbox-1"))
+        .expect("clean resource ring");
+}
+
+#[test]
+fn manager_status_and_resource_reads_are_pure_for_ten_thousand_iterations() {
+    let runtime = Arc::new(FakeRuntime::default());
+    let (services, store, daemon_client) = services_with_runtime(runtime.clone());
+    store
+        .insert(ready_record(
+            "sbox-pure",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-pure",
+            )),
+        ))
+        .expect("insert sandbox");
+    assert_eq!(services.sample_resources_once(), 1);
+
+    let list = request("list_sandboxes", OperationScope::System, json!({}));
+    let inspect = request(
+        "inspect_sandbox",
+        OperationScope::System,
+        json!({ "sandbox_id": "sbox-pure" }),
+    );
+    let resources = request(
+        CGROUP_SPEC.name,
+        OperationScope::sandbox("sbox-pure"),
+        json!({}),
+    );
+    let ring_path = services.resource_ring().path(&sandbox_id("sbox-pure"));
+    let before = std::fs::read(&ring_path).expect("read ring before pure reads");
+    let before_metadata = std::fs::metadata(&ring_path).expect("ring metadata before pure reads");
+
+    for _ in 0..10_000 {
+        let listed = sandbox_manager::dispatch_operation(&services, &list).into_json_value();
+        assert_eq!(listed["sandboxes"][0]["activity_revision"], 0);
+        let inspected = sandbox_manager::dispatch_operation(&services, &inspect).into_json_value();
+        assert_eq!(inspected["id"], "sbox-pure");
+        let sampled =
+            sandbox_manager::dispatch_operation(&services, &resources).into_json_value();
+        assert_eq!(sampled["series"].as_array().map(Vec::len), Some(1));
+    }
+
+    let after = std::fs::read(&ring_path).expect("read ring after pure reads");
+    let after_metadata = std::fs::metadata(&ring_path).expect("ring metadata after pure reads");
+    assert_eq!(after, before, "pure reads must not change ring contents");
+    assert_eq!(after_metadata.len(), before_metadata.len());
+    assert_eq!(after_metadata.modified().ok(), before_metadata.modified().ok());
+    assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
+    services
+        .resource_ring()
+        .remove(&sandbox_id("sbox-pure"))
+        .expect("clean resource ring");
+}
+
+#[tokio::test]
+async fn activity_revision_advances_only_after_successful_daemon_mutations() {
+    let (services, store, daemon_client) = services();
+    store
+        .insert(ready_record(
+            "sbox-revision",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-revision",
+            )),
+        ))
+        .expect("insert sandbox");
+    let router = router(services);
+
+    for operation in [
+        FILE_READ_SPEC.name,
+        FILE_BLAME_SPEC.name,
+        READ_LINES_SPEC.name,
+        SNAPSHOT_SPEC.name,
+    ] {
+        let response = router
+            .dispatch_request(request(
+                operation,
+                OperationScope::sandbox("sbox-revision"),
+                json!({}),
+            ))
+            .await
+            .into_json_value();
+        assert!(response.get("error").is_none(), "{operation}: {response}");
+        assert_eq!(store.inspect(&sandbox_id("sbox-revision")).unwrap().activity_revision, 0);
+    }
+
+    for (expected, operation) in [
+        EXEC_COMMAND_SPEC.name,
+        WRITE_STDIN_SPEC.name,
+        FILE_WRITE_SPEC.name,
+        FILE_EDIT_SPEC.name,
+        CREATE_WORKSPACE_SESSION_SPEC.name,
+        DESTROY_WORKSPACE_SESSION_SPEC.name,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let response = router
+            .dispatch_request(request(
+                operation,
+                OperationScope::sandbox("sbox-revision"),
+                json!({}),
+            ))
+            .await
+            .into_json_value();
+        assert!(response.get("error").is_none(), "{operation}: {response}");
+        assert_eq!(
+            store.inspect(&sandbox_id("sbox-revision")).unwrap().activity_revision,
+            (expected + 1) as u64,
+            "{operation}"
+        );
+    }
+
     assert_eq!(
         daemon_client
             .invocations
             .lock()
             .expect("invocations lock")
             .len(),
-        1
+        10
     );
 }
 

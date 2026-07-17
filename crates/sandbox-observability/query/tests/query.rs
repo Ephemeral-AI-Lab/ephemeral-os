@@ -155,6 +155,7 @@ fn snapshot_renders_neutral_runtime_state_and_latest_resources() {
                 namespace_execution_id: "namespace_execution_1".to_owned(),
                 workspace_session_id: "workspace-1".to_owned(),
                 operation_name: "exec_command".to_owned(),
+                command: Some("printf ok".to_owned()),
             }],
             partial_errors: vec!["partial workspace projection failed".to_owned()],
         },
@@ -185,6 +186,10 @@ fn snapshot_renders_neutral_runtime_state_and_latest_resources() {
     assert_eq!(
         value["workspaces"][0]["active_namespace_executions"][0]["namespace_execution_id"],
         "namespace_execution_1"
+    );
+    assert_eq!(
+        value["workspaces"][0]["active_namespace_executions"][0]["command"],
+        "printf ok"
     );
     assert_eq!(
         value["workspaces"][0]["resources"]["latest"]["metrics"]["disk_bytes"],

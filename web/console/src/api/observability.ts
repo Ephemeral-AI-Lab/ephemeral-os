@@ -16,6 +16,7 @@ export interface ActiveExecution {
   namespace_execution_id: string;
   operation: string;
   lifecycle_state: string;
+  command?: string | null;
 }
 
 export interface WorkspaceSnapshot {

@@ -13,7 +13,9 @@ import "@mantine/notifications/styles.css";
 import "../../src/index.css";
 
 const sandboxId = "terminal-fixture";
-const large = new URL(window.location.href).searchParams.has("large");
+const fixtureParams = new URL(window.location.href).searchParams;
+const large = fixtureParams.has("large");
+const external = fixtureParams.has("external");
 
 const snapshot: SnapshotResult = {
   sandboxes: [
@@ -38,6 +40,7 @@ const snapshot: SnapshotResult = {
               namespace_execution_id: large ? "large-command" : "running-command",
               operation: "exec_command",
               lifecycle_state: "running",
+              command: external ? "backend-interactive-loop" : null,
             },
           ],
         },
@@ -72,7 +75,9 @@ function entry(partial: Partial<LedgerEntry> & Pick<LedgerEntry, "localId" | "cm
   };
 }
 
-const entries: LedgerEntry[] = large
+const entries: LedgerEntry[] = external
+  ? []
+  : large
   ? [
       entry({
         localId: "large-local",
@@ -135,7 +140,9 @@ function Fixture() {
     <MantineProvider forceColorScheme="light" theme={ephemeralosTheme}>
       <Notifications limit={4} position="bottom-right" />
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[`/terminal#cmd-${commandSessionId}`]}>
+        <MemoryRouter
+          initialEntries={[external ? "/terminal" : `/terminal#cmd-${commandSessionId}`]}
+        >
           <Box component="main" h="100%">
             <Routes>
               <Route path="/terminal" element={<TerminalContext />}>

@@ -183,6 +183,7 @@ fn build_docker_services(
     services.export_caps = export_caps;
     services.snapshot_limits = snapshot_limits;
     services.workspace_roots = workspace_roots;
+    services.start_resource_sampler();
     Ok(Arc::new(services))
 }
 

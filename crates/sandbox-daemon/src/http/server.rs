@@ -15,7 +15,6 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
-use crate::observability::DaemonObservability;
 use crate::rpc::ServerConfig;
 
 use super::response::BoxBody;
@@ -26,7 +25,6 @@ use super::router;
 pub(crate) struct HttpState {
     pub(crate) config: ServerConfig,
     pub(crate) operations: Arc<SandboxRuntimeOperations>,
-    pub(crate) observability: Option<Arc<DaemonObservability>>,
     pub(crate) observer: Observer,
 }
 
@@ -42,14 +40,12 @@ pub(crate) fn spawn(
     listener: TcpListener,
     config: ServerConfig,
     operations: Arc<SandboxRuntimeOperations>,
-    observability: Option<Arc<DaemonObservability>>,
     observer: Observer,
     shutdown: CancellationToken,
 ) -> JoinHandle<()> {
     let state = Arc::new(HttpState {
         config,
         operations,
-        observability,
         observer,
     });
     tokio::spawn(accept_loop(listener, state, shutdown))

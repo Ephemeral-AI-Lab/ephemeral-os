@@ -265,6 +265,7 @@ fn record_value(record: SandboxRecord) -> Value {
         "id": record.id.as_str(),
         "workspace_root": record.workspace_root.to_string_lossy(),
         "state": record.state.as_str(),
+        "activity_revision": record.activity_revision,
         "daemon": record.daemon.map(endpoint_value),
         "daemon_http": record.daemon_http.map(http_endpoint_value),
         "shared_base": record.shared_base.map(shared_base_value),

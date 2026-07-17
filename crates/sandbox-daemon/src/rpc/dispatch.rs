@@ -4,7 +4,6 @@ use super::SandboxDaemonServer;
 use crate::rpc::error::SandboxDaemonError;
 use sandbox_observability_telemetry::record::names;
 use sandbox_observability_telemetry::{SpanStatus, TraceContext};
-use sandbox_operation_catalog::observability::SNAPSHOT_SPEC;
 use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use sandbox_protocol::{
     decode_request_value, error as wire_error, DAEMON_AUTH_FIELD, DAEMON_READINESS_OPERATION,
@@ -73,10 +72,7 @@ impl SandboxDaemonServer {
             })
         });
         match task.await {
-            Ok(response) => {
-                self.trigger_observability_collection();
-                response
-            }
+            Ok(response) => response,
             Err(err) if err.is_cancelled() => super::error_response(
                 error::INTERNAL_ERROR,
                 "daemon request cancelled",
@@ -93,27 +89,12 @@ impl SandboxDaemonServer {
     async fn dispatch_observability(&self, request: OperationRequest) -> OperationResponse {
         let operations = Arc::clone(&self.operations);
         let observability = self.observability.clone();
-        let config = self.config.clone();
+        let cgroup_root = self.config.cgroup_root.clone();
         let task = tokio::task::spawn_blocking(move || {
-            if request.op == SNAPSHOT_SPEC.name {
-                if let Some(observability) = observability.as_deref() {
-                    let runtime_snapshot = operations.observability_snapshot();
-                    if observability
-                        .refresh_resource_samples(&config, &runtime_snapshot)
-                        .is_err()
-                    {
-                        return super::error_response(
-                            error::INTERNAL_ERROR,
-                            "snapshot resource refresh failed",
-                            serde_json::json!({}),
-                        );
-                    }
-                }
-            }
             let input = crate::observability::adapter::DaemonObservabilityAdapter::new(
                 &operations,
                 observability.as_deref(),
-                config.cgroup_root.as_deref(),
+                cgroup_root.as_deref(),
             );
             sandbox_observability_query::dispatch_operation(&input, &request)
         });

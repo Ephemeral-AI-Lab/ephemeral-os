@@ -71,6 +71,7 @@ impl CommandOperationService {
                 namespace_execution_id: command.exec.id().clone(),
                 workspace_session_id: command.workspace_session_id.clone(),
                 operation_name: command.operation_name.to_owned(),
+                command: Some(command.command.clone()),
             })
         });
         snapshots.sort_by(|left, right| {

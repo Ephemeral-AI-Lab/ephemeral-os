@@ -175,6 +175,7 @@ fn content_digest(changes: &[LayerChange], path: &LayerPath) -> String {
         },
         LayerChange::Delete { .. }
         | LayerChange::Symlink { .. }
+        | LayerChange::Directory { .. }
         | LayerChange::OpaqueDir { .. } => return String::new(),
     }
     format!("sha256:{:x}", hasher.finalize())

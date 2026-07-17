@@ -28,7 +28,9 @@ pub(crate) fn destroy_sandbox(
             services
                 .store
                 .set_state(&stopping.id, SandboxState::Stopped)?;
-            services.store.remove(&stopping.id)
+            let removed = services.store.remove(&stopping.id)?;
+            let _ = services.resource_ring.remove(&stopping.id);
+            Ok(removed)
         }
         Err(error) => {
             let _ = services.store.set_state(&stopping.id, SandboxState::Failed);

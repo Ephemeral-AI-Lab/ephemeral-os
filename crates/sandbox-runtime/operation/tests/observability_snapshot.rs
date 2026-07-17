@@ -84,6 +84,7 @@ fn observability_snapshot_reports_active_command_namespace_execution(
         workspace_session_id
     );
     assert_eq!(namespace_execution.operation_name, "exec_command");
+    assert_eq!(namespace_execution.command.as_deref(), Some("printf ok"));
     Ok(())
 }
 

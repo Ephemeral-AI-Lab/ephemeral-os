@@ -197,6 +197,23 @@ impl SandboxStore {
         Ok(record)
     }
 
+    pub fn advance_activity_revision(&self, id: &SandboxId) -> Result<SandboxRecord, ManagerError> {
+        let mut records = self.records()?;
+        let record = records
+            .get_mut(id)
+            .ok_or_else(|| ManagerError::MissingSandbox { id: id.clone() })?;
+        record.activity_revision =
+            record
+                .activity_revision
+                .checked_add(1)
+                .ok_or_else(|| ManagerError::RuntimeFailed {
+                    message: format!("activity revision exhausted for {id}"),
+                })?;
+        let record = record.clone();
+        self.persist(&records)?;
+        Ok(record)
+    }
+
     /// Host path of the registry snapshot, when this store persists one.
     /// The export dest guard denies destinations that would overwrite it.
     #[must_use]

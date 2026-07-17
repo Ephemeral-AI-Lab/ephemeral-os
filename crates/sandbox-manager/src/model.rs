@@ -63,6 +63,8 @@ pub struct SandboxRecord {
     pub id: SandboxId,
     pub workspace_root: PathBuf,
     pub state: SandboxState,
+    #[serde(default)]
+    pub activity_revision: u64,
     pub daemon: Option<SandboxDaemonEndpoint>,
     pub daemon_http: Option<SandboxHttpEndpoint>,
     pub shared_base: Option<SharedBaseMount>,
@@ -75,6 +77,7 @@ impl SandboxRecord {
             id,
             workspace_root,
             state,
+            activity_revision: 0,
             daemon: None,
             daemon_http: None,
             shared_base: None,

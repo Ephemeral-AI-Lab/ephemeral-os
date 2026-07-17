@@ -12,6 +12,7 @@ mod management;
 mod model;
 mod operations;
 mod progress;
+mod resource_ring;
 pub(crate) mod router;
 mod runtime;
 mod store;
@@ -30,6 +31,10 @@ pub use operations::{
     operation_families, operation_specs, ManagerServices, ObservabilitySnapshotLimits,
 };
 pub use progress::ProgressSink;
+pub use resource_ring::{
+    ResourceRingRead, ResourceRingStore, ResourceSample, MAX_RESOURCE_RESPONSE_RECORDS,
+    RESOURCE_RECORD_BYTES, RESOURCE_RING_BYTES,
+};
 pub use router::SandboxManagerRouter;
 pub use runtime::{
     CreateSandboxRequest, CreateSandboxResult, SandboxResourceMetrics, SandboxRuntime,

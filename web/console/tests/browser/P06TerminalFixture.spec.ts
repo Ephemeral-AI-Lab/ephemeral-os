@@ -163,6 +163,15 @@ async function openTerminal(page: Page, large = false, failInitially = false) {
   return api;
 }
 
+async function openExternalTerminal(page: Page) {
+  const api = await installTerminalApi(page);
+  await page.clock.setFixedTime(FIXTURE_NOW);
+  await page.goto("/p06-terminal.html?external=1");
+  await expect(page.locator("[data-terminal-workspace]")).toBeVisible();
+  await expect(page.locator("[data-terminal-command]")).toHaveCount(1);
+  return api;
+}
+
 for (const [width, height] of [
   [375, 812],
   [768, 1024],
@@ -196,7 +205,7 @@ test("P06 separates history filtering from execution targeting and blocks invali
   await drawer.getByText("workspace-beta", { exact: true }).click();
   await expect(drawer).toBeHidden();
   await expect(page.locator("[data-terminal-command]")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText("Automatic");
+  await expect(page.getByRole("button", { name: "Workspace session", exact: true })).toContainText("Automatic");
 
   await page.getByRole("button", { name: "Command options" }).click();
   const timeout = page.getByLabel("Timeout in seconds");
@@ -211,11 +220,11 @@ test("P06 creates and safely destroys explicit workspace sessions", async ({ pag
   await page.setViewportSize({ width: 1440, height: 900 });
   const api = await openTerminal(page);
 
-  await page.getByRole("button", { name: "Workspace session" }).click();
+  await page.getByRole("button", { name: "Workspace session", exact: true }).click();
   await page.getByText("Create isolated session", { exact: true }).click();
   await expect.poll(() => api.createdProfiles).toEqual(["isolated"]);
   await expect(page.getByText("Workspace session created")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText("workspace-created");
+  await expect(page.getByRole("button", { name: "Workspace session", exact: true })).toContainText("workspace-created");
   await expect(page.getByText("history: all commands")).toBeVisible();
 
   await page.getByRole("textbox", { name: "Command" }).fill("pwd");
@@ -247,7 +256,7 @@ test("P06 automatic execution omits the workspace session id", async ({ page }) 
   await page.setViewportSize({ width: 1024, height: 768 });
   const api = await openTerminal(page);
 
-  await expect(page.getByRole("button", { name: "Workspace session" })).toContainText(
+  await expect(page.getByRole("button", { name: "Workspace session", exact: true })).toContainText(
     "Automatic · shared · auto-publish",
   );
   await page.getByRole("textbox", { name: "Command" }).fill("pwd");
@@ -255,6 +264,18 @@ test("P06 automatic execution omits the workspace session id", async ({ page }) 
   await expect.poll(() => api.execArgs).toHaveLength(1);
   expect(api.execArgs[0]).toMatchObject({ cmd: "pwd", yield_time_ms: 0 });
   expect(api.execArgs[0]).not.toHaveProperty("workspace_session_id");
+});
+
+test("P06 hydrates and accepts stdin for a command started outside the browser", async ({ page }) => {
+  const api = await openExternalTerminal(page);
+  const toggle = page.getByRole("button", { name: "Expand command backend-interactive-loop" });
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+
+  const frame = page.locator("#terminal-running-command");
+  await frame.getByRole("textbox", { name: "Standard input" }).fill("hello from browser");
+  await frame.getByRole("button", { name: "Send line" }).click();
+  await expect.poll(() => api.stdinWrites).toEqual(["hello from browser\n"]);
 });
 
 test("P06 keeps stale transcript output, authoritative publish rejection, and one control write visible @visual", async ({ page }) => {

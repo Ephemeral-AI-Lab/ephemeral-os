@@ -372,6 +372,7 @@ fn sandbox_record(
         id: id(value),
         workspace_root: PathBuf::from("/testbed"),
         state,
+        activity_revision: 0,
         daemon,
         daemon_http: None,
         shared_base: None,

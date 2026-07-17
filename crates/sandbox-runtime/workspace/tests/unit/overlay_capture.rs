@@ -5,6 +5,25 @@ use sandbox_runtime_layerstack::{LayerChange, LayerPath};
 use sandbox_runtime_workspace::overlay::capture::capture_upperdir;
 use sandbox_runtime_workspace::{ProtectedPathDrop, ProtectedPathDropReason};
 
+#[test]
+fn captures_empty_directories_as_publishable_changes(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("capture_empty_directories")?;
+    std::fs::create_dir_all(fixture.base.join("abc/nested"))?;
+
+    let captured = capture_upperdir(&fixture.base)?;
+
+    assert_eq!(
+        captured
+            .changes
+            .iter()
+            .map(|change| (change.path().as_str(), change.kind()))
+            .collect::<Vec<_>>(),
+        vec![("abc", "directory"), ("abc/nested", "directory")]
+    );
+    Ok(())
+}
+
 // Whiteout/opaque fixtures fabricate kernel overlay metadata via user-namespace
 // xattrs (settable unprivileged), so delete/opaque capture coverage is
 // Linux-gated: the daemon target is Linux, and dirent names no longer stand in

@@ -251,6 +251,7 @@ fn env_with_store_and_caps(label: &str, store: Arc<SandboxStore>, caps: ExportAp
             id: sandbox_id("sbox-1"),
             workspace_root: PathBuf::from("/testbed"),
             state: SandboxState::Ready,
+            activity_revision: 0,
             daemon: Some(SandboxDaemonEndpoint::new("127.0.0.1", 7000, "token")),
             daemon_http: None,
             shared_base: None,
@@ -852,6 +853,7 @@ fn non_ready_sandbox_is_rejected_by_the_forward_gate_with_dest_untouched() {
             id: sandbox_id("sbox-creating"),
             workspace_root: PathBuf::from("/testbed"),
             state: SandboxState::Creating,
+            activity_revision: 0,
             daemon: Some(SandboxDaemonEndpoint::new("127.0.0.1", 7000, "token")),
             daemon_http: None,
             shared_base: None,
@@ -1251,6 +1253,7 @@ fn env_with_daemon_http(label: &str, port: u16) -> Env {
             id: sandbox_id("sbox-1"),
             workspace_root: PathBuf::from("/testbed"),
             state: SandboxState::Ready,
+            activity_revision: 0,
             daemon: Some(SandboxDaemonEndpoint::new("127.0.0.1", 7000, "token")),
             daemon_http: Some(SandboxHttpEndpoint {
                 host: "127.0.0.1".to_owned(),
