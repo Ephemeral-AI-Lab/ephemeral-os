@@ -105,7 +105,11 @@ async function installFleetApi(page: Page, options: FixtureOptions = {}) {
     route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "ok" }) }),
   );
   await page.route("**/api/rpc", async (route) => {
-    const { op, args } = route.request().postDataJSON() as { op: string; args: Record<string, unknown> };
+    const { op, scope, args } = route.request().postDataJSON() as {
+      op: string;
+      scope: { kind: "system" } | { kind: "sandbox"; sandbox_id: string };
+      args: Record<string, unknown>;
+    };
     if (op === "list_sandboxes") {
       listCalls += 1;
       if (options.listDelayMs) await new Promise((resolve) => setTimeout(resolve, options.listDelayMs));
@@ -121,7 +125,31 @@ async function installFleetApi(page: Page, options: FixtureOptions = {}) {
       return;
     }
     if (op === "snapshot") {
-      await route.fulfill({ contentType: "application/json", body: JSON.stringify(snapshotFor(list)) });
+      const snapshots = snapshotFor(list);
+      const body = scope.kind === "sandbox"
+        ? snapshots.sandboxes.find((entry) => entry.sandbox_id === scope.sandbox_id)
+        : snapshots;
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify(body) });
+      return;
+    }
+    if (op === "cgroup") {
+      await route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify({
+          view: "cgroup",
+          scope: "sandbox",
+          series: [sample],
+          topology: {
+            schema_version: 2,
+            available: false,
+            source: null,
+            error: null,
+            truncated: false,
+            warnings: [],
+            workspaces: [],
+          },
+        }),
+      });
       return;
     }
     if (op === "list_docker_images") {

@@ -7,10 +7,9 @@ import { rpcStream, systemScope } from "@/api/rpc";
 import type { SandboxRecord } from "@/api/types";
 import { inFlightCount, type SandboxSnapshot } from "@/api/observability";
 import { formatMegabytes } from "@/lib/format";
-import { recordSample } from "@/lib/sparkHistory";
+import type { SandboxCurrentUsage } from "@/poll/useFleetCurrentUsage";
 import { ConfirmDestroyDialog } from "@/components/ConfirmDestroyDialog";
 import { HealthDot } from "@/components/HealthDot";
-import { ResourceSparkline } from "@/components/ResourceSparkline";
 import { StateBadge } from "@/components/StateBadge";
 import { StreamLogPane } from "@/components/StreamLogPane";
 import { useErrorToast } from "@/components/ErrorToast";
@@ -18,23 +17,17 @@ import { useErrorToast } from "@/components/ErrorToast";
 export function SandboxCard({
   record,
   snapshot,
+  usage,
   createLogs,
 }: {
   record: SandboxRecord;
   snapshot: SandboxSnapshot | undefined;
+  usage: SandboxCurrentUsage | undefined;
   createLogs: string[] | undefined;
 }) {
   const navigate = useNavigate();
-  const spark = recordSample(record.id, snapshot?.resources.latest ?? null);
   const sessions = snapshot?.workspaces.length ?? 0;
   const commands = snapshot ? inFlightCount(snapshot) : 0;
-  const latest = snapshot?.resources.latest;
-  const memory = latest?.metrics["mem_cur"];
-  const cpuDelta = latest?.deltas["cpu_usec"];
-  const sampleDeltaMs = latest?.sample_delta_ms ?? 0;
-  const cpuPercent = typeof cpuDelta === "number" && sampleDeltaMs > 0
-    ? (cpuDelta / (sampleDeltaMs * 1_000)) * 100
-    : null;
 
   return (
     <Card component="article" data-fleet-card padding="md" radius="md" shadow="sm" withBorder>
@@ -75,27 +68,32 @@ export function SandboxCard({
         ) : null}
 
         {record.state === "ready" ? (
-          <Box data-fleet-activity>
-            <Group align="center" justify="space-between" wrap="nowrap">
-              <Text c="dimmed" fw={700} size="xs" tt="uppercase">Activity</Text>
-              <Text size="sm" truncate>
-                {sessions} {sessions === 1 ? "session" : "sessions"} · {commands}{" "}
-                {commands === 1 ? "cmd" : "cmds"}
-              </Text>
-            </Group>
-            <SimpleGrid cols={2} data-fleet-resources mt="xs" spacing="sm">
-              <ResourceMetric
-                label="CPU"
-                value={cpuPercent === null ? "–" : `${cpuPercent.toFixed(cpuPercent < 1 ? 2 : 1)}%`}
-                values={spark.cpu}
-              />
-              <ResourceMetric
-                label="Memory"
-                value={typeof memory === "number" ? formatMegabytes(memory) : "–"}
-                values={spark.mem}
-              />
-            </SimpleGrid>
-          </Box>
+          <Stack gap="sm">
+            <Box data-fleet-activity>
+              <Group align="center" justify="space-between" wrap="nowrap">
+                <Text c="dimmed" fw={700} size="xs" tt="uppercase">Activity</Text>
+                <Text size="sm" truncate>
+                  {sessions} {sessions === 1 ? "session" : "sessions"} · {commands}{" "}
+                  {commands === 1 ? "cmd" : "cmds"}
+                </Text>
+              </Group>
+            </Box>
+            <Box data-fleet-resources>
+              <Text c="dimmed" fw={700} size="xs" tt="uppercase">Current usage</Text>
+              <SimpleGrid cols={2} mt="xs" spacing="sm">
+                <ResourceMetric
+                  label="CPU"
+                  value={usage?.cpuPercent == null
+                    ? "–"
+                    : `${usage.cpuPercent.toFixed(usage.cpuPercent < 1 ? 2 : 1)}%`}
+                />
+                <ResourceMetric
+                  label="Memory"
+                  value={usage?.memoryBytes == null ? "–" : formatMegabytes(usage.memoryBytes)}
+                />
+              </SimpleGrid>
+            </Box>
+          </Stack>
         ) : null}
       </Stack>
 
@@ -127,14 +125,13 @@ export function SandboxCard({
   );
 }
 
-function ResourceMetric({ label, value, values }: { label: string; value: string; values: number[] }) {
+function ResourceMetric({ label, value }: { label: string; value: string }) {
   return (
     <Box data-fleet-resource>
       <Group gap="xs" justify="space-between" wrap="nowrap">
         <Text c="dimmed" size="xs">{label}</Text>
         <Text fw={700} size="sm">{value}</Text>
       </Group>
-      <ResourceSparkline values={values} label={`${label} history`} />
     </Box>
   );
 }
