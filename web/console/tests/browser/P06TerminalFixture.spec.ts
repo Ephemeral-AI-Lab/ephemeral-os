@@ -222,13 +222,17 @@ test("P06 creates and safely destroys explicit workspace sessions", async ({ pag
   await page.getByRole("button", { name: "Run" }).click();
   await expect.poll(() => api.execArgs.at(-1)?.workspace_session_id).toBe("workspace-created");
 
-    const sessionRail = page.locator("[data-terminal-session-rail]");
-    await sessionRail.getByText("workspace-alpha", { exact: true }).click();
-  await expect(page.getByRole("button", { name: "Destroy session" })).toBeDisabled();
-  await expect(page.getByText("Stop the active command first.")).toBeVisible();
+  const sessionRail = page.locator("[data-terminal-session-rail]");
+  const activeSessionDestroy = sessionRail.getByRole("button", {
+    name: "Destroy workspace session workspace-alpha",
+  });
+  await expect(activeSessionDestroy).toBeDisabled();
+  await expect(activeSessionDestroy).toHaveAttribute("title", "Stop the active command first");
+  await expect(sessionRail.getByText("Selected session")).toHaveCount(0);
 
-    await sessionRail.getByText("workspace-beta", { exact: true }).click();
-  await page.getByRole("button", { name: "Destroy session" }).click();
+  await sessionRail.getByText("workspace-alpha", { exact: true }).click();
+  await expect(page.getByText("history: workspace-alpha")).toBeVisible();
+  await sessionRail.getByRole("button", { name: "Destroy workspace session workspace-beta" }).click();
   const destroyDialog = page.getByRole("dialog", { name: "Destroy workspace session" });
   const confirm = destroyDialog.getByLabel("Type the workspace session ID to confirm");
   await expect(destroyDialog.getByRole("button", { name: "Destroy session" })).toBeDisabled();
@@ -236,7 +240,7 @@ test("P06 creates and safely destroys explicit workspace sessions", async ({ pag
   await destroyDialog.getByRole("button", { name: "Destroy session" }).click();
   await expect.poll(() => api.destroyedSessions).toEqual(["workspace-beta"]);
   await expect(page.getByText("Workspace session destroyed")).toBeVisible();
-  await expect(page.getByText("history: all commands")).toBeVisible();
+  await expect(page.getByText("history: workspace-alpha")).toBeVisible();
 });
 
 test("P06 automatic execution omits the workspace session id", async ({ page }) => {
