@@ -52,19 +52,22 @@ fn daemon_topology(services: &ManagerServices, request: &OperationRequest) -> Va
             .into_json_value()
             .get("topology")
             .cloned()
-            .unwrap_or_else(|| unavailable_topology("sandbox daemon did not report cgroup topology")),
+            .unwrap_or_else(|| {
+                unavailable_topology("sandbox daemon did not report cgroup topology")
+            }),
         Err(error) => unavailable_topology(format!("sandbox daemon topology unavailable: {error}")),
     }
 }
 
 fn unavailable_topology(message: impl Into<String>) -> Value {
     json!({
+        "schema_version": 2,
         "available": false,
-        "root": null,
-        "self_cgroup": null,
+        "source": null,
         "error": message.into(),
-        "controllers": [],
-        "groups": [],
+        "truncated": false,
+        "warnings": [],
+        "workspaces": [],
     })
 }
 

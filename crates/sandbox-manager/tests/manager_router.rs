@@ -139,12 +139,20 @@ impl SandboxDaemonClient for RecordingDaemonClient {
             "cgroup" => json!({
                 "forwarded": true,
                 "topology": {
-                    "available": false,
-                    "root": null,
-                    "self_cgroup": "0::/",
-                    "error": "cgroup root unavailable",
-                    "controllers": [],
-                    "groups": [],
+                    "schema_version": 2,
+                    "available": true,
+                    "source": "proc_namespaces",
+                    "error": null,
+                    "truncated": false,
+                    "warnings": [],
+                    "workspaces": [{
+                        "workspace_id": "workspace-1",
+                        "state": "idle",
+                        "holder_pid": 41,
+                        "pid_namespace": "pid:[100]",
+                        "mount_namespace": "mnt:[200]",
+                        "processes": [],
+                    }],
                 },
             }),
             _ => json!({"forwarded": true}),
@@ -250,7 +258,13 @@ async fn manager_router_reads_sandbox_resource_metrics_from_the_runtime() {
         response["series"][0]["metrics"]["metrics_source"],
         "docker_engine"
     );
-    assert_eq!(response["topology"]["self_cgroup"], "0::/");
+    assert_eq!(response["topology"]["schema_version"], 2);
+    assert_eq!(response["topology"]["available"], true);
+    assert_eq!(response["topology"]["source"], "proc_namespaces");
+    assert_eq!(
+        response["topology"]["workspaces"][0]["workspace_id"],
+        "workspace-1"
+    );
     let invocations = daemon_client.invocations.lock().expect("invocations lock");
     assert_eq!(invocations.len(), 1);
     assert_eq!(invocations[0].1, CGROUP_SPEC.name);
@@ -287,7 +301,8 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
     assert!(metrics.get("cpu_usec").is_none());
     assert!(metrics.get("io_rbytes").is_none());
     assert!(metrics.get("io_wbytes").is_none());
-    assert_eq!(response["topology"]["error"], "cgroup root unavailable");
+    assert_eq!(response["topology"]["schema_version"], 2);
+    assert_eq!(response["topology"]["available"], true);
     assert_eq!(
         daemon_client
             .invocations
@@ -296,6 +311,39 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
             .len(),
         1
     );
+}
+
+#[tokio::test]
+async fn manager_preserves_resource_series_when_topology_transport_is_unavailable() {
+    let (services, store, daemon_client) = services();
+    store
+        .insert(ready_record("sbox-no-daemon", None))
+        .expect("insert sandbox");
+    let router = router(services);
+
+    let response = router
+        .dispatch_request(request(
+            CGROUP_SPEC.name,
+            OperationScope::sandbox("sbox-no-daemon"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["series"].as_array().map(Vec::len), Some(1));
+    assert_eq!(response["topology"]["schema_version"], 2);
+    assert_eq!(response["topology"]["available"], false);
+    assert_eq!(response["topology"]["source"], serde_json::Value::Null);
+    assert_eq!(response["topology"]["workspaces"], json!([]));
+    assert!(response["topology"]["error"]
+        .as_str()
+        .expect("topology error")
+        .contains("unavailable"));
+    assert!(daemon_client
+        .invocations
+        .lock()
+        .expect("invocations lock")
+        .is_empty());
 }
 
 #[tokio::test]
