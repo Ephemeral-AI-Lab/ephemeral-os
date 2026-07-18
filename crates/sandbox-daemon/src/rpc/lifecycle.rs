@@ -3,9 +3,10 @@ use std::sync::Arc;
 
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
+use tokio::sync::OwnedSemaphorePermit;
 use tokio_util::task::TaskTracker;
 
-use super::SandboxDaemonServer;
+use super::{ConnectionAdmission, SandboxDaemonServer};
 use crate::rpc::error::SandboxDaemonError;
 
 impl SandboxDaemonServer {
@@ -48,11 +49,11 @@ impl SandboxDaemonServer {
                         () = server.shutdown.cancelled() => break,
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
-                            let Some(permit) = connection_admission.try_acquire() else {
-                                reject_overloaded_connection(
-                                    stream,
-                                    server.config.max_concurrent_connections,
-                                ).await;
+                            let Some((stream, permit)) = admit_rpc_connection(
+                                stream,
+                                &connection_admission,
+                                server.config.max_concurrent_connections,
+                            ).await else {
                                 continue;
                             };
                             let server = Arc::clone(&server);
@@ -96,11 +97,11 @@ impl SandboxDaemonServer {
                             () = server.shutdown.cancelled() => break,
                             accepted = listener.accept() => {
                                 let (stream, peer_addr) = accepted?;
-                                let Some(permit) = connection_admission.try_acquire() else {
-                                    reject_overloaded_connection(
-                                        stream,
-                                        server.config.max_concurrent_connections,
-                                    ).await;
+                                let Some((stream, permit)) = admit_rpc_connection(
+                                    stream,
+                                    &connection_admission,
+                                    server.config.max_concurrent_connections,
+                                ).await else {
                                     continue;
                                 };
                                 let local_addr = stream.local_addr().ok();
@@ -177,6 +178,24 @@ impl SandboxDaemonServer {
         let _ = tokio::fs::remove_file(&server.config.socket_path).await;
         Ok(())
     }
+}
+
+/// Admit an accepted JSON-line RPC stream before its handler can be spawned.
+/// Both Unix and TCP listeners use this boundary, so a saturated connection
+/// limit writes one structured overload response without creating a task.
+pub(crate) async fn admit_rpc_connection<S>(
+    stream: S,
+    connection_admission: &ConnectionAdmission,
+    max_concurrent_connections: usize,
+) -> Option<(S, OwnedSemaphorePermit)>
+where
+    S: AsyncWrite + Unpin,
+{
+    let Some(permit) = connection_admission.try_acquire() else {
+        reject_overloaded_connection(stream, max_concurrent_connections).await;
+        return None;
+    };
+    Some((stream, permit))
 }
 
 async fn reject_overloaded_connection<S>(mut stream: S, max_concurrent_connections: usize)

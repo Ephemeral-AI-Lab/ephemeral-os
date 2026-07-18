@@ -30,34 +30,71 @@ impl WorkspaceSessionService {
         handler: WorkspaceSessionHandler,
         request: DestroyWorkspaceRequest,
     ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
-        let (flight, leader) = {
-            let mut flights = self
-                .destroy_flights
-                .lock()
-                .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
-            if let Some(flight) = flights.get(&handler.workspace_session_id) {
-                (Arc::clone(flight), false)
-            } else {
-                let flight = Arc::new(DestroyFlight::new());
-                flights.insert(handler.workspace_session_id.clone(), Arc::clone(&flight));
-                (flight, true)
-            }
-        };
+        let (flight, leader) = self.claim_destroy_flight(&handler.workspace_session_id)?;
 
         if !leader {
-            let result = flight
-                .result
-                .lock()
-                .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
-            let result = flight
-                .ready
-                .wait_while(result, |result| result.is_none())
-                .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
-            return result
-                .as_ref()
-                .expect("destroy leader always publishes a terminal result")
-                .clone();
+            return Self::wait_destroy_flight(&flight);
         }
+
+        self.destroy_claimed_session(handler, request, flight)
+    }
+
+    /// Reserve or join the one teardown transaction for this identity. Holder
+    /// reconciliation claims while it still owns the admission gate, before it
+    /// releases the gate to drain commands. That makes every concurrent public
+    /// destroy a follower of the same terminal result.
+    pub(crate) fn claim_destroy_flight(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> Result<(Arc<DestroyFlight>, bool), WorkspaceSessionError> {
+        let mut flights = self
+            .destroy_flights
+            .lock()
+            .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
+        if let Some(flight) = flights.get(workspace_session_id) {
+            return Ok((Arc::clone(flight), false));
+        }
+        let flight = Arc::new(DestroyFlight::new());
+        flights.insert(workspace_session_id.clone(), Arc::clone(&flight));
+        Ok((flight, true))
+    }
+
+    pub(crate) fn existing_destroy_flight(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> Result<Option<Arc<DestroyFlight>>, WorkspaceSessionError> {
+        Ok(self
+            .destroy_flights
+            .lock()
+            .map_err(|_| WorkspaceSessionError::LockPoisoned)?
+            .get(workspace_session_id)
+            .map(Arc::clone))
+    }
+
+    pub(crate) fn wait_destroy_flight(
+        flight: &Arc<DestroyFlight>,
+    ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
+        let result = flight
+            .result
+            .lock()
+            .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
+        let result = flight
+            .ready
+            .wait_while(result, |result| result.is_none())
+            .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
+        result
+            .as_ref()
+            .expect("destroy leader always publishes a terminal result")
+            .clone()
+    }
+
+    pub(crate) fn destroy_claimed_session(
+        &self,
+        handler: WorkspaceSessionHandler,
+        request: DestroyWorkspaceRequest,
+        flight: Arc<DestroyFlight>,
+    ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
+        let workspace_session_id = handler.workspace_session_id.clone();
 
         let result = self.obs().scope(names::WORKSPACE_SESSION_DESTROY, |_span| {
             let snapshot = self.snapshot_for_destroy(&handler.workspace_session_id)?;
@@ -71,6 +108,28 @@ impl WorkspaceSessionService {
                 }
             }
         }
+        self.publish_destroy_flight(&workspace_session_id, &flight, result)
+    }
+
+    /// Complete a reservation when holder finalization fails before raw
+    /// teardown starts (command join or recovery preservation). Followers are
+    /// released with the same retryable terminal error, and the flight is
+    /// removed so a later bounded retry can lead a fresh transaction.
+    pub(crate) fn fail_claimed_destroy(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+        flight: &Arc<DestroyFlight>,
+        error: WorkspaceSessionError,
+    ) {
+        let _ = self.publish_destroy_flight(workspace_session_id, flight, Err(error));
+    }
+
+    fn publish_destroy_flight(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+        flight: &Arc<DestroyFlight>,
+        result: Result<DestroyWorkspaceResult, WorkspaceSessionError>,
+    ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
         {
             let mut slot = flight.result.lock().unwrap_or_else(PoisonError::into_inner);
             *slot = Some(result.clone());
@@ -81,10 +140,10 @@ impl WorkspaceSessionService {
             .lock()
             .unwrap_or_else(PoisonError::into_inner);
         if flights
-            .get(&handler.workspace_session_id)
-            .is_some_and(|current| Arc::ptr_eq(current, &flight))
+            .get(workspace_session_id)
+            .is_some_and(|current| Arc::ptr_eq(current, flight))
         {
-            flights.remove(&handler.workspace_session_id);
+            flights.remove(workspace_session_id);
         }
         result
     }

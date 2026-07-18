@@ -551,6 +551,41 @@ fn workspace_session_duplicate_destroy_does_not_call_raw_destroy_twice() {
     );
 }
 
+#[test]
+fn stale_destroy_handler_cannot_destroy_recreated_same_id_session() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-reused", "lease-old")));
+    let manager = manager_with(&fake);
+    let stale = manager
+        .create_workspace_session(create_request())
+        .expect("old generation creates");
+    manager
+        .destroy_session(stale.clone(), DestroyWorkspaceRequest::default())
+        .expect("old generation destroys");
+
+    fake.push_create_result(Ok(workspace_handle("workspace-reused", "lease-new")));
+    let current = manager
+        .create_workspace_session(create_request())
+        .expect("new generation reuses the public id");
+    let stale_error = manager
+        .destroy_session(stale, DestroyWorkspaceRequest::default())
+        .expect_err("stale generation cannot target the replacement");
+
+    assert!(matches!(
+        stale_error,
+        WorkspaceSessionError::NotFound {
+            workspace_session_id
+        } if workspace_session_id == current.workspace_session_id
+    ));
+    assert_eq!(fake.destroy_calls(), vec![current.workspace_session_id.clone()]);
+    assert_eq!(
+        manager
+            .resolve_session(current.workspace_session_id.clone())
+            .expect("replacement remains resolvable"),
+        current
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Finalize-policy matrix (§5): the completion edge is the only trigger.
 // ---------------------------------------------------------------------------

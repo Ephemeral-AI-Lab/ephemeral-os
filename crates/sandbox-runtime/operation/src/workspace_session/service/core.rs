@@ -410,7 +410,14 @@ impl WorkspaceSessionService {
             .lock()
             .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
         let sessions = self.lock_sessions()?;
-        if creating.contains(&workspace_session_id) || sessions.contains_key(&workspace_session_id)
+        let destroy_in_flight = self
+            .destroy_flights
+            .lock()
+            .map_err(|_| WorkspaceSessionError::LockPoisoned)?
+            .contains_key(&workspace_session_id);
+        if creating.contains(&workspace_session_id)
+            || sessions.contains_key(&workspace_session_id)
+            || destroy_in_flight
         {
             return Err(WorkspaceSessionError::DuplicateWorkspaceSessionId {
                 workspace_session_id,

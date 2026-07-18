@@ -3,6 +3,7 @@ use tokio_util::task::TaskTracker;
 
 use crate::rpc::SandboxDaemonError;
 use sandbox_protocol::ProtocolLimits;
+use serde_json::json;
 
 fn limits(max_request_bytes: usize, request_read_timeout_s: f64) -> ProtocolLimits {
     ProtocolLimits {
@@ -71,4 +72,53 @@ async fn drain_connection_tasks_waits_for_tracked_tasks() {
     assert!(completed.load(std::sync::atomic::Ordering::SeqCst));
     assert!(tracker.is_closed());
     assert!(tracker.is_empty());
+}
+
+#[tokio::test]
+async fn rpc_connection_limit_rejects_before_spawn_and_recovers_after_release() {
+    let admission = ConnectionAdmission::new(1);
+    let held = admission
+        .try_acquire()
+        .expect("the sole configured connection permit is available");
+    assert_eq!(admission.in_use(), 1);
+
+    let (mut client, server) = tokio::io::duplex(4 * 1024);
+    let rejected = admit_rpc_connection(server, &admission, 1).await;
+    assert!(
+        rejected.is_none(),
+        "an overloaded connection must not return a stream that can be spawned"
+    );
+    assert_eq!(
+        admission.in_use(),
+        1,
+        "rejection must not exceed or consume the configured bound"
+    );
+
+    let mut framed = Vec::new();
+    client
+        .read_to_end(&mut framed)
+        .await
+        .expect("read structured overload response");
+    assert_eq!(framed.pop(), Some(b'\n'));
+    let response: serde_json::Value =
+        serde_json::from_slice(&framed).expect("overload response is JSON");
+    assert_eq!(response["error"]["kind"], "server_busy");
+    assert_eq!(
+        response["error"]["message"],
+        "daemon is at connection capacity"
+    );
+    assert_eq!(
+        response["error"]["details"],
+        json!({ "fields": { "max_concurrent_connections": 1 } })
+    );
+
+    drop(held);
+    assert_eq!(admission.in_use(), 0);
+    let (_client, server) = tokio::io::duplex(64);
+    let (_stream, permit) = admit_rpc_connection(server, &admission, 1)
+        .await
+        .expect("a released connection permit admits the next stream");
+    assert_eq!(admission.in_use(), 1);
+    drop(permit);
+    assert_eq!(admission.in_use(), 0);
 }

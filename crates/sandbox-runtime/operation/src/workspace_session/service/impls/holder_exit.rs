@@ -1,4 +1,4 @@
-use std::sync::PoisonError;
+use std::sync::{Arc, PoisonError};
 use std::time::Instant;
 
 use crate::workspace_crate::DestroyWorkspaceRequest;
@@ -54,13 +54,27 @@ impl WorkspaceSessionService {
                 session.holder_exit_recorded = true;
                 session.finalization_state = FinalizationState::Finalizing;
                 session.holder_cleanup_attempts = session.holder_cleanup_attempts.saturating_add(1);
-                InitialReconcilePlan {
+                let initial = InitialReconcilePlan {
                     handler: session.handler(),
                     policy: session.finalize_policy,
                     command_ids: session.active_commands.iter().cloned().collect(),
                     reason,
                     newly_observed,
                     attempt: session.holder_cleanup_attempts,
+                    flight: None,
+                };
+                drop(sessions);
+                let Ok((flight, leader)) =
+                    self.claim_destroy_flight(&initial.handler.workspace_session_id)
+                else {
+                    continue;
+                };
+                if !leader {
+                    continue;
+                }
+                InitialReconcilePlan {
+                    flight: Some(flight),
+                    ..initial
                 }
             };
 
@@ -89,6 +103,7 @@ impl WorkspaceSessionService {
                     &error,
                     cleanup_started,
                 );
+                self.fail_holder_destroy_reservation(&workspace_session_id, &initial, &error);
                 outcomes.push(HolderExitOutcome {
                     workspace_session_id,
                     reason: initial.reason,
@@ -124,6 +139,7 @@ impl WorkspaceSessionService {
                     &error,
                     cleanup_started,
                 );
+                self.fail_holder_destroy_reservation(&workspace_session_id, &initial, &error);
                 outcomes.push(HolderExitOutcome {
                     workspace_session_id,
                     reason: initial.reason,
@@ -136,8 +152,11 @@ impl WorkspaceSessionService {
 
             match initial.policy {
                 FinalizePolicy::NoOp => {
-                    match self.destroy_session(initial.handler, DestroyWorkspaceRequest::default())
-                    {
+                    match self.destroy_claimed_session(
+                        initial.handler.clone(),
+                        DestroyWorkspaceRequest::default(),
+                        initial.flight(),
+                    ) {
                         Ok(_) => {
                             self.record_holder_lifecycle(
                                 workspace_session_id.clone(),
@@ -169,37 +188,9 @@ impl WorkspaceSessionService {
                     }
                 }
                 FinalizePolicy::PublishThenDestroy => {
-                    let upperdir = match initial.handler.handle.entry() {
-                        Ok(entry) => entry.upperdir,
-                        Err(error) => {
-                            let error = format!("resolve recovery source: {error}");
-                            self.record_holder_cleanup_failure(
-                                &workspace_session_id,
-                                initial.attempt,
-                                &error,
-                                cleanup_started,
-                            );
-                            outcomes.push(HolderExitOutcome {
-                                workspace_session_id,
-                                reason: initial.reason,
-                                disposition: HolderExitDisposition::RetryableCleanupFailure {
-                                    diagnostic: error,
-                                },
-                            });
-                            continue;
-                        }
-                    };
-                    let layer_stack_root = self.layerstack().layer_stack_root();
-                    let recovery_root = layer_stack_root
-                        .parent()
-                        .unwrap_or(layer_stack_root)
-                        .join("storage")
-                        .join("workspace_recovery");
-                    let artifact = match super::super::recovery::preserve_recovery_artifact(
-                        &recovery_root,
-                        &workspace_session_id,
-                        &upperdir,
-                    ) {
+                    let artifact = match self
+                        .preserve_holder_recovery_artifact(&workspace_session_id, &initial.handler)
+                    {
                         Ok(artifact) => artifact,
                         Err(error) => {
                             self.record_holder_cleanup_failure(
@@ -208,6 +199,11 @@ impl WorkspaceSessionService {
                                 &error,
                                 cleanup_started,
                             );
+                            self.fail_holder_destroy_reservation(
+                                &workspace_session_id,
+                                &initial,
+                                &error,
+                            );
                             outcomes.push(HolderExitOutcome {
                                 workspace_session_id,
                                 reason: initial.reason,
@@ -218,8 +214,11 @@ impl WorkspaceSessionService {
                             continue;
                         }
                     };
-                    match self.destroy_session(initial.handler, DestroyWorkspaceRequest::default())
-                    {
+                    match self.destroy_claimed_session(
+                        initial.handler.clone(),
+                        DestroyWorkspaceRequest::default(),
+                        initial.flight(),
+                    ) {
                         Ok(_) => {
                             self.record_holder_lifecycle(
                                 workspace_session_id.clone(),
@@ -255,7 +254,7 @@ impl WorkspaceSessionService {
         outcomes
     }
 
-    fn record_holder_cleanup_failure(
+    pub(in crate::workspace_session::service::impls) fn record_holder_cleanup_failure(
         &self,
         workspace_session_id: &crate::workspace_crate::WorkspaceSessionId,
         attempt: u8,
@@ -273,6 +272,45 @@ impl WorkspaceSessionService {
                 session.finalization_state = FinalizationState::FinalizeFailed;
             }
         }
+    }
+
+    pub(in crate::workspace_session::service::impls) fn preserve_holder_recovery_artifact(
+        &self,
+        workspace_session_id: &crate::workspace_crate::WorkspaceSessionId,
+        handler: &super::super::model::WorkspaceSessionHandler,
+    ) -> Result<std::path::PathBuf, String> {
+        let upperdir = handler
+            .handle
+            .entry()
+            .map_err(|error| format!("resolve recovery source: {error}"))?
+            .upperdir;
+        let layer_stack_root = self.layerstack().layer_stack_root();
+        let recovery_root = layer_stack_root
+            .parent()
+            .unwrap_or(layer_stack_root)
+            .join("storage")
+            .join("workspace_recovery");
+        super::super::recovery::preserve_recovery_artifact(
+            &recovery_root,
+            workspace_session_id,
+            &upperdir,
+        )
+    }
+
+    fn fail_holder_destroy_reservation(
+        &self,
+        workspace_session_id: &crate::workspace_crate::WorkspaceSessionId,
+        initial: &InitialReconcilePlan,
+        diagnostic: &str,
+    ) {
+        self.fail_claimed_destroy(
+            workspace_session_id,
+            initial.flight_ref(),
+            crate::workspace_session::WorkspaceSessionError::FinalizationFailed {
+                workspace_session_id: workspace_session_id.clone(),
+                error: diagnostic.to_owned(),
+            },
+        );
     }
 
     #[must_use]
@@ -296,7 +334,7 @@ impl WorkspaceSessionService {
         })
     }
 
-    fn record_holder_lifecycle(
+    pub(in crate::workspace_session::service::impls) fn record_holder_lifecycle(
         &self,
         workspace_session_id: crate::workspace_crate::WorkspaceSessionId,
         kind: HolderLifecycleEventKind,
@@ -330,4 +368,17 @@ struct InitialReconcilePlan {
     reason: String,
     newly_observed: bool,
     attempt: u8,
+    flight: Option<Arc<super::super::core::DestroyFlight>>,
+}
+
+impl InitialReconcilePlan {
+    fn flight(&self) -> Arc<super::super::core::DestroyFlight> {
+        Arc::clone(self.flight_ref())
+    }
+
+    fn flight_ref(&self) -> &Arc<super::super::core::DestroyFlight> {
+        self.flight
+            .as_ref()
+            .expect("holder leader always owns its destroy reservation")
+    }
 }

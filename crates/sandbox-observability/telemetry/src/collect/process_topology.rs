@@ -94,6 +94,8 @@ pub struct DaemonRuntimeConfigMetrics {
     pub blocking_thread_keep_alive_s: Option<f64>,
     pub max_concurrent_connections: Option<usize>,
     pub max_active_commands: Option<usize>,
+    pub max_blocking_queue_depth: Option<usize>,
+    pub max_command_queue_depth: Option<usize>,
     pub infrastructure_thread_allowance: Option<usize>,
 }
 

@@ -13,6 +13,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
@@ -200,6 +201,8 @@ struct FakeLauncherState {
     scripts: VecDeque<FakeRunnerScript>,
     overlay_mount_setup_timeouts: Vec<f64>,
     file_op_setup_timeouts: Vec<f64>,
+    cancel_after_completion_entered: Option<Sender<()>>,
+    cancel_after_completion_release: Option<Receiver<()>>,
 }
 
 /// A fake `NsRunnerLauncher`: records each request, hands back a `FakeRunnerChild`
@@ -220,6 +223,18 @@ impl FakeLauncher {
     /// Queue a scripted outcome for the next `spawn_pty` (FIFO).
     pub fn push_script(&self, script: FakeRunnerScript) {
         self.lock().scripts.push_back(script);
+    }
+
+    /// Park the next cancellation after its completion has been published.
+    /// This exposes the interval where the command ledger can drain while the
+    /// holder-exit transaction is still joining its teardown owner.
+    pub fn park_next_cancel_after_completion(&self) -> (Receiver<()>, Sender<()>) {
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        let mut state = self.lock();
+        state.cancel_after_completion_entered = Some(entered_tx);
+        state.cancel_after_completion_release = Some(release_rx);
+        (entered_rx, release_tx)
     }
 
     #[must_use]
@@ -345,13 +360,22 @@ impl NsRunnerLauncher for FakeLauncher {
             let ignore_cancel = script.ignore_cancel;
             move || {
                 cancelled.store(true, Ordering::Release);
-                state
-                    .lock()
-                    .expect("fake launcher mutex poisoned")
-                    .cancel_request_ids
-                    .push(request_id.clone());
+                let (entered, release) = {
+                    let mut state = state.lock().expect("fake launcher mutex poisoned");
+                    state.cancel_request_ids.push(request_id.clone());
+                    (
+                        state.cancel_after_completion_entered.take(),
+                        state.cancel_after_completion_release.take(),
+                    )
+                };
                 if !ignore_cancel {
                     completion.cancel();
+                }
+                if let Some(entered) = entered {
+                    let _ = entered.send(());
+                }
+                if let Some(release) = release {
+                    let _ = release.recv_timeout(Duration::from_secs(2));
                 }
             }
         };

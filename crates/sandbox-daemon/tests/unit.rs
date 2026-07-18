@@ -39,7 +39,8 @@ mod dependency_guard_tests;
 
 mod connection_tests {
     pub(crate) use crate::rpc::connection::read_request_line_with_limits;
-    pub(crate) use crate::rpc::lifecycle::drain_connection_tasks;
+    pub(crate) use crate::rpc::lifecycle::{admit_rpc_connection, drain_connection_tasks};
+    pub(crate) use crate::rpc::ConnectionAdmission;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/unit/connection.rs"

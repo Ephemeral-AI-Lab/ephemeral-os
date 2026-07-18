@@ -65,6 +65,10 @@ impl DaemonObservability {
                 blocking_thread_keep_alive_s: Some(config.blocking_thread_keep_alive_s),
                 max_concurrent_connections: Some(config.max_concurrent_connections),
                 max_active_commands: Some(runtime.command.max_active),
+                // Admission is intentionally fail-fast: neither blocking work
+                // nor command starts wait in an in-process queue.
+                max_blocking_queue_depth: Some(0),
+                max_command_queue_depth: Some(0),
                 infrastructure_thread_allowance: Some(INFRASTRUCTURE_THREAD_ALLOWANCE),
             },
             diagnostics: Mutex::new(diagnostics),

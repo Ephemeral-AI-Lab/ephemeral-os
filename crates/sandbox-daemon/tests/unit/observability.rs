@@ -733,6 +733,8 @@ async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
             "blocking_thread_keep_alive_s": 5.0,
             "max_concurrent_connections": 256,
             "max_active_commands": 32,
+            "max_blocking_queue_depth": 0,
+            "max_command_queue_depth": 0,
             "infrastructure_thread_allowance": 4,
         })
     );
@@ -1057,6 +1059,8 @@ fn diagnostic_process_metrics(
             blocking_thread_keep_alive_s: Some(5.0),
             max_concurrent_connections: Some(256),
             max_active_commands: Some(256),
+            max_blocking_queue_depth: Some(0),
+            max_command_queue_depth: Some(0),
             infrastructure_thread_allowance: Some(4),
         },
         runtime_usage: Default::default(),

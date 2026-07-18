@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -29,6 +29,7 @@ pub struct HolderExitDispatcher {
     shutdown: Mutex<Option<HolderExitShutdown>>,
     worker: Mutex<Option<JoinHandle<()>>>,
     joined: Arc<AtomicBool>,
+    reconcile_passes_started: Arc<AtomicU64>,
 }
 
 impl HolderExitDispatcher {
@@ -44,9 +45,18 @@ impl HolderExitDispatcher {
         let sessions = Arc::downgrade(sessions);
         let joined = Arc::new(AtomicBool::new(false));
         let worker_joined = Arc::clone(&joined);
+        let reconcile_passes_started = Arc::new(AtomicU64::new(0));
+        let worker_reconcile_passes_started = Arc::clone(&reconcile_passes_started);
         let worker = thread::Builder::new()
             .name("eos-holder-exit-dispatch".to_owned())
-            .spawn(move || dispatcher_loop(listener, sessions, worker_joined))
+            .spawn(move || {
+                dispatcher_loop(
+                    listener,
+                    sessions,
+                    worker_joined,
+                    worker_reconcile_passes_started,
+                );
+            })
             .map_err(|error| {
                 WorkspaceSessionError::Workspace(WorkspaceError::Setup {
                     step: format!("holder exit dispatcher thread start failed: {error}"),
@@ -56,6 +66,7 @@ impl HolderExitDispatcher {
             shutdown: Mutex::new(Some(shutdown)),
             worker: Mutex::new(Some(worker)),
             joined,
+            reconcile_passes_started,
         })))
     }
 
@@ -90,6 +101,12 @@ impl HolderExitDispatcher {
     pub const fn cleanup_attempt_limit_for_test() -> usize {
         HOLDER_EXIT_CLEANUP_ATTEMPTS
     }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn reconcile_passes_started_for_test(&self) -> u64 {
+        self.reconcile_passes_started.load(Ordering::Acquire)
+    }
 }
 
 impl Drop for HolderExitDispatcher {
@@ -102,6 +119,7 @@ fn dispatcher_loop(
     listener: crate::workspace_crate::HolderExitListener,
     sessions: Weak<WorkspaceSessionService>,
     joined: Arc<AtomicBool>,
+    reconcile_passes_started: Arc<AtomicU64>,
 ) {
     struct JoinedOnDrop(Arc<AtomicBool>);
     impl Drop for JoinedOnDrop {
@@ -115,6 +133,7 @@ fn dispatcher_loop(
             break;
         };
         for attempt in 0..HOLDER_EXIT_CLEANUP_ATTEMPTS {
+            reconcile_passes_started.fetch_add(1, Ordering::Release);
             let outcomes = sessions.reconcile_holder_exits();
             let retry_pending = outcomes.iter().any(|outcome| {
                 matches!(
