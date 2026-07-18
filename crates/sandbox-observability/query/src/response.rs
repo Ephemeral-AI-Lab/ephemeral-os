@@ -236,6 +236,7 @@ fn namespace_execution_value(execution: &NamespaceExecutionSnapshot) -> Value {
         "namespace_execution_id": execution.namespace_execution_id,
         "operation": execution.operation_name,
         "lifecycle_state": "running",
+        "command": execution.command,
     })
 }
 

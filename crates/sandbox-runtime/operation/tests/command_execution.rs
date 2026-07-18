@@ -51,6 +51,7 @@ fn fixture(suffix: &str) -> Fixture {
         WorkspaceSessionId("workspace-session".to_owned()),
         Instant::now(),
         "exec_command",
+        "printf ok".to_owned(),
         Arc::new(OnceLock::<FinalizeOutcome>::new()),
         1024 * 1024,
     );

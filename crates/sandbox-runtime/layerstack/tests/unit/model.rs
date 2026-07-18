@@ -110,6 +110,7 @@ fn arb_change_unique() -> impl Strategy<Value = LayerChange> {
         path.clone().prop_map(|path| LayerChange::Delete { path }),
         (path.clone(), "[a-z/]{0,16}")
             .prop_map(|(path, source_path)| LayerChange::Symlink { path, source_path }),
+        path.clone().prop_map(|path| LayerChange::Directory { path }),
         path.prop_map(|path| LayerChange::OpaqueDir { path }),
     ]
 }

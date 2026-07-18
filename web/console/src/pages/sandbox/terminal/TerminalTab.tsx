@@ -49,10 +49,13 @@ export function TerminalTab() {
   );
 
   const inFlight = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, { workspaceId: string; command: string | null }>();
     for (const workspace of workspaces) {
       for (const execution of workspace.active_namespace_executions) {
-        map.set(execution.namespace_execution_id, workspace.workspace_id);
+        map.set(execution.namespace_execution_id, {
+          workspaceId: workspace.workspace_id,
+          command: execution.command ?? null,
+        });
       }
     }
     return map;
@@ -61,18 +64,30 @@ export function TerminalTab() {
   useEffect(() => {
     if (!snapshot) return;
     setLedger((current) => {
+      let changed = false;
+      const reconciled = current.map((entry) => {
+        if (!entry.commandSessionId) return entry;
+        const execution = inFlight.get(entry.commandSessionId);
+        if (!execution?.command || execution.command === entry.cmd) return entry;
+        changed = true;
+        return { ...entry, cmd: execution.command };
+      });
       const known = new Set(
-        current
+        reconciled
           .map((entry) => entry.commandSessionId)
           .filter((id): id is string => id !== null),
       );
       const additions: LedgerEntry[] = [];
-      for (const [commandSessionId, workspaceId] of inFlight) {
+      for (const [commandSessionId, execution] of inFlight) {
         if (!known.has(commandSessionId)) {
-          additions.push(entryFromSnapshot(commandSessionId, workspaceId));
+          additions.push(entryFromSnapshot(
+            commandSessionId,
+            execution.workspaceId,
+            execution.command,
+          ));
         }
       }
-      return additions.length > 0 ? [...current, ...additions] : current;
+      return additions.length > 0 || changed ? [...reconciled, ...additions] : current;
     });
   }, [snapshot, inFlight]);
 

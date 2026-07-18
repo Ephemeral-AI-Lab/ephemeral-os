@@ -139,6 +139,7 @@ fn route_change(
                 MergedEntry::Directory
             )
         }
+        LayerChange::Directory { .. } => true,
         LayerChange::OpaqueDir { .. } => true,
         LayerChange::Write { .. } | LayerChange::WriteFile { .. } | LayerChange::Symlink { .. } => {
             false

@@ -73,6 +73,9 @@ enum PendingChange {
         path: LayerPath,
         source_path: String,
     },
+    Directory {
+        path: LayerPath,
+    },
     OpaqueDir {
         path: LayerPath,
     },
@@ -92,6 +95,7 @@ impl PendingChange {
             },
             Self::Delete { path } => LayerChange::Delete { path },
             Self::Symlink { path, source_path } => LayerChange::Symlink { path, source_path },
+            Self::Directory { path } => LayerChange::Directory { path },
             Self::OpaqueDir { path } => LayerChange::OpaqueDir { path },
         }
     }
@@ -169,11 +173,14 @@ fn walk_upperdir(
         capture_file_entry_metadata(root, &entry, &meta, entries, protected_drops)?;
     }
     for entry in dirs {
+        let rel = relative_path(root, &entry)?;
+        let layer_path = layer_path_from_relative_or_drop(&rel, protected_drops);
         if has_overlay_opaque_xattr(&entry) {
-            let rel = relative_path(root, &entry)?;
-            if let Some(opaque_path) = layer_path_from_relative_or_drop(&rel, protected_drops) {
+            if let Some(opaque_path) = layer_path {
                 push_opaque_dir(opaque_path, emitted_opaque_dirs, entries);
             }
+        } else if let Some(path) = layer_path {
+            entries.push(PendingChange::Directory { path });
         }
         walk_upperdir(
             root,

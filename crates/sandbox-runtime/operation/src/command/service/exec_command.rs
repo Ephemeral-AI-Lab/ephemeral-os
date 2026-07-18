@@ -140,6 +140,7 @@ impl CommandOperationService {
                     admitted.handler.workspace_session_id.clone(),
                     started_at,
                     "exec_command",
+                    input.cmd.clone(),
                     Arc::clone(&admitted.finalize_outcome),
                     self.config().execution.max_transcript_window_bytes,
                 ),

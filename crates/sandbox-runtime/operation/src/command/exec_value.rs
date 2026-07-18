@@ -25,6 +25,7 @@ pub struct CommandExecValue {
     pub(crate) workspace_session_id: WorkspaceSessionId,
     started_at: Instant,
     pub(crate) operation_name: &'static str,
+    pub(crate) command: String,
     next_snapshot_offset: Cell<u64>,
     pub(crate) finalize_outcome: Arc<OnceLock<FinalizeOutcome>>,
     max_transcript_window_bytes: u64,
@@ -38,6 +39,7 @@ impl CommandExecValue {
         workspace_session_id: WorkspaceSessionId,
         started_at: Instant,
         operation_name: &'static str,
+        command: String,
         finalize_outcome: Arc<OnceLock<FinalizeOutcome>>,
         max_transcript_window_bytes: u64,
     ) -> Self {
@@ -47,6 +49,7 @@ impl CommandExecValue {
             workspace_session_id,
             started_at,
             operation_name,
+            command,
             next_snapshot_offset: Cell::new(0),
             finalize_outcome,
             max_transcript_window_bytes,

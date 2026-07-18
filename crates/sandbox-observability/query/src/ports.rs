@@ -40,6 +40,7 @@ pub struct NamespaceExecutionSnapshot {
     pub namespace_execution_id: String,
     pub workspace_session_id: String,
     pub operation_name: String,
+    pub command: Option<String>,
 }
 
 pub trait ObservabilityInput {

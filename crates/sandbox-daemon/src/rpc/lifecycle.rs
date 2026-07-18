@@ -76,7 +76,6 @@ impl SandboxDaemonServer {
                     listener,
                     server.config.clone(),
                     Arc::clone(&server.operations),
-                    server.observability.clone(),
                     server.observer(),
                     server.shutdown.clone(),
                 ))

@@ -185,6 +185,9 @@ pub enum LayerChange {
         path: LayerPath,
         source_path: String,
     },
+    Directory {
+        path: LayerPath,
+    },
     OpaqueDir {
         path: LayerPath,
     },
@@ -197,6 +200,7 @@ impl LayerChange {
             Self::Write { .. } | Self::WriteFile { .. } => "write",
             Self::Delete { .. } => "delete",
             Self::Symlink { .. } => "symlink",
+            Self::Directory { .. } => "directory",
             Self::OpaqueDir { .. } => "opaque_dir",
         }
     }
@@ -208,6 +212,7 @@ impl LayerChange {
             | Self::WriteFile { path, .. }
             | Self::Delete { path }
             | Self::Symlink { path, .. }
+            | Self::Directory { path }
             | Self::OpaqueDir { path } => path,
         }
     }
@@ -234,6 +239,7 @@ pub fn published_layer_bytes(changes: &[LayerChange]) -> u64 {
             LayerChange::WriteFile { size, .. } => *size,
             LayerChange::Delete { .. }
             | LayerChange::Symlink { .. }
+            | LayerChange::Directory { .. }
             | LayerChange::OpaqueDir { .. } => 0,
         })
         .fold(0_u64, u64::saturating_add)
@@ -258,7 +264,9 @@ fn update_digest(hasher: &mut Sha256, change: &LayerChange) -> io::Result<()> {
             }
         }
         LayerChange::Symlink { source_path, .. } => hasher.update(source_path.as_bytes()),
-        LayerChange::Delete { .. } | LayerChange::OpaqueDir { .. } => {}
+        LayerChange::Delete { .. }
+        | LayerChange::Directory { .. }
+        | LayerChange::OpaqueDir { .. } => {}
     }
     hasher.update(b"\0");
     Ok(())

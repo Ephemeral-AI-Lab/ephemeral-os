@@ -1,7 +1,5 @@
-// Daemon observability: `collect`/`emit_resource_samples` write `obs.sample`
-// lines per scope; the `snapshot`/`cgroup` views render from live runtime state
-// plus the leaf `Reader` with no storage engine; rotation moves the oversized
-// log aside; the disabled gate and missing sandbox id stay silent.
+// Daemon observability exposes live structural views and persisted operation
+// events without collecting or retaining resource samples on request paths.
 
 use std::error::Error;
 use std::path::{Path, PathBuf};
@@ -10,7 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::observability::DaemonObservability;
 use crate::rpc::{SandboxDaemonServer, ServerConfig};
 use sandbox_config::configs::observability::ObservabilityConfig;
-use sandbox_observability_telemetry::{LayerStackBytes, ObservabilityPaths, Reader, SampleDelta};
+use sandbox_observability_telemetry::ObservabilityPaths;
 use sandbox_operation_catalog::observability::{
     CGROUP_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TRACE_SPEC,
 };
@@ -19,145 +17,9 @@ use sandbox_runtime::{
     NamespaceExecutionId, NetworkProfile, RuntimeNamespaceExecutionSnapshot,
     RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot, WorkspaceSessionId,
 };
-use sandbox_runtime_layerstack::{LayerChange, LayerPath, LayerStack};
 use serde_json::{json, Value};
 
 type TestResult<T = ()> = Result<T, Box<dyn Error + Send + Sync>>;
-
-const BIG_WINDOW_MS: i64 = 600_000;
-
-#[test]
-fn emit_resource_samples_writes_sandbox_and_workspace_scopes() -> TestResult {
-    let root = test_root("emit-scopes");
-    let sandbox_cgroup = root.join("cgroup-root");
-    write_cgroup_fixture(&sandbox_cgroup, 4_096, 8_192, "max")?;
-    let workspace_cgroup = sandbox_cgroup.join("workspace-workspace-1");
-    write_cgroup_fixture(&workspace_cgroup, 2_048, 4_096, "16384")?;
-    let upperdir = root.join("upperdir");
-    std::fs::create_dir_all(&upperdir)?;
-    std::fs::write(upperdir.join("one.txt"), b"hello")?;
-
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.cgroup_root = Some(sandbox_cgroup);
-    let observability =
-        DaemonObservability::from_config(&config).expect("sandbox id enables observability");
-    let snapshot = RuntimeObservabilitySnapshot {
-        workspaces: vec![RuntimeWorkspaceSnapshot {
-            cgroup_path: Some(workspace_cgroup),
-            ..workspace_snapshot("workspace-1", Some(upperdir))
-        }],
-        active_namespace_executions: Vec::new(),
-        partial_errors: Vec::new(),
-    };
-
-    observability.emit_resource_samples(&config, &snapshot);
-
-    let sandbox = latest_sample(&config, "sandbox").expect("sandbox sample written");
-    assert_eq!(sandbox.metrics["cpu_usec"], 4_096);
-    assert_eq!(sandbox.metrics["mem_cur"], 8_192);
-
-    let workspace = latest_sample(&config, "workspace-1").expect("workspace sample written");
-    assert_eq!(workspace.metrics["cpu_usec"], 2_048);
-    assert_eq!(workspace.metrics["disk_bytes"], 5);
-    #[cfg(unix)]
-    assert!(workspace.metrics["disk_allocated_bytes"].is_u64());
-    #[cfg(not(unix))]
-    assert!(workspace.metrics.get("disk_allocated_bytes").is_none());
-    assert_eq!(workspace.metrics["files"], 1);
-    Ok(())
-}
-
-#[test]
-fn collect_writes_sandbox_and_stack_samples_from_live_runtime() -> TestResult {
-    let root = test_root("collect-stack");
-    let server = daemon_server(&root, Some("sandbox-1"))?;
-    let observability = server.observability.as_ref().expect("observability");
-
-    observability.collect(&server.config, server.operations.as_ref());
-
-    assert!(
-        latest_sample(&server.config, "sandbox").is_some(),
-        "sandbox sample"
-    );
-    let stack = latest_sample(&server.config, "stack").expect("stack sample written");
-    assert!(stack.metrics["layer_count"].is_u64());
-    assert!(stack.metrics["layers_bytes"].is_u64());
-    assert!(stack.metrics["storage_logical_bytes"].is_u64());
-    #[cfg(unix)]
-    {
-        assert!(stack.metrics["layers_allocated_bytes"].is_u64());
-        assert!(stack.metrics["storage_allocated_bytes"].is_u64());
-    }
-    #[cfg(not(unix))]
-    {
-        assert!(stack.metrics["layers_allocated_bytes"].is_null());
-        assert!(stack.metrics["storage_allocated_bytes"].is_null());
-    }
-    assert_eq!(stack.metrics["staging_entry_count"], 0);
-    assert_eq!(stack.metrics["active_leases"], 0);
-    Ok(())
-}
-
-#[test]
-fn collect_preserves_unavailable_stack_metrics_as_null() -> TestResult {
-    let root = test_root("collect-stack-unavailable");
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.observability.sampling.max_walk_nodes = 1;
-    let server = daemon_server_from(&root, config)?;
-    let layer_stack_root = server.operations.layer_stack_root();
-    let mut layerstack = LayerStack::open(layer_stack_root.to_path_buf())?;
-    layerstack.publish_layer(&[LayerChange::Write {
-        path: LayerPath::parse("nonempty.txt")?,
-        content: b"force a truncated active-layer walk".to_vec(),
-    }])?;
-    std::fs::remove_dir_all(layer_stack_root.join(".layer-metadata"))?;
-    std::fs::remove_dir_all(layer_stack_root.join("staging"))?;
-
-    server
-        .observability
-        .as_ref()
-        .expect("observability")
-        .collect(&server.config, server.operations.as_ref());
-
-    let stack = latest_sample(&server.config, "stack").expect("stack sample written");
-    assert!(stack.metrics["layer_count"].is_u64());
-    for metric in [
-        "layers_bytes",
-        "layers_allocated_bytes",
-        "storage_logical_bytes",
-        "storage_allocated_bytes",
-    ] {
-        assert!(
-            stack.metrics[metric].is_null(),
-            "unavailable {metric} must be explicit null, never omitted or zero"
-        );
-    }
-    assert_eq!(
-        stack.metrics["staging_entry_count"], 0,
-        "opening the live stack repairs a missing staging directory before sampling"
-    );
-    Ok(())
-}
-
-#[test]
-fn stack_metrics_serialize_unavailable_values_as_explicit_nulls() {
-    let metrics = DaemonObservability::stack_metrics(2, 1, &LayerStackBytes::default());
-
-    assert_eq!(metrics["layer_count"], 2);
-    assert_eq!(metrics["active_leases"], 1);
-    for metric in [
-        "layers_bytes",
-        "layers_allocated_bytes",
-        "storage_logical_bytes",
-        "storage_allocated_bytes",
-        "staging_entry_count",
-    ] {
-        assert!(
-            metrics[metric].is_null(),
-            "unavailable {metric} must be explicit null, never omitted or zero"
-        );
-    }
-}
 
 #[test]
 fn adapter_maps_concrete_runtime_snapshot_into_neutral_input() {
@@ -167,6 +29,7 @@ fn adapter_maps_concrete_runtime_snapshot_into_neutral_input() {
             namespace_execution_id: NamespaceExecutionId("namespace_execution_1".to_owned()),
             workspace_session_id: WorkspaceSessionId("workspace-1".to_owned()),
             operation_name: "exec_command".to_owned(),
+            command: Some("printf ok".to_owned()),
         }],
         partial_errors: vec!["partial projection".to_owned()],
     });
@@ -193,40 +56,10 @@ fn adapter_maps_concrete_runtime_snapshot_into_neutral_input() {
         snapshot.active_namespace_executions[0].operation_name,
         "exec_command"
     );
-}
-
-#[test]
-fn rotation_moves_oversized_log_to_rotated_sibling() -> TestResult {
-    let root = test_root("rotation");
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.observability = ObservabilityConfig {
-        enabled: true,
-        max_file_bytes: 8,
-        ..ObservabilityConfig::default()
-    };
-    let server = daemon_server_from(&root, config.clone())?;
-    let observability = server.observability.as_ref().expect("observability");
-
-    // First tick creates the log (no prior file to rotate); second tick rotates
-    // the now-oversized log aside and writes fresh.
-    observability.collect(&config, server.operations.as_ref());
-    let paths = ObservabilityPaths::from_socket_path(&config.socket_path)?;
-    assert!(paths.log_path().exists(), "primary log created");
-    assert!(!paths.rotated_log_path().exists(), "nothing rotated yet");
-
-    observability.collect(&config, server.operations.as_ref());
-    assert!(
-        paths.rotated_log_path().exists(),
-        "oversized log rotated to .1"
+    assert_eq!(
+        snapshot.active_namespace_executions[0].command.as_deref(),
+        Some("printf ok")
     );
-    assert!(
-        paths.log_path().exists(),
-        "fresh primary written after rotation"
-    );
-
-    // The Reader spans both files.
-    assert!(latest_sample(&config, "sandbox").is_some());
-    Ok(())
 }
 
 #[test]
@@ -236,136 +69,47 @@ fn from_config_disabled_when_sandbox_id_is_missing() {
     assert!(DaemonObservability::from_config(&config).is_none());
 }
 
-#[test]
-fn disabled_gate_emits_no_log() -> TestResult {
-    let root = test_root("disabled");
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.observability = ObservabilityConfig {
-        enabled: false,
-        max_file_bytes: 8 * 1024 * 1024,
-        ..ObservabilityConfig::default()
-    };
-    let observability = DaemonObservability::from_config(&config).expect("constructed");
-    observability.emit_resource_samples(&config, &empty_snapshot());
-
-    let paths = ObservabilityPaths::from_socket_path(&config.socket_path)?;
-    assert!(!paths.log_path().exists(), "disabled emits nothing");
-    Ok(())
-}
-
 #[tokio::test]
-async fn concrete_cgroup_operation_returns_series() -> TestResult {
-    let root = test_root("cgroup-view");
+async fn runtime_request_completion_does_not_create_resource_history() -> TestResult {
+    let root = test_root("request-completion-purity");
     let server = daemon_server(&root, Some("sandbox-1"))?;
-    server
-        .observability
-        .as_ref()
-        .expect("observability")
-        .collect(&server.config, server.operations.as_ref());
 
     let response = server
         .dispatch_bytes(
-            request_bytes(
-                CGROUP_SPEC.name,
-                "req-cgroup",
-                json!({ "scope": "sandbox" }),
-            )?,
+            request_bytes("unknown_runtime_op", "req-runtime", json!({}))?,
             false,
         )
         .await;
-    let response = response.as_json_value();
+    assert_eq!(response, sandbox_operation_contract::OperationResponse::unknown_op());
 
-    assert_eq!(response["view"], "cgroup");
-    assert_eq!(response["scope"], "sandbox");
-    assert_eq!(response["topology"]["available"], false);
-    assert_eq!(response["topology"]["error"], "cgroup root unavailable");
-    assert_eq!(response["series"].as_array().map(Vec::len), Some(1));
-    assert_eq!(response["series"][0]["metrics"]["cgroup_available"], false);
-    assert_eq!(
-        response["series"][0]["metrics"]["cgroup_error"],
-        "cgroup root unavailable"
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn snapshot_refreshes_resources_before_building_response() -> TestResult {
-    let root = test_root("snapshot-refresh");
-    let cgroup_root = root.join("cgroup-root");
-    write_cgroup_fixture(&cgroup_root, 1_024, 2_048, "4096")?;
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.cgroup_root = Some(cgroup_root.clone());
-    let server = daemon_server_from(&root, config)?;
-    let observability = server.observability.as_ref().expect("observability");
-
-    observability.emit_resource_samples(&server.config, &empty_snapshot());
-    assert_eq!(
-        latest_sample(&server.config, "sandbox")
-            .expect("stale baseline")
-            .metrics["cpu_usec"],
-        1_024
-    );
-
-    write_cgroup_fixture(&cgroup_root, 8_192, 16_384, "32768")?;
-    let response = server
-        .dispatch_bytes(
-            request_bytes(SNAPSHOT_SPEC.name, "req-refresh", json!({}))?,
-            false,
-        )
-        .await;
-    let response = response.as_json_value();
-
-    assert_eq!(
-        response["resources"]["latest"]["metrics"]["cpu_usec"],
-        8_192
-    );
-    assert_eq!(
-        response["resources"]["latest"]["metrics"]["mem_cur"],
-        16_384
-    );
-    assert_eq!(
-        response["resources"]["latest"]["metrics"]["mem_max"],
-        32_768
-    );
-    Ok(())
-}
-
-#[tokio::test]
-async fn snapshot_refresh_failure_never_reuses_rotated_stale_sample() -> TestResult {
-    let root = test_root("snapshot-refresh-failure");
-    let cgroup_root = root.join("cgroup-root");
-    write_cgroup_fixture(&cgroup_root, 1_024, 2_048, "4096")?;
-    let mut config = server_config(&root, Some("sandbox-1"));
-    config.cgroup_root = Some(cgroup_root.clone());
-    let server = daemon_server_from(&root, config)?;
-    let observability = server.observability.as_ref().expect("observability");
-
-    observability.emit_resource_samples(&server.config, &empty_snapshot());
     let paths = ObservabilityPaths::from_socket_path(&server.config.socket_path)?;
-    std::fs::rename(paths.log_path(), paths.rotated_log_path())?;
-    std::fs::create_dir(paths.log_path())?;
-    write_cgroup_fixture(&cgroup_root, 8_192, 16_384, "32768")?;
+    let samples = sandbox_observability_telemetry::Reader::new(
+        paths.log_path().to_path_buf(),
+        paths.rotated_log_path().to_path_buf(),
+    )
+    .samples("sandbox", 600_000);
+    assert!(samples.is_empty(), "request completion retained resource history");
+    Ok(())
+}
 
-    let response = server
-        .dispatch_bytes(
-            request_bytes(SNAPSHOT_SPEC.name, "req-refresh-failure", json!({}))?,
-            false,
-        )
-        .await;
-    let response = response.as_json_value();
+#[tokio::test]
+async fn snapshot_and_cgroup_reads_do_not_create_a_store() -> TestResult {
+    let root = test_root("observability-read-purity");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    let paths = ObservabilityPaths::from_socket_path(&server.config.socket_path)?;
 
-    assert_eq!(response["error"]["kind"], "internal_error");
-    assert_eq!(
-        response["error"]["message"],
-        "snapshot resource refresh failed"
-    );
-    assert!(response.get("resources").is_none());
-    assert_eq!(
-        latest_sample(&server.config, "sandbox")
-            .expect("rotated stale sample remains readable")
-            .metrics["cpu_usec"],
-        1_024
-    );
+    for (op, args) in [
+        (SNAPSHOT_SPEC.name, json!({})),
+        (CGROUP_SPEC.name, json!({ "scope": "sandbox" })),
+    ] {
+        let response = server
+            .dispatch_bytes(request_bytes(op, "req-read", args)?, false)
+            .await;
+        assert!(response.as_json_value().get("error").is_none());
+    }
+
+    assert!(!paths.log_path().exists());
+    assert!(!paths.rotated_log_path().exists());
     Ok(())
 }
 
@@ -387,14 +131,7 @@ async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
     assert_eq!(snapshot["availability"], "available");
     assert_eq!(snapshot["errors"], json!([]));
     assert_eq!(snapshot["resources"]["history"], json!([]));
-    assert_eq!(
-        snapshot["resources"]["latest"]["metrics"]["cgroup_available"],
-        false
-    );
-    assert_eq!(
-        snapshot["resources"]["latest"]["metrics"]["cgroup_error"],
-        "cgroup root unavailable"
-    );
+    assert_eq!(snapshot["resources"]["latest"], Value::Null);
     assert_eq!(snapshot["workspaces"], json!([]));
     assert!(snapshot["sampled_at_unix_ms"].is_u64());
     assert!(snapshot["daemon"]["daemon_pid"].is_u64());
@@ -458,39 +195,6 @@ async fn observability_emit_does_not_change_operation_responses() -> TestResult 
         sandbox_operation_contract::OperationResponse::unknown_op()
     );
     Ok(())
-}
-
-fn write_cgroup_fixture(
-    dir: &Path,
-    cpu_usage_usec: u64,
-    memory_current_bytes: u64,
-    memory_max: &str,
-) -> TestResult {
-    std::fs::create_dir_all(dir)?;
-    std::fs::write(
-        dir.join("cpu.stat"),
-        format!("usage_usec {cpu_usage_usec}\n"),
-    )?;
-    std::fs::write(
-        dir.join("memory.current"),
-        format!("{memory_current_bytes}\n"),
-    )?;
-    std::fs::write(dir.join("memory.max"), format!("{memory_max}\n"))?;
-    Ok(())
-}
-
-fn latest_sample(config: &ServerConfig, scope: &str) -> Option<SampleDelta> {
-    let paths = ObservabilityPaths::from_socket_path(&config.socket_path).expect("paths");
-    Reader::new(
-        paths.log_path().to_path_buf(),
-        paths.rotated_log_path().to_path_buf(),
-    )
-    .samples(scope, BIG_WINDOW_MS)
-    .pop()
-}
-
-fn empty_snapshot() -> RuntimeObservabilitySnapshot {
-    RuntimeObservabilitySnapshot::default()
 }
 
 fn workspace_snapshot(workspace_id: &str, upperdir: Option<PathBuf>) -> RuntimeWorkspaceSnapshot {

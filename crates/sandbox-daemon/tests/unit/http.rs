@@ -53,7 +53,6 @@ impl HttpTestServer {
             listener,
             server_config(&root),
             operations,
-            None,
             Observer::disabled(),
             shutdown.clone(),
         );
