@@ -9,9 +9,7 @@ use std::future::Future;
 use bollard::container::{
     Config, CreateContainerOptions, ListContainersOptions, LogsOptions, RemoveContainerOptions,
     StartContainerOptions, StatsOptions, StopContainerOptions, UploadToContainerOptions,
-    WaitContainerOptions,
 };
-use bollard::errors::Error as BollardError;
 use bollard::image::ListImagesOptions;
 use bollard::models::{
     ContainerInspectResponse, ContainerState, ContainerStateStatusEnum, ContainerSummary,
@@ -67,10 +65,6 @@ pub(crate) struct VolumeSpec {
     pub(crate) name: String,
     pub(crate) target: String,
     pub(crate) labels: HashMap<String, String>,
-}
-
-pub(crate) struct ImageCommandResult {
-    pub(crate) exit_code: i64,
 }
 
 /// Cumulative counters obtained from Docker's read-only container stats API.
@@ -247,37 +241,6 @@ impl DockerEngine {
                 .upload_to_container(&container, Some(options), archive)
                 .await
                 .map_err(|error| DockerError::Api(format!("upload_to_container: {error}")))
-        })
-    }
-
-    pub(crate) fn run_image_command(
-        &self,
-        image: String,
-        platform: Option<String>,
-        cmd: Vec<String>,
-        env: Vec<String>,
-    ) -> Result<ImageCommandResult, DockerError> {
-        self.run_blocking(move |docker| async move {
-            let name = create_command_container(&docker, image, platform, cmd, env).await?;
-            let result = start_wait_and_logs(&docker, &name).await;
-            let removed = remove_command_container(&docker, &name).await;
-            match (result, removed) {
-                (Ok(result), Ok(())) => Ok(result),
-                (Err(error), _) => Err(error),
-                (Ok(_), Err(error)) => Err(error),
-            }
-        })
-    }
-
-    pub(crate) fn daemon_architecture(&self) -> Result<String, DockerError> {
-        self.run_blocking(move |docker| async move {
-            let info = docker
-                .info()
-                .await
-                .map_err(|error| DockerError::Api(format!("docker info: {error}")))?;
-            info.architecture.ok_or_else(|| {
-                DockerError::Api("docker info did not report an architecture".to_owned())
-            })
         })
     }
 
@@ -594,73 +557,6 @@ async fn create_volume(docker: &Docker, volume: &VolumeSpec) -> Result<(), Docke
         .await
         .map(|_| ())
         .map_err(|error| DockerError::Api(format!("create_volume: {error}")))
-}
-
-async fn create_command_container(
-    docker: &Docker,
-    image: String,
-    platform: Option<String>,
-    cmd: Vec<String>,
-    env: Vec<String>,
-) -> Result<String, DockerError> {
-    let name = format!("eos-tool-{}", uuid::Uuid::new_v4());
-    let config = Config {
-        image: Some(image),
-        cmd: Some(cmd),
-        env: if env.is_empty() { None } else { Some(env) },
-        ..Default::default()
-    };
-    let options = CreateContainerOptions {
-        name: name.clone(),
-        platform,
-    };
-    docker
-        .create_container(Some(options), config)
-        .await
-        .map_err(|error| DockerError::Api(format!("create command container: {error}")))?;
-    Ok(name)
-}
-
-async fn start_wait_and_logs(
-    docker: &Docker,
-    container: &str,
-) -> Result<ImageCommandResult, DockerError> {
-    docker
-        .start_container(container, None::<StartContainerOptions<String>>)
-        .await
-        .map_err(|error| DockerError::Api(format!("start command container: {error}")))?;
-    let exit_code = wait_exit_code(docker, container).await?;
-    Ok(ImageCommandResult { exit_code })
-}
-
-async fn wait_exit_code(docker: &Docker, container: &str) -> Result<i64, DockerError> {
-    let mut stream = docker.wait_container(container, None::<WaitContainerOptions<String>>);
-    match stream.next().await {
-        Some(Ok(response)) => Ok(response.status_code),
-        Some(Err(BollardError::DockerContainerWaitError { code, .. })) => Ok(code),
-        Some(Err(error)) => Err(DockerError::Api(format!("wait_container: {error}"))),
-        None => Err(DockerError::Api("wait_container: no response".to_owned())),
-    }
-}
-
-async fn remove_command_container(docker: &Docker, container: &str) -> Result<(), DockerError> {
-    match docker
-        .remove_container(
-            container,
-            Some(RemoveContainerOptions {
-                force: true,
-                v: false,
-                ..Default::default()
-            }),
-        )
-        .await
-    {
-        Ok(()) => Ok(()),
-        Err(error) if server_status(&error) == Some(HTTP_NOT_FOUND) => Ok(()),
-        Err(error) => Err(DockerError::Api(format!(
-            "remove command container: {error}"
-        ))),
-    }
 }
 
 async fn remove_volume(docker: &Docker, volume: &str) -> Result<(), DockerError> {

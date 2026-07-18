@@ -37,7 +37,6 @@ fn main() -> Result<()> {
         .as_deref()
     {
         Some("package") => package(&PackageArgs::parse(args)?),
-        Some("package-console") => package_console(),
         Some("check-mod-lib-size") => {
             check_mod_lib_size_policy(&ModLibSizePolicyArgs::parse(args)?)
         }
@@ -1012,61 +1011,6 @@ fn package(args: &PackageArgs) -> Result<()> {
     Ok(())
 }
 
-fn package_console() -> Result<()> {
-    let root = workspace_root()?;
-    let spa_dir = root.join("web/console");
-    if !spa_dir.join("package.json").is_file() {
-        bail!("SPA scaffold missing at {}", spa_dir.display());
-    }
-    run_npm(&spa_dir, &["install", "--no-fund", "--no-audit"])?;
-    run_npm(&spa_dir, &["run", "build"])?;
-    let built = spa_dir.join("dist");
-    if !built.join("index.html").is_file() {
-        bail!("SPA build produced no index.html in {}", built.display());
-    }
-    let staged = root.join("dist/console");
-    if staged.exists() {
-        fs::remove_dir_all(&staged)
-            .with_context(|| format!("clear staged console assets {}", staged.display()))?;
-    }
-    copy_dir(&built, &staged)?;
-    println!("packaged console SPA into {}", staged.display());
-    Ok(())
-}
-
-fn run_npm(dir: &Path, args: &[&str]) -> Result<()> {
-    let status = Command::new("npm")
-        .args(args)
-        .current_dir(dir)
-        .status()
-        .with_context(|| format!("spawn npm {} in {}", args.join(" "), dir.display()))?;
-    if !status.success() {
-        bail!(
-            "npm {} failed in {} with {status}",
-            args.join(" "),
-            dir.display()
-        );
-    }
-    Ok(())
-}
-
-fn copy_dir(source: &Path, target: &Path) -> Result<()> {
-    fs::create_dir_all(target)
-        .with_context(|| format!("create staged asset dir {}", target.display()))?;
-    for entry in fs::read_dir(source).with_context(|| format!("read {}", source.display()))? {
-        let entry = entry?;
-        let from = entry.path();
-        let to = target.join(entry.file_name());
-        if entry.file_type()?.is_dir() {
-            copy_dir(&from, &to)?;
-        } else {
-            fs::copy(&from, &to)
-                .with_context(|| format!("copy {} to {}", from.display(), to.display()))?;
-        }
-    }
-    Ok(())
-}
-
 fn next_string<I>(iter: &mut I, flag: &str) -> Result<String>
 where
     I: Iterator<Item = OsString>,
@@ -1422,9 +1366,6 @@ xtask commands:
   package [--target <triple>] [--out-dir <dir>]
           [--builder auto|zigbuild|cross|rust-lld|cargo]
           [--profile <name> | --fast] [--no-build] [--sign --minisign-key <path>]
-  package-console
-          build the web console SPA (web/console) and stage it into dist/console
-
 Targets:
   {AMD64_TARGET} -> sandbox-daemon-linux-amd64
   {ARM64_TARGET} -> sandbox-daemon-linux-arm64

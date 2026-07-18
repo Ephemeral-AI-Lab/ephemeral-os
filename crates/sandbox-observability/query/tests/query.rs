@@ -8,8 +8,8 @@ use sandbox_observability_query::ports::{
 };
 use sandbox_observability_query::{dispatch_operation, observability_handler_keys};
 use sandbox_observability_telemetry::collect::process_topology::{
-    WorkspaceProcess, WorkspaceProcessKind, WorkspaceProcessState, WorkspaceProcessTopology,
-    WorkspaceProcesses,
+    DaemonProcessMetrics, WorkspaceProcess, WorkspaceProcessKind, WorkspaceProcessState,
+    WorkspaceProcessTopology, WorkspaceProcesses,
 };
 use sandbox_observability_telemetry::{LayerBytes, LayerStackBytes, Reader, SinkStats};
 use sandbox_operation_contract::{
@@ -406,6 +406,36 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
                     start_time_ticks: Some(12_345),
                 }],
             }],
+            daemon: Some(DaemonProcessMetrics {
+                available: true,
+                error: None,
+                sampled_at_unix_ms: 1_700_000_000_000,
+                pid: 7,
+                name: Some("sandbox-daemon".to_owned()),
+                state: Some("S (sleeping)".to_owned()),
+                virtual_memory_bytes: Some(120_000_000),
+                resident_memory_bytes: Some(30_000_000),
+                peak_resident_memory_bytes: Some(32_000_000),
+                proportional_set_size_bytes: Some(28_000_000),
+                unique_set_size_bytes: Some(26_000_000),
+                anonymous_memory_bytes: Some(25_000_000),
+                file_memory_bytes: Some(4_000_000),
+                shared_memory_bytes: Some(1_000_000),
+                data_memory_bytes: Some(27_000_000),
+                swap_bytes: Some(0),
+                cpu_time_us: Some(750_000),
+                start_time_ticks: Some(12_345),
+                thread_count: Some(37),
+                file_descriptor_count: Some(15),
+                io_read_bytes: Some(4_096),
+                io_write_bytes: Some(8_192),
+                read_syscalls: Some(41),
+                write_syscalls: Some(17),
+                voluntary_context_switches: Some(120),
+                involuntary_context_switches: Some(3),
+                cgroup_memberships: vec!["0::/_daemon".to_owned()],
+                warnings: Vec::new(),
+            }),
         },
         ..FakeInput::default()
     };
@@ -441,6 +471,12 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
         response["topology"]["workspaces"][0]["processes"][0]["start_time_ticks"],
         12_345
     );
+    assert_eq!(response["topology"]["daemon"]["pid"], 7);
+    assert_eq!(
+        response["topology"]["daemon"]["proportional_set_size_bytes"],
+        28_000_000
+    );
+    assert_eq!(response["topology"]["daemon"]["file_descriptor_count"], 15);
 }
 
 #[test]

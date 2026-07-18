@@ -16,7 +16,6 @@ case "$target_dir" in
     /*) ;;
     *) target_dir=$(pwd)/$target_dir ;;
 esac
-git_toolchain_dir=${SANDBOX_GIT_TOOLCHAIN_DIR:-$repo_root/dist/git}
 gateway_bin=$target_dir/debug/sandbox-gateway
 manager_cli_bin=$target_dir/debug/sandbox-manager-cli
 runtime_cli_bin=$target_dir/debug/sandbox-runtime-cli
@@ -72,6 +71,11 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+if [ "$rebuild_binary" -eq 1 ]; then
+    printf 'cleaning host build profile\n'
+    cargo clean --quiet --manifest-path "$repo_root/Cargo.toml" --profile dev
+fi
 
 printf 'building host binaries\n'
 cargo build --quiet --manifest-path "$repo_root/Cargo.toml" \
@@ -138,6 +142,13 @@ if [ "$show_help" -eq 0 ]; then
         [ -z "$newer_source" ] || needs_package=1
     fi
 
+    if [ "$rebuild_binary" -eq 1 ]; then
+        package_profile=${SANDBOX_XTASK_PROFILE:-package-fast}
+        printf 'cleaning daemon build profile for %s\n' "$package_target"
+        cargo clean --quiet --manifest-path "$repo_root/Cargo.toml" \
+            --target "$package_target" --profile "$package_profile"
+    fi
+
     if [ "$rebuild_binary" -eq 1 ] || [ "$needs_package" -eq 1 ]; then
         "$xtask_bin" package --target "$package_target"
     fi
@@ -145,18 +156,9 @@ fi
 
 if [ "$show_help" -eq 1 ]; then
     printf 'start-sandbox-docker-gateway options:\n'
-    printf '  --rebuild-binary  force xtask package rebuild of the configured sandbox-daemon target\n\n'
+    printf '  --rebuild-binary  clean and rebuild host binaries plus the configured sandbox-daemon target\n\n'
     exec "$gateway_bin" serve "$@"
 fi
-
-for arch in arm64 amd64; do
-    archive=$git_toolchain_dir/linux-$arch.tar
-    if [ ! -s "$archive" ]; then
-        printf 'missing git toolchain archive: %s\n' "$archive" >&2
-        exit 1
-    fi
-done
-export SANDBOX_GIT_TOOLCHAIN_DIR="$git_toolchain_dir"
 
 log_file=${SANDBOX_GATEWAY_LOG:-${pid_file%.*}.log}
 if [ "$log_file" = "$pid_file" ]; then
@@ -260,4 +262,4 @@ printf 'pid file: %s\n' "$pid_file"
 printf 'address: %s\n' "$socket_path"
 printf 'auth token file: %s\n' "$token_file"
 printf 'log: %s\n' "$log_file"
-printf 'the console and bin/sandbox-*-cli wrappers read this token automatically\n'
+printf 'bin/sandbox-*-cli wrappers read this token automatically\n'

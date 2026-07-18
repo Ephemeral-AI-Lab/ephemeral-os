@@ -13,7 +13,6 @@ use super::{StaleFacts, TrackedSource};
 const DIRECT_CRATE_CHILDREN: &[&str] = &[
     "sandbox-cli",
     "sandbox-config",
-    "sandbox-console",
     "sandbox-daemon",
     "sandbox-gateway",
     "sandbox-manager",
@@ -376,7 +375,6 @@ fn generated_path(path: &str) -> bool {
             value.to_str(),
             Some(
                 "target"
-                    | "node_modules"
                     | "dist"
                     | "cache"
                     | ".cache"
@@ -387,7 +385,6 @@ fn generated_path(path: &str) -> bool {
         )
     });
     generated_component
-        || path.ends_with(".tsbuildinfo")
         || path.ends_with(".pyc")
         || path.starts_with(concat!("cli-operation-e2e-", "live-test/"))
 }
@@ -1459,10 +1456,8 @@ fn validate_observability_routing(facts: &StaleFacts, violations: &mut Vec<Strin
     let request_roots = [
         "crates/sandbox-cli/src/",
         "crates/sandbox-mcp/src/",
-        "crates/sandbox-console/src/",
         "crates/sandbox-manager/src/",
         "crates/sandbox-daemon/src/rpc/",
-        "web/console/src/",
     ];
     for file in facts.files.iter().filter(|file| {
         request_roots.iter().any(|root| file.path.starts_with(root)) && is_production_source(file)
@@ -1479,35 +1474,15 @@ fn validate_observability_routing(facts: &StaleFacts, violations: &mut Vec<Strin
             .split_whitespace()
             .collect::<Vec<_>>()
             .join(" ");
-        let generic_view_argument = [
-            "args.insert(\"view\"",
-            "args.insert('view'",
-            "args[\"view\"]",
-            "args['view']",
-            "args[`view`]",
-            "args.view =",
-            "args = { view:",
-            "args={view:",
-            "\"view\":",
-            "'view':",
-            "`view`:",
-        ]
-        .iter()
-        .any(|pattern| compact.contains(pattern));
+        let generic_view_argument = ["args.insert(\"view\"", "args[\"view\"]", "\"view\":"]
+            .iter()
+            .any(|pattern| compact.contains(pattern));
         let lower_path = file.path.to_ascii_lowercase();
         let lower_content = file.content.to_ascii_lowercase();
         let observability_context = lower_path.contains("observability")
             || lower_content.contains("observability")
             || lower_content.contains("operationdomain::observability");
-        let mut synthetic = observability_context && generic_view_argument;
-        if file.path.ends_with(".ts")
-            || file.path.ends_with(".tsx")
-            || file.path.ends_with(".js")
-            || file.path.ends_with(".jsx")
-        {
-            synthetic |= call_contains_view_argument(&compact, "rpc")
-                || call_contains_view_argument(&compact, "fetchObservabilityView");
-        }
+        let synthetic = observability_context && generic_view_argument;
         if synthetic {
             violations.push(format!(
                 "synthetic observability view routing remains in {}",
@@ -1518,22 +1493,6 @@ fn validate_observability_routing(facts: &StaleFacts, violations: &mut Vec<Strin
 }
 
 fn validate_visibility_proofs(facts: &StaleFacts, violations: &mut Vec<String>) {
-    let console = facts
-        .files
-        .iter()
-        .find(|file| file.path == "crates/sandbox-console/tests/console/rpc.rs")
-        .map(|file| file.content.as_str())
-        .unwrap_or_default();
-    for proof in [
-        "unknown_operation_is_rejected_before_gateway_transport",
-        "internal_operation_is_rejected_before_gateway_transport",
-    ] {
-        if !active_test(console, proof) {
-            violations.push(format!(
-                "console visibility proof is ignored or not an active test: {proof}"
-            ));
-        }
-    }
     let manager = facts
         .files
         .iter()
@@ -1561,10 +1520,6 @@ fn validate_visibility_proofs(facts: &StaleFacts, violations: &mut Vec<String>) 
     }
 }
 
-fn active_test(source: &str, name: &str) -> bool {
-    active_test_body(source, name).is_some()
-}
-
 fn active_test_body<'a>(source: &'a str, name: &str) -> Option<&'a str> {
     let async_signature = format!("async fn {name}(");
     let sync_signature = format!("fn {name}(");
@@ -1587,10 +1542,6 @@ fn active_test_body<'a>(source: &'a str, name: &str) -> Option<&'a str> {
 fn is_production_source(file: &TrackedSource) -> bool {
     (file.path.starts_with("crates/") && file.path.contains("/src/") && file.path.ends_with(".rs"))
         || (file.path.starts_with("crates/") && file.path.ends_with("/build.rs"))
-        || (file.path.starts_with("web/console/src/")
-            && [".ts", ".tsx", ".js", ".jsx"]
-                .iter()
-                .any(|extension| file.path.ends_with(extension)))
 }
 
 fn path_string(path: &Path) -> String {
@@ -1659,40 +1610,6 @@ fn struct_field_name(line: &str) -> Option<&str> {
             .chars()
             .all(|character| character.is_ascii_alphanumeric() || character == '_'))
     .then_some(name)
-}
-
-fn call_contains_view_argument(source: &str, function: &str) -> bool {
-    let mut cursor = 0;
-    while let Some(offset) = source[cursor..].find(function) {
-        let start = cursor + offset + function.len();
-        let Some(relative_open) = source[start..].find('(') else {
-            return false;
-        };
-        let open = start + relative_open;
-        let mut depth = 0;
-        for (relative, character) in source[open..].char_indices() {
-            if character == '(' {
-                depth += 1;
-            } else if character == ')' {
-                depth -= 1;
-                if depth == 0 {
-                    let call = &source[open + 1..open + relative];
-                    if call.contains("{ view:")
-                        || call.contains("{view:")
-                        || call.contains("\"view\":")
-                    {
-                        return true;
-                    }
-                    cursor = open + relative + 1;
-                    break;
-                }
-            }
-        }
-        if cursor <= start {
-            return false;
-        }
-    }
-    false
 }
 
 #[cfg(unix)]

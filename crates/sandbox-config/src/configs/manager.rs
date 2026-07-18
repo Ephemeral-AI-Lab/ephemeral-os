@@ -153,10 +153,9 @@ pub struct ManagerConfig {
     /// reconciling against the containers the runtime actually recovers.
     /// `None` keeps the registry in process memory only.
     pub registry_path: Option<PathBuf>,
-    /// Optional host directory allowlist for the workspace picker. When set,
+    /// Optional host directory allowlist for sandbox creation. When set,
     /// `create_sandbox` must use a directory below one of these roots.
-    /// Omitting it preserves existing direct API behavior; the Console picker
-    /// starts from the gateway user's home directory.
+    /// Omitting it preserves unrestricted API behavior.
     pub workspace_roots: Option<Vec<PathBuf>>,
     pub export: ManagerExportConfig,
     pub observability_snapshot: ManagerObservabilitySnapshotConfig,

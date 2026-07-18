@@ -46,9 +46,10 @@ impl WorkspaceRootPolicy {
         })
     }
 
-    /// Build the Console's default browse policy. It exposes only the gateway
-    /// user's home directory while preserving legacy unrestricted create calls
-    /// until an explicit `workspace_roots` allowlist is configured.
+    /// Build the default directory-browsing policy. It exposes only the
+    /// gateway user's home directory while preserving legacy unrestricted
+    /// create calls until an explicit `workspace_roots` allowlist is
+    /// configured.
     ///
     /// # Errors
     /// Returns an error when the default browse root cannot be resolved.

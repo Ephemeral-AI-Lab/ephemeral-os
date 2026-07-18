@@ -10,7 +10,6 @@ focused on using the project.
 operator or agent
    | sandbox-manager-cli / sandbox-runtime-cli / sandbox-observability-cli
    | sandbox-mcp --set management|runtime|observability
-   | sandbox-console
    v
 sandbox-operation-catalog + adapter-owned projection
    | adapter builds an operation-contract request
@@ -40,11 +39,10 @@ sandbox-runtime-overlay / sandbox-observability-telemetry
 |---|---|---|---|
 | `sandbox-operation-contract` | lib | Own adapter-neutral operation, argument, scope, route, request, response, and application-error types | Depend on any workspace package or own wire/presentation behavior |
 | `sandbox-operation-catalog` | lib | Own canonical internal identifiers and routes unconditionally, plus every public declaration and route in feature-gated manager/runtime/observability modules | Depend on anything except the contract, own CLI metadata, or contain handlers |
-| `sandbox-operation-client` | lib | Own gateway discovery and wire transport shared by CLI, MCP, and console, plus value-based request construction shared by CLI and MCP | Depend on the catalog, applications, adapters, or `sandbox-config` |
-| `sandbox-gateway` | bin+lib | Compose the public gateway listener, manager application, Docker provider, daemon wire client, and local daemon installer | Own application behavior, depend on CLI/MCP/console or the shared client, or compose runtime applications directly |
+| `sandbox-operation-client` | lib | Own gateway discovery and wire transport shared by product adapters, plus value-based request construction shared by CLI and MCP | Depend on the catalog, applications, adapters, or `sandbox-config` |
+| `sandbox-gateway` | bin+lib | Compose the public gateway listener, manager application, Docker provider, daemon wire client, and local daemon installer | Own application behavior, depend on product adapters or the shared client, or compose runtime applications directly |
 | `sandbox-cli` | lib + 3 bins | Own CLI paths, flags, positionals, help, output, and separately feature-gated manager/runtime/observability executables | Depend on protocol/applications/other adapters, provide a combined executable, or let one binary enumerate another authority |
-| `sandbox-mcp` | bin | Project exactly one selected domain from the merged catalog as a stdio MCP server and send through the shared client | Define a second catalog, expose a combined set, or depend on protocol/applications/CLI/console |
-| `sandbox-console` | bin | Serve the SPA, validate public `/api/rpc` routes, send through the shared client, and proxy the allowed per-sandbox daemon HTTP surface | Define operation vocabulary, depend on protocol/applications/CLI/MCP, contact daemon RPC directly, or expose gateway credentials to the browser |
+| `sandbox-mcp` | bin | Project exactly one selected domain from the merged catalog as a stdio MCP server and send through the shared client | Define a second catalog, expose a combined set, or depend on protocol/applications/CLI |
 | `sandbox-manager` | lib | Own sandbox lifecycle, daemon endpoint tracking, system-scoped operation handlers, routing, and application ports | Depend on protocol/client/adapters/composition roots or implement runtime command/workspace semantics |
 | `sandbox-protocol` | lib | Own wire codec, framing, authentication fields, limits, and the daemon readiness handshake | Own operation declarations/help or depend on catalog/applications/client/adapters |
 | `sandbox-daemon` | bin+lib | Compose authenticated RPC, the exact HTTP allowlist, runtime dispatch, observability dispatch, sampling, and lifecycle | Depend on product adapters/client/manager or expose operation routes over HTTP beyond `file_list` |
@@ -56,7 +54,7 @@ sandbox-runtime-overlay / sandbox-observability-telemetry
 | `sandbox-runtime-namespace-execution` | lib | Own the namespace execution engine, PTY I/O, and transcript read/write windowing | Own workspace lifecycle |
 | `sandbox-runtime-namespace-process` | lib | Own namespace holder/runner bodies and setns execution | Own operation dispatch |
 | `sandbox-runtime-overlay` | lib | Own low-level overlay mount and unmount primitives | Own workspace lifecycle |
-| `sandbox-config` | lib | Own sandbox YAML loading, merging, validation, and typed console/gateway/manager/daemon/observability/runner/runtime schemas | Depend on any workspace package or own runtime behavior |
+| `sandbox-config` | lib | Own sandbox YAML loading, merging, validation, and typed gateway/manager/daemon/observability/runner/runtime schemas | Depend on any workspace package or own runtime behavior |
 | `sandbox-provider-docker` | lib | Implement manager ports with Docker and use protocol only for daemon readiness | Own generic lifecycle/rollback, application handlers, client behavior, or depend on `sandbox-daemon` |
 
 ## Boundary law
@@ -88,12 +86,11 @@ package identity, or re-export layer.
 - `crates/sandbox-observability/` groups `telemetry/` and `query/`.
 - `crates/sandbox-runtime/` groups `operation/`, `workspace/`, `layerstack/`,
   `namespace-execution/`, `namespace-process/`, and `overlay/`.
-- `crates/` also contains the flat CLI, config, console, daemon, gateway,
-  manager, MCP, protocol, and Docker-provider packages.
+- `crates/` also contains the flat CLI, config, daemon, gateway, manager, MCP,
+  protocol, and Docker-provider packages.
 - `crates/sandbox-runtime/layerstack/tests/fixtures/` owns runtime CAS fixtures.
-- `e2e/` contains live CLI, MCP, console, gateway, manager, daemon, runtime,
-  and observability coverage.
-- `web/console/` contains the tracked SPA source.
+- `e2e/` contains live CLI, MCP, gateway, manager, daemon, runtime, and
+  observability coverage.
 - `config/prd.yml` is the daemon configuration baseline.
 - `dist/` contains packaged static binaries and supporting artifacts uploaded
   into sandbox containers.
@@ -105,11 +102,22 @@ no combined executable. MCP uses one binary, but each process selects exactly
 one fixed `management`, `runtime`, or `observability` tool set. CLI and MCP tool
 definitions come from the same semantic catalog.
 
-The web console does not invoke MCP servers or CLI executables. Browser
-management, command, file read/write/edit/blame, and observability requests go
-to the console server's `POST /api/rpc`. The server keeps gateway credentials
-private and sends authenticated gateway RPC through
-`sandbox-operation-client`.
+The browser UI and its backend are maintained in the separate
+[Ephemeral Sandbox Console](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-console)
+repository. External adapters consume the operation contract, catalog, and
+client at immutable revisions; they do not redefine core operation vocabulary
+or expose gateway credentials to untrusted callers.
+
+The compatibility unit for those three crates is one reachable, immutable core
+commit. Consumers must take `sandbox-operation-contract`,
+`sandbox-operation-catalog`, and `sandbox-operation-client` from the same Git
+URL and exact revision, and must commit the resulting lockfile. Operation IDs,
+request and response schemas, catalog feature sets, and gateway authentication
+or discovery behavior are part of that client-facing boundary. A change to any
+of them is coordinated by publishing the core commit first, updating every
+consumer pin and lockfile together, and passing the consumer's live
+compatibility gate before retiring its previous validated pin. Mixing revisions
+across the three crates is unsupported.
 
 Each sandbox record has a `daemon_http` endpoint separate from its authenticated
 daemon RPC endpoint. The HTTP listener exposes only:
@@ -124,8 +132,8 @@ POST /files/list
 `file_list` is the deliberate HTTP-only operation exception. Direct
 `/files/read`, `/files/write`, `/files/edit`, `/files/blame`,
 `/observability/*`, and `/export/*` requests return `404`. Use the relevant
-management, runtime, or observability CLI/MCP set, or the console's
-authenticated `/api/rpc` bridge, for those operations.
+management, runtime, or observability CLI/MCP set, or an authenticated external
+adapter, for those operations.
 
 The optional `file_list` JSON fields are `path`, `workspace_session_id`, and
 `limit`. The limit must be at least 1 and is clamped to the daemon's fixed

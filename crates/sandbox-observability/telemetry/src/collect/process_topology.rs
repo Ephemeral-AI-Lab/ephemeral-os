@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 
@@ -11,6 +12,9 @@ const STATUS_LIMIT: usize = 64 * 1024;
 const STAT_LIMIT: usize = 4 * 1024;
 const COMM_LIMIT: usize = 256;
 const CGROUP_LIMIT: usize = 64 * 1024;
+const IO_LIMIT: usize = 16 * 1024;
+const SMAPS_ROLLUP_LIMIT: usize = 64 * 1024;
+const FD_COUNT_LIMIT: usize = 4_096;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkspaceProcessInput {
@@ -27,6 +31,39 @@ pub struct WorkspaceProcessTopology {
     pub truncated: bool,
     pub warnings: Vec<String>,
     pub workspaces: Vec<WorkspaceProcesses>,
+    pub daemon: Option<DaemonProcessMetrics>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DaemonProcessMetrics {
+    pub available: bool,
+    pub error: Option<String>,
+    pub sampled_at_unix_ms: u64,
+    pub pid: u32,
+    pub name: Option<String>,
+    pub state: Option<String>,
+    pub virtual_memory_bytes: Option<u64>,
+    pub resident_memory_bytes: Option<u64>,
+    pub peak_resident_memory_bytes: Option<u64>,
+    pub proportional_set_size_bytes: Option<u64>,
+    pub unique_set_size_bytes: Option<u64>,
+    pub anonymous_memory_bytes: Option<u64>,
+    pub file_memory_bytes: Option<u64>,
+    pub shared_memory_bytes: Option<u64>,
+    pub data_memory_bytes: Option<u64>,
+    pub swap_bytes: Option<u64>,
+    pub cpu_time_us: Option<u64>,
+    pub start_time_ticks: Option<u64>,
+    pub thread_count: Option<u64>,
+    pub file_descriptor_count: Option<u64>,
+    pub io_read_bytes: Option<u64>,
+    pub io_write_bytes: Option<u64>,
+    pub read_syscalls: Option<u64>,
+    pub write_syscalls: Option<u64>,
+    pub voluntary_context_switches: Option<u64>,
+    pub involuntary_context_switches: Option<u64>,
+    pub cgroup_memberships: Vec<String>,
+    pub warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -240,6 +277,110 @@ impl WorkspaceProcessTopology {
                 .into_iter()
                 .map(|builder| builder.workspace)
                 .collect(),
+            daemon: None,
+        }
+    }
+}
+
+impl DaemonProcessMetrics {
+    #[must_use]
+    pub fn collect(proc_root: &Path, pid: u32) -> Self {
+        let sampled_at_unix_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            .try_into()
+            .unwrap_or(u64::MAX);
+        let pid_root = proc_root.join(pid.to_string());
+        let status = match read_bounded(&pid_root.join("status"), STATUS_LIMIT) {
+            Ok(status) if !status.truncated => status,
+            Ok(_) => {
+                return Self::unavailable(
+                    pid,
+                    sampled_at_unix_ms,
+                    "daemon status exceeded the read limit",
+                )
+            }
+            Err(error) => {
+                return Self::unavailable(
+                    pid,
+                    sampled_at_unix_ms,
+                    format!("daemon status read failed: {error}"),
+                )
+            }
+        };
+        let mut warnings = WarningBuffer::default();
+        let status = parse_daemon_status(&status.text);
+        let usage = read_process_usage(&pid_root, pid, clock_ticks_per_second(), &mut warnings);
+        let memory = read_daemon_smaps(&pid_root, &mut warnings);
+        let io = read_daemon_io(&pid_root, &mut warnings);
+        let file_descriptor_count = count_file_descriptors(&pid_root, &mut warnings);
+        let cgroup = read_bounded(&pid_root.join("cgroup"), CGROUP_LIMIT).unwrap_or_default();
+        if cgroup.truncated {
+            warnings.push("daemon cgroup membership truncated".to_owned());
+        }
+        Self {
+            available: true,
+            error: None,
+            sampled_at_unix_ms,
+            pid,
+            name: status.name,
+            state: status.state,
+            virtual_memory_bytes: status.virtual_memory_bytes,
+            resident_memory_bytes: status.resident_memory_bytes,
+            peak_resident_memory_bytes: status.peak_resident_memory_bytes,
+            proportional_set_size_bytes: memory.proportional_set_size_bytes,
+            unique_set_size_bytes: memory.unique_set_size_bytes,
+            anonymous_memory_bytes: status.anonymous_memory_bytes,
+            file_memory_bytes: status.file_memory_bytes,
+            shared_memory_bytes: status.shared_memory_bytes,
+            data_memory_bytes: status.data_memory_bytes,
+            swap_bytes: status.swap_bytes,
+            cpu_time_us: usage.cpu_time_us,
+            start_time_ticks: usage.start_time_ticks,
+            thread_count: status.thread_count,
+            file_descriptor_count,
+            io_read_bytes: io.read_bytes,
+            io_write_bytes: io.write_bytes,
+            read_syscalls: io.read_syscalls,
+            write_syscalls: io.write_syscalls,
+            voluntary_context_switches: status.voluntary_context_switches,
+            involuntary_context_switches: status.involuntary_context_switches,
+            cgroup_memberships: complete_nonempty_lines(&cgroup.text, cgroup.truncated),
+            warnings: warnings.finish(),
+        }
+    }
+
+    fn unavailable(pid: u32, sampled_at_unix_ms: u64, message: impl Into<String>) -> Self {
+        Self {
+            available: false,
+            error: Some(message.into()),
+            sampled_at_unix_ms,
+            pid,
+            name: None,
+            state: None,
+            virtual_memory_bytes: None,
+            resident_memory_bytes: None,
+            peak_resident_memory_bytes: None,
+            proportional_set_size_bytes: None,
+            unique_set_size_bytes: None,
+            anonymous_memory_bytes: None,
+            file_memory_bytes: None,
+            shared_memory_bytes: None,
+            data_memory_bytes: None,
+            swap_bytes: None,
+            cpu_time_us: None,
+            start_time_ticks: None,
+            thread_count: None,
+            file_descriptor_count: None,
+            io_read_bytes: None,
+            io_write_bytes: None,
+            read_syscalls: None,
+            write_syscalls: None,
+            voluntary_context_switches: None,
+            involuntary_context_switches: None,
+            cgroup_memberships: Vec::new(),
+            warnings: Vec::new(),
         }
     }
 }
@@ -498,6 +639,163 @@ struct ProcessStatus {
     parent_pid: u32,
     state: char,
     resident_memory_bytes: Option<u64>,
+}
+
+#[derive(Default)]
+struct DaemonStatus {
+    name: Option<String>,
+    state: Option<String>,
+    virtual_memory_bytes: Option<u64>,
+    resident_memory_bytes: Option<u64>,
+    peak_resident_memory_bytes: Option<u64>,
+    anonymous_memory_bytes: Option<u64>,
+    file_memory_bytes: Option<u64>,
+    shared_memory_bytes: Option<u64>,
+    data_memory_bytes: Option<u64>,
+    swap_bytes: Option<u64>,
+    thread_count: Option<u64>,
+    voluntary_context_switches: Option<u64>,
+    involuntary_context_switches: Option<u64>,
+}
+
+fn parse_daemon_status(status: &str) -> DaemonStatus {
+    let mut parsed = DaemonStatus::default();
+    for line in status.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        match key {
+            "Name" => parsed.name = nonempty(value),
+            "State" => parsed.state = nonempty(value),
+            "VmSize" => parsed.virtual_memory_bytes = parse_kibibytes(value),
+            "VmRSS" => parsed.resident_memory_bytes = parse_kibibytes(value),
+            "VmHWM" => parsed.peak_resident_memory_bytes = parse_kibibytes(value),
+            "RssAnon" => parsed.anonymous_memory_bytes = parse_kibibytes(value),
+            "RssFile" => parsed.file_memory_bytes = parse_kibibytes(value),
+            "RssShmem" => parsed.shared_memory_bytes = parse_kibibytes(value),
+            "VmData" => parsed.data_memory_bytes = parse_kibibytes(value),
+            "VmSwap" => parsed.swap_bytes = parse_kibibytes(value),
+            "Threads" => parsed.thread_count = parse_u64(value),
+            "voluntary_ctxt_switches" => {
+                parsed.voluntary_context_switches = parse_u64(value);
+            }
+            "nonvoluntary_ctxt_switches" => {
+                parsed.involuntary_context_switches = parse_u64(value);
+            }
+            _ => {}
+        }
+    }
+    parsed
+}
+
+#[derive(Default)]
+struct DaemonSmaps {
+    proportional_set_size_bytes: Option<u64>,
+    unique_set_size_bytes: Option<u64>,
+}
+
+fn read_daemon_smaps(pid_root: &Path, warnings: &mut WarningBuffer) -> DaemonSmaps {
+    let smaps = match read_bounded(&pid_root.join("smaps_rollup"), SMAPS_ROLLUP_LIMIT) {
+        Ok(smaps) if !smaps.truncated => smaps,
+        Ok(_) => {
+            warnings.push("daemon smaps_rollup exceeded the read limit".to_owned());
+            return DaemonSmaps::default();
+        }
+        Err(error) => {
+            warnings.push(format!("daemon smaps_rollup read failed: {error}"));
+            return DaemonSmaps::default();
+        }
+    };
+    let mut proportional_set_size_bytes = None;
+    let mut unique_set_size_bytes = Some(0_u64);
+    for line in smaps.text.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        match key {
+            "Pss" => proportional_set_size_bytes = parse_kibibytes(value),
+            "Private_Clean" | "Private_Dirty" | "Private_Hugetlb" => {
+                unique_set_size_bytes = unique_set_size_bytes
+                    .zip(parse_kibibytes(value))
+                    .and_then(|(total, bytes)| total.checked_add(bytes));
+            }
+            _ => {}
+        }
+    }
+    DaemonSmaps {
+        proportional_set_size_bytes,
+        unique_set_size_bytes,
+    }
+}
+
+#[derive(Default)]
+struct DaemonIo {
+    read_bytes: Option<u64>,
+    write_bytes: Option<u64>,
+    read_syscalls: Option<u64>,
+    write_syscalls: Option<u64>,
+}
+
+fn read_daemon_io(pid_root: &Path, warnings: &mut WarningBuffer) -> DaemonIo {
+    let input = match read_bounded(&pid_root.join("io"), IO_LIMIT) {
+        Ok(input) if !input.truncated => input,
+        Ok(_) => {
+            warnings.push("daemon io exceeded the read limit".to_owned());
+            return DaemonIo::default();
+        }
+        Err(error) => {
+            warnings.push(format!("daemon io read failed: {error}"));
+            return DaemonIo::default();
+        }
+    };
+    let mut parsed = DaemonIo::default();
+    for line in input.text.lines() {
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
+        match key {
+            "read_bytes" => parsed.read_bytes = parse_u64(value),
+            "write_bytes" => parsed.write_bytes = parse_u64(value),
+            "syscr" => parsed.read_syscalls = parse_u64(value),
+            "syscw" => parsed.write_syscalls = parse_u64(value),
+            _ => {}
+        }
+    }
+    parsed
+}
+
+fn count_file_descriptors(pid_root: &Path, warnings: &mut WarningBuffer) -> Option<u64> {
+    let entries = match std::fs::read_dir(pid_root.join("fd")) {
+        Ok(entries) => entries,
+        Err(error) => {
+            warnings.push(format!("daemon file descriptor read failed: {error}"));
+            return None;
+        }
+    };
+    let mut count = 0_u64;
+    for entry in entries {
+        if entry.is_err() {
+            warnings.push("daemon file descriptor entry disappeared".to_owned());
+            continue;
+        }
+        if count == FD_COUNT_LIMIT as u64 {
+            warnings.push(format!(
+                "daemon file descriptor count truncated at {FD_COUNT_LIMIT}"
+            ));
+            return None;
+        }
+        count += 1;
+    }
+    Some(count)
+}
+
+fn nonempty(value: &str) -> Option<String> {
+    let value = value.trim();
+    (!value.is_empty()).then(|| value.to_owned())
+}
+
+fn parse_u64(value: &str) -> Option<u64> {
+    value.trim().parse().ok()
 }
 
 fn parse_status(status: &str) -> io::Result<ProcessStatus> {

@@ -52,13 +52,9 @@ fn validate_protocol_ownership(facts: &StaleFacts, violations: &mut Vec<String>)
     {
         let rust_content = is_rust_source(file).then(|| compact_rust_code(&file.content));
         let content = rust_content.as_deref().unwrap_or(&file.content);
-        let product = [
-            "crates/sandbox-cli/",
-            "crates/sandbox-mcp/",
-            "crates/sandbox-console/",
-        ]
-        .iter()
-        .any(|root| file.path.starts_with(root));
+        let product = ["crates/sandbox-cli/", "crates/sandbox-mcp/"]
+            .iter()
+            .any(|root| file.path.starts_with(root));
         if product && (content.contains("sandbox-protocol") || content.contains("sandbox_protocol"))
         {
             violations.push(format!(

@@ -1,8 +1,7 @@
 # Workspace Process Topology Observability
 
 Status: Draft  
-Owners: sandbox-runtime, sandbox-observability, sandbox-manager, sandbox-console  
-Target route: `/sandboxes/:sandboxId/observability/cgroup`  
+Owners: sandbox-runtime, sandbox-observability, sandbox-manager
 Target operation: `cgroup`  
 Live E2E spec: [`ephemeral-sandbox-test/e2e/observability/cgroup/test_spec.md`](../../ephemeral-sandbox-test/e2e/observability/cgroup/test_spec.md)
 
@@ -12,7 +11,11 @@ Replace the current delegated-cgroup topology view with workspace process topolo
 
 Every open workspace already has a namespace holder process. The runtime knows the stable mapping from `workspace_id` to `holder_pid`. A process belongs to that workspace when its PID namespace matches the holder's `pid_for_children` namespace and its mount namespace matches the holder's mount namespace. `/proc/<pid>/cgroup` remains useful diagnostic metadata, but neither writable cgroups nor one child cgroup per workspace is required.
 
-The existing public URL and operation name stay stable. The console presents the route as **Processes** and renders workspace sessions, their namespace init, their current processes, and explicitly estimated current RSS and CPU usage. Read-only cgroup mounts, a root cgroup such as `0::/`, or the absence of delegated child cgroups must not produce an `unavailable` topology.
+The existing public operation name stays stable. The response includes workspace
+sessions, their namespace init, their current processes, and the counters
+needed to derive explicitly estimated current RSS and CPU usage. Read-only
+cgroup mounts, a root cgroup such as `0::/`, or the absence of delegated child
+cgroups must not produce an `unavailable` topology.
 
 ## Problem
 
@@ -37,7 +40,8 @@ even though the daemon can read `/proc`, knows every workspace holder, and can d
 - Depend only on Linux `/proc` facilities already required by the namespace runner.
 - Preserve the existing `cgroup` operation and `/observability/cgroup` route.
 - Expose `/proc/<pid>/cgroup` membership as optional diagnostics on each process.
-- Expose optional process RSS and cumulative CPU counters so the console can derive current per-workspace estimates without background collector state.
+- Expose optional process RSS and cumulative CPU counters so response consumers
+  can derive current per-workspace estimates without background collector state.
 - Distinguish an idle workspace from unavailable topology.
 - Handle normal `/proc` process races without failing the whole response.
 - Keep collection on demand, bounded, deterministic, and free of background work.
@@ -229,7 +233,10 @@ Contract rules:
 - `resident_memory_bytes`, `cpu_time_us`, and `start_time_ticks` are optional nullable diagnostics. Failure to read them does not hide the process or make topology unavailable.
 - these additive nullable fields do not change `schema_version: 2`; consumers must tolerate them being absent from an older schema-v2 daemon during rolling replacement.
 
-The old `root`, `controllers`, and `groups` fields are removed from schema version 2. Console and browser fixtures must migrate in the same change. The public operation and route remain stable, which limits migration to response consumers.
+The old `root`, `controllers`, and `groups` fields are removed from schema
+version 2. Response consumers and their fixtures must migrate with the schema
+change. The public operation remains stable, which limits migration to response
+consumers.
 
 ## Availability and race behavior
 
@@ -291,7 +298,9 @@ For sandbox scope, the manager continues to own Docker-derived resource series. 
 - `series` from the manager resource ring;
 - `topology` from the daemon proc collector.
 
-The manager must not hardcode topology as unavailable. It must not introduce daemon wakeups into normal aggregate resource polling; the additional daemon request is limited to the explicit topology page/operation.
+The manager must not hardcode topology as unavailable. It must not introduce
+daemon wakeups into normal aggregate resource polling; the additional daemon
+request is limited to the explicit `cgroup` operation.
 
 Manager-to-daemon transport failures remain a valid top-level unavailable response with an actionable error distinct from cgroup delegation.
 
@@ -309,54 +318,6 @@ Manager-to-daemon transport failures remain a valid top-level unavailable respon
 | Query port/response | `crates/sandbox-observability/query/src/ports.rs` and `query.rs` | Emit topology schema version 2 |
 | Daemon composition | `crates/sandbox-daemon/src/observability/adapter.rs` | Join runtime workspace inputs to the proc collector |
 | Manager response | `crates/sandbox-manager/src/management/service/impls/resource_metrics.rs` | Merge manager series with daemon topology instead of synthesizing unavailable |
-| Console contract | `web/console/src/api/observability.ts` | Replace delegated-cgroup types with process-topology types |
-| Console page | `web/console/src/pages/sandbox/observability/CgroupView.tsx` | Render workspace and process placement |
-| Console estimates | `web/console/src/pages/sandbox/observability/processEstimates.ts` | Sum current RSS and derive PID-reuse-safe CPU deltas between successful refreshes |
-| Console navigation | observability tab and shell route labels | Display Processes while preserving the route |
-| Browser fixtures | `web/console/tests/browser/P07ObservabilityFixture.spec.ts` | Migrate fixtures and state coverage to schema version 2 |
-
-## Console design
-
-Keep `/observability/cgroup` addressable for bookmarks and compatibility, but change the visible tab and breadcrumb label from **Cgroups** to **Processes**.
-
-Page content:
-
-- title: **Workspace process topology**;
-- subtitle: **Process placement from Linux `/proc` namespace identity**;
-- source badge: **proc namespaces**;
-- existing auto-refresh control;
-- one card/section per workspace;
-- status badge (`active`, `idle`, or `partial`), process count, holder PID, and namespace diagnostics;
-- compact **RSS (estimated)** and **CPU (estimated)** values for each workspace;
-- process table with Name, PID, Namespace PID, State, Kind, and Cgroup membership;
-- optional cgroup membership displayed as monospace diagnostic text, not as hierarchy.
-
-Empty and failure states:
-
-- available with no workspace: **No workspace sessions are open.**
-- idle workspace: render the workspace and namespace init, plus **No workload processes are running.**
-- partial workspace: keep visible data and show a non-blocking warning in that workspace.
-- top-level unavailable: show the actual proc/runtime/transport cause and retain auto-refresh.
-
-Do not restore delegated child-cgroup hierarchy or resource columns. The compact workspace estimates are derived from the processes visible in two topology samples: RSS is the current sum and may double-count shared pages, while CPU is the cumulative-counter delta divided by the refresh interval and may miss processes that start and exit between samples. The first successful sample shows RSS and waits for a second sample before displaying CPU. Match CPU samples by `(pid, start_time_ticks)` and never carry estimates across sandboxes. Sandbox resource charts remain on Resources, and the UI must label these values as estimates rather than authoritative lifetime accounting.
-
-Responsive behavior:
-
-- desktop uses a compact table within each workspace card;
-- narrow layouts stack process fields without horizontal page overflow;
-- long workspace IDs and membership lines wrap or scroll within their value cell.
-
-Accessibility and stable test hooks:
-
-- the navigation remains a semantic Mantine tab;
-- workspace status is conveyed by text as well as color;
-- process tables have accessible column names;
-- page root: `data-process-topology="true"`;
-- workspace container: `data-workspace-id="<id>"`;
-- process row: `data-process-pid="<pid>"`.
-- workspace RSS estimate: `data-workspace-rss-estimate="true"`;
-- workspace CPU estimate: `data-workspace-cpu-estimate="true"`;
-- estimate limitations: `data-resource-estimate-note="true"`.
 
 ## Security and privacy
 
@@ -399,25 +360,15 @@ Use a fixture proc tree and deterministic namespace-stat abstraction to cover:
 - daemon transport failure is reported distinctly;
 - normal resource polling does not acquire a new daemon dependency.
 
-### Console tests
-
-Update browser fixtures and cover:
-
-- active, idle, partial, empty, and unavailable states;
-- cgroup membership with v1 multiple-line and v2 root values;
-- backend-started commands appearing on refresh;
-- immediate RSS aggregation, CPU deltas after two refreshes, and PID-reuse rejection;
-- responsive rendering and stable tab routing;
-- no legacy delegated-cgroup language.
-
 ## Rollout
 
 1. Add the proc collector and fixture tests without changing the public response.
 2. Thread holder identity from runtime to daemon observability.
 3. Switch query and manager merge behavior to schema version 2 in one backend change;
-4. migrate console types, fixtures, and UI in the same integration branch;
-5. add and run the linked live E2E family;
-6. remove obsolete delegated-child-cgroup topology code after all consumers use version 2.
+4. coordinate the schema change with downstream consumers and run the linked
+   live E2E family;
+5. remove obsolete delegated-child-cgroup topology code after all consumers
+   use version 2.
 
 No migration of stored sandbox state is required. Topology is generated from the live runtime snapshot on demand.
 
@@ -431,6 +382,4 @@ No migration of stored sandbox state is required. Topology is generated from the
 - Read-only `/sys/fs/cgroup` and `0::/` membership still produce `available: true`.
 - No topology code requires writable cgroups or `CAP_SYS_ADMIN` beyond capabilities already required for workspace creation.
 - The manager returns daemon topology instead of a hardcoded unavailable value.
-- The console no longer presents missing delegated cgroups as an availability failure.
-- The console labels current per-workspace RSS and CPU as estimates, waits for two samples before CPU, and states their shared-page and short-lived-process limitations.
 - Product tests and the linked live E2E suite pass.

@@ -2,7 +2,7 @@
 
 Status: Draft
 Scope: `sandbox-daemon`, `sandbox-manager`, `sandbox-observability-telemetry`,
-`sandbox-observability-query`, `sandbox-provider-docker`, and `sandbox-console`
+`sandbox-observability-query`, and `sandbox-provider-docker`
 
 ## Relationship to existing specifications
 
@@ -222,11 +222,11 @@ Successful RPC completion must not trigger observability collection. Snapshot
 reads must not refresh resource samples. Observability reads must not trace
 themselves into the store they are reading.
 
-The console may poll manager lifecycle state and the manager-owned resource
-route. It requests a daemon snapshot only after an activity revision changes,
-while an execution is known active, after an explicitly requested refresh, or
-after a stale-focus transition. Volatile timestamps and resource counters are
-not activity fingerprints.
+Presentation clients may poll manager lifecycle state and the manager-owned
+resource route. A client requests a daemon snapshot only after an activity
+revision changes, while an execution is known active, after an explicitly
+requested refresh, or after a stale-focus transition. Volatile timestamps and
+resource counters are not activity fingerprints.
 
 ### 6.6 Anonymous memory and huge pages
 

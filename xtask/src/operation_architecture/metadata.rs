@@ -130,17 +130,6 @@ const PACKAGE_POLICIES: &[PackagePolicy] = &[
         ],
     },
     PackagePolicy {
-        manifest: "crates/sandbox-console/Cargo.toml",
-        name: "sandbox-console",
-        layer: Layer::ProductAdapter,
-        allowed: &[
-            "sandbox-operation-client",
-            "sandbox-operation-contract",
-            "sandbox-operation-catalog",
-            "sandbox-config",
-        ],
-    },
-    PackagePolicy {
         manifest: "crates/sandbox-gateway/Cargo.toml",
         name: "sandbox-gateway",
         layer: Layer::CompositionRoot,
@@ -281,11 +270,6 @@ const PROOF_TARGETS: &[(&str, &str, &str)] = &[
         "sandbox-observability-query",
         "query",
         "crates/sandbox-observability/query/tests/query.rs",
-    ),
-    (
-        "sandbox-console",
-        "console",
-        "crates/sandbox-console/tests/console.rs",
     ),
 ];
 
@@ -575,7 +559,7 @@ fn validate_catalog_edge(
         "sandbox-runtime" => Some(&["runtime"]),
         "sandbox-observability-query" => Some(&["observability"]),
         "sandbox-daemon" => Some(&["runtime", "observability"]),
-        "sandbox-mcp" | "sandbox-console" => Some(&["manager", "runtime", "observability"]),
+        "sandbox-mcp" => Some(&["manager", "runtime", "observability"]),
         "sandbox-cli" => Some(&[]),
         _ => None,
     };
@@ -657,7 +641,6 @@ fn validate_library_and_binaries(package: &PackageFact, violations: &mut Vec<Str
             ("sandbox-observability-cli", &["observability"]),
         ],
         "sandbox-mcp" => &[("sandbox-mcp", &[])],
-        "sandbox-console" => &[("sandbox-console", &[])],
         "sandbox-gateway" => &[("sandbox-gateway", &[])],
         "sandbox-daemon" => &[("sandbox-daemon", &[])],
         "xtask" => &[("xtask", &[])],

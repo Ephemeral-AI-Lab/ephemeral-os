@@ -249,7 +249,7 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
 }
 
 #[tokio::test]
-async fn manager_router_reads_sandbox_resource_metrics_from_the_host_ring_only() {
+async fn manager_router_merges_host_resource_series_with_daemon_topology() {
     let sandbox = sandbox_id("sbox-host-ring");
     let runtime = Arc::new(FakeRuntime::default());
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
@@ -291,14 +291,16 @@ async fn manager_router_reads_sandbox_resource_metrics_from_the_host_ring_only()
         "docker_engine"
     );
     assert_eq!(response["topology"]["schema_version"], 2);
-    assert_eq!(response["topology"]["available"], false);
-    assert_eq!(response["topology"]["workspaces"], json!([]));
+    assert_eq!(response["topology"]["available"], true);
+    assert_eq!(response["topology"]["source"], "proc_namespaces");
+    assert_eq!(
+        response["topology"]["workspaces"][0]["workspace_id"],
+        "workspace-1"
+    );
     assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
-    assert!(daemon_client
-        .invocations
-        .lock()
-        .expect("invocations lock")
-        .is_empty());
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, CGROUP_SPEC.name);
     services
         .resource_ring()
         .remove(&sandbox)
@@ -344,13 +346,11 @@ async fn manager_router_does_not_report_unavailable_counters_as_zero() {
     assert!(metrics.get("cpu_usec").is_none());
     assert!(metrics.get("io_rbytes").is_none());
     assert!(metrics.get("io_wbytes").is_none());
-    assert_eq!(response["topology"]["available"], false);
+    assert_eq!(response["topology"]["available"], true);
     assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
-    assert!(daemon_client
-        .invocations
-        .lock()
-        .expect("invocations lock")
-        .is_empty());
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, CGROUP_SPEC.name);
     services
         .resource_ring()
         .remove(&sandbox)
@@ -387,7 +387,7 @@ async fn manager_preserves_resource_series_when_topology_transport_is_unavailabl
     assert_eq!(response["topology"]["workspaces"], json!([]));
     assert_eq!(
         response["topology"]["error"],
-        "daemon topology is not queried by the manager resource route"
+        "sandbox daemon topology unavailable: sandbox daemon unavailable for sbox-no-daemon"
     );
     assert!(daemon_client
         .invocations
@@ -401,7 +401,7 @@ async fn manager_preserves_resource_series_when_topology_transport_is_unavailabl
 }
 
 #[test]
-fn manager_status_and_cgroup_reads_are_pure_for_ten_thousand_iterations() {
+fn manager_status_and_cgroup_reads_do_not_mutate_resource_ring() {
     let runtime = Arc::new(FakeRuntime::default());
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
     store
@@ -453,11 +453,11 @@ fn manager_status_and_cgroup_reads_are_pure_for_ten_thousand_iterations() {
         before_metadata.modified().ok()
     );
     assert_eq!(runtime.resource_reads.load(Ordering::SeqCst), 1);
-    assert!(daemon_client
-        .invocations
-        .lock()
-        .expect("invocations lock")
-        .is_empty());
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 10_000);
+    assert!(invocations
+        .iter()
+        .all(|(_, operation, _)| operation == CGROUP_SPEC.name));
     services
         .resource_ring()
         .remove(&sandbox_id("sbox-pure"))

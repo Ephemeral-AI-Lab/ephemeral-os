@@ -32,9 +32,6 @@ target-linux-container-gnu/
 /docs/obsidian/ephemeral-os/testing/file-operation/outputs/
 /e2e/**/test-reports/
 /e2e/repo/eos-shared-workspace-base-cache/
-*.tsbuildinfo
-test-results/
-coverage/
 .cache/
 .omc/
 **/.omc/
@@ -43,7 +40,3 @@ coverage/
 
 # Release/build artifacts
 /dist/
-
-# Web console SPA
-/web/console/node_modules/
-/web/console/dist/

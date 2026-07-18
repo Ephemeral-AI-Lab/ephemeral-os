@@ -34,8 +34,10 @@ compiles.
 - **Parallel workers.** Other agents may be editing this repo concurrently. Only
   touch what your task requires, never revert or overwrite changes you did not
   make, and prefer additive, localized edits.
-- **Work on `main`.** Always work on the `main` branch. Do not create new
-  branches or git worktrees; commit your changes directly to `main`.
+- **Work on `main`.** Always work, commit, and push directly on the `main`
+  branch. Never create side branches (including `agent/*`) or additional git
+  worktrees. If another checkout owns `main`, use that existing `main` checkout
+  instead of branching.
 
 ## Build & test
 

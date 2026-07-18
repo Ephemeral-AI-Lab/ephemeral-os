@@ -24,6 +24,12 @@ Ephemeral Sandbox gives parallel coding agents isolated workspaces inside one
 shared sandbox. Agents share the same project history, work independently, and
 publish only the changes they intend to keep.
 
+This repository contains the headless Rust core: gateway, manager, daemon,
+runtime, observability, CLI, and MCP components. The browser UI and its backend
+live in the separate
+[Ephemeral Sandbox Console](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-console)
+repository.
+
 ## Why Ephemeral Sandbox?
 
 - **Work in parallel.** Run multiple coding agents at the same time.
@@ -68,7 +74,6 @@ sandbox-observability-cli snapshot --sandbox-id eos-abc
 |---|---|---|
 | CLI | Operators, scripts, and local development | `sandbox-manager-cli help` |
 | MCP | Coding agents and MCP-compatible clients | `bin/setup-codex-mcp` |
-| Web console | Browser-based operation and inspection | `bin/start-sandbox-console-stack` |
 
 The CLI and MCP interfaces use three focused tool groups:
 

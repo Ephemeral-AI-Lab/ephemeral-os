@@ -324,27 +324,6 @@ fn run_behavior_proofs(root: &Path) -> Result<()> {
             "--",
             "--exact",
         ], Some("public_registry_is_bijective_with_observability_owned_routes")),
-        (&["test", "-p", "sandbox-console", "--test", "console"], None),
-        (&[
-            "test",
-            "-p",
-            "sandbox-console",
-            "--test",
-            "console",
-            "rpc_tests::unknown_operation_is_rejected_before_gateway_transport",
-            "--",
-            "--exact",
-        ], Some("rpc_tests::unknown_operation_is_rejected_before_gateway_transport")),
-        (&[
-            "test",
-            "-p",
-            "sandbox-console",
-            "--test",
-            "console",
-            "rpc_tests::internal_operation_is_rejected_before_gateway_transport",
-            "--",
-            "--exact",
-        ], Some("rpc_tests::internal_operation_is_rejected_before_gateway_transport")),
     ];
     for (arguments, expected) in proofs {
         let output = run_cargo(root, arguments)?;

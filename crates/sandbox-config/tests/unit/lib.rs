@@ -324,15 +324,6 @@ gateway:
   pid_path: /tmp/eos-gateway.pid
   max_concurrent_connections: 256
 
-console:
-  bind_addr: 127.0.0.1:7880
-  rpc_timeout_s: 120.0
-  health_probe_timeout_s: 2.0
-  proxy_connect_timeout_s: 10.0
-  proxy_response_timeout_s: 30.0
-  endpoint_resolve_timeout_s: 5.0
-  endpoint_cache_ttl_s: 3.0
-
 manager:
   registry_path: null
   export:
@@ -378,9 +369,6 @@ manager:
 
     let gateway: configs::gateway::GatewayConfig = doc.section("gateway").expect("gateway section");
     gateway.validate().expect("maximal gateway config is valid");
-
-    let console: configs::console::ConsoleConfig = doc.section("console").expect("console section");
-    console.validate().expect("maximal console config is valid");
 
     let manager: configs::manager::ManagerConfig = doc.section("manager").expect("manager section");
     manager.validate().expect("maximal manager config is valid");

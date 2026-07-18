@@ -2,12 +2,10 @@
 //! and recover existing containers by label after a gateway restart.
 
 use std::collections::{HashMap, HashSet};
-use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use bytes::Bytes;
 use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_config::configs::runtime::RuntimeConfig;
 use sandbox_manager::{
@@ -22,15 +20,7 @@ use crate::launch::daemon_launch_argv;
 
 const ENDPOINT_HOST: &str = "127.0.0.1";
 const SHARED_BASE_VOLUME_MOUNT_ROOT: &str = "/eos-shared-base-seed";
-const GIT_TOOLCHAIN_DIR_ENV: &str = "SANDBOX_GIT_TOOLCHAIN_DIR";
 static SEEDED_SHARED_BASE_VOLUMES: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
-static GIT_TOOLCHAINS: OnceLock<Mutex<HashMap<String, GitToolchain>>> = OnceLock::new();
-
-#[derive(Clone)]
-enum GitToolchain {
-    Present,
-    Upload(Bytes),
-}
 
 /// Docker-backed runtime. Creates stopped containers; the installer starts them.
 pub struct DockerSandboxRuntime {
@@ -130,66 +120,6 @@ impl DockerSandboxRuntime {
         seeded.insert(volume_name.clone());
         Ok(volume_name)
     }
-
-    fn ensure_git_toolchain(
-        &self,
-        config: &DockerRuntimeConfig,
-        image: &str,
-        id: &SandboxId,
-    ) -> Result<(), ManagerError> {
-        match self.git_toolchain(config, image)? {
-            GitToolchain::Present => Ok(()),
-            GitToolchain::Upload(archive) => self
-                .engine
-                .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
-                .map_err(runtime_failed),
-        }
-    }
-
-    fn git_toolchain(
-        &self,
-        config: &DockerRuntimeConfig,
-        image: &str,
-    ) -> Result<GitToolchain, ManagerError> {
-        let key = git_toolchain_key(config, image);
-        let cache = GIT_TOOLCHAINS.get_or_init(|| Mutex::new(HashMap::new()));
-        if let Some(toolchain) = cache
-            .lock()
-            .map_err(|_| ManagerError::RuntimeFailed {
-                message: "git toolchain cache lock poisoned".to_owned(),
-            })?
-            .get(&key)
-            .cloned()
-        {
-            return Ok(toolchain);
-        }
-        let probe = self
-            .engine
-            .run_image_command(
-                image.to_owned(),
-                config.platform.clone(),
-                vec![
-                    "sh".to_owned(),
-                    "-ceu".to_owned(),
-                    "command -v git >/dev/null 2>&1".to_owned(),
-                ],
-                container_env(config),
-            )
-            .map_err(runtime_failed)?;
-        let toolchain = if probe.exit_code == 0 {
-            GitToolchain::Present
-        } else {
-            let arch = git_toolchain_arch(config, &self.engine)?;
-            GitToolchain::Upload(load_git_toolchain_archive(arch)?)
-        };
-        cache
-            .lock()
-            .map_err(|_| ManagerError::RuntimeFailed {
-                message: "git toolchain cache lock poisoned".to_owned(),
-            })?
-            .insert(key, toolchain.clone());
-        Ok(toolchain)
-    }
 }
 
 impl SandboxRuntime for DockerSandboxRuntime {
@@ -257,7 +187,7 @@ impl SandboxRuntime for DockerSandboxRuntime {
         let cmd = daemon_launch_argv(config, &record, &auth_token);
         let spec = ContainerSpec {
             name,
-            image: image.clone(),
+            image,
             cmd,
             env: container_env(config),
             labels,
@@ -279,14 +209,11 @@ impl SandboxRuntime for DockerSandboxRuntime {
         .map_err(|error| ManagerError::RuntimeFailed {
             message: format!("failed to build shared base seed archive: {error}"),
         });
-        match archive
-            .and_then(|archive| {
-                self.engine
-                    .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
-                    .map_err(runtime_failed)
-            })
-            .and_then(|()| self.ensure_git_toolchain(config, &image, &id))
-        {
+        match archive.and_then(|archive| {
+            self.engine
+                .upload_archive(id.as_str().to_owned(), "/".to_owned(), archive)
+                .map_err(runtime_failed)
+        }) {
             Ok(()) => {}
             Err(error) => {
                 let _ = self
@@ -383,51 +310,6 @@ fn runtime_volumes(
             labels,
         },
     ]
-}
-
-fn git_toolchain_key(config: &DockerRuntimeConfig, image: &str) -> String {
-    format!(
-        "{}|{}",
-        image,
-        config.platform.as_deref().unwrap_or_default()
-    )
-}
-
-fn git_toolchain_arch(
-    config: &DockerRuntimeConfig,
-    engine: &DockerEngine,
-) -> Result<String, ManagerError> {
-    if let Some(platform) = config.platform.as_deref() {
-        if let Some(arch) = platform.split('/').nth(1) {
-            return Ok(arch.to_owned());
-        }
-    }
-    engine.daemon_architecture().map_err(runtime_failed)
-}
-
-fn load_git_toolchain_archive(arch: impl AsRef<str>) -> Result<Bytes, ManagerError> {
-    let arch = arch.as_ref();
-    let filename = match arch {
-        "aarch64" | "arm64" => "linux-arm64.tar",
-        "x86_64" | "amd64" => "linux-amd64.tar",
-        value => {
-            return Err(ManagerError::RuntimeFailed {
-                message: format!("unsupported git toolchain architecture {value}"),
-            });
-        }
-    };
-    let dir = env::var_os(GIT_TOOLCHAIN_DIR_ENV).ok_or_else(|| ManagerError::RuntimeFailed {
-        message: format!("{GIT_TOOLCHAIN_DIR_ENV} is not set"),
-    })?;
-    let path = PathBuf::from(dir).join(filename);
-    std::fs::read(&path)
-        .map(Bytes::from)
-        .map_err(|error| ManagerError::RuntimeFailed {
-            message: format!(
-                "failed to read prebuilt git toolchain {}: {error}",
-                path.display()
-            ),
-        })
 }
 
 fn container_env(config: &DockerRuntimeConfig) -> Vec<String> {

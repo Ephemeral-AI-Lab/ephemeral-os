@@ -12,7 +12,6 @@ members = [
     "crates/sandbox-observability/query",
     "crates/sandbox-cli",
     "crates/sandbox-mcp",
-    "crates/sandbox-console",
     "crates/sandbox-gateway",
     "crates/sandbox-protocol",
     "crates/sandbox-runtime/workspace",
@@ -87,7 +86,6 @@ sandbox-observability-telemetry = { path = "crates/sandbox-observability/telemet
 sandbox-observability-query = { path = "crates/sandbox-observability/query" }
 sandbox-cli = { path = "crates/sandbox-cli" }
 sandbox-mcp = { path = "crates/sandbox-mcp" }
-sandbox-console = { path = "crates/sandbox-console" }
 sandbox-gateway = { path = "crates/sandbox-gateway" }
 sandbox-protocol = { path = "crates/sandbox-protocol" }
 sandbox-daemon = { path = "crates/sandbox-daemon" }

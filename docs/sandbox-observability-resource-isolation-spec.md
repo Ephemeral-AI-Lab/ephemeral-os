@@ -1,18 +1,18 @@
 # Sandbox observability resource isolation specification
 
 Status: Implemented
-Owners: `sandbox-daemon`, `sandbox-manager`, `sandbox-provider-docker`, `sandbox-observability-telemetry`, `sandbox-console`  
+Owners: `sandbox-daemon`, `sandbox-manager`, `sandbox-provider-docker`, `sandbox-observability-telemetry`
 Target: observability storage v2
 
 ## Summary
 
 Sandbox observability must be idle-memory-neutral and strictly disk-bounded.
-Opening the console, inspecting status, or reading telemetry must not cause the
-sandbox daemon to collect or persist more telemetry. Resource metrics must be
-collected by the host manager, not by waking the sandbox daemon. The daemon may
-record operation-generated events, but it must retain no telemetry history in
-heap memory and must keep its on-disk event store within a hard per-sandbox
-budget.
+Opening a monitoring client, inspecting status, or reading telemetry must not
+cause the sandbox daemon to collect or persist more telemetry. Resource metrics
+must be collected by the host manager, not by waking the sandbox daemon. The
+daemon may record operation-generated events, but it must retain no telemetry
+history in heap memory and must keep its on-disk event store within a hard
+per-sandbox budget.
 
 The implementation should reuse the current operation contract, manager
 runtime port, NDJSON record format, and two-segment event store. It must not add
@@ -27,8 +27,8 @@ The current request path has four properties that violate resource isolation:
    answers.
 3. The manager retains ten minutes of resource samples in a `HashMap` of
    `VecDeque`s.
-4. The console polls payloads containing timestamps and counters, so volatile
-   data can prevent idle backoff.
+4. Monitoring clients poll payloads containing timestamps and counters, so
+   volatile data can prevent idle backoff.
 
 The daemon serializes each record into a temporary `Vec<u8>`. Its latest-sample
 reader is bounded to two samples per requested scope, but other views scan and
@@ -53,8 +53,8 @@ A sandbox is idle when all of the following are true:
 - no runtime mutation is being dispatched;
 - no explicit observability history request is in flight.
 
-A console page being open, a fleet/status refresh, and a manager health check
-do not count as sandbox activity.
+A monitoring page being open, a fleet/status refresh, and a manager health
+check do not count as sandbox activity.
 
 ### Memory-free observability
 
@@ -131,7 +131,7 @@ minutes without growing.
 ## Target architecture
 
 ```text
-console status polling
+client status polling
         |
         v
 manager persisted sandbox record ---- activity revision
@@ -150,8 +150,8 @@ The manager continues to call the existing `SandboxRuntime` resource-metrics
 port. The Docker provider reads sandbox cgroup metrics from the host. The
 manager runs one host-side sampling loop and writes each fixed-size sample
 directly to an on-disk ring without retaining the sample in `ResourceHistory`.
-The loop is independent of console and API reads, sleeps when there are no
-ready sandboxes, and never invokes a sandbox daemon.
+The loop is independent of client and API reads, sleeps when there are no ready
+sandboxes, and never invokes a sandbox daemon.
 
 The manager's sandbox snapshot must read the latest ring record. It must not
 sample resources as a side effect. The cgroup/resource operation reads the ring
@@ -184,7 +184,8 @@ manager increments it after successful state-changing operations that it
 routes to the daemon. Read-only file, status, and observability operations do
 not increment it.
 
-The console may poll manager state. It requests a daemon snapshot only when:
+Monitoring clients may poll manager state. A client requests a daemon snapshot
+only when:
 
 - the activity revision changes;
 - an execution is known to be active;
@@ -304,8 +305,8 @@ Test ownership is deliberately split:
 
 - deterministic Rust unit, allocation, and application integration tests live
   with the owning product crates in this repository;
-- console polling tests live with the console and use fake timers and request
-  counters;
+- downstream polling tests live with their owning client and use fake timers
+  and request counters;
 - every backend test requiring a real packaged daemon and a real Docker
   sandbox lives in
   `/Users/yifanxu/Ephemeral-AI-Lab/ephemeral-sandbox-test/e2e/observability`.
@@ -393,18 +394,6 @@ Use a counting fake `SandboxDaemonClient` and real manager service:
 - one revision change produces exactly one daemon snapshot;
 - an active execution permits polling only until the first inactive snapshot.
 
-#### Console polling
-
-Use fake timers and request counters:
-
-- timestamp-only and resource-counter changes do not count as activity;
-- an idle detail page stops daemon snapshots completely;
-- manager status polling may continue at the idle cadence;
-- hiding the tab stops all polling;
-- focus performs one revision check, not an unconditional daemon snapshot;
-- opening Resources queries the manager resource route only;
-- leaving Resources cancels its sampling requests.
-
 ### 3. Live memory conformance test
 
 Implement this section in
@@ -434,20 +423,20 @@ test process must not retain a sample list proportional to test duration.
 #### Phases
 
 1. Start and warm both sandboxes for five minutes.
-2. Leave both idle with no console for thirty minutes.
+2. Leave both idle with no monitoring client for thirty minutes.
 3. Poll the public aggregate and scoped snapshot backend routes for thirty
-   minutes at the console's active cadence.
+   minutes at the active client cadence.
 4. Poll the public manager-owned Resources/cgroup backend route for thirty
-   minutes at the console's active cadence.
+   minutes at the active client cadence.
 5. Run 100,000 bounded event-producing operations.
 6. Stop backend polling and allow a ten-minute cooldown.
 7. Request cgroup reclaim where supported, then capture the final five minutes.
 
-No browser is required for these backend phases. Console request scheduling is
-covered separately with fake timers. Exact manager-to-daemon invocation counts
-are proved by the application integration tests with a counting fake; live E2E
-proves the consequence by observing no daemon CPU/IO work, memory trend, or
-event-store mutation.
+No browser is required for these backend phases. Client request scheduling is
+covered separately by each client implementation. Exact manager-to-daemon
+invocation counts are proved by the application integration tests with a
+counting fake; live E2E proves the consequence by observing no daemon CPU/IO
+work, memory trend, or event-store mutation.
 
 #### Memory gates
 
@@ -520,7 +509,7 @@ harness has a run-scoped restart/fault primitive.
 | Tier | Owner | Frequency | Coverage |
 |---|---|---|---|
 | Unit | Product repository | Every change | Sink, reader, ring, allocation harness, polling logic |
-| Integration | Product repository | Every change | Read purity, routing counts, console fake timers |
+| Integration | Product repository | Every change | Read purity and routing counts |
 | Smoke | External live E2E | Every observability change | Real sandbox public contracts plus five-minute idle/polling regression |
 | Nightly | External live E2E | Nightly | Three-run memory test, read purity, strict disk cap |
 | Release | External live E2E | Before release | Five-run A/B and Node GC tests, six-hour disk soak, 100-sandbox cleanup, isolated faults |
@@ -536,20 +525,20 @@ live tests.
 2. Remove daemon collection from successful request completion and snapshot
    reads.
 3. Replace manager `ResourceHistory` with the fixed host ring.
-4. Add manager activity revision and gate console snapshots on it.
+4. Add manager activity revision for downstream snapshot gating.
 5. Disable daemon transparent huge pages and enable live conformance tests.
 6. Deprecate `max_file_bytes`; remove it after one compatibility release.
 
 On first v2 startup, an oversized legacy store is compacted by a bounded
 streaming pass. No legacy file may be loaded wholesale. Old daemons remain
-readable, but the console must not continuously poll them; users receive an
-explicit notice that resource-isolation guarantees require a v2 daemon.
+readable, but clients must not continuously poll them; users receive an explicit
+notice that resource-isolation guarantees require a v2 daemon.
 
 ## Acceptance criteria
 
 The work is complete only when all of the following are true:
 
-- no idle console route causes a daemon observability request;
+- unchanged activity revisions cause no daemon observability request;
 - no telemetry read changes telemetry storage;
 - the manager retains no resource history in memory;
 - the daemon retains no telemetry history in memory;

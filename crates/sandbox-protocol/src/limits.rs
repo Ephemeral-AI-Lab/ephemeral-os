@@ -1,8 +1,8 @@
 /// Enforcement thresholds for one framed request exchange. The protocol crate
 /// owns the vocabulary and the shipped defaults; the daemon constructs this
 /// from `daemon.server` at startup and threads it down its read path, while
-/// pure clients (CLI, manager, gateway, console) rely on the associated
-/// defaults. This crate never reads configuration.
+/// pure clients rely on the associated defaults. This crate never reads
+/// configuration.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProtocolLimits {
     /// Byte cap for one request envelope (and, for clients, one response).

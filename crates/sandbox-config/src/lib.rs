@@ -1,8 +1,8 @@
 //! Shared loader for the sandbox configuration document.
 //!
 //! This crate owns file loading, path validation, YAML parsing, merge semantics,
-//! and typed schemas for gateway, console, manager, daemon, observability,
-//! runner, and runtime config surfaces. CLI gateway discovery belongs to
+//! and typed schemas for gateway, manager, daemon, observability, runner, and
+//! runtime config surfaces. CLI gateway discovery belongs to
 //! `sandbox-operation-client`.
 
 pub mod configs;

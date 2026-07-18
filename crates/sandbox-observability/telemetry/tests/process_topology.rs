@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use sandbox_observability_telemetry::collect::process_topology::{
-    NamespaceIdentity, NamespaceIdentityReader, WorkspaceProcessInput, WorkspaceProcessKind,
-    WorkspaceProcessState, WorkspaceProcessTopology,
+    DaemonProcessMetrics, NamespaceIdentity, NamespaceIdentityReader, WorkspaceProcessInput,
+    WorkspaceProcessKind, WorkspaceProcessState, WorkspaceProcessTopology,
 };
 
 #[derive(Default)]
@@ -230,6 +230,50 @@ fn missing_process_stat_omits_cpu_estimate_without_hiding_process() {
     assert_eq!(process.resident_memory_bytes, Some(256 * 1_024));
     assert_eq!(process.cpu_time_us, None);
     assert_eq!(process.start_time_ticks, None);
+}
+
+#[test]
+fn daemon_metrics_collect_memory_cpu_io_threads_fds_and_cgroup() {
+    let root = fixture("daemon-metrics");
+    let pid = 42;
+    write_process_with_usage(&root, pid, 1, 1, "sandbox-daemon", 'S', 30_000, 25, 15, 900);
+    let pid_root = root.join(pid.to_string());
+    std::fs::write(
+        pid_root.join("status"),
+        "Name:\tsandbox-daemon\nState:\tS (sleeping)\nVmSize:\t120000 kB\nVmHWM:\t32000 kB\nVmRSS:\t30000 kB\nRssAnon:\t26000 kB\nRssFile:\t3900 kB\nRssShmem:\t100 kB\nVmData:\t28000 kB\nVmSwap:\t20 kB\nThreads:\t37\nvoluntary_ctxt_switches:\t120\nnonvoluntary_ctxt_switches:\t3\n",
+    )
+    .expect("daemon status");
+    std::fs::write(
+        pid_root.join("smaps_rollup"),
+        "00400000-00401000 r--p 00000000 00:00 0 [rollup]\nPss:\t28000 kB\nPrivate_Clean:\t1000 kB\nPrivate_Dirty:\t25000 kB\nPrivate_Hugetlb:\t0 kB\n",
+    )
+    .expect("daemon smaps rollup");
+    std::fs::write(
+        pid_root.join("io"),
+        "rchar: 12000\nwchar: 8000\nsyscr: 41\nsyscw: 17\nread_bytes: 4096\nwrite_bytes: 8192\n",
+    )
+    .expect("daemon io");
+    std::fs::write(pid_root.join("cgroup"), "0::/_daemon\n").expect("daemon cgroup");
+    std::fs::create_dir(pid_root.join("fd")).expect("daemon fd directory");
+    std::fs::write(pid_root.join("fd/3"), "").expect("fd 3");
+    std::fs::write(pid_root.join("fd/4"), "").expect("fd 4");
+
+    let metrics = DaemonProcessMetrics::collect(&root, pid);
+
+    assert!(metrics.available);
+    assert_eq!(metrics.name.as_deref(), Some("sandbox-daemon"));
+    assert_eq!(metrics.resident_memory_bytes, Some(30_000 * 1_024));
+    assert_eq!(metrics.proportional_set_size_bytes, Some(28_000 * 1_024));
+    assert_eq!(metrics.unique_set_size_bytes, Some(26_000 * 1_024));
+    assert_eq!(metrics.thread_count, Some(37));
+    assert_eq!(metrics.file_descriptor_count, Some(2));
+    assert_eq!(metrics.io_read_bytes, Some(4_096));
+    assert_eq!(metrics.io_write_bytes, Some(8_192));
+    assert_eq!(metrics.read_syscalls, Some(41));
+    assert_eq!(metrics.write_syscalls, Some(17));
+    assert_eq!(metrics.cgroup_memberships, ["0::/_daemon"]);
+    assert!(metrics.cpu_time_us.is_some_and(|value| value > 0));
+    assert!(metrics.warnings.is_empty());
 }
 
 #[test]

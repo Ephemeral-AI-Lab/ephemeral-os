@@ -4,7 +4,7 @@ use sandbox_observability_query::ports::{
     QueryLimits, WorkspaceSnapshot,
 };
 use sandbox_observability_telemetry::collect::process_topology::{
-    WorkspaceProcessInput, WorkspaceProcessTopology,
+    DaemonProcessMetrics, WorkspaceProcessInput, WorkspaceProcessTopology,
 };
 use sandbox_observability_telemetry::{sample_layerstack, LayerStackBytes, WalkBudget};
 use sandbox_runtime::{
@@ -64,12 +64,16 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
     }
 
     fn cgroup_topology(&self) -> WorkspaceProcessTopology {
+        let daemon =
+            DaemonProcessMetrics::collect(std::path::Path::new("/proc"), std::process::id());
         let snapshot = self.operations().observability_snapshot();
         if snapshot.workspaces.is_empty() && !snapshot.partial_errors.is_empty() {
-            return WorkspaceProcessTopology::unavailable(format!(
+            let mut topology = WorkspaceProcessTopology::unavailable(format!(
                 "runtime workspace snapshot failed: {}",
                 snapshot.partial_errors.join("; ")
             ));
+            topology.daemon = Some(daemon);
+            return topology;
         }
         let workspaces = snapshot
             .workspaces
@@ -79,7 +83,10 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
                 holder_pid: u32::try_from(workspace.holder_pid).unwrap_or(0),
             })
             .collect();
-        WorkspaceProcessTopology::collect(std::path::Path::new("/proc"), workspaces)
+        let mut topology =
+            WorkspaceProcessTopology::collect(std::path::Path::new("/proc"), workspaces);
+        topology.daemon = Some(daemon);
+        topology
     }
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot {

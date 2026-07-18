@@ -2,6 +2,7 @@ use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use serde_json::{json, Map, Value};
 
 use crate::operations::{ManagerServices, MAX_RESOURCE_HISTORY_MS};
+use crate::router::forward_sandbox_request;
 use crate::{ManagerError, ResourceRingRead, ResourceSample, SandboxId, SandboxResourceMetrics};
 
 const SANDBOX_SCOPE: &str = "sandbox";
@@ -37,16 +38,28 @@ pub(crate) fn dispatch_resource_metrics(
     } else {
         "partial"
     };
+    let topology = daemon_topology(services, request);
     OperationResponse::ok(json!({
         "view": "cgroup",
         "scope": SANDBOX_SCOPE,
         "availability": availability,
         "errors": errors,
         "series": series_value(read.samples),
-        "topology": unavailable_topology(
-            "daemon topology is not queried by the manager resource route"
-        ),
+        "topology": topology,
     }))
+}
+
+fn daemon_topology(services: &ManagerServices, request: &OperationRequest) -> Value {
+    match forward_sandbox_request(services, request.clone()) {
+        Ok(response) => response
+            .into_json_value()
+            .get("topology")
+            .cloned()
+            .unwrap_or_else(|| {
+                unavailable_topology("sandbox daemon did not report cgroup topology")
+            }),
+        Err(error) => unavailable_topology(format!("sandbox daemon topology unavailable: {error}")),
+    }
 }
 
 fn unavailable_topology(message: impl Into<String>) -> Value {

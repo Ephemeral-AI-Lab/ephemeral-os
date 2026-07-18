@@ -97,7 +97,6 @@ fn forbidden_dependency_edge_is_rejected_for_every_edge_kind() {
         ("sandbox-manager", "manager_export"),
         ("sandbox-runtime", "operation_registry"),
         ("sandbox-observability-query", "query"),
-        ("sandbox-console", "console"),
     ] {
         let mut replaced = packages.clone();
         replaced
@@ -1155,14 +1154,6 @@ fn maintained_stale_reference_and_generated_path_are_rejected() {
             format!("> **Landed design record (operation-layout exempt, 2026-07-11):** Archived.\n\n{RETIRED_E2E_TREE}"),
         ),
         (
-            "web/console/src/phase8-unrelated-view.ts",
-            "const layout = { \"view\": \"grid\" };".to_owned(),
-        ),
-        (
-            "web/console/src/phase8-observability-view.ts",
-            "const observability = { \"view\": \"snapshot\" };".to_owned(),
-        ),
-        (
             "crates/sandbox-manager/tests/phase8_nonfirst.rs",
             "use std::{fmt, process::Child};".to_owned(),
         ),
@@ -1415,13 +1406,6 @@ fn maintained_stale_reference_and_generated_path_are_rejected() {
     ] {
         assert!(!violations.iter().any(|violation| violation.contains(path)));
     }
-    assert!(!violations
-        .iter()
-        .any(|violation| violation.contains("phase8-unrelated-view.ts")));
-    assert!(violations.iter().any(|violation| {
-        violation.contains("synthetic observability view routing")
-            && violation.contains("phase8-observability-view.ts")
-    }));
     for path in [
         "phase8_nonfirst.rs",
         "phase8_braced.rs",
