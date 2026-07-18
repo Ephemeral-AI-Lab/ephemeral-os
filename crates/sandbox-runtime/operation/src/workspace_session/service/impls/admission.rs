@@ -84,14 +84,24 @@ impl WorkspaceSessionService {
         let _ = admission;
         let (handler, finalize_policy) = {
             let mut sessions = self.lock_sessions()?;
-            let session = sessions
-                .get_mut(workspace_session_id)
-                .filter(|session| session.finalization_state == FinalizationState::Active);
-            let Some(session) = session else {
+            let Some(session) = sessions.get_mut(workspace_session_id) else {
                 drop(sessions);
                 self.discard_resurrected_gate(workspace_session_id, gate);
                 return Err(WorkspaceSessionError::not_found(workspace_session_id));
             };
+            if !session.handle.holder_is_live() {
+                return Err(WorkspaceSessionError::HolderExited {
+                    workspace_session_id: workspace_session_id.clone(),
+                    reason: session
+                        .handle
+                        .holder_exit_reason()
+                        .unwrap_or_else(|| "exit-status:unknown".to_owned()),
+                    cleanup_state: session.finalization_state,
+                });
+            }
+            if session.finalization_state != FinalizationState::Active {
+                return Err(WorkspaceSessionError::not_found(workspace_session_id));
+            }
             session.active_commands.insert(command_session_id.clone());
             (session.handler(), session.finalize_policy)
         };
@@ -128,12 +138,21 @@ impl WorkspaceSessionService {
         let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
         let handler = {
             let sessions = self.lock_sessions()?;
-            let session = sessions
-                .get(workspace_session_id)
-                .filter(|session| session.finalization_state == FinalizationState::Active);
-            match session {
-                Some(session) => session.handler(),
-                None => {
+            match sessions.get(workspace_session_id) {
+                Some(session) if !session.handle.holder_is_live() => {
+                    return Err(WorkspaceSessionError::HolderExited {
+                        workspace_session_id: workspace_session_id.clone(),
+                        reason: session
+                            .handle
+                            .holder_exit_reason()
+                            .unwrap_or_else(|| "exit-status:unknown".to_owned()),
+                        cleanup_state: session.finalization_state,
+                    });
+                }
+                Some(session) if session.finalization_state == FinalizationState::Active => {
+                    session.handler()
+                }
+                _ => {
                     drop(sessions);
                     self.discard_resurrected_gate(workspace_session_id, &gate);
                     return Err(WorkspaceSessionError::not_found(workspace_session_id));

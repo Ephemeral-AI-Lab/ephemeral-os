@@ -1,5 +1,6 @@
 use crate::isolated_network_setup::VethAllocation;
 use crate::model::{LayerStackSnapshotRef, NetworkProfile, WorkspaceSessionId};
+use crate::namespace::holder::HolderRegistration;
 use crate::overlay::dirs::OverlayDirs;
 
 #[derive(Debug, Clone)]
@@ -11,6 +12,8 @@ pub struct MountedWorkspace {
     pub dirs: OverlayDirs,
     pub ns_fds: HolderNsFds,
     pub holder_pid: i32,
+    #[doc(hidden)]
+    pub holder_registration: HolderRegistration,
     pub readiness_fd: i32,
     pub control_fd: i32,
     pub veth: Option<VethAllocation>,

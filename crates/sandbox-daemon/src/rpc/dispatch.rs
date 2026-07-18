@@ -54,6 +54,9 @@ impl SandboxDaemonServer {
         if has_observability_handler(&request) {
             return self.dispatch_observability(request).await;
         }
+        let Some(_blocking_permit) = self.blocking_admission.try_acquire() else {
+            return blocking_overload_response(self.blocking_admission.limit());
+        };
         let operations = Arc::clone(&self.operations);
         let observer = self.observer();
         let task = tokio::task::spawn_blocking(move || {
@@ -87,12 +90,19 @@ impl SandboxDaemonServer {
     }
 
     async fn dispatch_observability(&self, request: OperationRequest) -> OperationResponse {
+        let Some(_blocking_permit) = self.blocking_admission.try_acquire() else {
+            return blocking_overload_response(self.blocking_admission.limit());
+        };
         let operations = Arc::clone(&self.operations);
         let observability = self.observability.clone();
+        let blocking_admission = self.blocking_admission.clone();
+        let connection_admission = self.connection_admission.clone();
         let task = tokio::task::spawn_blocking(move || {
             let input = crate::observability::adapter::DaemonObservabilityAdapter::new(
                 &operations,
                 observability.as_deref(),
+                &blocking_admission,
+                &connection_admission,
             );
             sandbox_observability_query::dispatch_operation(&input, &request)
         });
@@ -110,6 +120,14 @@ impl SandboxDaemonServer {
             ),
         }
     }
+}
+
+pub(crate) fn blocking_overload_response(max_blocking_requests: usize) -> OperationResponse {
+    super::error_response(
+        "server_busy",
+        "daemon blocking dispatch capacity is exhausted",
+        serde_json::json!({"max_blocking_requests": max_blocking_requests}),
+    )
 }
 
 fn has_observability_handler(request: &OperationRequest) -> bool {

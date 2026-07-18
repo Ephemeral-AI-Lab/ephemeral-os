@@ -4,7 +4,7 @@ use std::path::Path;
 use serde_json::{json, Value};
 
 use crate::session::manager::PERSISTED_HANDLES_SCHEMA_VERSION;
-use crate::session::{WorkspaceManager, WorkspaceManagerError};
+use crate::session::{MountedWorkspace, WorkspaceManager, WorkspaceManagerError};
 
 impl WorkspaceManager {
     fn persisted_handles_path(&self) -> std::path::PathBuf {
@@ -14,29 +14,18 @@ impl WorkspaceManager {
     pub(crate) fn persist_handles(&self) -> Result<(), WorkspaceManagerError> {
         std::fs::create_dir_all(&self.scratch_root)
             .map_err(|err| manager_setup_error("manager_root", err))?;
+        // Retain peer teardown records until their own resource ledger reaches
+        // persistence. A successful destroy must not erase a different
+        // workspace's retry handle merely because both share manager.json.
         let handles: Vec<Value> = self
             .handles
             .values()
-            .map(|handle| {
-                json!({
-                    "workspace_handle_id": handle.workspace_id.0,
-                    "lease_id": handle.snapshot.lease_id.0,
-                    "manifest_version": handle.snapshot.manifest_version,
-                    "manifest_root_hash": handle.snapshot.root_hash,
-                    "network_profile": handle.network.as_str(),
-                    "workspace_root": handle.workspace_root,
-                    "scratch_dir": handle.dirs.run_dir.to_string_lossy(),
-                    "upperdir": handle.dirs.upperdir.to_string_lossy(),
-                    "workdir": handle.dirs.workdir.to_string_lossy(),
-                    "layer_paths": handle.snapshot.layer_paths,
-                    "holder_pid": handle.holder_pid,
-                    "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
-                    "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
-                    "ns_ip": handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
-                    "created_at": handle.created_at,
-                    "last_activity": handle.last_activity,
-                })
-            })
+            .chain(self.teardowns.values().filter_map(|transaction| {
+                transaction
+                    .has_persisted_handle()
+                    .then(|| transaction.owned_handle())
+            }))
+            .map(persisted_handle_json)
             .collect();
         let payload = json!({
             "schema_version": PERSISTED_HANDLES_SCHEMA_VERSION,
@@ -63,6 +52,28 @@ impl WorkspaceManager {
     }
 }
 
+fn persisted_handle_json(handle: &MountedWorkspace) -> Value {
+    json!({
+        "workspace_handle_id": handle.workspace_id.0,
+        "lease_id": handle.snapshot.lease_id.0,
+        "parked_lease_id": handle.parked_lease_id,
+        "manifest_version": handle.snapshot.manifest_version,
+        "manifest_root_hash": handle.snapshot.root_hash,
+        "network_profile": handle.network.as_str(),
+        "workspace_root": handle.workspace_root,
+        "scratch_dir": handle.dirs.run_dir.to_string_lossy(),
+        "upperdir": handle.dirs.upperdir.to_string_lossy(),
+        "workdir": handle.dirs.workdir.to_string_lossy(),
+        "layer_paths": handle.snapshot.layer_paths,
+        "holder_pid": handle.holder_pid,
+        "veth_host_name": handle.veth.as_ref().map(|veth| veth.host_name.as_str()),
+        "veth_ns_name": handle.veth.as_ref().map(|veth| veth.ns_name.as_str()),
+        "ns_ip": handle.veth.as_ref().map(|veth| veth.ns_ip.to_string()),
+        "created_at": handle.created_at,
+        "last_activity": handle.last_activity,
+    })
+}
+
 /// One reaped boot leftover: every persisted handle is a dead session
 /// (PDEATHSIG makes holders provably dead), so reap destroys its run dir and
 /// drops the record — no lease recreation, no liveness proof.
@@ -71,17 +82,28 @@ pub struct ReapedSession {
     pub workspace_handle_id: String,
     pub run_dir: std::path::PathBuf,
     pub run_dir_removed: bool,
+    /// `None` is the one-release migration value for records written before
+    /// lease ids were persisted. New records report an explicit result.
+    pub lease_released: Option<bool>,
+    pub lease_release_error: Option<String>,
+    pub run_dir_cleanup_error: Option<String>,
+    /// True only after the dead handle record was durably removed from
+    /// `manager.json`. A failed peer record keeps the original file intact so
+    /// every cleanup can be retried idempotently.
+    pub persisted_handle_released: bool,
 }
 
 impl WorkspaceManager {
-    pub(crate) fn reap_persisted_handles(&mut self) -> Vec<ReapedSession> {
+    pub(crate) fn reap_persisted_handles(
+        &mut self,
+    ) -> Result<Vec<ReapedSession>, WorkspaceManagerError> {
         let path = self.persisted_handles_path();
         let Ok(text) = std::fs::read_to_string(&path) else {
-            return Vec::new();
+            return Ok(Vec::new());
         };
         let Ok(payload) = serde_json::from_str::<Value>(&text) else {
-            let _ = self.persist_handles();
-            return Vec::new();
+            self.persist_handles()?;
+            return Ok(Vec::new());
         };
         let empty = Vec::new();
         let records = payload
@@ -89,27 +111,104 @@ impl WorkspaceManager {
             .and_then(Value::as_array)
             .unwrap_or(&empty);
         let mut reaped = Vec::with_capacity(records.len());
+        let mut all_terminal = true;
         for record in records {
             let workspace_handle_id = record
                 .get("workspace_handle_id")
                 .and_then(Value::as_str)
                 .unwrap_or("<unknown>")
                 .to_owned();
-            let Some(run_dir) = record.get("scratch_dir").and_then(Value::as_str) else {
-                continue;
-            };
-            let run_dir = std::path::PathBuf::from(run_dir);
-            let contained = run_dir.starts_with(&self.scratch_root);
-            let run_dir_removed =
-                contained && (!run_dir.exists() || std::fs::remove_dir_all(&run_dir).is_ok());
+            let run_dir = record
+                .get("scratch_dir")
+                .and_then(Value::as_str)
+                .map(std::path::PathBuf::from)
+                .unwrap_or_default();
+            let (run_dir_removed, run_dir_cleanup_error, scratch_retryable) =
+                reap_persisted_run_dir(&self.scratch_root, &run_dir);
+            let (lease_released, lease_release_error) =
+                self.release_persisted_record_leases(record);
+            if scratch_retryable || lease_released == Some(false) {
+                all_terminal = false;
+            }
             reaped.push(ReapedSession {
                 workspace_handle_id,
                 run_dir,
                 run_dir_removed,
+                lease_released,
+                lease_release_error,
+                run_dir_cleanup_error,
+                persisted_handle_released: false,
             });
         }
-        let _ = self.persist_handles();
-        reaped
+        if all_terminal {
+            self.persist_handles()?;
+            for session in &mut reaped {
+                session.persisted_handle_released = true;
+            }
+        }
+        Ok(reaped)
+    }
+
+    fn release_persisted_record_leases(&self, record: &Value) -> (Option<bool>, Option<String>) {
+        let lease_id = record.get("lease_id").and_then(Value::as_str);
+        let parked_lease_id = record.get("parked_lease_id").and_then(Value::as_str);
+        if lease_id.is_none() && parked_lease_id.is_none() {
+            return (None, None);
+        }
+        let Some(layer_stack_root) = self.layer_stack_root.as_deref() else {
+            return (
+                Some(false),
+                Some("layer stack root is not bound to workspace manager".to_owned()),
+            );
+        };
+
+        let mut failures = Vec::new();
+        if let Some(lease_id) = lease_id {
+            if let Err(error) =
+                sandbox_runtime_layerstack::service::release_lease(layer_stack_root, lease_id)
+            {
+                failures.push(format!("release lease {lease_id}: {error}"));
+            }
+        }
+        if let Some(parked_lease_id) = parked_lease_id {
+            if let Err(error) = sandbox_runtime_layerstack::service::release_lease(
+                layer_stack_root,
+                parked_lease_id,
+            ) {
+                failures.push(format!("release parked lease {parked_lease_id}: {error}"));
+            }
+        }
+
+        if failures.is_empty() {
+            (Some(true), None)
+        } else {
+            (Some(false), Some(failures.join("; ")))
+        }
+    }
+}
+
+fn reap_persisted_run_dir(scratch_root: &Path, run_dir: &Path) -> (bool, Option<String>, bool) {
+    if run_dir.as_os_str().is_empty() {
+        return (
+            false,
+            Some("persisted handle has no scratch_dir".to_owned()),
+            false,
+        );
+    }
+    if !run_dir.starts_with(scratch_root) {
+        return (
+            false,
+            Some(format!(
+                "refusing to remove scratch outside manager root: {}",
+                run_dir.display()
+            )),
+            false,
+        );
+    }
+    match std::fs::remove_dir_all(run_dir) {
+        Ok(()) => (true, None, false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (true, None, false),
+        Err(error) => (false, Some(error.to_string()), true),
     }
 }
 

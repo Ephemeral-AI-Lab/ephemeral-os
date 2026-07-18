@@ -9,6 +9,7 @@ use sandbox_operation_contract::OperationResponse;
 use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::{SandboxRuntimeConfig, SandboxRuntimeOperations};
 use serde_json::{json, Value};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio_util::sync::CancellationToken;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
@@ -43,6 +44,13 @@ pub struct ServerConfig {
     pub limits: ProtocolLimits,
     /// RPC connection-permit count (`daemon.server.max_concurrent_connections`).
     pub max_concurrent_connections: usize,
+    /// Exact Tokio multi-thread runtime worker count.
+    pub worker_threads: usize,
+    /// Maximum number of blocking dispatches admitted at once. Requests above
+    /// this bound fail immediately instead of entering Tokio's blocking queue.
+    pub max_blocking_requests: usize,
+    /// Seconds an idle Tokio blocking worker is retained.
+    pub blocking_thread_keep_alive_s: f64,
     /// `/forward` reverse-proxy deadlines (`daemon.http.forward`).
     pub forward: DaemonHttpForwardConfig,
 }
@@ -65,6 +73,62 @@ pub struct SandboxDaemonServer {
     pub(crate) operations: Arc<SandboxRuntimeOperations>,
     pub(crate) observability: Option<Arc<DaemonObservability>>,
     pub(crate) shutdown: CancellationToken,
+    pub(crate) blocking_admission: BlockingAdmission,
+    pub(crate) connection_admission: ConnectionAdmission,
+}
+
+#[derive(Clone)]
+pub(crate) struct BlockingAdmission {
+    permits: Arc<Semaphore>,
+    limit: usize,
+}
+
+impl BlockingAdmission {
+    pub(crate) fn new(limit: usize) -> Self {
+        Self {
+            permits: Arc::new(Semaphore::new(limit)),
+            limit,
+        }
+    }
+
+    pub(crate) fn try_acquire(&self) -> Option<OwnedSemaphorePermit> {
+        Arc::clone(&self.permits).try_acquire_owned().ok()
+    }
+
+    pub(crate) fn limit(&self) -> usize {
+        self.limit
+    }
+
+    pub(crate) fn in_use(&self) -> usize {
+        self.limit.saturating_sub(self.permits.available_permits())
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct ConnectionAdmission {
+    permits: Arc<Semaphore>,
+    limit: usize,
+}
+
+impl ConnectionAdmission {
+    pub(crate) fn new(limit: usize) -> Self {
+        Self {
+            permits: Arc::new(Semaphore::new(limit)),
+            limit,
+        }
+    }
+
+    pub(crate) fn try_acquire(&self) -> Option<OwnedSemaphorePermit> {
+        Arc::clone(&self.permits).try_acquire_owned().ok()
+    }
+
+    pub(crate) fn in_use(&self) -> usize {
+        self.limit.saturating_sub(self.permits.available_permits())
+    }
+
+    pub(crate) fn limit(&self) -> usize {
+        self.limit
+    }
 }
 
 impl SandboxDaemonServer {
@@ -73,12 +137,15 @@ impl SandboxDaemonServer {
         config: ServerConfig,
         runtime_config: SandboxRuntimeConfig,
     ) -> Self {
-        let observability = DaemonObservability::from_config(&config).map(Arc::new);
+        let observability =
+            DaemonObservability::from_config(&config, &runtime_config).map(Arc::new);
         let operations = Arc::new(SandboxRuntimeOperations::from_config(
             runtime_config,
             resolve_observer(observability.as_ref()),
         ));
         Self {
+            blocking_admission: BlockingAdmission::new(config.max_blocking_requests),
+            connection_admission: ConnectionAdmission::new(config.max_concurrent_connections),
             config,
             operations,
             observability,

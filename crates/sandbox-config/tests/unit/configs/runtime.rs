@@ -52,20 +52,14 @@ fn config_layerstack_defaults_preserve_shipped_policy() {
     assert_eq!(config.layerstack.export_chunk_bytes, 2 * 1024 * 1024);
     assert_eq!(config.layerstack.spool_zstd_level, 3);
     assert_eq!(
-        config
-            .layerstack
-            .autosquash_policies
-            .squash_at_n_layers,
+        config.layerstack.autosquash_policies.squash_at_n_layers,
         Some(100)
     );
 
     let omitted = layerstack_config("").expect("omitted layerstack config deserializes");
     assert_eq!(omitted.layerstack, LayerstackConfig::default());
     assert_eq!(
-        omitted
-            .layerstack
-            .autosquash_policies
-            .squash_at_n_layers,
+        omitted.layerstack.autosquash_policies.squash_at_n_layers,
         None
     );
 }
@@ -87,10 +81,7 @@ fn config_layerstack_overrides_deserialize() {
     assert_eq!(config.layerstack.export_chunk_bytes, 4096);
     assert_eq!(config.layerstack.spool_zstd_level, 19);
     assert_eq!(
-        config
-            .layerstack
-            .autosquash_policies
-            .squash_at_n_layers,
+        config.layerstack.autosquash_policies.squash_at_n_layers,
         Some(123)
     );
 }
@@ -105,7 +96,10 @@ fn config_layerstack_rejects_unknown_key() {
         "  layerstack:\n    autosquash_policies:\n      squash_every_n_layers: 100\n",
     )
     .expect_err("unknown autosquash policy key must be rejected");
-    assert!(error.to_string().contains("squash_every_n_layers"), "{error}");
+    assert!(
+        error.to_string().contains("squash_every_n_layers"),
+        "{error}"
+    );
 }
 
 #[test]
@@ -135,9 +129,7 @@ fn config_validation_rejects_layerstack_edge_values() {
 
     for threshold in 0..3 {
         let mut cfg = layerstack_config("").expect("omitted policy config deserializes");
-        cfg.layerstack
-            .autosquash_policies
-            .squash_at_n_layers = Some(threshold);
+        cfg.layerstack.autosquash_policies.squash_at_n_layers = Some(threshold);
         assert_invalid(
             cfg,
             "runtime.layerstack.autosquash_policies.squash_at_n_layers",
@@ -145,9 +137,7 @@ fn config_validation_rejects_layerstack_edge_values() {
     }
 
     let mut cfg = layerstack_config("").expect("omitted policy config deserializes");
-    cfg.layerstack
-        .autosquash_policies
-        .squash_at_n_layers = Some(3);
+    cfg.layerstack.autosquash_policies.squash_at_n_layers = Some(3);
     cfg.validate().expect("threshold three is valid");
 }
 
@@ -157,7 +147,7 @@ fn config_operation_caps_default_to_shipped_policy() {
     // today's exact constants.
     let config = prd_config();
     assert_eq!(config.command, CommandConfig::default());
-    assert_eq!(config.command.max_active, 256);
+    assert_eq!(config.command.max_active, 32);
     assert_eq!(config.command.read_lines_default, 200);
     assert_eq!(config.command.read_lines_max, 1000);
     assert_eq!(config.file, FileConfig::default());
@@ -191,7 +181,9 @@ fn config_operation_caps_overrides_deserialize() {
 ",
     )
     .expect("operation cap overrides deserialize");
-    config.validate().expect("operation cap overrides are valid");
+    config
+        .validate()
+        .expect("operation cap overrides are valid");
     assert_eq!(config.command.max_active, 1);
     assert_eq!(config.command.read_lines_default, 10);
     assert_eq!(config.file.max_list_entries, 5);
@@ -224,6 +216,10 @@ fn config_validation_rejects_operation_cap_edge_values() {
     assert_invalid(cfg, "runtime.command.max_active");
 
     let mut cfg = prd_config();
+    cfg.command.max_active = usize::MAX;
+    assert_invalid(cfg, "runtime.command.max_active");
+
+    let mut cfg = prd_config();
     cfg.command.read_lines_default = 1001;
     assert_invalid(cfg, "runtime.command.read_lines_default");
 
@@ -249,7 +245,10 @@ fn config_validation_rejects_operation_cap_edge_values() {
 
     let mut cfg = prd_config();
     cfg.namespace_execution.max_transcript_window_bytes = 0;
-    assert_invalid(cfg, "runtime.namespace_execution.max_transcript_window_bytes");
+    assert_invalid(
+        cfg,
+        "runtime.namespace_execution.max_transcript_window_bytes",
+    );
 
     let mut cfg = prd_config();
     cfg.namespace_execution.max_runner_result_bytes = 0;

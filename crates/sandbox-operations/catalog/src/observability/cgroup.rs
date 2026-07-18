@@ -11,16 +11,15 @@ pub const CGROUP: RoutedOperation = RoutedOperation {
 pub static CGROUP_SPEC: OperationSpec = OperationSpec {
     name: "cgroup",
     family: "cgroup",
-    summary: "Sandbox resource series and workspace process topology.",
-    description: "For explicit sandbox requests, merge manager-owned host resource series with \
-daemon-owned proc namespace topology. Normal resource polling remains daemon-independent, and \
-the operation never mutates cgroups.",
+    summary: "Resource series for a scope (cpu/mem/io + disk).",
+    description: "Return a read-only resource time series. Sandbox scope reads CPU, memory, and \
+block-I/O counters from the host Docker Engine; workspace scopes retain daemon disk samples.",
     args: &[
         SANDBOX_ID_ARG,
         ArgSpec::optional(
             "scope",
             ArgKind::String,
-            "Resource scope. Only 'sandbox' is supported by the manager-owned ring.",
+            "Resource scope: 'sandbox' or a workspace id.",
             Some("sandbox"),
         ),
         ArgSpec::optional(

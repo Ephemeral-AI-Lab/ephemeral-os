@@ -10,7 +10,8 @@ use sandbox_config::configs::manager::DockerRuntimeConfig;
 use sandbox_config::configs::runtime::RuntimeConfig;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, SandboxDaemonEndpoint,
-    SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxRuntime, SandboxState, SharedBaseMount,
+    SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxResourceProfile, SandboxRuntime,
+    SandboxState, SharedBaseMount,
 };
 
 use crate::archive::{build_shared_base_seed_archive, build_shared_base_volume_archive};
@@ -27,6 +28,40 @@ pub struct DockerSandboxRuntime {
     engine: DockerEngine,
 }
 
+/// Effective Docker and workload-cgroup limits selected for new sandboxes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DockerResourceLimits {
+    pub profile_name: String,
+    pub nano_cpus: i64,
+    pub memory_high_bytes: i64,
+    pub memory_max_bytes: i64,
+    pub pids_max: i64,
+    pub workload_memory_high_bytes: i64,
+    pub workload_memory_max_bytes: i64,
+    pub workload_pids_max: i64,
+    pub control_plane_pids_reserve: i64,
+    pub daemon_runtime_profile: String,
+    pub separate_workload_cgroup: bool,
+}
+
+impl DockerResourceLimits {
+    fn into_manager_profile(self) -> SandboxResourceProfile {
+        SandboxResourceProfile {
+            name: self.profile_name,
+            nano_cpus: self.nano_cpus,
+            memory_high_bytes: self.memory_high_bytes,
+            memory_max_bytes: self.memory_max_bytes,
+            pids_max: self.pids_max,
+            workload_memory_high_bytes: self.workload_memory_high_bytes,
+            workload_memory_max_bytes: self.workload_memory_max_bytes,
+            workload_pids_max: self.workload_pids_max,
+            control_plane_pids_reserve: self.control_plane_pids_reserve,
+            daemon_runtime_profile: self.daemon_runtime_profile,
+            separate_workload_cgroup: self.separate_workload_cgroup,
+        }
+    }
+}
+
 impl DockerSandboxRuntime {
     /// Build a runtime from the resolved Docker config.
     #[must_use]
@@ -34,6 +69,12 @@ impl DockerSandboxRuntime {
         Self {
             engine: DockerEngine::new(config),
         }
+    }
+
+    /// Return the effective limits for the configured named profile.
+    #[must_use]
+    pub fn configured_resource_limits(&self) -> Option<DockerResourceLimits> {
+        configured_resource_limits(self.engine.config())
     }
 
     /// Rebuild manager records for containers owned by this gateway instance.
@@ -50,6 +91,8 @@ impl DockerSandboxRuntime {
                 config.daemon_http_port,
             )
             .map_err(runtime_failed)?;
+        let fallback_resource_profile =
+            configured_resource_limits(config).map(DockerResourceLimits::into_manager_profile);
         let mut records = Vec::with_capacity(recovered.len());
         for container in recovered {
             let Ok(id) = SandboxId::new(container.sandbox_id.clone()) else {
@@ -72,6 +115,10 @@ impl DockerSandboxRuntime {
                     container.published_http_port,
                 )),
                 shared_base,
+                resource_profile: container
+                    .resource_profile
+                    .clone()
+                    .or_else(|| fallback_resource_profile.clone()),
             });
         }
         Ok(records)
@@ -169,12 +216,20 @@ impl SandboxRuntime for DockerSandboxRuntime {
             request.workspace_root.clone(),
             SandboxState::Creating,
         );
+        let limits =
+            configured_resource_limits(config).ok_or_else(|| ManagerError::RuntimeFailed {
+                message: format!(
+                    "selected Docker resource profile `{}` is not configured",
+                    config.resource_profile
+                ),
+            })?;
         let labels = build_labels(
             config,
             &id,
             &auth_token,
             &request.workspace_root,
             shared_base,
+            &limits,
         );
         let image = resolve_image(config, &request.image);
         let shared_base_volume = self.ensure_shared_base_volume(config, &image, shared_base)?;
@@ -197,8 +252,10 @@ impl SandboxRuntime for DockerSandboxRuntime {
             daemon_http_port: config.daemon_http_port,
             privileged: config.privileged,
             platform: config.platform.clone(),
-            memory_bytes: config.memory_bytes,
-            nano_cpus: config.nano_cpus,
+            memory_high_bytes: limits.memory_high_bytes,
+            memory_max_bytes: limits.memory_max_bytes,
+            nano_cpus: limits.nano_cpus,
+            pids_max: limits.pids_max,
         };
         self.engine.create_container(spec).map_err(runtime_failed)?;
         let archive = build_shared_base_seed_archive(
@@ -229,7 +286,10 @@ impl SandboxRuntime for DockerSandboxRuntime {
                 return Err(error);
             }
         }
-        Ok(CreateSandboxResult { id })
+        Ok(CreateSandboxResult {
+            id,
+            resource_profile: Some(limits.into_manager_profile()),
+        })
     }
 
     fn destroy_sandbox(&self, record: &SandboxRecord) -> Result<(), ManagerError> {
@@ -243,6 +303,25 @@ impl SandboxRuntime for DockerSandboxRuntime {
         }
         Ok(())
     }
+}
+
+fn configured_resource_limits(config: &DockerRuntimeConfig) -> Option<DockerResourceLimits> {
+    let profile = config.selected_resource_profile()?;
+    let memory_max_bytes = config.memory_bytes.unwrap_or(profile.memory_max_bytes);
+    let memory_high_bytes = profile.memory_high_bytes.min(memory_max_bytes);
+    Some(DockerResourceLimits {
+        profile_name: config.resource_profile.clone(),
+        nano_cpus: config.nano_cpus.unwrap_or(profile.nano_cpus),
+        memory_high_bytes,
+        memory_max_bytes,
+        pids_max: profile.pids_max,
+        workload_memory_high_bytes: memory_high_bytes,
+        workload_memory_max_bytes: memory_high_bytes,
+        workload_pids_max: profile.workload_pids_max(),
+        control_plane_pids_reserve: profile.control_plane_pids_reserve(),
+        daemon_runtime_profile: profile.daemon_runtime_profile.clone(),
+        separate_workload_cgroup: profile.separate_workload_cgroup,
+    })
 }
 
 struct RuntimeWorkspacePaths {
@@ -354,6 +433,7 @@ fn build_labels(
     auth_token: &str,
     host_workspace_root: &Path,
     shared_base: &SharedBaseMount,
+    limits: &DockerResourceLimits,
 ) -> HashMap<String, String> {
     let created_at = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -403,6 +483,52 @@ fn build_labels(
         labels::SHARED_BASE_READONLY.to_owned(),
         shared_base.readonly.to_string(),
     );
+    label_map.extend([
+        (
+            labels::RESOURCE_PROFILE.to_owned(),
+            limits.profile_name.clone(),
+        ),
+        (
+            labels::RESOURCE_NANO_CPUS.to_owned(),
+            limits.nano_cpus.to_string(),
+        ),
+        (
+            labels::RESOURCE_MEMORY_HIGH_BYTES.to_owned(),
+            limits.memory_high_bytes.to_string(),
+        ),
+        (
+            labels::RESOURCE_MEMORY_MAX_BYTES.to_owned(),
+            limits.memory_max_bytes.to_string(),
+        ),
+        (
+            labels::RESOURCE_PIDS_MAX.to_owned(),
+            limits.pids_max.to_string(),
+        ),
+        (
+            labels::RESOURCE_WORKLOAD_MEMORY_HIGH_BYTES.to_owned(),
+            limits.workload_memory_high_bytes.to_string(),
+        ),
+        (
+            labels::RESOURCE_WORKLOAD_MEMORY_MAX_BYTES.to_owned(),
+            limits.workload_memory_max_bytes.to_string(),
+        ),
+        (
+            labels::RESOURCE_WORKLOAD_PIDS_MAX.to_owned(),
+            limits.workload_pids_max.to_string(),
+        ),
+        (
+            labels::RESOURCE_CONTROL_PLANE_PIDS_RESERVE.to_owned(),
+            limits.control_plane_pids_reserve.to_string(),
+        ),
+        (
+            labels::RESOURCE_DAEMON_RUNTIME_PROFILE.to_owned(),
+            limits.daemon_runtime_profile.clone(),
+        ),
+        (
+            labels::RESOURCE_SEPARATE_WORKLOAD_CGROUP.to_owned(),
+            limits.separate_workload_cgroup.to_string(),
+        ),
+    ]);
     label_map
 }
 
@@ -462,5 +588,50 @@ fn runtime_failed(error: DockerError) -> ManagerError {
 fn runtime_config_failed(error: sandbox_config::ConfigError) -> ManagerError {
     ManagerError::RuntimeFailed {
         message: format!("failed to load daemon runtime config: {error}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn container_labels_persist_the_exact_resolved_resource_profile() {
+        let mut config = DockerRuntimeConfig::default();
+        config.resource_profile = "build-heavy".to_owned();
+        let limits = configured_resource_limits(&config).expect("configured profile");
+        let id = SandboxId::new("eos-profile-labels").expect("valid id");
+        let shared_base = SharedBaseMount {
+            source: PathBuf::from("/host/base"),
+            target: PathBuf::from("/eos/base"),
+            root_hash: "hash".to_owned(),
+            readonly: true,
+        };
+
+        let values = build_labels(
+            &config,
+            &id,
+            "token",
+            Path::new("/host/workspace"),
+            &shared_base,
+            &limits,
+        );
+
+        assert_eq!(
+            values.get(labels::RESOURCE_PROFILE).map(String::as_str),
+            Some("build-heavy")
+        );
+        assert_eq!(
+            values
+                .get(labels::RESOURCE_WORKLOAD_MEMORY_MAX_BYTES)
+                .map(String::as_str),
+            Some("3221225472")
+        );
+        assert_eq!(
+            values
+                .get(labels::RESOURCE_WORKLOAD_PIDS_MAX)
+                .map(String::as_str),
+            Some("960")
+        );
     }
 }

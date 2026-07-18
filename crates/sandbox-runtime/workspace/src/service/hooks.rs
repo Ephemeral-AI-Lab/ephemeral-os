@@ -4,12 +4,15 @@ use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use crate::error::WorkspaceError;
 use crate::model::{
     CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, ReadonlySnapshotHandle, WorkspaceHandle,
-    WorkspaceSessionId,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkProfile, ReadonlySnapshotHandle,
+    WorkspaceHandle, WorkspaceSessionId,
 };
+use crate::service::HolderExitSubscription;
 
 #[doc(hidden)]
 pub struct WorkspaceRuntimeHooks {
+    pub take_holder_exit_subscription:
+        Box<dyn Fn() -> Result<Option<HolderExitSubscription>, WorkspaceError> + Send + Sync>,
     #[expect(
         clippy::type_complexity,
         reason = "hook signatures stay explicit by policy"
@@ -26,6 +29,8 @@ pub struct WorkspaceRuntimeHooks {
     pub run_file_op: Box<
         dyn Fn(&WorkspaceHandle, FileRunnerOp) -> Result<RunResult, WorkspaceError> + Send + Sync,
     >,
+    pub allocate_workspace_session_id:
+        Box<dyn Fn(NetworkProfile) -> Result<WorkspaceSessionId, WorkspaceError> + Send + Sync>,
     pub create_workspace: Box<
         dyn Fn(CreateWorkspaceRequest) -> Result<WorkspaceHandle, WorkspaceError> + Send + Sync,
     >,

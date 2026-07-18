@@ -17,6 +17,14 @@ const EVENTS_ARGUMENTS: &[ArgumentProjection] = &[
     ArgumentProjection::flag("last_n", "--last-n"),
 ];
 
+const RESOURCES_ARGUMENTS: &[ArgumentProjection] = &[
+    ArgumentProjection::flag("sandbox_id", "--sandbox-id"),
+    ArgumentProjection::flag("window_ms", "--window-ms"),
+];
+
+const TOPOLOGY_ARGUMENTS: &[ArgumentProjection] =
+    &[ArgumentProjection::flag("sandbox_id", "--sandbox-id")];
+
 const CGROUP_ARGUMENTS: &[ArgumentProjection] = &[
     ArgumentProjection::flag("sandbox_id", "--sandbox-id"),
     ArgumentProjection::flag("scope", "--scope"),
@@ -60,6 +68,23 @@ const OPERATIONS: &[OperationProjection] = &[
             "sandbox-observability-cli events --sandbox-id eos-abc --last-n 20",
         ],
         arguments: EVENTS_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "resources",
+        path: &["observability", "resources"],
+        usage: "sandbox-observability-cli resources [--sandbox-id ID] [--window-ms MS]",
+        examples: &[
+            "sandbox-observability-cli resources",
+            "sandbox-observability-cli resources --sandbox-id eos-abc --window-ms 60000",
+        ],
+        arguments: RESOURCES_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "topology",
+        path: &["observability", "topology"],
+        usage: "sandbox-observability-cli topology --sandbox-id ID",
+        examples: &["sandbox-observability-cli topology --sandbox-id eos-abc"],
+        arguments: TOPOLOGY_ARGUMENTS,
     },
     OperationProjection {
         name: "cgroup",

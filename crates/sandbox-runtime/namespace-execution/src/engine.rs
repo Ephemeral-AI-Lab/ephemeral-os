@@ -3,7 +3,6 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::thread;
 
 use sandbox_observability_telemetry::{SpanStatus, TerminalHook, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
@@ -18,12 +17,22 @@ use crate::launcher::{
 use crate::promise::CompletionPromise;
 use crate::registry::ExecutionRegistry;
 use crate::shell::{NamespaceExecutionTerminalStatus, RunnerOutcome, ShellOperation};
+use crate::supervisor::CompletionSupervisor;
 use crate::types::{NamespaceExecutionId, NamespaceTarget};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BackgroundWorkerSnapshot {
+    pub completion_supervisor_threads: usize,
+    pub pty_reactor_threads: usize,
+    pub active_completions: usize,
+    pub active_pty_readers: usize,
+}
 
 pub struct NamespaceExecutionEngine<V = ()> {
     registry: Arc<ExecutionRegistry<V>>,
     terminal_hook: Arc<dyn TerminalHook<NamespaceExecutionId>>,
     launcher: Box<dyn NsRunnerLauncher>,
+    supervisor: CompletionSupervisor,
     next_id: AtomicU64,
     setup_timeout_s: f64,
 }
@@ -49,6 +58,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             )),
             terminal_hook,
             launcher,
+            supervisor: CompletionSupervisor::new(),
             next_id: AtomicU64::new(1),
             setup_timeout_s: caps.setup_timeout_s,
         }
@@ -86,6 +96,17 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
 
     pub fn live_values<R>(&self, f: impl Fn(&V) -> Option<R>) -> Vec<R> {
         self.registry.live_values(f)
+    }
+
+    #[must_use]
+    pub fn background_worker_snapshot(&self) -> BackgroundWorkerSnapshot {
+        let pty = crate::pty::output_reactor_snapshot();
+        BackgroundWorkerSnapshot {
+            completion_supervisor_threads: 1,
+            pty_reactor_threads: pty.worker_threads,
+            active_completions: self.supervisor.active(),
+            active_pty_readers: pty.active_readers,
+        }
     }
 
     pub fn run_shell_interactive<S: ShellOperation>(
@@ -237,7 +258,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
     fn spawn_watcher<O: Send + 'static>(
         &self,
         id: NamespaceExecutionId,
-        mut child: Box<dyn RunnerChild>,
+        child: Box<dyn RunnerChild>,
         promise: Arc<CompletionPromise<O>>,
         cancelled: Arc<AtomicBool>,
         mount_error_mode: Option<&'static str>,
@@ -245,8 +266,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
     ) {
         let registry = Arc::clone(&self.registry);
         let terminal_hook = Arc::clone(&self.terminal_hook);
-        thread::spawn(move || {
-            let wait_result = child.wait_completion();
+        self.supervisor.submit(child, move |wait_result| {
             let (result, status, exit_code) = match wait_result {
                 Ok(run_result) => {
                     let outcome = RunnerOutcome::new(run_result)

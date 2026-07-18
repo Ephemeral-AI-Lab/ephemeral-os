@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpListener, UnixListener};
-use tokio::sync::Semaphore;
 use tokio_util::task::TaskTracker;
 
 use super::SandboxDaemonServer;
@@ -23,7 +22,6 @@ impl SandboxDaemonServer {
     pub async fn serve(self) -> Result<(), SandboxDaemonError> {
         let shutdown = self.shutdown.clone();
         let server = Arc::new(self);
-        let connection_permits = Arc::new(Semaphore::new(server.config.max_concurrent_connections));
         let connection_tasks = TaskTracker::new();
         if let Some(parent) = server.config.socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
@@ -42,7 +40,7 @@ impl SandboxDaemonServer {
 
         let mut unix_server = {
             let server = Arc::clone(&server);
-            let connection_permits = Arc::clone(&connection_permits);
+            let connection_admission = server.connection_admission.clone();
             let connection_tasks = connection_tasks.clone();
             tokio::spawn(async move {
                 loop {
@@ -50,11 +48,11 @@ impl SandboxDaemonServer {
                         () = server.shutdown.cancelled() => break,
                         accepted = unix_listener.accept() => {
                             let (stream, _) = accepted?;
-                            let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                connection_tasks.spawn(reject_overloaded_connection(
+                            let Some(permit) = connection_admission.try_acquire() else {
+                                reject_overloaded_connection(
                                     stream,
                                     server.config.max_concurrent_connections,
-                                ));
+                                ).await;
                                 continue;
                             };
                             let server = Arc::clone(&server);
@@ -77,6 +75,9 @@ impl SandboxDaemonServer {
                     server.config.clone(),
                     Arc::clone(&server.operations),
                     server.observer(),
+                    server.blocking_admission.clone(),
+                    server.connection_admission.clone(),
+                    connection_tasks.clone(),
                     server.shutdown.clone(),
                 ))
             }
@@ -87,7 +88,7 @@ impl SandboxDaemonServer {
             (Some(host), Some(port)) => {
                 let listener = TcpListener::bind((host.as_str(), port)).await?;
                 let server = Arc::clone(&server);
-                let connection_permits = Arc::clone(&connection_permits);
+                let connection_admission = server.connection_admission.clone();
                 let connection_tasks = connection_tasks.clone();
                 Some(tokio::spawn(async move {
                     loop {
@@ -95,11 +96,11 @@ impl SandboxDaemonServer {
                             () = server.shutdown.cancelled() => break,
                             accepted = listener.accept() => {
                                 let (stream, peer_addr) = accepted?;
-                                let Ok(permit) = Arc::clone(&connection_permits).try_acquire_owned() else {
-                                    connection_tasks.spawn(reject_overloaded_connection(
+                                let Some(permit) = connection_admission.try_acquire() else {
+                                    reject_overloaded_connection(
                                         stream,
                                         server.config.max_concurrent_connections,
-                                    ));
+                                    ).await;
                                     continue;
                                 };
                                 let local_addr = stream.local_addr().ok();

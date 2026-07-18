@@ -142,7 +142,11 @@ impl NamespaceRuntime {
             );
             write_all_fd(handle.control_fd, payload.as_bytes())?;
             if let Err(error) = expect_line(handle.readiness_fd, b"ready", setup_timeout_s) {
-                return Err(ns_holder_runtime_error(error, handle.holder_pid)?);
+                return Err(ns_holder_runtime_error(
+                    error,
+                    &handle.holder_registration,
+                    &self.holder_supervisor,
+                )?);
             }
         }
         Ok(())

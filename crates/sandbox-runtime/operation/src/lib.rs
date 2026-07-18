@@ -20,7 +20,9 @@ pub use layerstack::LayerStackService;
 pub use namespace_execution::{
     NamespaceExecutionId, NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };
-pub use observability::{RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot};
+pub use observability::{
+    RuntimeObservabilitySnapshot, RuntimeOwnershipSnapshot, RuntimeWorkspaceSnapshot,
+};
 pub use sandbox_runtime_layerstack::service::{LayerStatus, StackObservation};
 pub use sandbox_runtime_layerstack::{
     describe_layer_delta, LayerDeltaDescription, LayerDeltaEntry, LayerDeltaEntryKind,
@@ -28,7 +30,7 @@ pub use sandbox_runtime_layerstack::{
 pub use services::{
     CommandRuntimeConfig, FileRuntimeConfig, LayerstackRuntimeConfig, NamespaceExecutionCaps,
     NamespaceExecutionRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
-    WorkspaceResourceCaps, WorkspaceRuntimeConfig,
+    WorkloadCgroupLimits, WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 pub use workspace_crate::{NetworkProfile, WorkspaceSessionId};
 pub use workspace_session::WorkspaceSessionService;

@@ -1,6 +1,28 @@
 use serde_json::json;
 
 #[test]
+fn blocking_admission_rejects_immediately_and_recovers_after_release() {
+    let admission = BlockingAdmission::new(2);
+    let first = admission.try_acquire().expect("first permit");
+    let _second = admission.try_acquire().expect("second permit");
+
+    assert!(admission.try_acquire().is_none());
+    drop(first);
+    assert!(admission.try_acquire().is_some());
+}
+
+#[test]
+fn blocking_overload_is_structured_and_reports_the_active_limit() {
+    let response = blocking_overload_response(8).into_json_value();
+
+    assert_eq!(response["error"]["kind"], "server_busy");
+    assert_eq!(
+        response["error"]["details"]["fields"]["max_blocking_requests"],
+        8
+    );
+}
+
+#[test]
 fn decode_request_preserves_request_fields() {
     let args = json!({
         "command": "echo hi",

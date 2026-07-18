@@ -1,24 +1,39 @@
 //! Daemon observability query metadata and event access.
 
 use std::path::Path;
+use std::sync::{Mutex, PoisonError};
 
 use sandbox_config::configs::observability::ViewsConfig;
+use sandbox_observability_telemetry::collect::process_topology::{
+    DaemonDiagnosticState, DaemonDiagnosticWorkspaceHolder, DaemonOwnershipMetrics,
+    DaemonProcessMetrics, DaemonRuntimeConfigMetrics, DaemonRuntimeUsage,
+};
 use sandbox_observability_telemetry::{
     record, ObservabilityPaths, Observer, ObserverConfig, Reader, Sink, WalkBudget,
 };
+use sandbox_runtime::SandboxRuntimeConfig;
 
 use crate::rpc::ServerConfig;
+
+use super::diagnostics::DiagnosticTracker;
+
+const INFRASTRUCTURE_THREAD_ALLOWANCE: usize = 4;
 
 pub struct DaemonObservability {
     sandbox_id: String,
     paths: ObservabilityPaths,
     observer: Observer,
+    runtime_config: DaemonRuntimeConfigMetrics,
+    diagnostics: Mutex<DiagnosticTracker>,
     pub(crate) sampling: WalkBudget,
     pub(crate) views: ViewsConfig,
 }
 
 impl DaemonObservability {
-    pub(crate) fn from_config(config: &ServerConfig) -> Option<Self> {
+    pub(crate) fn from_config(
+        config: &ServerConfig,
+        runtime: &SandboxRuntimeConfig,
+    ) -> Option<Self> {
         let sandbox_id = config
             .sandbox_id
             .as_ref()
@@ -36,10 +51,23 @@ impl DaemonObservability {
                 config.observability.max_disk_bytes,
             ),
         );
+        let diagnostics = DiagnosticTracker::new(
+            config.observability.diagnostics,
+            paths.observability_dir().join("daemon-diagnostic.json"),
+        );
         Some(Self {
             sandbox_id,
             paths,
             observer,
+            runtime_config: DaemonRuntimeConfigMetrics {
+                worker_threads: Some(config.worker_threads),
+                max_blocking_threads: Some(config.max_blocking_requests),
+                blocking_thread_keep_alive_s: Some(config.blocking_thread_keep_alive_s),
+                max_concurrent_connections: Some(config.max_concurrent_connections),
+                max_active_commands: Some(runtime.command.max_active),
+                infrastructure_thread_allowance: Some(INFRASTRUCTURE_THREAD_ALLOWANCE),
+            },
+            diagnostics: Mutex::new(diagnostics),
             sampling: WalkBudget {
                 max_nodes: config.observability.sampling.max_walk_nodes,
                 max_depth: config.observability.sampling.max_walk_depth,
@@ -70,5 +98,22 @@ impl DaemonObservability {
 
     pub(super) fn runtime_dir(&self) -> &Path {
         self.paths.daemon_runtime_dir()
+    }
+
+    pub(super) fn runtime_config(&self) -> DaemonRuntimeConfigMetrics {
+        self.runtime_config.clone()
+    }
+
+    pub(super) fn observe_diagnostics(
+        &self,
+        process: &DaemonProcessMetrics,
+        runtime_usage: &DaemonRuntimeUsage,
+        ownership: &DaemonOwnershipMetrics,
+        workspace_holders: &[DaemonDiagnosticWorkspaceHolder],
+    ) -> DaemonDiagnosticState {
+        self.diagnostics
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .observe(process, runtime_usage, ownership, workspace_holders)
     }
 }

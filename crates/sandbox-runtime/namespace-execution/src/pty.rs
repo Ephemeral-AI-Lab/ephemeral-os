@@ -1,8 +1,9 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -21,6 +22,32 @@ enum TranscriptSink {
     Memory(Arc<AtomicU64>),
     File(PathBuf),
 }
+
+type OutputSink = Box<dyn FnMut(&[u8]) + Send + 'static>;
+
+struct OutputReader {
+    master: File,
+    sink: OutputSink,
+}
+
+#[derive(Default)]
+struct OutputQueue {
+    readers: Vec<OutputReader>,
+}
+
+struct OutputReactor {
+    queue: Arc<(Mutex<OutputQueue>, Condvar)>,
+    active_readers: Arc<AtomicUsize>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
+pub(crate) struct OutputReactorSnapshot {
+    pub(crate) worker_threads: usize,
+    pub(crate) active_readers: usize,
+}
+
+static OUTPUT_REACTOR: OnceLock<OutputReactor> = OnceLock::new();
 
 pub struct PtyMaster {
     pgid: Option<i32>,
@@ -133,27 +160,86 @@ fn spawn_file_output_reader(master: File, transcript_path: &Path) {
     });
 }
 
-fn spawn_output_reader(mut master: File, mut sink: impl FnMut(&[u8]) + Send + 'static) {
-    thread::spawn(move || {
-        let mut buf = [0_u8; 8192];
-        while poll_readable(&master) {
-            match master.read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => sink(&buf[..n]),
-                Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
-                Err(_) => break,
-            }
-        }
-    });
+fn spawn_output_reader(master: File, sink: impl FnMut(&[u8]) + Send + 'static) {
+    output_reactor().register(master, Box::new(sink));
 }
 
-fn poll_readable(master: &File) -> bool {
+#[allow(dead_code)]
+pub(crate) fn output_reactor_snapshot() -> OutputReactorSnapshot {
+    let reactor = output_reactor();
+    OutputReactorSnapshot {
+        worker_threads: 1,
+        active_readers: reactor.active_readers.load(Ordering::Acquire),
+    }
+}
+
+fn output_reactor() -> &'static OutputReactor {
+    OUTPUT_REACTOR.get_or_init(OutputReactor::new)
+}
+
+impl OutputReactor {
+    fn new() -> Self {
+        let queue = Arc::new((Mutex::new(OutputQueue::default()), Condvar::new()));
+        let active_readers = Arc::new(AtomicUsize::new(0));
+        let worker_queue = Arc::clone(&queue);
+        let worker_active = Arc::clone(&active_readers);
+        thread::Builder::new()
+            .name("eos-pty-reactor".to_owned())
+            .spawn(move || run_output_reactor(&worker_queue, &worker_active))
+            .expect("spawn PTY output reactor");
+        Self {
+            queue,
+            active_readers,
+        }
+    }
+
+    fn register(&self, master: File, sink: OutputSink) {
+        self.active_readers.fetch_add(1, Ordering::Release);
+        let (queue, ready) = &*self.queue;
+        let mut queue = queue
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        queue.readers.push(OutputReader { master, sink });
+        ready.notify_one();
+    }
+}
+
+fn run_output_reactor(shared: &(Mutex<OutputQueue>, Condvar), active_readers: &AtomicUsize) {
+    let (queue, ready) = shared;
+    let mut queue = queue
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     loop {
-        let mut fds = [PollFd::new(master, PollFlags::IN)];
-        match poll(&mut fds, -1) {
-            Ok(_) => return true,
-            Err(rustix::io::Errno::INTR) => continue,
+        while queue.readers.is_empty() {
+            queue = ready
+                .wait(queue)
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+        }
+
+        let mut index = 0;
+        while index < queue.readers.len() {
+            if drain_output_reader(&mut queue.readers[index]) {
+                index += 1;
+            } else {
+                queue.readers.swap_remove(index);
+                active_readers.fetch_sub(1, Ordering::AcqRel);
+            }
+        }
+        let (next, _) = ready
+            .wait_timeout(queue, Duration::from_millis(5))
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        queue = next;
+    }
+}
+
+fn drain_output_reader(reader: &mut OutputReader) -> bool {
+    let mut buf = [0_u8; 8192];
+    loop {
+        match reader.master.read(&mut buf) {
+            Ok(0) => return false,
+            Ok(n) => (reader.sink)(&buf[..n]),
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => return true,
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => {}
             Err(_) => return false,
         }
     }

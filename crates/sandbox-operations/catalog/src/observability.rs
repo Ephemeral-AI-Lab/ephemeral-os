@@ -2,13 +2,17 @@
 mod cgroup;
 mod events;
 mod layerstack;
+mod resources;
 mod snapshot;
+mod topology;
 mod trace;
 
 pub use cgroup::CGROUP_SPEC;
 pub use events::EVENTS_SPEC;
 pub use layerstack::LAYERSTACK_SPEC;
+pub use resources::RESOURCES_SPEC;
 pub use snapshot::SNAPSHOT_SPEC;
+pub use topology::TOPOLOGY_SPEC;
 pub use trace::TRACE_SPEC;
 
 use sandbox_operation_contract::{
@@ -46,6 +50,21 @@ const CGROUP_FAMILY: OperationFamilySpec = OperationFamilySpec {
     description: "Read sandbox CPU, memory, I/O, and workspace disk resource series.",
 };
 
+const RESOURCES_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "resources",
+    title: "Resources",
+    summary: "Inspect manager-owned resource metrics.",
+    description:
+        "Read bounded sandbox history or one fleet current-usage map without daemon calls.",
+};
+
+const TOPOLOGY_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "topology",
+    title: "Topology",
+    summary: "Inspect workspace process topology.",
+    description: "Perform one explicit, bounded namespace topology collection in a sandbox daemon.",
+};
+
 const LAYERSTACK_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "layerstack",
     title: "Layerstack",
@@ -60,6 +79,13 @@ const RESOURCE_ISOLATION_FAMILY: OperationFamilySpec = OperationFamilySpec {
     description: "Verify bounded resource use and read-only observability behavior.",
 };
 
+const RESOURCE_EFFICIENCY_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "resource_efficiency",
+    title: "Resource efficiency",
+    summary: "Qualify sandbox resource efficiency.",
+    description: "Verify holder lifecycle, bounded runtime ownership, manager-only resource routing, workload containment, and diagnostic evidence.",
+};
+
 pub(crate) const SANDBOX_ID_ARG: ArgSpec = ArgSpec::required(
     "sandbox_id",
     ArgKind::String,
@@ -70,15 +96,20 @@ const FAMILIES: &[&OperationFamilySpec] = &[
     &SNAPSHOT_FAMILY,
     &TRACE_FAMILY,
     &EVENTS_FAMILY,
+    &RESOURCES_FAMILY,
+    &TOPOLOGY_FAMILY,
     &CGROUP_FAMILY,
     &LAYERSTACK_FAMILY,
     &RESOURCE_ISOLATION_FAMILY,
+    &RESOURCE_EFFICIENCY_FAMILY,
 ];
 
 const OPERATIONS: &[&RoutedOperation] = &[
     &snapshot::SNAPSHOT,
     &trace::TRACE,
     &events::EVENTS,
+    &resources::RESOURCES,
+    &topology::TOPOLOGY,
     &cgroup::CGROUP,
     &layerstack::LAYERSTACK,
 ];

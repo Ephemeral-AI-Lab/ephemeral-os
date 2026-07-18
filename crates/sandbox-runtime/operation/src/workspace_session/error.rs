@@ -4,7 +4,9 @@ use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 
 use crate::workspace_crate::{WorkspaceError, WorkspaceSessionId};
 
-#[derive(Debug, Error)]
+use super::service::{PublishFailureStage, WorkspaceSessionPublishDetails};
+
+#[derive(Debug, Clone, Error)]
 pub enum WorkspaceSessionError {
     #[error(transparent)]
     Workspace(#[from] WorkspaceError),
@@ -17,6 +19,14 @@ pub enum WorkspaceSessionError {
         workspace_session_id: WorkspaceSessionId,
     },
 
+    #[error(
+        "raw workspace identity mismatch: reserved {reserved_workspace_session_id:?}, returned {returned_workspace_session_id:?}"
+    )]
+    WorkspaceIdentityMismatch {
+        reserved_workspace_session_id: WorkspaceSessionId,
+        returned_workspace_session_id: WorkspaceSessionId,
+    },
+
     #[error("workspace session not found: {workspace_session_id:?}")]
     NotFound {
         workspace_session_id: WorkspaceSessionId,
@@ -26,6 +36,34 @@ pub enum WorkspaceSessionError {
     ActiveCommands {
         workspace_session_id: WorkspaceSessionId,
         active_command_session_ids: Vec<NamespaceExecutionId>,
+    },
+
+    #[error(
+        "workspace namespace holder exited for {workspace_session_id:?}: {reason} (cleanup state: {cleanup_state:?})"
+    )]
+    HolderExited {
+        workspace_session_id: WorkspaceSessionId,
+        reason: String,
+        cleanup_state: super::service::FinalizationState,
+    },
+
+    #[error(
+        "workspace session publish failed at {stage:?} for {workspace_session_id:?}: {diagnostic}"
+    )]
+    PublishRetained {
+        workspace_session_id: WorkspaceSessionId,
+        stage: PublishFailureStage,
+        diagnostic: String,
+        publish_rejection: Option<Box<sandbox_runtime_layerstack::PublishReject>>,
+    },
+
+    #[error(
+        "workspace session published but could not be closed for {workspace_session_id:?}: {diagnostic}"
+    )]
+    PublishedButNotClosed {
+        workspace_session_id: WorkspaceSessionId,
+        publish: WorkspaceSessionPublishDetails,
+        diagnostic: String,
     },
 
     #[error("workspace session finalization failed for {workspace_session_id:?}: {error}")]
@@ -41,6 +79,21 @@ pub enum WorkspaceSessionError {
         workspace_session_id: WorkspaceSessionId,
         insert_error: Box<WorkspaceSessionError>,
         rollback_error: WorkspaceError,
+    },
+
+    #[error("workspace teardown remains incomplete for {workspace_session_id:?}: {failures:?}")]
+    TeardownIncomplete {
+        workspace_session_id: WorkspaceSessionId,
+        failures: Vec<String>,
+    },
+
+    #[error(
+        "workload cgroup setup failed for {workspace_session_id:?}: {diagnostic} (rollback: {rollback_diagnostic:?})"
+    )]
+    WorkloadCgroupSetupFailed {
+        workspace_session_id: WorkspaceSessionId,
+        diagnostic: String,
+        rollback_diagnostic: Option<String>,
     },
 }
 

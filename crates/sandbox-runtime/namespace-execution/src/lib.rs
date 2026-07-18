@@ -16,11 +16,12 @@ mod pty;
 pub mod quiesce;
 mod registry;
 mod shell;
+mod supervisor;
 mod transcript_rows;
 mod types;
 
 pub use caps::ExecutionCaps;
-pub use engine::NamespaceExecutionEngine;
+pub use engine::{BackgroundWorkerSnapshot, NamespaceExecutionEngine};
 pub use error::NamespaceExecutionError;
 pub use execution::{ExecutionHandle, InteractiveExecution};
 pub use launcher::{NsRunnerLauncher, RunnerChild, RunnerPlacement};

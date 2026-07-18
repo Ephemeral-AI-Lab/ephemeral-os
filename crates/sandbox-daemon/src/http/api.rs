@@ -25,6 +25,16 @@ async fn handle_file_list(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> 
         Err(response) => return response,
     };
     let request = protocol_request(&state, Value::Object(args));
+    let Some(_blocking_permit) = state.blocking_admission.try_acquire() else {
+        return transport_error_with_details(
+            StatusCode::TOO_MANY_REQUESTS,
+            "server_busy",
+            "daemon blocking dispatch capacity is exhausted",
+            json!({
+                "fields": { "max_blocking_requests": state.blocking_admission.limit() }
+            }),
+        );
+    };
     let operations = Arc::clone(&state.operations);
     let observer = state.observer.clone();
     let task = tokio::task::spawn_blocking(move || {
@@ -92,9 +102,18 @@ fn protocol_request(state: &HttpState, args: Value) -> OperationRequest {
 }
 
 fn transport_error(status: StatusCode, kind: &str, message: &str) -> Response<BoxBody> {
+    transport_error_with_details(status, kind, message, json!({}))
+}
+
+fn transport_error_with_details(
+    status: StatusCode,
+    kind: &str,
+    message: &str,
+    details: Value,
+) -> Response<BoxBody> {
     response::json_value(
         status,
-        &sandbox_operation_contract::error_response_with_details(kind, message, json!({})),
+        &sandbox_operation_contract::error_response_with_details(kind, message, details),
     )
 }
 

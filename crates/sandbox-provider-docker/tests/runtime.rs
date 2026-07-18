@@ -8,6 +8,27 @@ use sandbox_manager::{
 use sandbox_provider_docker::{DockerRuntimeConfig, DockerSandboxRuntime};
 
 #[test]
+fn container_limits_come_from_the_selected_named_profile() {
+    let mut config = DockerRuntimeConfig::default();
+    config.resource_profile = "build-heavy".to_owned();
+    let runtime = DockerSandboxRuntime::new(config);
+
+    let limits = runtime
+        .configured_resource_limits()
+        .expect("selected profile is available");
+    assert_eq!(limits.profile_name, "build-heavy");
+    assert_eq!(limits.nano_cpus, 4_000_000_000);
+    assert_eq!(limits.memory_high_bytes, 3 * 1024 * 1024 * 1024);
+    assert_eq!(limits.memory_max_bytes, 4 * 1024 * 1024 * 1024);
+    assert_eq!(limits.pids_max, 1024);
+    assert_eq!(limits.workload_memory_high_bytes, 3 * 1024 * 1024 * 1024);
+    assert_eq!(limits.workload_memory_max_bytes, 3 * 1024 * 1024 * 1024);
+    assert_eq!(limits.workload_pids_max, 960);
+    assert_eq!(limits.control_plane_pids_reserve, 64);
+    assert!(limits.separate_workload_cgroup);
+}
+
+#[test]
 fn create_sandbox_rejects_missing_shared_base_mount() {
     let runtime = DockerSandboxRuntime::new(DockerRuntimeConfig::default());
     let error = runtime

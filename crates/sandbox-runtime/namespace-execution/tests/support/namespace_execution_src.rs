@@ -34,6 +34,10 @@ pub mod shell {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/shell.rs"));
 }
 
+pub mod supervisor {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/supervisor.rs"));
+}
+
 pub mod types {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/types.rs"));
 }

@@ -3,7 +3,9 @@ use std::path::PathBuf;
 #[test]
 fn config_prd_manager_docker_section_deserializes_and_validates() {
     let docker = prd_docker();
-    docker.validate().expect("prd manager.docker config is valid");
+    docker
+        .validate()
+        .expect("prd manager.docker config is valid");
 
     assert_eq!(docker.daemon_port, 7000);
     assert_eq!(docker.readiness_timeout_ms, 60_000);
@@ -11,6 +13,154 @@ fn config_prd_manager_docker_section_deserializes_and_validates() {
     assert_eq!(docker.gateway_instance_id, "eos-gateway");
     // Phase 3: prd runs the de-privileged container boundary.
     assert!(!docker.privileged);
+    assert_eq!(docker.resource_profile, "standard");
+    let standard = docker
+        .selected_resource_profile()
+        .expect("standard resource profile is declared");
+    assert_eq!(standard.nano_cpus, 1_000_000_000);
+    assert_eq!(standard.memory_high_bytes, 384 * 1024 * 1024);
+    assert_eq!(standard.memory_max_bytes, 512 * 1024 * 1024);
+    assert_eq!(standard.pids_max, 256);
+    assert_eq!(standard.daemon_runtime_profile, "standard");
+    assert!(standard.separate_workload_cgroup);
+    assert_eq!(standard.workload_memory_max_bytes(), 384 * 1024 * 1024);
+    assert_eq!(standard.control_plane_pids_reserve(), 32);
+    assert_eq!(standard.workload_pids_max(), 224);
+    assert!(docker.resource_profiles.contains_key("build-heavy"));
+}
+
+#[test]
+fn named_resource_profile_selection_and_limits_are_validated() {
+    let mut docker = prd_docker();
+    docker.resource_profile = "missing".to_owned();
+    assert_invalid(&docker, "manager.docker.resource_profile");
+
+    let mut docker = prd_docker();
+    docker
+        .resource_profiles
+        .get_mut("standard")
+        .expect("standard profile")
+        .pids_max = 0;
+    assert_invalid(&docker, "manager.docker.resource_profiles");
+
+    let mut docker = prd_docker();
+    let profile = docker
+        .resource_profiles
+        .get_mut("standard")
+        .expect("standard profile");
+    profile.memory_high_bytes = profile.memory_max_bytes + 1;
+    assert_invalid(&docker, "manager.docker.resource_profiles");
+
+    let mut docker = prd_docker();
+    docker
+        .resource_profiles
+        .get_mut("standard")
+        .expect("standard profile")
+        .pids_max = 8;
+    assert_invalid(&docker, "manager.docker.resource_profiles");
+}
+
+#[test]
+fn legacy_resource_overrides_cannot_disable_or_collapse_workload_separation() {
+    let mut docker = prd_docker();
+    docker.nano_cpus = Some(0);
+    assert_invalid(&docker, "manager.docker.nano_cpus");
+
+    let mut docker = prd_docker();
+    docker.nano_cpus = Some(-1);
+    assert_invalid(&docker, "manager.docker.nano_cpus");
+
+    let mut docker = prd_docker();
+    docker.memory_bytes = Some(0);
+    assert_invalid(&docker, "manager.docker.memory_bytes");
+
+    let mut docker = prd_docker();
+    docker.memory_bytes = Some(-1);
+    assert_invalid(&docker, "manager.docker.memory_bytes");
+
+    let mut docker = prd_docker();
+    let high = docker
+        .selected_resource_profile()
+        .expect("selected profile")
+        .memory_high_bytes;
+    docker.memory_bytes = Some(high);
+    assert_invalid(&docker, "manager.docker.memory_bytes");
+
+    docker.memory_bytes = Some(high + 1);
+    docker
+        .validate()
+        .expect("a positive legacy cap above memory.high retains headroom");
+}
+
+#[test]
+fn selected_profile_binds_daemon_runtime_limits() {
+    let document = crate::load_baseline().expect("production config loads");
+    let docker = prd_docker();
+    let daemon: crate::configs::daemon::DaemonConfig = document
+        .section("daemon")
+        .expect("daemon section deserializes");
+    let runtime: crate::configs::runtime::RuntimeConfig = document
+        .section("runtime")
+        .expect("runtime section deserializes");
+    docker
+        .validate_daemon_runtime_profile(&daemon, &runtime)
+        .expect("standard production settings match the selected profile");
+
+    let mut mismatched = daemon.clone();
+    mismatched.server.worker_threads += 1;
+    assert_runtime_profile_invalid(&docker, &mismatched, &runtime, "worker_threads");
+
+    let mut mismatched = daemon.clone();
+    mismatched.server.max_blocking_threads += 1;
+    assert_runtime_profile_invalid(&docker, &mismatched, &runtime, "max_blocking_threads");
+
+    let mut mismatched = daemon.clone();
+    mismatched.server.blocking_thread_keep_alive_s += 1.0;
+    assert_runtime_profile_invalid(
+        &docker,
+        &mismatched,
+        &runtime,
+        "blocking_thread_keep_alive_s",
+    );
+
+    let mut mismatched = daemon.clone();
+    mismatched.server.max_concurrent_connections += 1;
+    assert_runtime_profile_invalid(
+        &docker,
+        &mismatched,
+        &runtime,
+        "max_concurrent_connections",
+    );
+
+    let mut mismatched_runtime = runtime.clone();
+    mismatched_runtime.command.max_active += 1;
+    assert_runtime_profile_invalid(
+        &docker,
+        &daemon,
+        &mismatched_runtime,
+        "runtime.command.max_active",
+    );
+
+    let mut build_heavy = docker.clone();
+    build_heavy.resource_profile = "build-heavy".to_owned();
+    let mut build_daemon = daemon.clone();
+    build_daemon.server.worker_threads = 4;
+    build_daemon.server.max_blocking_threads = 16;
+    build_daemon.server.max_concurrent_connections = 128;
+    let mut build_runtime = runtime.clone();
+    build_runtime.command.max_active = 64;
+    build_heavy
+        .validate_daemon_runtime_profile(&build_daemon, &build_runtime)
+        .expect("build-heavy settings match the selected profile");
+
+    let mut constrained = daemon.clone();
+    constrained.server.max_blocking_threads = 4;
+    constrained.server.max_concurrent_connections = 8;
+    let mut constrained_runtime = runtime.clone();
+    constrained_runtime.command.max_active = 4;
+    docker
+        .validate_daemon_runtime_profile(&constrained, &constrained_runtime)
+        .expect("lower admission caps remain a valid constrained standard profile");
 }
 
 #[test]
@@ -383,5 +533,17 @@ fn assert_invalid_manager(config: &ManagerConfig, field: &str) {
 
 fn assert_invalid(config: &DockerRuntimeConfig, field: &str) {
     let err = config.validate().expect_err("config should be invalid");
+    assert!(err.to_string().contains(field), "{err}");
+}
+
+fn assert_runtime_profile_invalid(
+    config: &DockerRuntimeConfig,
+    daemon: &crate::configs::daemon::DaemonConfig,
+    runtime: &crate::configs::runtime::RuntimeConfig,
+    field: &str,
+) {
+    let err = config
+        .validate_daemon_runtime_profile(daemon, runtime)
+        .expect_err("daemon runtime profile should be invalid");
     assert!(err.to_string().contains(field), "{err}");
 }

@@ -20,7 +20,10 @@ daemon:
   server:
     socket_path: /eos/runtime/daemon/runtime.sock
     pid_path: /eos/runtime/daemon/runtime.pid
-    max_worker_threads: 32
+    worker_threads: 4
+    max_blocking_threads: 16
+    blocking_thread_keep_alive_s: 5
+    max_concurrent_connections: 128
 
 runtime:
   workspace:
@@ -33,6 +36,8 @@ runtime:
     scratch_root: /eos/namespace_execution
   layerstack:
     remount_sweep_width: __SWEEP_WIDTH__
+  command:
+    max_active: 64
 
 runner:
   mount_mask:
@@ -47,6 +52,22 @@ manager:
   docker:
     daemon_binary_path: dist/sandbox-daemon-linux-arm64
     daemon_config_yaml_path: __DAEMON_CONFIG_PATH__
+    resource_profile: build-heavy
+    resource_profiles:
+      standard:
+        nano_cpus: 1000000000
+        memory_high_bytes: 402653184
+        memory_max_bytes: 536870912
+        pids_max: 256
+        daemon_runtime_profile: standard
+        separate_workload_cgroup: true
+      build-heavy:
+        nano_cpus: 4000000000
+        memory_high_bytes: 3221225472
+        memory_max_bytes: 4294967296
+        pids_max: 1024
+        daemon_runtime_profile: build-heavy
+        separate_workload_cgroup: true
     container_env:
       HTTP_PROXY: http://http.docker.internal:3128
       HTTPS_PROXY: http://http.docker.internal:3128

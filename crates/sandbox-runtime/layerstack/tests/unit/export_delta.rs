@@ -2,6 +2,7 @@
 //! `MergedView` equivalence over the delta manifest (spec inv 2), and the
 //! fold↔flatten winner-selection cross-check (spec decision 14).
 
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use crate::stack::squash::flatten::flatten_block_into_with_lower;
@@ -352,9 +353,15 @@ fn fold_matches_merged_view_over_the_delta_manifest() {
         match fold.winners.get(&path(candidate)) {
             Some(DeltaWinner::File { source }) => {
                 let bytes = std::fs::read(source).expect("winner bytes");
+                let executable = std::fs::metadata(source)
+                    .expect("winner metadata")
+                    .permissions()
+                    .mode()
+                    & 0o111
+                    != 0;
                 assert_eq!(
                     merged,
-                    crate::stack::projection::MergedEntry::File { bytes },
+                    crate::stack::projection::MergedEntry::File { bytes, executable },
                     "file winner diverges from MergedView at {candidate}"
                 );
             }

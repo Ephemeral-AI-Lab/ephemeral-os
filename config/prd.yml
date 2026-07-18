@@ -2,7 +2,10 @@ daemon:
   server:
     socket_path: /eos/runtime/daemon/runtime.sock
     pid_path: /eos/runtime/daemon/runtime.pid
-    max_worker_threads: 32
+    worker_threads: 2
+    max_blocking_threads: 8
+    blocking_thread_keep_alive_s: 5
+    max_concurrent_connections: 64
 
 runtime:
   workspace:
@@ -16,6 +19,8 @@ runtime:
   layerstack:
     autosquash_policies:
       squash_at_n_layers: 100
+  command:
+    max_active: 32
 
 runner:
   mount_mask:
@@ -38,6 +43,22 @@ manager:
     daemon_binary_path: dist/sandbox-daemon-linux-arm64
     # Daemon config YAML uploaded into each container.
     daemon_config_yaml_path: config/prd.yml
+    resource_profile: standard
+    resource_profiles:
+      standard:
+        nano_cpus: 1000000000
+        memory_high_bytes: 402653184
+        memory_max_bytes: 536870912
+        pids_max: 256
+        daemon_runtime_profile: standard
+        separate_workload_cgroup: true
+      build-heavy:
+        nano_cpus: 4000000000
+        memory_high_bytes: 3221225472
+        memory_max_bytes: 4294967296
+        pids_max: 1024
+        daemon_runtime_profile: build-heavy
+        separate_workload_cgroup: true
     # Environment injected into every sandbox container. The Docker CLI injects
     # these proxy vars from ~/.docker/config.json, but the Engine API used here
     # does not, so sandboxes need them declared to share Docker Desktop's egress.

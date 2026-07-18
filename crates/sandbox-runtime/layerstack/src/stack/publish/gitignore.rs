@@ -51,7 +51,7 @@ impl<'a> GitignoreOracle<'a> {
             format!("{dir}/.gitignore")
         };
         let entry = self.view.read_entry(&gitignore_path, self.manifest)?;
-        let MergedEntry::File { bytes } = entry else {
+        let MergedEntry::File { bytes, .. } = entry else {
             return GitignoreBuilder::new(".")
                 .build()
                 .map_err(|err| LayerStackError::Storage(err.to_string()));

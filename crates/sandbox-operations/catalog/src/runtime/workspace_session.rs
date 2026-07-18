@@ -11,6 +11,11 @@ pub const CREATE_WORKSPACE_SESSION: RoutedOperation = RoutedOperation {
     routing: RUNTIME_OWNED,
 };
 
+pub const PUBLISH_WORKSPACE_SESSION: RoutedOperation = RoutedOperation {
+    spec: &PUBLISH_WORKSPACE_SESSION_SPEC,
+    routing: RUNTIME_OWNED,
+};
+
 pub const DESTROY_WORKSPACE_SESSION: RoutedOperation = RoutedOperation {
     spec: &DESTROY_WORKSPACE_SESSION_SPEC,
     routing: RUNTIME_OWNED,
@@ -19,8 +24,8 @@ pub const DESTROY_WORKSPACE_SESSION: RoutedOperation = RoutedOperation {
 pub const WORKSPACE_SESSION_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "workspace_session",
     title: "Workspace session",
-    summary: "Create and destroy explicit workspace sessions.",
-    description: "Create and destroy explicit workspace sessions that retain private changes until they are destroyed.",
+    summary: "Workspace-session lifecycle capability.",
+    description: "Runtime capability that owns workspace-session lifecycle and finalization.",
 };
 
 pub const CREATE_WORKSPACE_SESSION_SPEC: OperationSpec = OperationSpec {
@@ -38,6 +43,33 @@ const CREATE_WORKSPACE_SESSION_ARGS: &[ArgSpec] = &[ArgSpec::optional(
     "Network profile for the session: shared or isolated. Defaults to shared.",
     Some("shared"),
 )];
+
+pub const PUBLISH_WORKSPACE_SESSION_SPEC: OperationSpec = OperationSpec {
+    name: "publish_workspace_session",
+    family: "workspace_session",
+    summary: "Publish an explicit workspace session and close it.",
+    description: "Capture the unpublished changes of an explicit workspace session, merge them safely into the current LayerStack when possible, and close the session. Rejected or failed pre-commit publishes retain the session.",
+    args: PUBLISH_WORKSPACE_SESSION_ARGS,
+    related: &[
+        "create_workspace_session",
+        "destroy_workspace_session",
+        "exec_command",
+    ],
+};
+
+const PUBLISH_WORKSPACE_SESSION_ARGS: &[ArgSpec] = &[
+    ArgSpec::required(
+        "workspace_session_id",
+        ArgKind::String,
+        "Explicit workspace session to publish and close.",
+    ),
+    ArgSpec::optional(
+        "grace_s",
+        ArgKind::Float,
+        "Optional non-negative close grace period in seconds.",
+        None,
+    ),
+];
 
 pub const DESTROY_WORKSPACE_SESSION_SPEC: OperationSpec = OperationSpec {
     name: "destroy_workspace_session",

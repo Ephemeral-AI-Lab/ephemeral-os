@@ -39,6 +39,7 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
             "file_edit",
             "file_blame",
             "create_workspace_session",
+            "publish_workspace_session",
             "destroy_workspace_session",
         ]
     );
@@ -74,6 +75,27 @@ fn runtime_catalog_is_the_exact_public_runtime_surface() {
         })
         .expect("create_workspace_session network_profile argument");
     assert_eq!(network_profile.default, Some("shared"));
+
+    let publish = catalog
+        .operations
+        .iter()
+        .find(|operation| operation.name == "publish_workspace_session")
+        .expect("publish_workspace_session operation");
+    assert_eq!(
+        publish.summary,
+        "Publish an explicit workspace session and close it."
+    );
+    assert_eq!(
+        publish
+            .args
+            .iter()
+            .map(|argument| (argument.name, argument.kind, argument.required))
+            .collect::<Vec<_>>(),
+        [
+            ("workspace_session_id", ArgKind::String, true),
+            ("grace_s", ArgKind::Float, false),
+        ]
+    );
 }
 
 #[test]

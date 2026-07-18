@@ -41,6 +41,7 @@ impl SandboxRuntime for FakeRuntime {
         assert!(shared_base.readonly);
         Ok(CreateSandboxResult {
             id: sandbox_id("container-1"),
+            resource_profile: None,
         })
     }
 
@@ -155,6 +156,7 @@ fn ready_record(value: &str, daemon: Option<SandboxDaemonEndpoint>) -> SandboxRe
         daemon,
         daemon_http: None,
         shared_base: None,
+        resource_profile: None,
     }
 }
 

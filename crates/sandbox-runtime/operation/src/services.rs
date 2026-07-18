@@ -11,12 +11,15 @@ use sandbox_runtime_layerstack::service::StackObservation;
 use crate::command::CommandOperationService;
 use crate::file::FileService;
 use crate::layerstack::LayerStackService;
-use crate::observability::RuntimeObservabilitySnapshot;
+use crate::observability::{RuntimeObservabilitySnapshot, RuntimeOwnershipSnapshot};
 use crate::workspace_crate::{session::WorkspaceManager, WorkspaceRuntimeService};
-use crate::workspace_session::WorkspaceSessionService;
+use crate::workspace_session::{HolderExitDispatcher, WorkspaceSessionService};
 
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
+    // Declared first so last-drop stops/joins while the service Arcs below are
+    // still alive. Every clone shares this one daemon-wide owner.
+    _holder_exit_dispatcher: Option<Arc<HolderExitDispatcher>>,
     pub command: Arc<CommandOperationService>,
     pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
@@ -32,6 +35,8 @@ impl SandboxRuntimeOperations {
         layerstack: Arc<LayerStackService>,
         file: Arc<FileService>,
     ) -> Self {
+        let holder_exit_dispatcher = HolderExitDispatcher::start(&workspace_session)
+            .expect("holder exit dispatcher initialization failed");
         let autosquash_engine = Arc::new(
             crate::layerstack::autosquash_engine::AutosquashEngine::start(
                 Arc::clone(&layerstack),
@@ -39,6 +44,7 @@ impl SandboxRuntimeOperations {
             ),
         );
         Self {
+            _holder_exit_dispatcher: holder_exit_dispatcher,
             command,
             workspace_session,
             layerstack,
@@ -101,12 +107,33 @@ impl SandboxRuntimeOperations {
             )
             .expect("layerstack service initialization failed"),
         );
-        let workspace_session = Arc::new(WorkspaceSessionService::with_cgroup_root(
-            workspace_runtime,
-            Arc::clone(&layerstack),
-            config.cgroup_root.clone(),
-            observer.clone(),
-        ));
+        let workspace_session = Arc::new(
+            match (config.cgroup_root.clone(), config.workload_cgroup_limits) {
+                (Some(cgroup_root), Some(limits)) => WorkspaceSessionService::with_workload_cgroup(
+                    workspace_runtime,
+                    Arc::clone(&layerstack),
+                    cgroup_root,
+                    limits,
+                    observer.clone(),
+                ),
+                (None, Some(limits)) => WorkspaceSessionService::with_unavailable_workload_cgroup(
+                    workspace_runtime,
+                    Arc::clone(&layerstack),
+                    limits,
+                    config
+                        .workload_cgroup_unavailable_reason
+                        .clone()
+                        .unwrap_or_else(|| "delegated cgroup v2 root is unavailable".to_owned()),
+                    observer.clone(),
+                ),
+                (cgroup_root, _) => WorkspaceSessionService::with_cgroup_root(
+                    workspace_runtime,
+                    Arc::clone(&layerstack),
+                    cgroup_root,
+                    observer.clone(),
+                ),
+            },
+        );
         let command = Arc::new(CommandOperationService::new(
             Arc::clone(&workspace_session),
             crate::command::CommandConfig {
@@ -126,11 +153,25 @@ impl SandboxRuntimeOperations {
 
     #[must_use]
     pub fn observability_snapshot(&self) -> RuntimeObservabilitySnapshot {
-        let (workspaces, partial_errors) = self.workspace_session.snapshot_workspaces();
+        let (workspaces, mut partial_errors) = self.workspace_session.snapshot_workspaces();
         let active_namespace_executions = self.command.active_namespace_executions();
+        let ownership = match self.workspace_session.workspace().ownership_snapshot() {
+            Ok(snapshot) => RuntimeOwnershipSnapshot {
+                namespace_fd_count: Some(snapshot.namespace_fd_count),
+                control_fd_count: Some(snapshot.control_fd_count),
+                active_scratch_directories: Some(snapshot.active_scratch_directories),
+                persisted_workspace_handles: Some(snapshot.persisted_workspace_handles),
+                exited_unreaped_holders: Some(snapshot.exited_unreaped_holders),
+            },
+            Err(error) => {
+                partial_errors.push(format!("workspace ownership snapshot failed: {error}"));
+                RuntimeOwnershipSnapshot::default()
+            }
+        };
         RuntimeObservabilitySnapshot {
             workspaces,
             active_namespace_executions,
+            ownership,
             partial_errors,
         }
     }
@@ -180,10 +221,20 @@ fn boot_reap_then_sweep(
 ) {
     assert_kernel_floor();
     probe_and_set_remount_gate(layerstack, observer);
-    let reaped = workspace_session
-        .workspace()
-        .reap_persisted_sessions()
-        .unwrap_or_default();
+    let reaped = match workspace_session.workspace().reap_persisted_sessions() {
+        Ok(reaped) => reaped,
+        Err(error) => {
+            observer.event(
+                sandbox_observability_telemetry::record::names::WORKSPACE_SESSION_CLEANUP_FAILED,
+                serde_json::json!({
+                    "boot_reap": true,
+                    "error": error.to_string(),
+                }),
+            );
+            cli_log(format!("boot reap failed: {error}"));
+            Vec::new()
+        }
+    };
     for session in &reaped {
         observer.event(
             sandbox_observability_telemetry::record::names::WORKSPACE_SESSION_DESTROY,
@@ -191,6 +242,10 @@ fn boot_reap_then_sweep(
                 "boot_reap": true,
                 "workspace_handle_id": session.workspace_handle_id,
                 "run_dir_removed": session.run_dir_removed,
+                "lease_released": session.lease_released,
+                "lease_release_error": session.lease_release_error,
+                "run_dir_cleanup_error": session.run_dir_cleanup_error,
+                "persisted_handle_released": session.persisted_handle_released,
             }),
         );
     }
@@ -347,6 +402,16 @@ pub struct SandboxRuntimeConfig {
     pub command: CommandRuntimeConfig,
     pub file: FileRuntimeConfig,
     pub cgroup_root: Option<std::path::PathBuf>,
+    pub workload_cgroup_limits: Option<WorkloadCgroupLimits>,
+    pub workload_cgroup_unavailable_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct WorkloadCgroupLimits {
+    pub nano_cpus: u64,
+    pub memory_high_bytes: u64,
+    pub memory_max_bytes: u64,
+    pub pids_max: u64,
 }
 
 /// Command-operation caps injected by the daemon from `runtime.command`;
@@ -361,7 +426,7 @@ pub struct CommandRuntimeConfig {
 impl Default for CommandRuntimeConfig {
     fn default() -> Self {
         Self {
-            max_active: 256,
+            max_active: 32,
             read_lines_default: 200,
             read_lines_max: 1000,
         }

@@ -9,11 +9,13 @@ use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::workspace_session::{
     FinalizePolicy, WorkspaceSessionError, WorkspaceSessionService,
 };
-use sandbox_runtime::{CommandOperationService, LayerStackService, SandboxRuntimeOperations};
+use sandbox_runtime::{
+    CommandOperationService, LayerStackService, SandboxRuntimeOperations, WorkloadCgroupLimits,
+};
 use sandbox_runtime_namespace_process::runner::protocol::RunResult;
 use sandbox_runtime_workspace::{
-    DestroyWorkspaceRequest, FileRunnerOp, NetworkProfile, WorkspaceError, WorkspaceHandle,
-    WorkspaceSessionId,
+    CapturedWorkspaceChanges, DestroyWorkspaceRequest, FileRunnerOp, NetworkProfile,
+    WorkspaceError, WorkspaceHandle, WorkspaceSessionId,
 };
 use serde_json::json;
 
@@ -47,6 +49,20 @@ fn workspace_handle_with_profile(
         PathBuf::from("/workspace"),
         network,
     )
+}
+
+fn empty_capture(handle: &WorkspaceHandle) -> CapturedWorkspaceChanges {
+    CapturedWorkspaceChanges {
+        workspace_session_id: handle.id.clone(),
+        base_revision: handle.base_revision(),
+        base_manifest: handle.snapshot.manifest.clone(),
+        changed_path_kinds: Default::default(),
+        protected_drops: Vec::new(),
+        stats: None,
+        metadata_path_count: 0,
+        changed_paths: Vec::new(),
+        changes: Vec::new(),
+    }
 }
 
 fn exec_input(workspace_session_id: Option<WorkspaceSessionId>, yield_ms: u64) -> ExecCommandInput {
@@ -96,15 +112,24 @@ fn workspace_session_resolve_returns_session_by_id() {
 }
 
 #[test]
-fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
+fn duplicate_workspace_id_is_rejected_before_raw_create_or_cgroup_mutation() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-1")));
     fake.push_create_result(Ok(workspace_handle("workspace-1", "lease-2")));
-    let manager = manager_with(&fake);
+    let cgroup_root = temp_root().join("cgroup-root");
+    let manager = WorkspaceSessionService::with_cgroup_root(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        Some(cgroup_root.clone()),
+        Observer::disabled(),
+    );
 
     manager
         .create_workspace_session(create_request())
         .expect("test operation succeeds");
+    let leaf = cgroup_root.join("workspace-workspace-1");
+    std::fs::write(leaf.join("unknown.owner"), "existing session owner")
+        .expect("inject an existing-session cgroup owner");
     let error = manager
         .create_workspace_session(create_request())
         .expect_err("test operation fails");
@@ -114,13 +139,92 @@ fn workspace_session_create_rolls_back_raw_workspace_when_insert_fails() {
         WorkspaceSessionError::DuplicateWorkspaceSessionId { workspace_session_id }
             if workspace_session_id == WorkspaceSessionId("workspace-1".to_owned())
     ));
+    assert_eq!(fake.create_requests().len(), 1);
+    assert!(fake.destroy_calls().is_empty());
     assert_eq!(
-        fake.destroy_calls(),
-        vec![WorkspaceSessionId("workspace-1".to_owned())]
+        std::fs::read_to_string(leaf.join("unknown.owner"))
+            .expect("existing session cgroup remains intact"),
+        "existing session owner"
     );
     assert!(manager
         .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
+}
+
+#[test]
+fn concurrent_duplicate_workspace_id_has_one_raw_create_owner() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("workspace-race", "lease-1")));
+    fake.push_create_result(Ok(workspace_handle("workspace-race", "lease-2")));
+    let manager = Arc::new(manager_with(&fake));
+    let (create_entered, release_create) = fake.park_next_create();
+
+    let creating_manager = Arc::clone(&manager);
+    let creator =
+        std::thread::spawn(move || creating_manager.create_workspace_session(create_request()));
+    create_entered
+        .recv_timeout(Duration::from_secs(5))
+        .expect("first creator holds the identity reservation inside raw create");
+
+    let duplicate = manager
+        .create_workspace_session(create_request())
+        .expect_err("a concurrent creator cannot share the reservation");
+    assert!(matches!(
+        duplicate,
+        WorkspaceSessionError::DuplicateWorkspaceSessionId { workspace_session_id }
+            if workspace_session_id == WorkspaceSessionId("workspace-race".to_owned())
+    ));
+    assert_eq!(fake.create_requests().len(), 1);
+    assert!(fake.destroy_calls().is_empty());
+
+    release_create.send(()).expect("release first raw create");
+    let handler = creator
+        .join()
+        .expect("creator thread")
+        .expect("reserved creator succeeds");
+    assert_eq!(
+        handler.workspace_session_id,
+        WorkspaceSessionId("workspace-race".to_owned())
+    );
+    assert_eq!(fake.create_requests().len(), 1);
+}
+
+#[test]
+fn failed_raw_create_releases_identity_reservation_for_retry() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let workspace_session_id = WorkspaceSessionId("workspace-retry".to_owned());
+    fake.push_workspace_session_id(workspace_session_id.clone());
+    fake.push_create_result(Err(WorkspaceError::Setup {
+        step: "injected create failure".to_owned(),
+    }));
+    fake.push_create_result(Ok(workspace_handle("workspace-retry", "lease-2")));
+    let manager = manager_with(&fake);
+
+    let first = manager
+        .create_workspace_session(create_request())
+        .expect_err("injected raw create fails");
+    assert!(matches!(
+        first,
+        WorkspaceSessionError::Workspace(WorkspaceError::Setup { .. })
+    ));
+
+    let retried = manager
+        .create_workspace_session(create_request())
+        .expect("retry can reserve the same identity");
+    assert_eq!(retried.workspace_session_id, workspace_session_id.clone());
+    assert_eq!(
+        fake.create_requests(),
+        vec![
+            sandbox_runtime_workspace::CreateWorkspaceRequest {
+                workspace_session_id: workspace_session_id.clone(),
+                network: NetworkProfile::Shared,
+            },
+            sandbox_runtime_workspace::CreateWorkspaceRequest {
+                workspace_session_id,
+                network: NetworkProfile::Shared,
+            },
+        ]
+    );
 }
 
 #[test]
@@ -146,6 +250,263 @@ fn workspace_session_destroy_failure_retains_session() {
     assert!(manager
         .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
+}
+
+#[test]
+fn cgroup_removal_failure_retries_without_repeating_raw_workspace_destroy() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("cgroup-retry", "lease-1")));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let manager = WorkspaceSessionService::with_cgroup_root(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        Some(cgroup_root.clone()),
+        Observer::disabled(),
+    );
+    let handler = manager
+        .create_workspace_session(create_request())
+        .expect("session creates");
+    let leaf = cgroup_root.join("workspace-cgroup-retry");
+    std::fs::write(leaf.join("unknown.owner"), "retained").expect("inject removal failure");
+
+    let first = manager
+        .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
+        .expect_err("cgroup failure remains visible");
+    assert!(matches!(
+        first,
+        WorkspaceSessionError::TeardownIncomplete { failures, .. }
+            if failures.iter().any(|failure| failure.contains("workload-cgroup"))
+    ));
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![handler.workspace_session_id.clone()]
+    );
+    assert!(leaf.exists());
+
+    std::fs::remove_file(leaf.join("unknown.owner")).expect("release injected owner");
+    manager
+        .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
+        .expect("retry completes remaining cgroup resource");
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![handler.workspace_session_id.clone()],
+        "raw workspace teardown is recorded before the retry"
+    );
+    assert!(!leaf.exists());
+    assert!(matches!(
+        manager.resolve_session(handler.workspace_session_id),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+}
+
+#[test]
+fn configured_workload_cgroup_limit_failure_aborts_and_rolls_back_raw_workspace() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("cgroup-setup-fail", "lease-1")));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let leaf = cgroup_root.join("workspace-cgroup-setup-fail");
+    std::fs::create_dir_all(&leaf).expect("precreate injected leaf");
+    std::os::unix::fs::symlink(&cgroup_root, leaf.join("cpu.max"))
+        .expect("cpu.max write fails on directory target");
+    let manager = WorkspaceSessionService::with_workload_cgroup(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        cgroup_root,
+        WorkloadCgroupLimits {
+            nano_cpus: 1_000_000_000,
+            memory_high_bytes: 64 * 1024 * 1024,
+            memory_max_bytes: 96 * 1024 * 1024,
+            pids_max: 32,
+        },
+        Observer::disabled(),
+    );
+
+    let error = manager
+        .create_workspace_session(create_request())
+        .expect_err("configured limit write must fail closed");
+    assert!(matches!(
+        error,
+        WorkspaceSessionError::WorkloadCgroupSetupFailed {
+            workspace_session_id,
+            rollback_diagnostic: None,
+            ..
+        } if workspace_session_id == WorkspaceSessionId("cgroup-setup-fail".to_owned())
+    ));
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("cgroup-setup-fail".to_owned())]
+    );
+    assert!(!leaf.exists(), "partial cgroup leaf is rolled back");
+}
+
+#[test]
+fn create_cgroup_cleanup_failure_is_visible_and_joinable_without_repeating_raw_destroy() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("cgroup-create-retry", "lease-1")));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let leaf = cgroup_root.join("workspace-cgroup-create-retry");
+    std::fs::create_dir_all(&leaf).expect("precreate injected leaf");
+    std::os::unix::fs::symlink(&cgroup_root, leaf.join("cpu.max"))
+        .expect("cpu.max write fails on directory target");
+    std::fs::write(leaf.join("unknown.owner"), "retained")
+        .expect("unknown owner blocks setup rollback");
+    let manager = WorkspaceSessionService::with_workload_cgroup(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        cgroup_root,
+        WorkloadCgroupLimits {
+            nano_cpus: 1_000_000_000,
+            memory_high_bytes: 64 * 1024 * 1024,
+            memory_max_bytes: 96 * 1024 * 1024,
+            pids_max: 32,
+        },
+        Observer::disabled(),
+    );
+
+    let first = manager
+        .create_workspace_session(create_request())
+        .expect_err("failed cgroup rollback remains visible");
+    assert!(matches!(
+        first,
+        WorkspaceSessionError::TeardownIncomplete {
+            ref workspace_session_id,
+            ref failures,
+        } if workspace_session_id == &WorkspaceSessionId("cgroup-create-retry".to_owned())
+            && failures.iter().any(|failure| failure.contains("workload-cgroup"))
+    ));
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("cgroup-create-retry".to_owned())]
+    );
+    assert!(leaf.exists());
+
+    std::fs::remove_file(leaf.join("unknown.owner")).expect("release injected owner");
+    manager
+        .guarded_destroy(WorkspaceSessionId("cgroup-create-retry".to_owned()), None)
+        .expect("joinable cleanup retry converges");
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("cgroup-create-retry".to_owned())],
+        "successful raw rollback is never repeated"
+    );
+    assert!(!leaf.exists());
+}
+
+#[test]
+fn create_raw_rollback_failure_retains_exact_handle_for_joinable_retry() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = workspace_handle("raw-create-retry", "lease-1");
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_destroy_result(Err(WorkspaceError::Setup {
+        step: "injected raw rollback failure".to_owned(),
+    }));
+    fake.push_destroy_result(Ok(support::destroy_result(&handle)));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let leaf = cgroup_root.join("workspace-raw-create-retry");
+    std::fs::create_dir_all(&leaf).expect("precreate injected leaf");
+    std::os::unix::fs::symlink(&cgroup_root, leaf.join("cpu.max"))
+        .expect("cpu.max write fails on directory target");
+    let manager = WorkspaceSessionService::with_workload_cgroup(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        cgroup_root,
+        WorkloadCgroupLimits {
+            nano_cpus: 1_000_000_000,
+            memory_high_bytes: 64 * 1024 * 1024,
+            memory_max_bytes: 96 * 1024 * 1024,
+            pids_max: 32,
+        },
+        Observer::disabled(),
+    );
+
+    let first = manager
+        .create_workspace_session(create_request())
+        .expect_err("raw rollback failure remains visible");
+    assert!(matches!(
+        first,
+        WorkspaceSessionError::TeardownIncomplete { ref failures, .. }
+            if failures.iter().any(|failure| failure.contains("workspace rollback"))
+    ));
+    assert!(!leaf.exists(), "successful cgroup rollback is terminal");
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("raw-create-retry".to_owned())]
+    );
+
+    manager
+        .guarded_destroy(WorkspaceSessionId("raw-create-retry".to_owned()), None)
+        .expect("retry uses the retained raw handle");
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![
+            WorkspaceSessionId("raw-create-retry".to_owned()),
+            WorkspaceSessionId("raw-create-retry".to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn isolated_ip_waits_for_cleanup_and_rejects_finalize_failed_session() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle_with_profile(
+        "ws-forward-cleanup",
+        "lease-1",
+        NetworkProfile::Isolated,
+    )));
+    fake.push_destroy_result(Err(WorkspaceError::Setup {
+        step: "cleanup failed".to_owned(),
+    }));
+    let env = support::build_services(Arc::clone(&fake));
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+    let (destroy_entered, release_destroy) = fake.park_next_destroy();
+
+    let destroy_workspace = Arc::clone(&env.workspace);
+    let destroy_id = workspace_session_id.clone();
+    let destroy = std::thread::spawn(move || destroy_workspace.guarded_destroy(destroy_id, None));
+    destroy_entered
+        .recv_timeout(Duration::from_secs(5))
+        .expect("guarded destroy reached the workspace hook under the session gate");
+
+    let (lookup_started_tx, lookup_started_rx) = mpsc::channel();
+    let (lookup_result_tx, lookup_result_rx) = mpsc::channel();
+    let lookup_workspace = Arc::clone(&env.workspace);
+    let lookup_id = workspace_session_id.clone();
+    let lookup = std::thread::spawn(move || {
+        lookup_started_tx
+            .send(())
+            .expect("announce isolated IP lookup");
+        lookup_result_tx
+            .send(lookup_workspace.isolated_ip(&lookup_id))
+            .expect("send isolated IP lookup result");
+    });
+    lookup_started_rx
+        .recv_timeout(Duration::from_secs(5))
+        .expect("isolated IP lookup thread started");
+    assert!(
+        lookup_result_rx
+            .recv_timeout(Duration::from_millis(200))
+            .is_err(),
+        "isolated IP resolution must wait for the in-flight cleanup transaction"
+    );
+
+    release_destroy.send(()).expect("release guarded destroy");
+    assert!(matches!(
+        destroy.join().expect("guarded destroy thread"),
+        Err(WorkspaceSessionError::Workspace(
+            WorkspaceError::Setup { .. }
+        ))
+    ));
+    assert!(matches!(
+        lookup_result_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("isolated IP lookup completes after cleanup"),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+    lookup.join().expect("isolated IP lookup thread");
 }
 
 #[test]
@@ -260,6 +621,76 @@ fn publish_then_destroy_session_finalizes_when_last_command_completes() {
         .resolve_session(workspace_session_id)
         .expect_err("finalized session is gone");
     assert!(matches!(missing, WorkspaceSessionError::NotFound { .. }));
+    assert_eq!(env.workspace.gate_entry_count(), 0);
+}
+
+#[test]
+fn explicit_publish_rejects_publish_then_destroy_policy_without_side_effects() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "done\n",
+    )));
+    let layerstack = support::observed_layerstack_service(Observer::disabled());
+    let env = support::build_services_with_launch_driver_and_layerstack(
+        Arc::clone(&fake),
+        launch_driver,
+        Arc::clone(&layerstack),
+    );
+    fake.push_create_result(Ok(workspace_handle("ws-policy", "lease-1")));
+    let handler = env
+        .workspace
+        .create_workspace_session(support::create_request_with_policy(
+            FinalizePolicy::PublishThenDestroy,
+        ))
+        .expect("publish_then_destroy session create succeeds");
+    let workspace_session_id = handler.workspace_session_id.clone();
+    let before =
+        sandbox_runtime_layerstack::LayerStack::open(layerstack.layer_stack_root().to_path_buf())
+            .expect("open test layerstack")
+            .read_active_manifest()
+            .expect("read active manifest before rejected publish");
+
+    let error = env
+        .workspace
+        .publish_workspace_session(workspace_session_id.clone(), None)
+        .expect_err("explicit publish must reject an implicit-policy session");
+
+    assert!(matches!(error, WorkspaceSessionError::NotFound { .. }));
+    assert!(fake.capture_calls().is_empty());
+    assert!(fake.destroy_calls().is_empty());
+    let after =
+        sandbox_runtime_layerstack::LayerStack::open(layerstack.layer_stack_root().to_path_buf())
+            .expect("reopen test layerstack")
+            .read_active_manifest()
+            .expect("read active manifest after rejected publish");
+    assert_eq!(after, before, "explicit rejection cannot publish a layer");
+    assert!(
+        env.workspace
+            .resolve_session(workspace_session_id.clone())
+            .is_ok(),
+        "the implicit-policy session remains active for its ordinary completion edge"
+    );
+
+    fake.push_capture_result(Ok(empty_capture(&handler.handle)));
+    let output = env
+        .command
+        .exec_command(exec_input(Some(workspace_session_id.clone()), 250))
+        .expect("targeted command completes through the implicit policy");
+    assert_eq!(
+        output.workspace_session_id,
+        Some(workspace_session_id.clone())
+    );
+    assert!(
+        wait_until(Duration::from_secs(5), || !fake.destroy_calls().is_empty()),
+        "the unchanged implicit completion edge still captures and destroys"
+    );
+    assert_eq!(fake.capture_calls(), vec![workspace_session_id.clone()]);
+    assert_eq!(fake.destroy_calls(), vec![workspace_session_id.clone()]);
+    assert!(matches!(
+        env.workspace.resolve_session(workspace_session_id),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
     assert_eq!(env.workspace.gate_entry_count(), 0);
 }
 
@@ -619,7 +1050,10 @@ fn workspace_session_create_operation_defaults_host_profile_and_projects_minimal
             "finalize_policy": "no_op",
         })
     );
-    assert_eq!(fake.create_requests(), vec![support::raw_create_request()]);
+    assert_eq!(
+        fake.create_requests(),
+        vec![support::raw_create_request("workspace-1")]
+    );
     Ok(())
 }
 
@@ -857,6 +1291,7 @@ fn workspace_session_files_do_not_import_command_service() {
     let admission = include_str!("../src/workspace_session/service/impls/admission.rs");
     let finalize_session =
         include_str!("../src/workspace_session/service/impls/finalize_session.rs");
+    let publish_session = include_str!("../src/workspace_session/service/impls/publish_session.rs");
     let guarded_destroy = include_str!("../src/workspace_session/service/impls/guarded_destroy.rs");
     let create_workspace_session =
         include_str!("../src/workspace_session/service/impls/create_workspace_session.rs");
@@ -870,6 +1305,7 @@ fn workspace_session_files_do_not_import_command_service() {
         core,
         admission,
         finalize_session,
+        publish_session,
         guarded_destroy,
         create_workspace_session,
         destroy_session,

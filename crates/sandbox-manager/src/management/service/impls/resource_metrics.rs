@@ -3,10 +3,94 @@ use serde_json::{json, Map, Value};
 
 use crate::operations::{ManagerServices, MAX_RESOURCE_HISTORY_MS};
 use crate::router::forward_sandbox_request;
-use crate::{ManagerError, ResourceRingRead, ResourceSample, SandboxId, SandboxResourceMetrics};
+use crate::{
+    ManagerError, ResourceRingRead, ResourceSample, SandboxId, SandboxResourceMetrics, SandboxState,
+};
 
 const SANDBOX_SCOPE: &str = "sandbox";
 const DEFAULT_RESOURCE_WINDOW_MS: i64 = 60_000;
+
+pub(crate) fn dispatch_resources(
+    services: &ManagerServices,
+    request: &OperationRequest,
+) -> OperationResponse {
+    match &request.scope {
+        sandbox_operation_contract::OperationScope::System => fleet_resources(services),
+        sandbox_operation_contract::OperationScope::Sandbox { .. } => {
+            sandbox_resources(services, request)
+        }
+    }
+}
+
+fn sandbox_resources(services: &ManagerServices, request: &OperationRequest) -> OperationResponse {
+    let window_ms = match resource_window_ms(request) {
+        Ok(window_ms) => window_ms,
+        Err(response) => return response,
+    };
+    let id = match sandbox_id(request) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let read = resource_samples(services, &id, window_ms);
+    let errors = read.error.into_iter().collect::<Vec<_>>();
+    let availability = availability(&errors);
+    OperationResponse::ok(json!({
+        "view": "resources",
+        "scope": SANDBOX_SCOPE,
+        "sandbox_id": id.as_str(),
+        "availability": availability,
+        "errors": errors,
+        "series": series_value(read.samples),
+    }))
+}
+
+fn fleet_resources(services: &ManagerServices) -> OperationResponse {
+    let records = match services.store.list() {
+        Ok(records) => records,
+        Err(error) => return error.into_response(),
+    };
+    let mut sandboxes = Map::new();
+    let mut errors = Vec::new();
+    for record in records
+        .into_iter()
+        .filter(|record| record.state == SandboxState::Ready)
+    {
+        let read = services.resource_ring.read_latest(&record.id);
+        let entry_errors = read.error.into_iter().collect::<Vec<_>>();
+        errors.extend(
+            entry_errors
+                .iter()
+                .map(|message| format!("{}: {message}", record.id.as_str())),
+        );
+        let current = series_value(read.samples)
+            .into_iter()
+            .last()
+            .unwrap_or(Value::Null);
+        sandboxes.insert(
+            record.id.as_str().to_owned(),
+            json!({
+                "availability": availability(&entry_errors),
+                "errors": entry_errors,
+                "current": current,
+            }),
+        );
+    }
+    OperationResponse::ok(json!({
+        "view": "resources",
+        "scope": "fleet",
+        "availability": availability(&errors),
+        "errors": errors,
+        "sandboxes": sandboxes,
+    }))
+}
+
+fn availability(errors: &[String]) -> &'static str {
+    if errors.is_empty() {
+        "available"
+    } else {
+        "partial"
+    }
+}
 
 pub(crate) fn dispatch_resource_metrics(
     services: &ManagerServices,
@@ -17,10 +101,10 @@ pub(crate) fn dispatch_resource_metrics(
         Err(response) => return response,
     };
     if scope != SANDBOX_SCOPE {
-        return OperationResponse::fault(
-            error::INVALID_REQUEST,
-            "manager-owned resource metrics support sandbox scope only",
-        );
+        return match forward_sandbox_request(services, request.clone()) {
+            Ok(response) => response,
+            Err(error) => error.into_response(),
+        };
     }
 
     let window_ms = match resource_window_ms(request) {
@@ -33,11 +117,7 @@ pub(crate) fn dispatch_resource_metrics(
     };
     let read = resource_samples(services, &id, window_ms);
     let errors = read.error.into_iter().collect::<Vec<_>>();
-    let availability = if errors.is_empty() {
-        "available"
-    } else {
-        "partial"
-    };
+    let availability = availability(&errors);
     let topology = daemon_topology(services, request);
     OperationResponse::ok(json!({
         "view": "cgroup",
@@ -91,12 +171,10 @@ pub(crate) fn latest_resource_value(
     services: &ManagerServices,
     id: &SandboxId,
 ) -> Result<Value, ManagerError> {
-    Ok(
-        series_value(resource_samples(services, id, MAX_RESOURCE_HISTORY_MS).samples)
-            .into_iter()
-            .last()
-            .unwrap_or(Value::Null),
-    )
+    Ok(series_value(services.resource_ring.read_latest(id).samples)
+        .into_iter()
+        .last()
+        .unwrap_or(Value::Null))
 }
 
 fn resource_samples(

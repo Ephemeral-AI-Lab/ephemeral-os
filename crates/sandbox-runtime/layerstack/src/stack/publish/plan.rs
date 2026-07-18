@@ -16,6 +16,17 @@ use super::route::{forbidden_path, RouteKind};
 pub(crate) struct SourceValidation {
     pub(crate) path: LayerPath,
     pub(crate) expected: ContentFingerprint,
+    pub(crate) provenance: SourceValidationProvenance,
+}
+
+/// Why a source validation exists. Opaque-directory planning expands one
+/// logical change into descendant validations; the resolver must be able to
+/// discard only those generated validations when a later change at the same
+/// root wins, without discarding an explicit change to that descendant.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SourceValidationProvenance {
+    ExplicitChange,
+    OpaqueDir { root: LayerPath },
 }
 
 /// One accepted change paired with the route it took, so the resolver knows
@@ -79,6 +90,7 @@ pub(crate) fn plan_publish(
                     source_validations.push(SourceValidation {
                         path: change.path().clone(),
                         expected: content_fingerprint(view, &request.base.manifest, change.path())?,
+                        provenance: SourceValidationProvenance::ExplicitChange,
                     });
                 }
                 route
@@ -196,6 +208,7 @@ fn plan_opaque_dir(
             source_validations.push(SourceValidation {
                 path: path.clone(),
                 expected: content_fingerprint(view, &request.base.manifest, path)?,
+                provenance: SourceValidationProvenance::OpaqueDir { root: path.clone() },
             });
         }
         return Ok(route);
@@ -223,6 +236,7 @@ fn plan_opaque_dir(
             source_validations.push(SourceValidation {
                 path: descendant.clone(),
                 expected: content_fingerprint(view, &request.base.manifest, &descendant)?,
+                provenance: SourceValidationProvenance::OpaqueDir { root: path.clone() },
             });
         }
         if saw_source && saw_ignored {

@@ -14,12 +14,12 @@ pub(crate) fn content_fingerprint(
 ) -> Result<ContentFingerprint, LayerStackError> {
     match view.read_entry(path.as_str(), manifest)? {
         MergedEntry::Absent => Ok(ContentFingerprint::Absent),
-        MergedEntry::File { bytes } => {
+        MergedEntry::File { bytes, executable } => {
             let mut hasher = Sha256::new();
             hasher.update(bytes);
             Ok(ContentFingerprint::File {
                 digest: hex_lower(hasher.finalize()),
-                executable: None,
+                executable: Some(executable),
             })
         }
         MergedEntry::Symlink { target } => Ok(ContentFingerprint::Symlink { target }),

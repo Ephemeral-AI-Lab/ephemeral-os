@@ -81,6 +81,17 @@ impl FakeCompletion {
             FakeCompletionOutcome::Failed(detail) => Err(NamespaceExecutionError::Spawn(detail)),
         }
     }
+
+    fn try_result(&self) -> Result<Option<RunResult>, NamespaceExecutionError> {
+        let slot = self.slot.lock().expect("fake completion mutex poisoned");
+        match slot.clone() {
+            Some(FakeCompletionOutcome::Completed(result)) => Ok(Some(result)),
+            Some(FakeCompletionOutcome::Failed(detail)) => {
+                Err(NamespaceExecutionError::Spawn(detail))
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 struct FakeRunnerChild {
@@ -91,6 +102,14 @@ struct FakeRunnerChild {
 impl RunnerChild for FakeRunnerChild {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
         self.completion.wait()
+    }
+
+    fn try_wait_completion(&mut self) -> Result<Option<RunResult>, NamespaceExecutionError> {
+        self.completion.try_result()
+    }
+
+    fn terminate(&mut self) {
+        self.completion.cancel();
     }
 }
 

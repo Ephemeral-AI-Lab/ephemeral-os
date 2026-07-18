@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use sandbox_observability_telemetry::collect::process_topology::{
-    DaemonProcessMetrics, NamespaceIdentity, NamespaceIdentityReader, WorkspaceProcessInput,
-    WorkspaceProcessKind, WorkspaceProcessState, WorkspaceProcessTopology,
+    DaemonProcessMetrics, NamespaceIdentity, NamespaceIdentityReader, ProcEntryReader,
+    WorkspaceProcessInput, WorkspaceProcessKind, WorkspaceProcessState, WorkspaceProcessTopology,
 };
 
 #[derive(Default)]
@@ -60,6 +60,106 @@ impl NamespaceIdentityReader for FakeNamespaceReader {
     fn diagnostic(&self, path: &Path) -> Option<String> {
         self.diagnostics.get(path).cloned()
     }
+}
+
+struct CountingProcEntryReader {
+    calls: AtomicU64,
+    pids: Vec<u32>,
+}
+
+impl CountingProcEntryReader {
+    fn new(pids: Vec<u32>) -> Self {
+        Self {
+            calls: AtomicU64::new(0),
+            pids,
+        }
+    }
+}
+
+impl ProcEntryReader for CountingProcEntryReader {
+    fn numeric_entries(&self, _proc_root: &Path) -> io::Result<Vec<u32>> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(self.pids.clone())
+    }
+}
+
+#[test]
+fn empty_or_all_invalid_holder_indices_skip_numeric_proc_enumeration() {
+    let root = fixture("empty-index-fast-path");
+    let empty_entries = CountingProcEntryReader::new(vec![1, 2, 3]);
+
+    let empty = WorkspaceProcessTopology::collect_with_readers(
+        &root,
+        Vec::new(),
+        &FakeNamespaceReader::default(),
+        &empty_entries,
+    );
+
+    assert!(empty.available);
+    assert!(empty.workspaces.is_empty());
+    assert_eq!(empty_entries.calls.load(Ordering::SeqCst), 0);
+
+    let invalid_entries = CountingProcEntryReader::new(vec![1, 2, 3]);
+    let invalid = WorkspaceProcessTopology::collect_with_readers(
+        &root,
+        (0..20)
+            .map(|index| workspace(&format!("workspace-{index:02}"), 100 + index))
+            .collect(),
+        &FakeNamespaceReader::default(),
+        &invalid_entries,
+    );
+
+    assert!(invalid.available);
+    assert_eq!(invalid.workspaces.len(), 20);
+    assert!(invalid
+        .workspaces
+        .iter()
+        .all(|workspace| workspace.state == WorkspaceProcessState::Partial));
+    assert!(invalid
+        .workspaces
+        .iter()
+        .all(|workspace| workspace.processes.is_empty()));
+    assert!(invalid.warnings.len() <= 16);
+    assert_eq!(invalid_entries.calls.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn valid_and_mixed_holder_indices_enumerate_numeric_proc_entries_once() {
+    let root = fixture("single-proc-enumeration");
+    let mut namespaces = FakeNamespaceReader::default();
+    namespaces.holder(&root, 10, 101, 201);
+    namespaces.process(&root, 11, 101, 201);
+    write_process(&root, 11, 1, 10, "ns-init", 'S', Some("0::/\n"));
+
+    let valid_entries = CountingProcEntryReader::new(vec![11]);
+    let valid = WorkspaceProcessTopology::collect_with_readers(
+        &root,
+        vec![workspace("workspace-valid", 10)],
+        &namespaces,
+        &valid_entries,
+    );
+
+    assert!(valid.available);
+    assert_eq!(valid.workspaces[0].processes.len(), 1);
+    assert_eq!(valid_entries.calls.load(Ordering::SeqCst), 1);
+
+    let mixed_entries = CountingProcEntryReader::new(vec![11]);
+    let mixed = WorkspaceProcessTopology::collect_with_readers(
+        &root,
+        vec![
+            workspace("workspace-invalid", 99),
+            workspace("workspace-valid", 10),
+        ],
+        &namespaces,
+        &mixed_entries,
+    );
+
+    assert!(mixed.available);
+    assert_eq!(mixed.workspaces.len(), 2);
+    assert_eq!(mixed.workspaces[0].state, WorkspaceProcessState::Partial);
+    assert_eq!(mixed.workspaces[1].state, WorkspaceProcessState::Idle);
+    assert_eq!(mixed.workspaces[1].processes.len(), 1);
+    assert_eq!(mixed_entries.calls.load(Ordering::SeqCst), 1);
 }
 
 #[test]
@@ -245,7 +345,7 @@ fn daemon_metrics_collect_memory_cpu_io_threads_fds_and_cgroup() {
     .expect("daemon status");
     std::fs::write(
         pid_root.join("smaps_rollup"),
-        "00400000-00401000 r--p 00000000 00:00 0 [rollup]\nPss:\t28000 kB\nPrivate_Clean:\t1000 kB\nPrivate_Dirty:\t25000 kB\nPrivate_Hugetlb:\t0 kB\n",
+        "00400000-00401000 r--p 00000000 00:00 0 [rollup]\nPss:\t28000 kB\nPrivate_Clean:\t1000 kB\nPrivate_Dirty:\t25000 kB\nPrivate_Hugetlb:\t0 kB\nAnonHugePages:\t2048 kB\n",
     )
     .expect("daemon smaps rollup");
     std::fs::write(
@@ -265,6 +365,8 @@ fn daemon_metrics_collect_memory_cpu_io_threads_fds_and_cgroup() {
     assert_eq!(metrics.resident_memory_bytes, Some(30_000 * 1_024));
     assert_eq!(metrics.proportional_set_size_bytes, Some(28_000 * 1_024));
     assert_eq!(metrics.unique_set_size_bytes, Some(26_000 * 1_024));
+    assert_eq!(metrics.private_dirty_bytes, Some(25_000 * 1_024));
+    assert_eq!(metrics.anonymous_huge_pages_bytes, Some(2_048 * 1_024));
     assert_eq!(metrics.thread_count, Some(37));
     assert_eq!(metrics.file_descriptor_count, Some(2));
     assert_eq!(metrics.io_read_bytes, Some(4_096));
@@ -272,6 +374,7 @@ fn daemon_metrics_collect_memory_cpu_io_threads_fds_and_cgroup() {
     assert_eq!(metrics.read_syscalls, Some(41));
     assert_eq!(metrics.write_syscalls, Some(17));
     assert_eq!(metrics.cgroup_memberships, ["0::/_daemon"]);
+    assert_eq!(metrics.cgroup_path.as_deref(), Some("/_daemon"));
     assert!(metrics.cpu_time_us.is_some_and(|value| value > 0));
     assert!(metrics.warnings.is_empty());
 }
@@ -333,6 +436,10 @@ fn workspace(workspace_id: &str, holder_pid: u32) -> WorkspaceProcessInput {
     WorkspaceProcessInput {
         workspace_id: workspace_id.to_owned(),
         holder_pid,
+        cgroup_path: Some(format!("/eos/workspace-{workspace_id}")),
+        applied_cgroup_limits: Some(Default::default()),
+        workload_cgroup_state: "applied".to_owned(),
+        workload_cgroup_reason: None,
     }
 }
 

@@ -37,8 +37,8 @@ fn public_catalogs_are_route_complete() {
         );
     }
 
-    assert_eq!(operation_count, 22);
-    assert_eq!(routes::public_routes().count(), 23);
+    assert_eq!(operation_count, 25);
+    assert_eq!(routes::public_routes().count(), 27);
 }
 
 #[test]
@@ -180,6 +180,13 @@ fn public_route_manifest_is_exact_and_policy_consistent() {
                 OperationVisibility::Public
             ),
             (
+                "publish_workspace_session",
+                OperationScopePolicy::SandboxRequired,
+                OperationScopeKind::Sandbox,
+                OperationExecutionOwner::Runtime,
+                OperationVisibility::Public
+            ),
+            (
                 "destroy_workspace_session",
                 OperationScopePolicy::SandboxRequired,
                 OperationScopeKind::Sandbox,
@@ -209,6 +216,27 @@ fn public_route_manifest_is_exact_and_policy_consistent() {
             ),
             (
                 "events",
+                OperationScopePolicy::SandboxRequired,
+                OperationScopeKind::Sandbox,
+                OperationExecutionOwner::Observability,
+                OperationVisibility::Public
+            ),
+            (
+                "resources",
+                OperationScopePolicy::SystemOrSandbox,
+                OperationScopeKind::System,
+                OperationExecutionOwner::Manager,
+                OperationVisibility::Public
+            ),
+            (
+                "resources",
+                OperationScopePolicy::SystemOrSandbox,
+                OperationScopeKind::Sandbox,
+                OperationExecutionOwner::Manager,
+                OperationVisibility::Public
+            ),
+            (
+                "topology",
                 OperationScopePolicy::SandboxRequired,
                 OperationScopeKind::Sandbox,
                 OperationExecutionOwner::Observability,

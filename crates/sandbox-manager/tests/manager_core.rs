@@ -6,8 +6,8 @@ use std::time::Duration;
 use sandbox_manager::{
     CreateSandboxRequest, CreateSandboxResult, ManagerError, ManagerServices, SandboxDaemonClient,
     SandboxDaemonEndpoint, SandboxDaemonInstaller, SandboxId, SandboxRecord,
-    SandboxResourceMetrics, SandboxRuntime, SandboxState, SandboxStore, SharedBaseMount,
-    StartedDaemon, WorkspaceRootPolicy,
+    SandboxResourceMetrics, SandboxResourceProfile, SandboxRuntime, SandboxState, SandboxStore,
+    SharedBaseMount, StartedDaemon, WorkspaceRootPolicy,
 };
 use sandbox_operation_contract::{
     ArgKind, OperationDomain, OperationRequest, OperationResponse, OperationScope,
@@ -38,6 +38,19 @@ impl SandboxRuntime for FakeRuntime {
         let sandbox_id = format!("container-{}", created.len());
         Ok(CreateSandboxResult {
             id: SandboxId::new(sandbox_id).expect("valid id"),
+            resource_profile: Some(SandboxResourceProfile {
+                name: "standard".to_owned(),
+                nano_cpus: 1_000_000_000,
+                memory_high_bytes: 384 * 1024 * 1024,
+                memory_max_bytes: 512 * 1024 * 1024,
+                pids_max: 256,
+                workload_memory_high_bytes: 384 * 1024 * 1024,
+                workload_memory_max_bytes: 384 * 1024 * 1024,
+                workload_pids_max: 224,
+                control_plane_pids_reserve: 32,
+                daemon_runtime_profile: "standard".to_owned(),
+                separate_workload_cgroup: true,
+            }),
         })
     }
 
@@ -376,6 +389,7 @@ fn sandbox_record(
         daemon,
         daemon_http: None,
         shared_base: None,
+        resource_profile: None,
     }
 }
 
@@ -560,6 +574,38 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
         Some(workspace_root.as_str())
     );
     assert_eq!(created["state"], "ready");
+    assert_eq!(created["resource_profile"]["name"], "standard");
+    assert_eq!(created["resource_profile"]["nano_cpus"], 1_000_000_000_u64);
+    assert_eq!(
+        created["resource_profile"]["memory_high_bytes"],
+        384_u64 * 1024 * 1024
+    );
+    assert_eq!(
+        created["resource_profile"]["memory_max_bytes"],
+        512_u64 * 1024 * 1024
+    );
+    assert_eq!(created["resource_profile"]["pids_max"], 256);
+    assert_eq!(
+        created["resource_profile"]["workload_memory_high_bytes"],
+        384_u64 * 1024 * 1024
+    );
+    assert_eq!(
+        created["resource_profile"]["workload_memory_max_bytes"],
+        384_u64 * 1024 * 1024
+    );
+    assert_eq!(created["resource_profile"]["workload_pids_max"], 224);
+    assert_eq!(
+        created["resource_profile"]["control_plane_pids_reserve"],
+        32
+    );
+    assert_eq!(
+        created["resource_profile"]["daemon_runtime_profile"],
+        "standard"
+    );
+    assert_eq!(
+        created["resource_profile"]["separate_workload_cgroup"],
+        true
+    );
     assert_eq!(
         created["daemon"],
         json!({"host": "127.0.0.1", "port": 7000})
@@ -576,6 +622,7 @@ fn create_list_inspect_destroy_sandbox_with_fake_runtime() {
         json!({"sandbox_id": "container-1"}),
     );
     assert_eq!(inspected["id"], "container-1");
+    assert_eq!(inspected["resource_profile"], created["resource_profile"]);
 
     assert_eq!(services.sample_resources_once(), 1);
     let ring_path = services.resource_ring().path(&id("container-1"));

@@ -38,6 +38,7 @@ async fn help_lists_exact_runtime_catalog() {
             "file_edit",
             "file_blame",
             "create_workspace_session",
+            "publish_workspace_session",
             "destroy_workspace_session",
         ]
     );
@@ -84,6 +85,20 @@ async fn operation_help_uses_runtime_program_name() {
     assert!(stderr.is_empty());
     assert!(stdout.contains("Default: 0"));
     assert!(stdout.contains("Default: 200"));
+
+    let (code, stdout, stderr) =
+        run(&["sandbox-runtime-cli", "help", "publish_workspace_session"]).await;
+    assert_eq!(code, 0);
+    assert!(stderr.is_empty());
+    assert!(stdout.contains(
+        "Usage\n  sandbox-runtime-cli --sandbox-id ID publish_workspace_session \
+--workspace-session-id ID [--grace-s SECONDS]"
+    ));
+    assert!(stdout.contains(
+        "Capture the unpublished changes of an explicit workspace session, merge them safely into the current LayerStack when possible, and close the session. Rejected or failed pre-commit publishes retain the session."
+    ));
+    assert!(stdout.contains("--workspace-session-id string required"));
+    assert!(stdout.contains("--grace-s float optional"));
 }
 
 #[tokio::test]
@@ -408,6 +423,52 @@ async fn omitted_read_arguments_use_catalog_defaults() {
     assert_eq!(
         request["args"],
         json!({"path": "README.md", "offset": 1, "limit": 2000})
+    );
+}
+
+#[tokio::test]
+async fn publish_workspace_session_forwards_exact_sandbox_scoped_arguments() {
+    let response = json!({
+        "workspace_session_id": "ws-1",
+        "publish": {
+            "no_op": true,
+            "revision": {
+                "manifest_version": 4,
+                "root_hash": "root-4",
+                "layer_count": 3
+            },
+            "route_summary": {"source_count": 0, "ignored_count": 0}
+        },
+        "destroyed": true,
+        "evicted_upperdir_bytes": 0
+    });
+    let (addr, received) = fake_gateway(response.clone()).await;
+    let (code, stdout, stderr) = run(&[
+        "sandbox-runtime-cli",
+        "--gateway-socket",
+        &addr,
+        "--sandbox-id",
+        "eos-x",
+        "publish_workspace_session",
+        "--workspace-session-id",
+        "ws-1",
+        "--grace-s",
+        "1.25",
+    ])
+    .await;
+
+    assert_eq!(code, 0);
+    assert!(stderr.is_empty());
+    assert_eq!(parse_json_line(&stdout), response);
+    let request = received.await.expect("fake gateway task");
+    assert_eq!(request["op"], "publish_workspace_session");
+    assert_eq!(
+        request["scope"],
+        json!({"kind": "sandbox", "sandbox_id": "eos-x"})
+    );
+    assert_eq!(
+        request["args"],
+        json!({"workspace_session_id": "ws-1", "grace_s": 1.25})
     );
 }
 

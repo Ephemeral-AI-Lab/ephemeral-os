@@ -1,11 +1,7 @@
 use std::sync::PoisonError;
 
-use sandbox_observability_telemetry::record::names;
-
 use crate::workspace_crate::{DestroyWorkspaceRequest, DestroyWorkspaceResult, WorkspaceSessionId};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
-
-use super::destroy_session::DestroySnapshot;
 
 impl WorkspaceSessionService {
     /// Guarded explicit destroy: hold the session admission gate, refuse while
@@ -25,7 +21,7 @@ impl WorkspaceSessionService {
     ) -> Result<DestroyWorkspaceResult, WorkspaceSessionError> {
         let gate = self.session_gate(&workspace_session_id);
         let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
-        let snapshot = {
+        let handler = {
             let sessions = self.lock_sessions()?;
             let Some(session) = sessions.get(&workspace_session_id) else {
                 drop(sessions);
@@ -38,14 +34,8 @@ impl WorkspaceSessionService {
                     active_command_session_ids: session.active_commands.iter().cloned().collect(),
                 });
             }
-            DestroySnapshot {
-                workspace_session_id: session.workspace_session_id.clone(),
-                handle: session.handle.clone(),
-                cgroup_path: session.cgroup_path.clone(),
-            }
+            session.handler()
         };
-        self.obs().scope(names::WORKSPACE_SESSION_DESTROY, |_span| {
-            self.destroy_snapshot(snapshot, DestroyWorkspaceRequest { grace_s })
-        })
+        self.destroy_session(handler, DestroyWorkspaceRequest { grace_s })
     }
 }

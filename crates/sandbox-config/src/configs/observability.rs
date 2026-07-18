@@ -8,14 +8,18 @@
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer};
 
-use crate::configs::validate::{require_u64_at_least, require_usize_at_least, ConfigFieldError};
+use crate::configs::validate::{
+    require_f64_gt, require_u64_at_least, require_usize_at_least, ConfigFieldError,
+};
 
 const DEFAULT_MAX_DISK_BYTES: u64 = 4 * 1024 * 1024;
 const MIN_MAX_DISK_BYTES: u64 = 1024 * 1024;
 const MAX_MAX_DISK_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_MAX_LINE_BYTES: usize = 16 * 1024;
+const MIN_DIAGNOSTIC_ARTIFACT_BYTES: usize = 4 * 1024;
+pub const MAX_DIAGNOSTIC_ARTIFACT_BYTES: usize = 1024 * 1024;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ObservabilityConfig {
     /// Whether the in-sandbox daemon emits spans/events/samples. Default on.
     pub enabled: bool,
@@ -25,6 +29,7 @@ pub struct ObservabilityConfig {
     pub max_line_bytes: usize,
     pub sampling: SamplingConfig,
     pub views: ViewsConfig,
+    pub diagnostics: DiagnosticsConfig,
     /// True only when the compatibility `max_file_bytes` key supplied the cap.
     pub used_legacy_max_file_bytes: bool,
 }
@@ -37,6 +42,7 @@ impl Default for ObservabilityConfig {
             max_line_bytes: default_max_line_bytes(),
             sampling: SamplingConfig::default(),
             views: ViewsConfig::default(),
+            diagnostics: DiagnosticsConfig::default(),
             used_legacy_max_file_bytes: false,
         }
     }
@@ -51,6 +57,7 @@ struct RawObservabilityConfig {
     max_line_bytes: usize,
     sampling: SamplingConfig,
     views: ViewsConfig,
+    diagnostics: DiagnosticsConfig,
 }
 
 impl Default for RawObservabilityConfig {
@@ -62,6 +69,7 @@ impl Default for RawObservabilityConfig {
             max_line_bytes: default_max_line_bytes(),
             sampling: SamplingConfig::default(),
             views: ViewsConfig::default(),
+            diagnostics: DiagnosticsConfig::default(),
         }
     }
 }
@@ -89,6 +97,7 @@ impl<'de> Deserialize<'de> for ObservabilityConfig {
             max_line_bytes: raw.max_line_bytes,
             sampling: raw.sampling,
             views: raw.views,
+            diagnostics: raw.diagnostics,
             used_legacy_max_file_bytes,
         })
     }
@@ -149,7 +158,69 @@ impl ObservabilityConfig {
                 "must not exceed layer_delta_max_limit",
             ));
         }
+        require_f64_gt(
+            self.diagnostics.cpu_threshold_percent,
+            0.0,
+            "observability.diagnostics.cpu_threshold_percent",
+        )?;
+        if self.diagnostics.cpu_threshold_percent > 10_000.0 {
+            return Err(ConfigFieldError::new(
+                "observability.diagnostics.cpu_threshold_percent",
+                "must not exceed 10000",
+            ));
+        }
+        require_u64_at_least(
+            self.diagnostics.anonymous_memory_threshold_bytes,
+            1,
+            "observability.diagnostics.anonymous_memory_threshold_bytes",
+        )?;
+        require_u64_at_least(
+            self.diagnostics.sustained_window_ms,
+            1,
+            "observability.diagnostics.sustained_window_ms",
+        )?;
+        require_u64_at_least(
+            self.diagnostics.cooldown_ms,
+            1,
+            "observability.diagnostics.cooldown_ms",
+        )?;
+        require_usize_at_least(
+            self.diagnostics.max_artifact_bytes,
+            MIN_DIAGNOSTIC_ARTIFACT_BYTES,
+            "observability.diagnostics.max_artifact_bytes",
+        )?;
+        if self.diagnostics.max_artifact_bytes > MAX_DIAGNOSTIC_ARTIFACT_BYTES {
+            return Err(ConfigFieldError::new(
+                "observability.diagnostics.max_artifact_bytes",
+                "must not exceed 1048576",
+            ));
+        }
         Ok(())
+    }
+}
+
+/// Thresholds for request-driven daemon diagnostic capture.
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct DiagnosticsConfig {
+    pub enabled: bool,
+    pub cpu_threshold_percent: f64,
+    pub anonymous_memory_threshold_bytes: u64,
+    pub sustained_window_ms: u64,
+    pub cooldown_ms: u64,
+    pub max_artifact_bytes: usize,
+}
+
+impl Default for DiagnosticsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            cpu_threshold_percent: 2.0,
+            anonymous_memory_threshold_bytes: 16 * 1024 * 1024,
+            sustained_window_ms: 30_000,
+            cooldown_ms: 300_000,
+            max_artifact_bytes: MAX_DIAGNOSTIC_ARTIFACT_BYTES,
+        }
     }
 }
 

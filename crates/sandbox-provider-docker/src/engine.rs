@@ -21,6 +21,7 @@ use bytes::Bytes;
 use futures_util::StreamExt as _;
 
 use sandbox_config::configs::manager::DockerRuntimeConfig;
+use sandbox_manager::SandboxResourceProfile;
 
 use crate::labels;
 
@@ -57,8 +58,10 @@ pub(crate) struct ContainerSpec {
     pub(crate) daemon_http_port: u16,
     pub(crate) privileged: bool,
     pub(crate) platform: Option<String>,
-    pub(crate) memory_bytes: Option<i64>,
-    pub(crate) nano_cpus: Option<i64>,
+    pub(crate) memory_high_bytes: i64,
+    pub(crate) memory_max_bytes: i64,
+    pub(crate) nano_cpus: i64,
+    pub(crate) pids_max: i64,
 }
 
 pub(crate) struct VolumeSpec {
@@ -97,6 +100,7 @@ pub(crate) struct RecoveredContainer {
     pub(crate) auth_token: String,
     pub(crate) published_port: u16,
     pub(crate) published_http_port: u16,
+    pub(crate) resource_profile: Option<SandboxResourceProfile>,
 }
 
 pub(crate) struct DockerEngine {
@@ -193,8 +197,10 @@ impl DockerEngine {
                 security_opt: deprivileged_security_opt(spec.privileged),
                 cgroupns_mode: Some(HostConfigCgroupnsModeEnum::PRIVATE),
                 init: Some(true),
-                memory: spec.memory_bytes,
-                nano_cpus: spec.nano_cpus,
+                memory_reservation: Some(spec.memory_high_bytes),
+                memory: Some(spec.memory_max_bytes),
+                nano_cpus: Some(spec.nano_cpus),
+                pids_limit: Some(spec.pids_max),
                 ..Default::default()
             };
             let config = Config {
@@ -661,6 +667,7 @@ fn recovered_from_summary(
         .get(labels::SHARED_BASE_READONLY)
         .and_then(|value| value.parse::<bool>().ok());
     let auth_token = labels.get(labels::AUTH_TOKEN)?.clone();
+    let resource_profile = recovered_resource_profile(labels);
     let ports = summary.ports.as_ref()?;
     let published_port = published_summary_port(ports, daemon_port)?;
     let published_http_port = published_summary_port(ports, daemon_http_port)?;
@@ -674,6 +681,44 @@ fn recovered_from_summary(
         auth_token,
         published_port,
         published_http_port,
+        resource_profile,
+    })
+}
+
+fn recovered_resource_profile(labels: &HashMap<String, String>) -> Option<SandboxResourceProfile> {
+    Some(SandboxResourceProfile {
+        name: labels.get(labels::RESOURCE_PROFILE)?.clone(),
+        nano_cpus: labels.get(labels::RESOURCE_NANO_CPUS)?.parse().ok()?,
+        memory_high_bytes: labels
+            .get(labels::RESOURCE_MEMORY_HIGH_BYTES)?
+            .parse()
+            .ok()?,
+        memory_max_bytes: labels
+            .get(labels::RESOURCE_MEMORY_MAX_BYTES)?
+            .parse()
+            .ok()?,
+        pids_max: labels.get(labels::RESOURCE_PIDS_MAX)?.parse().ok()?,
+        workload_memory_high_bytes: labels
+            .get(labels::RESOURCE_WORKLOAD_MEMORY_HIGH_BYTES)?
+            .parse()
+            .ok()?,
+        workload_memory_max_bytes: labels
+            .get(labels::RESOURCE_WORKLOAD_MEMORY_MAX_BYTES)?
+            .parse()
+            .ok()?,
+        workload_pids_max: labels
+            .get(labels::RESOURCE_WORKLOAD_PIDS_MAX)?
+            .parse()
+            .ok()?,
+        control_plane_pids_reserve: labels
+            .get(labels::RESOURCE_CONTROL_PLANE_PIDS_RESERVE)?
+            .parse()
+            .ok()?,
+        daemon_runtime_profile: labels.get(labels::RESOURCE_DAEMON_RUNTIME_PROFILE)?.clone(),
+        separate_workload_cgroup: labels
+            .get(labels::RESOURCE_SEPARATE_WORKLOAD_CGROUP)?
+            .parse()
+            .ok()?,
     })
 }
 
@@ -765,5 +810,82 @@ fn server_status(error: &bollard::errors::Error) -> Option<u16> {
     match error {
         bollard::errors::Error::DockerResponseServerError { status_code, .. } => Some(*status_code),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recovery_reads_the_persisted_profile_instead_of_current_config() {
+        let mut profile_labels = HashMap::from([
+            (labels::SANDBOX_ID.to_owned(), "eos-recovered".to_owned()),
+            (
+                labels::HOST_WORKSPACE_ROOT.to_owned(),
+                "/host/workspace".to_owned(),
+            ),
+            (labels::AUTH_TOKEN.to_owned(), "token".to_owned()),
+            (labels::RESOURCE_PROFILE.to_owned(), "small-test".to_owned()),
+            (
+                labels::RESOURCE_NANO_CPUS.to_owned(),
+                "500000000".to_owned(),
+            ),
+            (
+                labels::RESOURCE_MEMORY_HIGH_BYTES.to_owned(),
+                "67108864".to_owned(),
+            ),
+            (
+                labels::RESOURCE_MEMORY_MAX_BYTES.to_owned(),
+                "100663296".to_owned(),
+            ),
+            (labels::RESOURCE_PIDS_MAX.to_owned(), "64".to_owned()),
+            (
+                labels::RESOURCE_WORKLOAD_MEMORY_HIGH_BYTES.to_owned(),
+                "67108864".to_owned(),
+            ),
+            (
+                labels::RESOURCE_WORKLOAD_MEMORY_MAX_BYTES.to_owned(),
+                "67108864".to_owned(),
+            ),
+            (
+                labels::RESOURCE_WORKLOAD_PIDS_MAX.to_owned(),
+                "48".to_owned(),
+            ),
+            (
+                labels::RESOURCE_CONTROL_PLANE_PIDS_RESERVE.to_owned(),
+                "16".to_owned(),
+            ),
+            (
+                labels::RESOURCE_DAEMON_RUNTIME_PROFILE.to_owned(),
+                "standard".to_owned(),
+            ),
+            (
+                labels::RESOURCE_SEPARATE_WORKLOAD_CGROUP.to_owned(),
+                "true".to_owned(),
+            ),
+        ]);
+        let summary = ContainerSummary {
+            labels: Some(std::mem::take(&mut profile_labels)),
+            ports: Some(vec![
+                bollard::models::Port {
+                    private_port: 7000,
+                    public_port: Some(17_000),
+                    ..Default::default()
+                },
+                bollard::models::Port {
+                    private_port: 7001,
+                    public_port: Some(17_001),
+                    ..Default::default()
+                },
+            ]),
+            ..Default::default()
+        };
+
+        let recovered = recovered_from_summary(&summary, 7000, 7001).expect("recoverable");
+        let profile = recovered.resource_profile.expect("persisted profile");
+        assert_eq!(profile.name, "small-test");
+        assert_eq!(profile.nano_cpus, 500_000_000);
+        assert_eq!(profile.workload_pids_max, 48);
     }
 }

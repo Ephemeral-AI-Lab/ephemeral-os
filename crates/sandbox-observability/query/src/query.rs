@@ -47,6 +47,17 @@ pub(crate) fn cgroup(
     }))
 }
 
+pub(crate) fn topology(
+    input: &dyn ObservabilityInput,
+    _request: &OperationRequest,
+) -> OperationResponse {
+    OperationResponse::ok(json!({
+        "view": "topology",
+        "scope": "sandbox",
+        "topology": input.cgroup_topology(),
+    }))
+}
+
 pub(crate) fn events(
     input: &dyn ObservabilityInput,
     request: &OperationRequest,

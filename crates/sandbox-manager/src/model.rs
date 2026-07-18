@@ -68,6 +68,8 @@ pub struct SandboxRecord {
     pub daemon: Option<SandboxDaemonEndpoint>,
     pub daemon_http: Option<SandboxHttpEndpoint>,
     pub shared_base: Option<SharedBaseMount>,
+    #[serde(default)]
+    pub resource_profile: Option<SandboxResourceProfile>,
 }
 
 impl SandboxRecord {
@@ -81,8 +83,28 @@ impl SandboxRecord {
             daemon: None,
             daemon_http: None,
             shared_base: None,
+            resource_profile: None,
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SandboxResourceProfile {
+    pub name: String,
+    pub nano_cpus: i64,
+    pub memory_high_bytes: i64,
+    pub memory_max_bytes: i64,
+    pub pids_max: i64,
+    #[serde(default)]
+    pub workload_memory_high_bytes: i64,
+    #[serde(default)]
+    pub workload_memory_max_bytes: i64,
+    #[serde(default)]
+    pub workload_pids_max: i64,
+    #[serde(default)]
+    pub control_plane_pids_reserve: i64,
+    pub daemon_runtime_profile: String,
+    pub separate_workload_cgroup: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -55,6 +55,8 @@ pub mod names {
     pub const COMMAND_EXEC: &str = "command.exec";
     /// Workspace session creation span.
     pub const WORKSPACE_SESSION_CREATE: &str = "workspace_session.create";
+    /// Explicit workspace session publish-and-close span.
+    pub const WORKSPACE_SESSION_PUBLISH: &str = "workspace_session.publish";
     /// Workspace session change-capture span (finalize tail).
     pub const WORKSPACE_SESSION_CAPTURE_CHANGES: &str = "workspace_session.capture_changes";
     /// Workspace session teardown span (finalize tail).

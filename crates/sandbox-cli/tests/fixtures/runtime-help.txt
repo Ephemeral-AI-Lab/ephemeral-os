@@ -40,10 +40,13 @@ Shell security
   Shell-security capability.
 
 Workspace session
-  Create and destroy explicit workspace sessions.
+  Workspace-session lifecycle capability.
 
   create_workspace_session
     Create an explicit workspace session.
+
+  publish_workspace_session
+    Publish an explicit workspace session and close it.
 
   destroy_workspace_session
     Destroy an explicit workspace session.

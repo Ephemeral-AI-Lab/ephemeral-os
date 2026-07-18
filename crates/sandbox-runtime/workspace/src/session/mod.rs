@@ -6,6 +6,8 @@
 pub mod manager;
 pub mod state;
 
+#[doc(hidden)]
+pub use crate::namespace::holder::HolderRegistration;
 pub(crate) use manager::validate_workspace_root;
 pub use manager::{
     ExitOutcome, ResourceCaps, Rfc1918Egress, WorkspaceManager, WorkspaceManagerError,

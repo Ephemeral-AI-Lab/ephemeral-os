@@ -30,6 +30,7 @@ pub struct WorkspaceSnapshot {
     pub workspace_id: String,
     pub network_profile: String,
     pub finalize_policy: String,
+    pub finalization_state: String,
     pub namespace_fd_count: Option<usize>,
     pub base_root_hash: Option<String>,
     pub layer_count: Option<usize>,

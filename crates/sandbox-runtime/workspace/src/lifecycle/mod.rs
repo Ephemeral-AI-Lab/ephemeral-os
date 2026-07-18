@@ -1,5 +1,8 @@
 mod create;
-mod destroy;
+pub(crate) mod destroy;
+#[cfg(test)]
+#[path = "destroy_tests.rs"]
+mod destroy_tests;
 pub(crate) mod leases;
 mod persistence;
 pub(crate) mod remount;

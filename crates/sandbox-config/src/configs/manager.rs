@@ -12,6 +12,7 @@ use crate::configs::validate::{
     require_absolute, require_f64_gt, require_non_empty, require_u64_at_least,
     require_usize_at_least, ConfigFieldError,
 };
+use crate::configs::{daemon::DaemonConfig, runtime::RuntimeConfig};
 
 /// Host-side caps for the `export_changes` apply path (`manager.export`),
 /// the sole tuning path since the env side channels retired; the gateway
@@ -141,6 +142,134 @@ pub const DEFAULT_DAEMON_PORT: u16 = 7000;
 pub const DEFAULT_DAEMON_HTTP_PORT: u16 = 7001;
 pub const DEFAULT_READINESS_TIMEOUT_MS: u64 = 60_000;
 pub const DEFAULT_GATEWAY_INSTANCE_ID: &str = "eos-gateway";
+pub const STANDARD_RESOURCE_PROFILE: &str = "standard";
+pub const BUILD_HEAVY_RESOURCE_PROFILE: &str = "build-heavy";
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DockerResourceProfile {
+    pub nano_cpus: i64,
+    pub memory_high_bytes: i64,
+    pub memory_max_bytes: i64,
+    pub pids_max: i64,
+    pub daemon_runtime_profile: String,
+    pub separate_workload_cgroup: bool,
+}
+
+impl DockerResourceProfile {
+    #[must_use]
+    pub fn workload_memory_max_bytes(&self) -> i64 {
+        self.memory_high_bytes
+    }
+
+    #[must_use]
+    pub fn control_plane_pids_reserve(&self) -> i64 {
+        let profile_reserve = match self.daemon_runtime_profile.as_str() {
+            BUILD_HEAVY_RESOURCE_PROFILE => 64,
+            _ => 32,
+        };
+        profile_reserve.min((self.pids_max / 8).max(8))
+    }
+
+    #[must_use]
+    pub fn workload_pids_max(&self) -> i64 {
+        self.pids_max
+            .saturating_sub(self.control_plane_pids_reserve())
+    }
+
+    fn validate(&self, name: &str) -> Result<(), ConfigFieldError> {
+        const FIELD: &str = "manager.docker.resource_profiles";
+        if self.nano_cpus <= 0 {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!("profile `{name}` nano_cpus must be greater than zero"),
+            ));
+        }
+        if self.memory_high_bytes <= 0 {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!("profile `{name}` memory_high_bytes must be greater than zero"),
+            ));
+        }
+        if self.memory_max_bytes <= 0 {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!("profile `{name}` memory_max_bytes must be greater than zero"),
+            ));
+        }
+        if self.memory_high_bytes > self.memory_max_bytes {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!("profile `{name}` memory_high_bytes must not exceed memory_max_bytes"),
+            ));
+        }
+        if self.pids_max <= 0 {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!("profile `{name}` pids_max must be greater than zero"),
+            ));
+        }
+        if self.separate_workload_cgroup && self.memory_high_bytes >= self.memory_max_bytes {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!(
+                    "profile `{name}` memory_high_bytes must be below memory_max_bytes when workload separation is enabled"
+                ),
+            ));
+        }
+        if !matches!(
+            self.daemon_runtime_profile.as_str(),
+            STANDARD_RESOURCE_PROFILE | BUILD_HEAVY_RESOURCE_PROFILE
+        ) {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!(
+                    "profile `{name}` daemon_runtime_profile must be `standard` or `build-heavy`"
+                ),
+            ));
+        }
+        if self.separate_workload_cgroup && self.workload_pids_max() <= 0 {
+            return Err(ConfigFieldError::new(
+                FIELD,
+                format!(
+                    "profile `{name}` pids_max must leave a positive workload allowance after the control-plane reserve"
+                ),
+            ));
+        }
+        Ok(())
+    }
+}
+
+fn default_resource_profile_name() -> String {
+    STANDARD_RESOURCE_PROFILE.to_owned()
+}
+
+fn default_resource_profiles() -> BTreeMap<String, DockerResourceProfile> {
+    BTreeMap::from([
+        (
+            STANDARD_RESOURCE_PROFILE.to_owned(),
+            DockerResourceProfile {
+                nano_cpus: 1_000_000_000,
+                memory_high_bytes: 384 * 1024 * 1024,
+                memory_max_bytes: 512 * 1024 * 1024,
+                pids_max: 256,
+                daemon_runtime_profile: STANDARD_RESOURCE_PROFILE.to_owned(),
+                separate_workload_cgroup: true,
+            },
+        ),
+        (
+            BUILD_HEAVY_RESOURCE_PROFILE.to_owned(),
+            DockerResourceProfile {
+                nano_cpus: 4_000_000_000,
+                memory_high_bytes: 3 * 1024 * 1024 * 1024,
+                memory_max_bytes: 4 * 1024 * 1024 * 1024,
+                pids_max: 1024,
+                daemon_runtime_profile: BUILD_HEAVY_RESOURCE_PROFILE.to_owned(),
+                separate_workload_cgroup: true,
+            },
+        ),
+    ])
+}
 
 /// Root `manager` section. Holds one backend sub-section; only `docker` exists
 /// in v1, and it stays optional so the gateway's default `none` backend needs no
@@ -237,9 +366,16 @@ pub struct DockerRuntimeConfig {
     pub port_publish_attempts: u32,
     /// Delay between port-publish inspect retries.
     pub port_publish_retry_delay_ms: u64,
-    /// Optional per-container memory cap in bytes.
+    /// Name of the CPU, memory, PID, and daemon-runtime profile applied to
+    /// every sandbox created by this manager instance.
+    pub resource_profile: String,
+    /// Named, validated resource profiles available to this manager instance.
+    pub resource_profiles: BTreeMap<String, DockerResourceProfile>,
+    /// Legacy optional per-container memory cap in bytes. New deployments use
+    /// the selected named resource profile.
     pub memory_bytes: Option<i64>,
-    /// Optional per-container CPU cap in nano-CPUs.
+    /// Legacy optional per-container CPU cap in nano-CPUs. New deployments use
+    /// the selected named resource profile.
     pub nano_cpus: Option<i64>,
     /// Environment variables injected into every sandbox container, as a
     /// `name -> value` map. The Docker CLI injects proxy settings from
@@ -274,6 +410,8 @@ impl Default for DockerRuntimeConfig {
             // merely because its published port has not appeared in 2 s.
             port_publish_attempts: 200,
             port_publish_retry_delay_ms: 50,
+            resource_profile: default_resource_profile_name(),
+            resource_profiles: default_resource_profiles(),
             memory_bytes: None,
             nano_cpus: None,
             container_env: BTreeMap::new(),
@@ -282,6 +420,85 @@ impl Default for DockerRuntimeConfig {
 }
 
 impl DockerRuntimeConfig {
+    #[must_use]
+    pub fn selected_resource_profile(&self) -> Option<&DockerResourceProfile> {
+        self.resource_profiles.get(&self.resource_profile)
+    }
+
+    /// Validate that the daemon configuration uploaded for the selected
+    /// resource profile has its exact worker count and stays within the
+    /// profile's blocking, keepalive, connection, and command ceilings.
+    ///
+    /// This keeps `daemon_runtime_profile` from becoming descriptive metadata:
+    /// selecting a profile with a mismatched daemon would otherwise defeat its
+    /// worker, blocking-pool, connection, or command-admission budget.
+    pub fn validate_daemon_runtime_profile(
+        &self,
+        daemon: &DaemonConfig,
+        runtime: &RuntimeConfig,
+    ) -> Result<(), ConfigFieldError> {
+        let profile = self.selected_resource_profile().ok_or_else(|| {
+            ConfigFieldError::new(
+                "manager.docker.resource_profile",
+                format!("unknown profile `{}`", self.resource_profile),
+            )
+        })?;
+        let expected = match profile.daemon_runtime_profile.as_str() {
+            STANDARD_RESOURCE_PROFILE => DaemonRuntimeProfileLimits {
+                worker_threads: 2,
+                max_blocking_threads: 8,
+                blocking_thread_keep_alive_s: 5.0,
+                max_concurrent_connections: 64,
+                max_active_commands: 32,
+            },
+            BUILD_HEAVY_RESOURCE_PROFILE => DaemonRuntimeProfileLimits {
+                worker_threads: 4,
+                max_blocking_threads: 16,
+                blocking_thread_keep_alive_s: 5.0,
+                max_concurrent_connections: 128,
+                max_active_commands: 64,
+            },
+            unknown => {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.resource_profiles",
+                    format!("unknown daemon runtime profile `{unknown}`"),
+                ));
+            }
+        };
+        require_profile_value(
+            daemon.server.worker_threads,
+            expected.worker_threads,
+            "daemon.server.worker_threads",
+            &profile.daemon_runtime_profile,
+        )?;
+        require_profile_at_most(
+            daemon.server.max_blocking_threads,
+            expected.max_blocking_threads,
+            "daemon.server.max_blocking_threads",
+            &profile.daemon_runtime_profile,
+        )?;
+        if daemon.server.blocking_thread_keep_alive_s > expected.blocking_thread_keep_alive_s {
+            return Err(profile_ceiling_error(
+                "daemon.server.blocking_thread_keep_alive_s",
+                daemon.server.blocking_thread_keep_alive_s,
+                expected.blocking_thread_keep_alive_s,
+                &profile.daemon_runtime_profile,
+            ));
+        }
+        require_profile_at_most(
+            daemon.server.max_concurrent_connections,
+            expected.max_concurrent_connections,
+            "daemon.server.max_concurrent_connections",
+            &profile.daemon_runtime_profile,
+        )?;
+        require_profile_at_most(
+            runtime.command.max_active,
+            expected.max_active_commands,
+            "runtime.command.max_active",
+            &profile.daemon_runtime_profile,
+        )
+    }
+
     /// Validate semantic constraints that YAML deserialization cannot express.
     ///
     /// # Errors
@@ -343,6 +560,51 @@ impl DockerRuntimeConfig {
             1,
             "manager.docker.port_publish_retry_delay_ms",
         )?;
+        require_non_empty(&self.resource_profile, "manager.docker.resource_profile")?;
+        if self.resource_profiles.is_empty() {
+            return Err(ConfigFieldError::new(
+                "manager.docker.resource_profiles",
+                "must contain at least one named profile",
+            ));
+        }
+        for (name, profile) in &self.resource_profiles {
+            require_non_empty(name, "manager.docker.resource_profiles")?;
+            profile.validate(name)?;
+        }
+        if self.selected_resource_profile().is_none() {
+            return Err(ConfigFieldError::new(
+                "manager.docker.resource_profile",
+                format!("unknown profile `{}`", self.resource_profile),
+            ));
+        }
+        let selected = self
+            .selected_resource_profile()
+            .expect("selected profile existence checked above");
+        if let Some(nano_cpus) = self.nano_cpus {
+            if nano_cpus <= 0 {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.nano_cpus",
+                    "legacy override must be greater than zero",
+                ));
+            }
+        }
+        if let Some(memory_bytes) = self.memory_bytes {
+            if memory_bytes <= 0 {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.memory_bytes",
+                    "legacy override must be greater than zero",
+                ));
+            }
+            if selected.separate_workload_cgroup && memory_bytes <= selected.memory_high_bytes {
+                return Err(ConfigFieldError::new(
+                    "manager.docker.memory_bytes",
+                    format!(
+                        "legacy override must exceed selected profile memory_high_bytes ({}) to preserve control-plane headroom",
+                        selected.memory_high_bytes
+                    ),
+                ));
+            }
+        }
         for name in self.container_env.keys() {
             require_non_empty(name, "manager.docker.container_env")?;
             if name.contains('=') {
@@ -354,4 +616,69 @@ impl DockerRuntimeConfig {
         }
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DaemonRuntimeProfileLimits {
+    worker_threads: usize,
+    max_blocking_threads: usize,
+    blocking_thread_keep_alive_s: f64,
+    max_concurrent_connections: usize,
+    max_active_commands: usize,
+}
+
+fn require_profile_value<T>(
+    actual: T,
+    expected: T,
+    field: &'static str,
+    profile: &str,
+) -> Result<(), ConfigFieldError>
+where
+    T: Copy + PartialEq + std::fmt::Display,
+{
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(profile_binding_error(field, actual, expected, profile))
+    }
+}
+
+fn require_profile_at_most<T>(
+    actual: T,
+    ceiling: T,
+    field: &'static str,
+    profile: &str,
+) -> Result<(), ConfigFieldError>
+where
+    T: Copy + PartialOrd + std::fmt::Display,
+{
+    if actual <= ceiling {
+        Ok(())
+    } else {
+        Err(profile_ceiling_error(field, actual, ceiling, profile))
+    }
+}
+
+fn profile_binding_error(
+    field: &'static str,
+    actual: impl std::fmt::Display,
+    expected: impl std::fmt::Display,
+    profile: &str,
+) -> ConfigFieldError {
+    ConfigFieldError::new(
+        field,
+        format!("must be {expected} for daemon runtime profile `{profile}` (got {actual})"),
+    )
+}
+
+fn profile_ceiling_error(
+    field: &'static str,
+    actual: impl std::fmt::Display,
+    ceiling: impl std::fmt::Display,
+    profile: &str,
+) -> ConfigFieldError {
+    ConfigFieldError::new(
+        field,
+        format!("must be at most {ceiling} for daemon runtime profile `{profile}` (got {actual})"),
+    )
 }

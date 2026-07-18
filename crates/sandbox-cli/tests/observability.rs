@@ -28,7 +28,15 @@ async fn help_lists_exact_observability_catalog() {
     assert_eq!(stdout, include_str!("fixtures/observability-help.txt"));
     assert_eq!(
         help_operation_names(&stdout),
-        ["snapshot", "trace", "events", "cgroup", "layerstack"]
+        [
+            "snapshot",
+            "trace",
+            "events",
+            "resources",
+            "topology",
+            "cgroup",
+            "layerstack"
+        ]
     );
     assert!(stdout.contains("Use:\n  sandbox-observability-cli OPERATION"));
 }
@@ -72,11 +80,34 @@ async fn aggregate_snapshot_uses_system_scope() {
 }
 
 #[tokio::test]
+async fn fleet_resources_use_one_system_scope_request() {
+    let response = json!({"view": "resources", "scope": "fleet", "sandboxes": {}});
+    let (addr, received) = fake_gateway(response.clone()).await;
+    let (code, stdout, stderr) = run(&[
+        "sandbox-observability-cli",
+        "--gateway-socket",
+        &addr,
+        "resources",
+    ])
+    .await;
+
+    assert_eq!(code, 0);
+    assert!(stderr.is_empty());
+    assert_eq!(parse_json_line(&stdout), response);
+    let request = received.await.expect("fake gateway task");
+    assert_eq!(request["op"], "resources");
+    assert_eq!(request["scope"], json!({"kind": "system"}));
+    assert_eq!(request["args"], json!({"window_ms": 60000}));
+}
+
+#[tokio::test]
 async fn scoped_operations_use_concrete_names_and_catalog_defaults() {
     let cases = [
         ("snapshot", json!({})),
         ("trace", json!({"trace_id": "last"})),
         ("events", json!({})),
+        ("resources", json!({"window_ms": 60000})),
+        ("topology", json!({})),
         ("cgroup", json!({"scope": "sandbox", "window_ms": 60000})),
         ("layerstack", json!({"window_ms": 60000})),
     ];
@@ -112,7 +143,7 @@ async fn scoped_operations_use_concrete_names_and_catalog_defaults() {
 
 #[tokio::test]
 async fn non_snapshot_views_require_sandbox_id_before_gateway_io() {
-    for view in ["trace", "events", "cgroup", "layerstack"] {
+    for view in ["trace", "events", "topology", "cgroup", "layerstack"] {
         let listener = TcpListener::bind("127.0.0.1:0")
             .await
             .expect("bind unreachable gateway");

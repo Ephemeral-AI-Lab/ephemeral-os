@@ -1,9 +1,11 @@
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Barrier};
 
 use crate::stack::publish::model::{
     ContentFingerprint, LayerProtectedDrop, LayerProtectedDropReason, PublishBase,
-    PublishBaseRevision, PublishRejectReason, PublishValidatedChangesRequest,
+    PublishBaseRevision, PublishRejectReason, PublishValidatedChangesRequest, SourceConflict,
 };
 
 use super::*;
@@ -131,6 +133,198 @@ fn publishes_empty_directory_as_source_change(
 }
 
 #[test]
+fn parallel_disjoint_publishes_share_new_directory(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    const SESSION_COUNT: usize = 6;
+
+    let fixture = PublishFixture::new("parallel-disjoint-new-directory")?;
+    let base = fixture.build_base()?;
+    let barrier = Arc::new(Barrier::new(SESSION_COUNT));
+    let mut threads = Vec::with_capacity(SESSION_COUNT);
+
+    for index in 0..SESSION_COUNT {
+        let barrier = Arc::clone(&barrier);
+        let root = fixture.root.clone();
+        let base = base.clone();
+        threads.push(std::thread::spawn(move || {
+            let path = format!("parallel/session-{index}.txt");
+            barrier.wait();
+            LayerStack::open(root)?.publish_validated_changes(request(
+                base,
+                vec![
+                    LayerChange::Directory {
+                        path: lp("parallel"),
+                    },
+                    LayerChange::Write {
+                        path: lp(&path),
+                        content: format!("session-{index}\n").into_bytes(),
+                    },
+                ],
+            ))
+        }));
+    }
+
+    for thread in threads {
+        let result = thread.join().expect("publish thread does not panic")?;
+        assert!(!result.no_op);
+    }
+
+    let active = fixture.stack()?.read_active_manifest()?;
+    assert_eq!(active.version, base.version + SESSION_COUNT as i64);
+    assert_eq!(active.layers.len(), base.layers.len() + SESSION_COUNT);
+    for index in 0..SESSION_COUNT {
+        assert_eq!(
+            read_text(
+                &fixture.root,
+                &active,
+                &format!("parallel/session-{index}.txt")
+            )?,
+            Some(format!("session-{index}\n"))
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn stale_delete_conflicts_with_concurrently_created_directory(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("stale-delete-new-directory")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_validated_changes(request(
+        base.clone(),
+        vec![
+            LayerChange::Directory {
+                path: lp("parallel"),
+            },
+            LayerChange::Write {
+                path: lp("parallel/kept.txt"),
+                content: b"kept\n".to_vec(),
+            },
+        ],
+    ))?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Delete {
+                path: lp("parallel"),
+            }],
+        ))
+        .expect_err("stale delete must not erase a concurrent directory");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && matches!(
+                    rejection.source_conflict,
+                    Some(SourceConflict {
+                        expected: ContentFingerprint::Absent,
+                        actual: ContentFingerprint::Directory,
+                        ..
+                    })
+                )
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced.manifest);
+    assert_eq!(
+        read_text(&fixture.root, &advanced.manifest, "parallel/kept.txt")?,
+        Some("kept\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn effective_delete_does_not_inherit_duplicate_directory_compatibility(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("duplicate-directory-then-delete")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_validated_changes(request(
+        base.clone(),
+        vec![
+            LayerChange::Directory {
+                path: lp("parallel"),
+            },
+            LayerChange::Write {
+                path: lp("parallel/kept.txt"),
+                content: b"kept\n".to_vec(),
+            },
+        ],
+    ))?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![
+                LayerChange::Directory {
+                    path: lp("parallel"),
+                },
+                LayerChange::Delete {
+                    path: lp("parallel"),
+                },
+            ],
+        ))
+        .expect_err("effective delete must not use an earlier directory exception");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced.manifest);
+    assert_eq!(
+        read_text(&fixture.root, &advanced.manifest, "parallel/kept.txt")?,
+        Some("kept\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn stale_directory_create_conflicts_with_concurrent_file(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("stale-directory-concurrent-file")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_validated_changes(request(
+        base.clone(),
+        vec![LayerChange::Write {
+            path: lp("parallel"),
+            content: b"file\n".to_vec(),
+        }],
+    ))?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Directory {
+                path: lp("parallel"),
+            }],
+        ))
+        .expect_err("directory creation must not replace a concurrent file");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && matches!(
+                    rejection.source_conflict,
+                    Some(SourceConflict {
+                        expected: ContentFingerprint::Absent,
+                        actual: ContentFingerprint::File { .. },
+                        ..
+                    })
+                )
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced.manifest);
+    assert_eq!(
+        read_text(&fixture.root, &advanced.manifest, "parallel")?,
+        Some("file\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
 fn directory_change_keeps_lower_descendants_visible(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let fixture = PublishFixture::new("directory-keeps-descendants")?;
@@ -147,6 +341,397 @@ fn directory_change_keeps_lower_descendants_visible(
         read_text(&fixture.root, &result.manifest, "abc/existing.txt")?,
         Some("existing\n".to_owned())
     );
+    Ok(())
+}
+
+#[test]
+fn stale_directory_delete_conflicts_with_active_only_child(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("stale-directory-delete-active-child")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/active-only.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Delete { path: lp("target") }],
+        ))
+        .expect_err("stale directory delete must reject an active-only child");
+
+    match error {
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict =>
+        {
+            let conflict = rejection
+                .source_conflict
+                .expect("source conflict is included");
+            assert_eq!(conflict.path, lp("target/active-only.txt"));
+            assert_eq!(conflict.expected, ContentFingerprint::Absent);
+            assert!(matches!(
+                conflict.actual,
+                ContentFingerprint::File {
+                    executable: Some(false),
+                    ..
+                }
+            ));
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    assert_eq!(
+        read_text(&fixture.root, &advanced, "target/base.txt")?,
+        Some("base\n".to_owned())
+    );
+    assert_eq!(
+        read_text(&fixture.root, &advanced, "target/active-only.txt")?,
+        Some("active\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn stale_opaque_dir_conflicts_with_active_only_empty_directory(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("stale-opaque-active-empty-directory")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Directory {
+        path: lp("target/active-empty"),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::OpaqueDir { path: lp("target") }],
+        ))
+        .expect_err("stale opaque directory must reject an active-only directory");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && matches!(
+                    rejection.source_conflict.as_ref(),
+                    Some(SourceConflict {
+                        path,
+                        expected: ContentFingerprint::Absent,
+                        actual: ContentFingerprint::Directory,
+                    }) if path == &lp("target/active-empty")
+                )
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    assert!(matches!(
+        MergedView::new(fixture.root.clone()).read_entry("target/active-empty", &advanced)?,
+        crate::stack::projection::MergedEntry::Directory
+    ));
+    Ok(())
+}
+
+#[test]
+fn stale_write_file_replacing_directory_conflicts_with_active_only_child(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("stale-write-file-replaces-directory")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let command_source = fixture.base.join("command-source.txt");
+    std::fs::write(&command_source, "replacement\n")?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/active-only.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::WriteFile {
+                path: lp("target"),
+                source_path: command_source,
+                size: "replacement\n".len() as u64,
+            }],
+        ))
+        .expect_err("replacing a stale directory must reject an active-only child");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && rejection.path.as_ref() == Some(&lp("target/active-only.txt"))
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    assert_eq!(
+        read_text(&fixture.root, &advanced, "target/active-only.txt")?,
+        Some("active\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn stale_symlink_replacing_directory_conflicts_with_active_only_child(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("stale-symlink-replaces-directory")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/active-only.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Symlink {
+                path: lp("target"),
+                source_path: "elsewhere".to_owned(),
+            }],
+        ))
+        .expect_err("symlinking over a stale directory must reject an active-only child");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && rejection.path.as_ref() == Some(&lp("target/active-only.txt"))
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    assert_eq!(
+        read_text(&fixture.root, &advanced, "target/active-only.txt")?,
+        Some("active\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn unrelated_concurrent_path_still_permits_directory_delete(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("directory-delete-unrelated-concurrency")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("unrelated.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let result = stack.publish_validated_changes(request(
+        base,
+        vec![LayerChange::Delete { path: lp("target") }],
+    ))?;
+
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "target/base.txt")?,
+        None
+    );
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "unrelated.txt")?,
+        Some("active\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn effective_directory_scaffolding_does_not_validate_descendants(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("effective-directory-scaffolding")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    stack.publish_layer(&[
+        LayerChange::Write {
+            path: lp("target/base.txt"),
+            content: b"active base\n".to_vec(),
+        },
+        LayerChange::Write {
+            path: lp("target/active-only.txt"),
+            content: b"active only\n".to_vec(),
+        },
+    ])?;
+
+    let result = stack.publish_validated_changes(request(
+        base,
+        vec![
+            LayerChange::OpaqueDir { path: lp("target") },
+            LayerChange::Directory { path: lp("target") },
+        ],
+    ))?;
+
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "target/base.txt")?,
+        Some("active base\n".to_owned())
+    );
+    assert_eq!(
+        read_text(&fixture.root, &result.manifest, "target/active-only.txt")?,
+        Some("active only\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn effective_opaque_dir_validates_descendants_after_directory_scaffolding(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("effective-opaque-after-directory")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/base.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![
+                LayerChange::Directory { path: lp("target") },
+                LayerChange::OpaqueDir { path: lp("target") },
+            ],
+        ))
+        .expect_err("effective opaque directory must validate descendants");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && rejection.path.as_ref() == Some(&lp("target/base.txt"))
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    Ok(())
+}
+
+#[test]
+fn obsolete_opaque_validation_does_not_hide_explicit_descendant_validation(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("explicit-descendant-after-obsolete-opaque")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    std::fs::write(fixture.workspace.join("target/base.txt"), "base\n")?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/base.txt"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![
+                LayerChange::OpaqueDir { path: lp("target") },
+                LayerChange::Directory { path: lp("target") },
+                LayerChange::Delete {
+                    path: lp("target/base.txt"),
+                },
+            ],
+        ))
+        .expect_err("explicit descendant validation must survive obsolete opaque expansion");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict
+                && rejection.path.as_ref() == Some(&lp("target/base.txt"))
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    assert_eq!(
+        read_text(&fixture.root, &advanced, "target/base.txt")?,
+        Some("active\n".to_owned())
+    );
+    Ok(())
+}
+
+#[test]
+fn stale_directory_delete_detects_descendant_mode_change(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("directory-delete-descendant-mode")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    let source = fixture.workspace.join("target/script.sh");
+    std::fs::write(&source, "same\n")?;
+    std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0o755))?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let advanced = stack.publish_layer(&[LayerChange::Write {
+        path: lp("target/script.sh"),
+        content: b"same\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Delete { path: lp("target") }],
+        ))
+        .expect_err("stale directory delete must detect descendant mode changes");
+
+    match error {
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict =>
+        {
+            let conflict = rejection
+                .source_conflict
+                .expect("source conflict is included");
+            assert_eq!(conflict.path, lp("target/script.sh"));
+            assert!(matches!(
+                conflict.expected,
+                ContentFingerprint::File {
+                    executable: Some(true),
+                    ..
+                }
+            ));
+            assert!(matches!(
+                conflict.actual,
+                ContentFingerprint::File {
+                    executable: Some(false),
+                    ..
+                }
+            ));
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
+    assert_eq!(stack.read_active_manifest()?, advanced);
+    Ok(())
+}
+
+#[test]
+fn structural_occ_expansion_limit_rejects_without_path_leak(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("structural-occ-limit")?;
+    std::fs::create_dir_all(fixture.workspace.join("target"))?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    let active_changes = (0..=4096)
+        .map(|index| LayerChange::Directory {
+            path: lp(&format!("target/{index:04}")),
+        })
+        .collect::<Vec<_>>();
+    let advanced = stack.publish_layer(&active_changes)?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Delete { path: lp("target") }],
+        ))
+        .expect_err("structural validation must fail closed at the expansion limit");
+
+    assert!(matches!(
+        error,
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::OpaqueDirExpansionLimit
+                && rejection.path.as_ref() == Some(&lp("target"))
+                && rejection.message.is_none()
+    ));
+    assert_eq!(stack.read_active_manifest()?, advanced);
     Ok(())
 }
 
@@ -527,16 +1112,72 @@ fn source_delete_conflicts_when_active_changed(
                 .expect("source conflict is included");
             assert!(matches!(
                 conflict.expected,
-                ContentFingerprint::File { ref digest, .. } if !digest.is_empty()
+                ContentFingerprint::File {
+                    ref digest,
+                    executable: Some(false),
+                } if !digest.is_empty()
             ));
             assert!(matches!(
                 conflict.actual,
-                ContentFingerprint::File { ref digest, .. } if !digest.is_empty()
+                ContentFingerprint::File {
+                    ref digest,
+                    executable: Some(false),
+                } if !digest.is_empty()
             ));
         }
         other => panic!("unexpected error: {other:?}"),
     }
     assert_eq!(fixture.stack()?.read_active_manifest()?, advanced);
+    Ok(())
+}
+
+#[test]
+fn source_conflict_fingerprints_report_executable_bits(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = PublishFixture::new("source-executable-conflict")?;
+    let source = fixture.workspace.join("script.sh");
+    std::fs::write(&source, "base\n")?;
+    std::fs::set_permissions(&source, std::fs::Permissions::from_mode(0o755))?;
+    let base = fixture.build_base()?;
+    let mut stack = fixture.stack()?;
+    stack.publish_layer(&[LayerChange::Write {
+        path: lp("script.sh"),
+        content: b"active\n".to_vec(),
+    }])?;
+
+    let error = stack
+        .publish_validated_changes(request(
+            base,
+            vec![LayerChange::Delete {
+                path: lp("script.sh"),
+            }],
+        ))
+        .expect_err("delete of a mode-changed source path rejects");
+
+    match error {
+        LayerStackError::PublishRejected(rejection)
+            if rejection.reason == PublishRejectReason::SourceConflict =>
+        {
+            let conflict = rejection
+                .source_conflict
+                .expect("source conflict is included");
+            assert!(matches!(
+                conflict.expected,
+                ContentFingerprint::File {
+                    executable: Some(true),
+                    ..
+                }
+            ));
+            assert!(matches!(
+                conflict.actual,
+                ContentFingerprint::File {
+                    executable: Some(false),
+                    ..
+                }
+            ));
+        }
+        other => panic!("unexpected error: {other:?}"),
+    }
     Ok(())
 }
 

@@ -3,6 +3,9 @@ mod service;
 
 pub use error::WorkspaceSessionError;
 pub use service::{
-    AdmittedCommand, CreateSessionRequest, FinalizeOutcome, FinalizePolicy, SessionExecutionToken,
-    SweptDisposition, SweptSession, TokenSlot, WorkspaceSessionHandler, WorkspaceSessionService,
+    AdmittedCommand, CreateSessionRequest, FinalizationState, FinalizeOutcome, FinalizePolicy,
+    HolderExitDispatcher, HolderExitDisposition, HolderExitOutcome, HolderLifecycleEvent,
+    HolderLifecycleEventKind, HolderLifecycleSnapshot, PublishFailureStage,
+    PublishWorkspaceSessionResult, SessionExecutionToken, SweptDisposition, SweptSession,
+    TokenSlot, WorkspaceSessionHandler, WorkspaceSessionPublishDetails, WorkspaceSessionService,
 };

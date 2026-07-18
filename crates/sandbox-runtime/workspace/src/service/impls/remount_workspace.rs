@@ -99,6 +99,9 @@ impl WorkspaceRuntimeService {
         if self.hooks().is_some() {
             return Ok(Vec::new());
         }
-        Ok(self.lock_state()?.manager.reap_persisted_handles())
+        self.lock_state()?
+            .manager
+            .reap_persisted_handles()
+            .map_err(workspace_error_from_manager_error)
     }
 }

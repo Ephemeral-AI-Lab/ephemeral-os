@@ -94,6 +94,21 @@ impl ResourceRingStore {
         }
     }
 
+    /// Read only the current committed sample. Fleet current-usage reads use
+    /// this path so their I/O stays constant per sandbox instead of scanning a
+    /// full 64-KiB history ring on every cadence.
+    #[must_use]
+    pub fn read_latest(&self, id: &SandboxId) -> ResourceRingRead {
+        let _guard = self.guard();
+        match self.read_latest_locked(id) {
+            Ok(read) => read,
+            Err(error) => ResourceRingRead {
+                samples: Vec::new(),
+                error: Some(error.to_string()),
+            },
+        }
+    }
+
     pub fn remove(&self, id: &SandboxId) -> std::io::Result<()> {
         let _guard = self.guard();
         match fs::remove_file(self.path(id)) {
@@ -198,6 +213,55 @@ impl ResourceRingStore {
             error: corrupt.map(|error| {
                 format!("resource ring contained a corrupt record and was recreated: {error}")
             }),
+        })
+    }
+
+    fn read_latest_locked(&self, id: &SandboxId) -> std::io::Result<ResourceRingRead> {
+        let path = self.path(id);
+        let file = match OpenOptions::new().read(true).open(&path) {
+            Ok(file) => file,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return Ok(ResourceRingRead {
+                    samples: Vec::new(),
+                    error: Some("resource ring is not available yet".to_owned()),
+                });
+            }
+            Err(error) => return Err(error),
+        };
+        let header = match read_header(&file) {
+            Ok(header) => header,
+            Err(error) => {
+                drop(file);
+                recreate(&path)?;
+                return Ok(ResourceRingRead {
+                    samples: Vec::new(),
+                    error: Some(format!(
+                        "resource ring was corrupt and was recreated: {error}"
+                    )),
+                });
+            }
+        };
+        if header.count == 0 {
+            return Ok(ResourceRingRead::default());
+        }
+
+        let index = (header.next + CAPACITY - 1) % CAPACITY;
+        let mut record = [0_u8; RESOURCE_RECORD_BYTES];
+        let offset = HEADER_BYTES as u64 + u64::from(index) * RESOURCE_RECORD_BYTES as u64;
+        read_exact_at(&file, &mut record, offset)?;
+        let Some(sample) = decode_record(&record) else {
+            drop(file);
+            recreate(&path)?;
+            return Ok(ResourceRingRead {
+                samples: Vec::new(),
+                error: Some(format!(
+                    "resource ring contained a corrupt current record and was recreated: record {index} checksum mismatch"
+                )),
+            });
+        };
+        Ok(ResourceRingRead {
+            samples: vec![sample],
+            error: None,
         })
     }
 

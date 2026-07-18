@@ -3,7 +3,10 @@ use std::path::PathBuf;
 
 use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 
-use crate::workspace_crate::{NetworkProfile, WorkspaceHandle, WorkspaceSessionId};
+use crate::layerstack::LayerStackRevision;
+use crate::workspace_crate::{
+    DestroyWorkspaceResult, NetworkProfile, WorkspaceHandle, WorkspaceSessionId,
+};
 
 /// What happens when a command completion empties the session's command
 /// ledger. Fixed at creation; sessions created through the CLI are always
@@ -48,13 +51,96 @@ pub struct WorkspaceSessionHandler {
     pub cgroup_path: Option<PathBuf>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PublishFailureStage {
+    Capture,
+    Publish,
+}
+
+impl PublishFailureStage {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Capture => "capture",
+            Self::Publish => "publish",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceSessionPublishDetails {
+    pub no_op: bool,
+    pub revision: LayerStackRevision,
+    pub route_summary: sandbox_runtime_layerstack::PublishRouteSummary,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishWorkspaceSessionResult {
+    pub workspace_session_id: WorkspaceSessionId,
+    pub publish: WorkspaceSessionPublishDetails,
+    pub evicted_upperdir_bytes: u64,
+}
+
 /// Lifecycle phase of a session's finalization. `FinalizeFailed` and a session
 /// stuck in `Finalizing` are destroyable through `guarded_destroy` only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum FinalizationState {
+pub enum FinalizationState {
     Active,
     Finalizing,
     FinalizeFailed,
+}
+
+/// The converged result for a holder-death cleanup transaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HolderExitDisposition {
+    Destroyed,
+    RecoveryRequired { artifact: PathBuf },
+    RetryableCleanupFailure { diagnostic: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HolderExitOutcome {
+    pub workspace_session_id: WorkspaceSessionId,
+    pub reason: String,
+    pub disposition: HolderExitDisposition,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HolderLifecycleEventKind {
+    ExitObserved,
+    CleanupAttempt,
+    CleanupFailure,
+    CleanupTerminal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HolderLifecycleEvent {
+    pub sequence: u64,
+    pub workspace_session_id: WorkspaceSessionId,
+    pub kind: HolderLifecycleEventKind,
+    pub detail: String,
+    pub cleanup_duration_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HolderLifecycleSnapshot {
+    pub holder_exit_total: u64,
+    pub cleanup_attempt_total: u64,
+    pub cleanup_failure_total: u64,
+    pub cleanup_terminal_total: u64,
+    pub dropped_event_total: u64,
+    pub events: Vec<HolderLifecycleEvent>,
+}
+
+impl FinalizationState {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Finalizing => "finalizing",
+            Self::FinalizeFailed => "finalize_failed",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +151,14 @@ pub(crate) struct WorkspaceSession {
     pub finalize_policy: FinalizePolicy,
     pub active_commands: BTreeSet<NamespaceExecutionId>,
     pub finalization_state: FinalizationState,
+    pub holder_exit_recorded: bool,
+    pub holder_cleanup_terminal: bool,
+    pub holder_cleanup_attempts: u8,
+    /// Per-resource destroy ledger. A later retry never invokes the raw
+    /// workspace teardown again after it has succeeded just because cgroup
+    /// cleanup remains pending.
+    pub workspace_destroy_result: Option<DestroyWorkspaceResult>,
+    pub cgroup_cleanup_complete: bool,
 }
 
 impl WorkspaceSession {
@@ -73,6 +167,7 @@ impl WorkspaceSession {
         cgroup_path: Option<PathBuf>,
         finalize_policy: FinalizePolicy,
     ) -> Self {
+        let cgroup_cleanup_complete = cgroup_path.is_none();
         Self {
             workspace_session_id: handle.id.clone(),
             handle,
@@ -80,6 +175,11 @@ impl WorkspaceSession {
             finalize_policy,
             active_commands: BTreeSet::new(),
             finalization_state: FinalizationState::Active,
+            holder_exit_recorded: false,
+            holder_cleanup_terminal: false,
+            holder_cleanup_attempts: 0,
+            workspace_destroy_result: None,
+            cgroup_cleanup_complete,
         }
     }
 

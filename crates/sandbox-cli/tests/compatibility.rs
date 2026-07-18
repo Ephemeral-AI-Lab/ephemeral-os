@@ -12,10 +12,20 @@ fn assert_phase_zero_operations_preserved(current: &Value, phase_zero: &Value) {
             phase_zero[catalog]["operation_execution_space"],
             "{catalog} execution space"
         );
-        assert_eq!(
-            current[catalog]["families"], phase_zero[catalog]["families"],
-            "{catalog} families"
-        );
+        let current_families = current[catalog]["families"]
+            .as_array()
+            .expect("current families");
+        for expected in phase_zero[catalog]["families"]
+            .as_array()
+            .expect("Phase 0 families")
+        {
+            let id = expected["id"].as_str().expect("family id");
+            let actual = current_families
+                .iter()
+                .find(|family| family["id"] == id)
+                .unwrap_or_else(|| panic!("missing Phase 0 family: {catalog}.{id}"));
+            assert_eq!(actual, expected, "{catalog}.{id} changed from Phase 0");
+        }
         let current_operations = current[catalog]["operations"]
             .as_array()
             .expect("current operations");

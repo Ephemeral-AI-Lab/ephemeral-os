@@ -245,9 +245,18 @@ fn expected_names(set: OperationSet) -> &'static [&'static str] {
             "file_edit",
             "file_blame",
             "create_workspace_session",
+            "publish_workspace_session",
             "destroy_workspace_session",
         ],
-        OperationSet::Observability => &["snapshot", "trace", "events", "cgroup", "layerstack"],
+        OperationSet::Observability => &[
+            "snapshot",
+            "trace",
+            "events",
+            "resources",
+            "topology",
+            "cgroup",
+            "layerstack",
+        ],
     }
 }
 
@@ -533,6 +542,15 @@ fn mcp_requests_match_the_shared_builder() {
         ),
         (
             OperationSet::Runtime,
+            "publish_workspace_session",
+            json!({
+                "sandbox_id": "sbox-runtime",
+                "workspace_session_id": "workspace-1",
+                "grace_s": 1.5
+            }),
+        ),
+        (
+            OperationSet::Runtime,
             "destroy_workspace_session",
             json!({"sandbox_id": "sbox-runtime", "workspace_session_id": "workspace-1"}),
         ),
@@ -550,6 +568,12 @@ fn mcp_requests_match_the_shared_builder() {
             OperationSet::Observability,
             "events",
             json!({"sandbox_id": "sbox-observe", "last_n": 10}),
+        ),
+        (OperationSet::Observability, "resources", json!({})),
+        (
+            OperationSet::Observability,
+            "topology",
+            json!({"sandbox_id": "sbox-observe"}),
         ),
         (
             OperationSet::Observability,
@@ -573,6 +597,77 @@ fn mcp_requests_match_the_shared_builder() {
         assert_eq!(result(&response)["isError"], false);
         assert_matches_shared_value_builder(set, operation, arguments, &request);
     }
+}
+
+#[test]
+fn publish_workspace_session_schema_and_dispatch_are_catalog_generated() {
+    let gateway_response = json!({
+        "workspace_session_id": "workspace-1",
+        "publish": {
+            "no_op": false,
+            "revision": {
+                "manifest_version": 42,
+                "root_hash": "root-42",
+                "layer_count": 7
+            },
+            "route_summary": {"source_count": 3, "ignored_count": 0}
+        },
+        "destroyed": true,
+        "evicted_upperdir_bytes": 4096
+    });
+    let gateway = FakeGateway::response(gateway_response.clone());
+    let mut process = McpProcess::start_initialized("runtime", &gateway.addr);
+
+    let list = process.request("tools/list", Some(json!({})));
+    let tools = result(&list)["tools"].as_array().expect("MCP tools");
+    let matches = tools
+        .iter()
+        .filter(|tool| tool["name"] == "publish_workspace_session")
+        .collect::<Vec<_>>();
+    assert_eq!(matches.len(), 1);
+    let tool = matches[0];
+    assert_eq!(
+        tool["description"],
+        "Capture the unpublished changes of an explicit workspace session, merge them safely into the current LayerStack when possible, and close the session. Rejected or failed pre-commit publishes retain the session."
+    );
+    let schema = &tool["inputSchema"];
+    assert_eq!(schema["type"], "object");
+    assert_eq!(schema["additionalProperties"], false);
+    assert_eq!(
+        schema["required"],
+        json!(["sandbox_id", "workspace_session_id"])
+    );
+    assert_eq!(schema["properties"]["sandbox_id"]["type"], "string");
+    assert_eq!(
+        schema["properties"]["workspace_session_id"],
+        json!({
+            "type": "string",
+            "description": "Explicit workspace session to publish and close."
+        })
+    );
+    assert_eq!(
+        schema["properties"]["grace_s"],
+        json!({
+            "type": "number",
+            "description": "Optional non-negative close grace period in seconds."
+        })
+    );
+
+    let arguments = json!({
+        "sandbox_id": "sbox-runtime",
+        "workspace_session_id": "workspace-1",
+        "grace_s": 1.5
+    });
+    let response = process.call_tool("publish_workspace_session", arguments.clone());
+    assert_eq!(result(&response)["isError"], false);
+    assert_eq!(structured(&response), &gateway_response);
+    let request = gateway.finish();
+    assert_matches_shared_value_builder(
+        OperationSet::Runtime,
+        "publish_workspace_session",
+        arguments,
+        &request,
+    );
 }
 
 #[test]
@@ -708,6 +803,20 @@ fn invalid_and_hidden_calls_fail_before_gateway_dispatch() {
             "workspace_session_id is required for destroy_workspace_session",
         ),
         (
+            "publish_workspace_session",
+            json!({"sandbox_id": "sbox"}),
+            "workspace_session_id is required for publish_workspace_session",
+        ),
+        (
+            "publish_workspace_session",
+            json!({
+                "sandbox_id": "sbox",
+                "workspace_session_id": "workspace-1",
+                "grace_s": "soon"
+            }),
+            "grace_s must be a finite number",
+        ),
+        (
             "create_sandbox",
             json!({"sandbox_id": "sbox"}),
             "unknown operation: create_sandbox",
@@ -758,21 +867,36 @@ fn gateway_operation_errors_keep_kind_message_and_details() {
     let operation_error = json!({
         "error": {
             "kind": "operation_failed",
-            "message": "publish failed",
-            "details": {"phase": "publish", "retryable": false}
+            "message": "workspace session publish was rejected",
+            "details": {
+                "workspace_session_id": "workspace-1",
+                "stage": "publish",
+                "session_retained": true,
+                "publish_rejection": {
+                    "path": "notes.txt",
+                    "reason": "source_conflict"
+                }
+            }
         }
     });
     let (response, request) = call_through_gateway(
-        "management",
-        "list_sandboxes",
-        json!({}),
+        "runtime",
+        "publish_workspace_session",
+        json!({
+            "sandbox_id": "sbox-runtime",
+            "workspace_session_id": "workspace-1"
+        }),
         operation_error.clone(),
     );
     assert_eq!(
         assert_tool_error(&response, "operation_failed"),
         &operation_error
     );
-    assert_eq!(request["op"], "list_sandboxes");
+    assert_eq!(request["op"], "publish_workspace_session");
+    assert_eq!(
+        request["args"],
+        json!({"workspace_session_id": "workspace-1"})
+    );
 }
 
 #[test]

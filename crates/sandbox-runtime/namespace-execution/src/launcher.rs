@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
+use rustix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
 use rustix::io::{fcntl_setfd, FdFlags};
 use rustix::pipe::pipe;
 use sandbox_runtime_namespace_process::runner::protocol::{NamespaceRunnerRequest, RunResult};
@@ -84,6 +85,12 @@ pub trait NsRunnerLauncher: Send + Sync {
 
 pub trait RunnerChild: Send {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError>;
+
+    fn try_wait_completion(&mut self) -> Result<Option<RunResult>, NamespaceExecutionError> {
+        self.wait_completion().map(Some)
+    }
+
+    fn terminate(&mut self) {}
 }
 
 pub(crate) struct ForkRunnerLauncher {
@@ -102,10 +109,19 @@ impl ForkRunnerLauncher {
 
 struct ForkRunnerChild {
     child: Child,
-    result_read: OwnedFd,
+    result_read: File,
     mode_flag: Option<&'static str>,
     setup_timeout_s: f64,
     max_result_bytes: usize,
+    started_at: Instant,
+    result_bytes: Vec<u8>,
+    result_over_cap: bool,
+    result_eof: bool,
+    exit_status: Option<ExitStatus>,
+    timed_out: bool,
+    shutdown: bool,
+    terminate_sent_at: Option<Instant>,
+    kill_sent: bool,
 }
 
 struct SpawnedRunner {
@@ -135,7 +151,7 @@ impl NsRunnerLauncher for ForkRunnerLauncher {
             install_pgid_leader_hook(command);
             Ok(master)
         })?;
-        place_child_in_cgroup(spawned.child.id(), placement.cgroup_procs_path.as_deref());
+        place_spawned_child_in_cgroup(&mut spawned, placement.cgroup_procs_path.as_deref())?;
         let pgid = spawned.pgid;
         let cancel: Box<dyn Fn() + Send + Sync> = Box::new(move || {
             cancelled.store(true, Ordering::Release);
@@ -217,7 +233,7 @@ fn spawn_request_result(
     max_result_bytes: usize,
 ) -> Result<Box<dyn RunnerChild>, NamespaceExecutionError> {
     let request_bytes = encode_request(&request)?;
-    let (spawned, ()) = spawn_locked(Some(mode_flag), |command| {
+    let (mut spawned, ()) = spawn_locked(Some(mode_flag), |command| {
         command
             .stdin(Stdio::null())
             .stdout(Stdio::null())
@@ -225,7 +241,7 @@ fn spawn_request_result(
         install_pgid_leader_hook(command);
         Ok(())
     })?;
-    place_child_in_cgroup(spawned.child.id(), placement.cgroup_procs_path.as_deref());
+    place_spawned_child_in_cgroup(&mut spawned, placement.cgroup_procs_path.as_deref())?;
     Ok(Box::new(spawned.into_child(
         &request_bytes,
         Some(mode_flag),
@@ -252,12 +268,41 @@ impl SpawnedRunner {
             terminate_spawned_child(&mut child, Some(pgid));
             return Err(error);
         }
-        Ok(ForkRunnerChild {
+        ForkRunnerChild::new(
             child,
             result_read,
             mode_flag,
             setup_timeout_s,
             max_result_bytes,
+        )
+    }
+}
+
+impl ForkRunnerChild {
+    fn new(
+        child: Child,
+        result_read: OwnedFd,
+        mode_flag: Option<&'static str>,
+        setup_timeout_s: f64,
+        max_result_bytes: usize,
+    ) -> Result<Self, NamespaceExecutionError> {
+        let result_read = File::from(result_read);
+        set_nonblocking(&result_read).map_err(spawn_error)?;
+        Ok(Self {
+            child,
+            result_read,
+            mode_flag,
+            setup_timeout_s,
+            max_result_bytes,
+            started_at: Instant::now(),
+            result_bytes: Vec::new(),
+            result_over_cap: false,
+            result_eof: false,
+            exit_status: None,
+            timed_out: false,
+            shutdown: false,
+            terminate_sent_at: None,
+            kill_sent: false,
         })
     }
 }
@@ -298,72 +343,114 @@ fn spawn_locked<R>(
 
 impl RunnerChild for ForkRunnerChild {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
-        match self.mode_flag {
-            Some(mode_flag) => self.wait_request_result(mode_flag),
-            None => {
-                let status = self.child.wait().map_err(spawn_error)?;
-                let bytes = read_result_fd(&self.result_read).unwrap_or_default();
-                if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
-                    return Ok(result);
-                }
-                synthesize_result(status)
+        loop {
+            if let Some(result) = self.try_wait_completion()? {
+                return Ok(result);
             }
+            thread::sleep(SETUP_WAIT_POLL);
         }
+    }
+
+    fn try_wait_completion(&mut self) -> Result<Option<RunResult>, NamespaceExecutionError> {
+        self.drain_available_result()?;
+        if self.exit_status.is_none() {
+            self.exit_status = self.child.try_wait().map_err(spawn_error)?;
+        }
+        if self.exit_status.is_none() {
+            self.enforce_termination_deadline();
+            return Ok(None);
+        }
+
+        self.drain_available_result()?;
+        if !self.result_eof {
+            return Ok(None);
+        }
+        if self.shutdown {
+            return Err(NamespaceExecutionError::Spawn(
+                "namespace runner terminated during supervisor shutdown".to_owned(),
+            ));
+        }
+        if self.timed_out {
+            return Err(timeout_error(
+                self.mode_flag.unwrap_or("namespace execution"),
+            ));
+        }
+        if self.result_over_cap {
+            return Err(NamespaceExecutionError::Spawn(format!(
+                "ns-runner result exceeds {} bytes",
+                self.max_result_bytes
+            )));
+        }
+        if let Ok(result) = serde_json::from_slice::<RunResult>(&self.result_bytes) {
+            return Ok(Some(result));
+        }
+        let status = self
+            .exit_status
+            .take()
+            .expect("completion requires a reaped child status");
+        synthesize_result(status).map(Some)
+    }
+
+    fn terminate(&mut self) {
+        if self.exit_status.is_some() || self.shutdown {
+            return;
+        }
+        self.shutdown = true;
+        terminate_child(&mut self.child, Signal::SIGKILL);
+        self.kill_sent = true;
     }
 }
 
 impl ForkRunnerChild {
-    /// Wait on a request/result runner. The result fd is drained on a separate
-    /// thread that starts before the child wait, so a large payload cannot fill
-    /// the pipe and deadlock a child that blocks on the final write; the drain is
-    /// capped at the injected [`crate::ExecutionCaps::max_runner_result_bytes`].
-    fn wait_request_result(
-        &mut self,
-        mode_flag: &'static str,
-    ) -> Result<RunResult, NamespaceExecutionError> {
-        let result_read = self.result_read.try_clone().map_err(spawn_error)?;
-        let max_result_bytes = self.max_result_bytes;
-        let drain = thread::spawn(move || drain_result_fd(result_read, max_result_bytes));
-        let wait = wait_for_child_with_timeout(&mut self.child, mode_flag, self.setup_timeout_s);
-        let drained = drain.join().map_err(|_| {
-            NamespaceExecutionError::Spawn("ns-runner result drain thread panicked".to_owned())
-        })?;
-        let status = wait?;
-        let bytes = drained?;
-        if let Ok(result) = serde_json::from_slice::<RunResult>(&bytes) {
-            return Ok(result);
+    fn drain_available_result(&mut self) -> Result<(), NamespaceExecutionError> {
+        if self.result_eof {
+            return Ok(());
         }
-        synthesize_result(status)
+        let mut chunk = [0_u8; 64 * 1024];
+        loop {
+            match self.result_read.read(&mut chunk) {
+                Ok(0) => {
+                    self.result_eof = true;
+                    return Ok(());
+                }
+                Ok(read) => {
+                    if !self.result_over_cap
+                        && self.result_bytes.len().saturating_add(read) > self.max_result_bytes
+                    {
+                        self.result_over_cap = true;
+                        self.result_bytes.clear();
+                    }
+                    if !self.result_over_cap {
+                        self.result_bytes.extend_from_slice(&chunk[..read]);
+                    }
+                }
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock => return Ok(()),
+                Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+                Err(error) => return Err(spawn_error(error)),
+            }
+        }
     }
-}
 
-/// Read `result_fd` to EOF, capping the buffered envelope at `cap`. Reading
-/// continues past the cap (discarding) so the child never blocks on a full pipe;
-/// the overflow is reported once the fd closes.
-fn drain_result_fd(result_read: OwnedFd, cap: usize) -> Result<Vec<u8>, NamespaceExecutionError> {
-    let mut file = File::from(result_read);
-    let mut bytes = Vec::new();
-    let mut chunk = [0_u8; 64 * 1024];
-    let mut over_cap = false;
-    loop {
-        let read = file.read(&mut chunk).map_err(spawn_error)?;
-        if read == 0 {
-            break;
+    fn enforce_termination_deadline(&mut self) {
+        let now = Instant::now();
+        if !self.timed_out
+            && self.mode_flag.is_some()
+            && now.duration_since(self.started_at) >= setup_timeout_duration(self.setup_timeout_s)
+        {
+            self.timed_out = true;
+            self.terminate_sent_at = Some(now);
+            terminate_child(&mut self.child, Signal::SIGTERM);
         }
-        if !over_cap && bytes.len() + read > cap {
-            over_cap = true;
-            bytes = Vec::new();
-        }
-        if !over_cap {
-            bytes.extend_from_slice(&chunk[..read]);
+        if self.timed_out
+            && !self.kill_sent
+            && self
+                .terminate_sent_at
+                .is_some_and(|sent_at| now.duration_since(sent_at) >= Duration::from_millis(100))
+        {
+            terminate_child(&mut self.child, Signal::SIGKILL);
+            self.kill_sent = true;
         }
     }
-    if over_cap {
-        return Err(NamespaceExecutionError::Spawn(format!(
-            "ns-runner result exceeds {cap} bytes"
-        )));
-    }
-    Ok(bytes)
 }
 
 fn ns_runner_command(
@@ -397,14 +484,25 @@ fn child_pgid(child: &Child) -> Result<i32, NamespaceExecutionError> {
     })
 }
 
-/// Best-effort placement of the freshly spawned `ns-runner` into the workspace
-/// cgroup by writing its pid to the workspace `cgroup.procs`. Membership inherits
-/// across the runner re-exec, fork/exec, and setns; a write failure never blocks
-/// execution (cgroup accounting degrades to unavailable instead).
-fn place_child_in_cgroup(pid: u32, cgroup_procs_path: Option<&Path>) {
+/// Fail-closed placement of a freshly spawned `ns-runner` into the configured
+/// workspace cgroup. Membership inherits across runner re-exec/fork/setns. If
+/// placement fails, terminate and wait the just-spawned process group before
+/// returning, so no command can escape the configured workload limits.
+fn place_spawned_child_in_cgroup(
+    spawned: &mut SpawnedRunner,
+    cgroup_procs_path: Option<&Path>,
+) -> Result<(), NamespaceExecutionError> {
+    let pid = spawned.child.id();
     if let Some(path) = cgroup_procs_path {
-        let _ = std::fs::write(path, pid.to_string());
+        if let Err(error) = std::fs::write(path, pid.to_string()) {
+            terminate_spawned_child(&mut spawned.child, Some(spawned.pgid));
+            return Err(NamespaceExecutionError::Spawn(format!(
+                "place ns-runner pid {pid} in {}: {error}",
+                path.display()
+            )));
+        }
     }
+    Ok(())
 }
 
 fn install_pgid_leader_hook(command: &mut Command) {
@@ -428,13 +526,6 @@ fn spawn_lock() -> std::sync::MutexGuard<'static, ()> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-fn read_result_fd(result_read: &OwnedFd) -> io::Result<Vec<u8>> {
-    let mut file = File::from(result_read.try_clone()?);
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes)?;
-    Ok(bytes)
-}
-
 fn synthesize_result(status: ExitStatus) -> Result<RunResult, NamespaceExecutionError> {
     let exit_code = status
         .code()
@@ -449,33 +540,6 @@ fn synthesize_result(status: ExitStatus) -> Result<RunResult, NamespaceExecution
         exit_code,
         payload: serde_json::json!({ "status": "error" }),
     })
-}
-
-fn wait_for_child_with_timeout(
-    child: &mut Child,
-    mode_flag: &str,
-    setup_timeout_s: f64,
-) -> Result<ExitStatus, NamespaceExecutionError> {
-    let deadline = Instant::now() + setup_timeout_duration(setup_timeout_s);
-    loop {
-        if let Some(status) = child.try_wait().map_err(spawn_error)? {
-            return Ok(status);
-        }
-        if Instant::now() >= deadline {
-            terminate_child(child, Signal::SIGTERM);
-            let grace_deadline = Instant::now() + Duration::from_millis(100);
-            while Instant::now() < grace_deadline {
-                if child.try_wait().map_err(spawn_error)?.is_some() {
-                    return Err(timeout_error(mode_flag));
-                }
-                thread::sleep(Duration::from_millis(10));
-            }
-            terminate_child(child, Signal::SIGKILL);
-            let _ = child.wait();
-            return Err(timeout_error(mode_flag));
-        }
-        thread::sleep(SETUP_WAIT_POLL);
-    }
 }
 
 fn setup_timeout_duration(setup_timeout_s: f64) -> Duration {
@@ -509,6 +573,12 @@ fn terminate_spawned_child(child: &mut Child, pgid: Option<i32>) {
 
 fn timeout_error(mode_flag: &str) -> NamespaceExecutionError {
     NamespaceExecutionError::Spawn(format!("ns-runner {mode_flag} timed out"))
+}
+
+fn set_nonblocking(file: &File) -> io::Result<()> {
+    let flags = fcntl_getfl(file)?;
+    fcntl_setfl(file, flags | OFlags::NONBLOCK)?;
+    Ok(())
 }
 
 fn encode_request(request: &NamespaceRunnerRequest) -> Result<Vec<u8>, NamespaceExecutionError> {

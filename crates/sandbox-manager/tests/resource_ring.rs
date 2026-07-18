@@ -130,6 +130,42 @@ fn ring_wraps_one_hundred_times_without_growth_and_recovers_after_restart() {
         reopened.read_window(&isolated, i64::MAX).samples,
         vec![sample(999_999)]
     );
+    assert_eq!(
+        reopened.read_latest(&sandbox),
+        sandbox_manager::ResourceRingRead {
+            samples: vec![sample((writes - 1) as i64)],
+            error: None,
+        }
+    );
+    assert_eq!(
+        reopened.read_latest(&isolated).samples,
+        vec![sample(999_999)]
+    );
+}
+
+#[test]
+fn latest_read_returns_one_record_without_scanning_or_repairing_old_history() {
+    let temp = TempRoot::new("latest");
+    let sandbox = id("latest-sandbox");
+    let ring = ResourceRingStore::new(temp.path().join("rings"));
+    for timestamp in 1..=4 {
+        ring.append(&sandbox, sample(timestamp))
+            .expect("append resource sample");
+    }
+    let path = ring.path(&sandbox);
+    overwrite(
+        &path,
+        HEADER_BYTES as u64,
+        &[0x5a; RESOURCE_RECORD_BYTES / 2],
+    );
+
+    let current = ring.read_latest(&sandbox);
+    assert_eq!(current.error, None);
+    assert_eq!(current.samples, vec![sample(4)]);
+    assert_eq!(
+        fs::metadata(path).expect("ring remains fixed-size").len(),
+        RESOURCE_RING_BYTES
+    );
 }
 
 #[test]

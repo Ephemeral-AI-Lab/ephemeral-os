@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{ManagerError, SandboxId, SandboxRecord, SharedBaseMount};
+use crate::{ManagerError, SandboxId, SandboxRecord, SandboxResourceProfile, SharedBaseMount};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateSandboxRequest {
@@ -12,6 +12,7 @@ pub struct CreateSandboxRequest {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateSandboxResult {
     pub id: SandboxId,
+    pub resource_profile: Option<SandboxResourceProfile>,
 }
 
 /// Cumulative, read-only resource counters reported by the container runtime.

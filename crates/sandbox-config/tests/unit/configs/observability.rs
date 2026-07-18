@@ -20,6 +20,15 @@ fn config_observability_defaults_preserve_shipped_policy() {
     assert_eq!(cfg.views.resource_window_ms, 600_000);
     assert_eq!(cfg.views.layer_delta_default_limit, 500);
     assert_eq!(cfg.views.layer_delta_max_limit, 5_000);
+    assert!(cfg.diagnostics.enabled);
+    assert_eq!(cfg.diagnostics.cpu_threshold_percent, 2.0);
+    assert_eq!(
+        cfg.diagnostics.anonymous_memory_threshold_bytes,
+        16 * 1024 * 1024
+    );
+    assert_eq!(cfg.diagnostics.sustained_window_ms, 30_000);
+    assert_eq!(cfg.diagnostics.cooldown_ms, 300_000);
+    assert_eq!(cfg.diagnostics.max_artifact_bytes, 1024 * 1024);
 }
 
 #[test]
@@ -32,6 +41,12 @@ fn config_observability_overrides_deserialize() {
   views:
     layer_delta_default_limit: 3
     layer_delta_max_limit: 3
+  diagnostics:
+    cpu_threshold_percent: 0.5
+    anonymous_memory_threshold_bytes: 1048576
+    sustained_window_ms: 10
+    cooldown_ms: 20
+    max_artifact_bytes: 4096
 ",
     )
     .expect("observability overrides deserialize");
@@ -43,12 +58,17 @@ fn config_observability_overrides_deserialize() {
     assert_eq!(cfg.views.layer_delta_default_limit, 3);
     assert_eq!(cfg.views.layer_delta_max_limit, 3);
     assert_eq!(cfg.views.resource_window_ms, 600_000);
+    assert_eq!(cfg.diagnostics.cpu_threshold_percent, 0.5);
+    assert_eq!(cfg.diagnostics.anonymous_memory_threshold_bytes, 1_048_576);
+    assert_eq!(cfg.diagnostics.sustained_window_ms, 10);
+    assert_eq!(cfg.diagnostics.cooldown_ms, 20);
+    assert_eq!(cfg.diagnostics.max_artifact_bytes, 4_096);
 }
 
 #[test]
 fn legacy_per_segment_budget_is_doubled_clamped_and_marked_deprecated() {
-    let ordinary = observability_config("  max_file_bytes: 2097152\n")
-        .expect("legacy config deserializes");
+    let ordinary =
+        observability_config("  max_file_bytes: 2097152\n").expect("legacy config deserializes");
     assert_eq!(ordinary.max_disk_bytes, 4 * 1024 * 1024);
     assert!(ordinary.used_legacy_max_file_bytes);
 
@@ -57,10 +77,8 @@ fn legacy_per_segment_budget_is_doubled_clamped_and_marked_deprecated() {
     assert_eq!(clamped.max_disk_bytes, 16 * 1024 * 1024);
     clamped.validate().expect("clamped legacy config validates");
 
-    let error = observability_config(
-        "  max_disk_bytes: 4194304\n  max_file_bytes: 2097152\n",
-    )
-    .expect_err("new and legacy budgets are mutually exclusive");
+    let error = observability_config("  max_disk_bytes: 4194304\n  max_file_bytes: 2097152\n")
+        .expect_err("new and legacy budgets are mutually exclusive");
     assert!(error.to_string().contains("cannot both be set"), "{error}");
 }
 
@@ -73,6 +91,10 @@ fn config_observability_rejects_unknown_keys() {
     let error = observability_config("  views:\n    resource_window_s: 1\n")
         .expect_err("unknown views key must be rejected");
     assert!(error.to_string().contains("resource_window_s"), "{error}");
+
+    let error = observability_config("  diagnostics:\n    raw_command_lines: true\n")
+        .expect_err("unknown diagnostics key must be rejected");
+    assert!(error.to_string().contains("raw_command_lines"), "{error}");
 }
 
 #[test]
@@ -112,6 +134,37 @@ fn config_validation_rejects_observability_edge_values() {
     let mut cfg = prd_config();
     cfg.views.layer_delta_max_limit = 0;
     assert_invalid(cfg, "observability.views.layer_delta_max_limit");
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.cpu_threshold_percent = 0.0;
+    assert_invalid(cfg, "observability.diagnostics.cpu_threshold_percent");
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.cpu_threshold_percent = 10_001.0;
+    assert_invalid(cfg, "observability.diagnostics.cpu_threshold_percent");
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.anonymous_memory_threshold_bytes = 0;
+    assert_invalid(
+        cfg,
+        "observability.diagnostics.anonymous_memory_threshold_bytes",
+    );
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.sustained_window_ms = 0;
+    assert_invalid(cfg, "observability.diagnostics.sustained_window_ms");
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.cooldown_ms = 0;
+    assert_invalid(cfg, "observability.diagnostics.cooldown_ms");
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.max_artifact_bytes = 4_095;
+    assert_invalid(cfg, "observability.diagnostics.max_artifact_bytes");
+
+    let mut cfg = prd_config();
+    cfg.diagnostics.max_artifact_bytes = 1024 * 1024 + 1;
+    assert_invalid(cfg, "observability.diagnostics.max_artifact_bytes");
 }
 
 #[test]

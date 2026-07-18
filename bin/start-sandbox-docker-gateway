@@ -9,7 +9,8 @@ export PATH="$repo_root/bin:$PATH"
 
 config_yaml=${SANDBOX_GATEWAY_CONFIG_YAML:-$repo_root/config/prd.yml}
 default_socket=${SANDBOX_GATEWAY_SOCKET:-127.0.0.1:7878}
-pid_file=/tmp/eos-gateway.pid
+pid_file_from_env=${SANDBOX_GATEWAY_PID_FILE:-}
+pid_file=${pid_file_from_env:-/tmp/eos-gateway.pid}
 socket_path=$default_socket
 target_dir=${CARGO_TARGET_DIR:-$repo_root/target}
 case "$target_dir" in
@@ -23,6 +24,7 @@ observability_cli_bin=$target_dir/debug/sandbox-observability-cli
 xtask_bin=$target_dir/debug/xtask
 rebuild_binary=0
 show_help=0
+pid_file_arg_seen=0
 arg_count=$#
 while [ "$arg_count" -gt 0 ]; do
     arg=$1
@@ -58,9 +60,11 @@ for arg in "$@"; do
             show_help=1
             ;;
         --pid-file)
+            pid_file_arg_seen=1
             previous_flag=pid-file
             ;;
         --pid-file=*)
+            pid_file_arg_seen=1
             pid_file=${arg#--pid-file=}
             ;;
         --gateway-socket)
@@ -71,6 +75,10 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+if [ -n "$pid_file_from_env" ] && [ "$pid_file_arg_seen" -eq 0 ]; then
+    set -- "$@" --pid-file "$pid_file"
+fi
 
 if [ "$rebuild_binary" -eq 1 ]; then
     printf 'cleaning host build profile\n'

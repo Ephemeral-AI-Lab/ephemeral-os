@@ -8,7 +8,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use crate::{
     ManagerError, SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord,
-    SandboxState, SharedBaseMount,
+    SandboxResourceProfile, SandboxState, SharedBaseMount,
 };
 
 #[derive(Debug, Default)]
@@ -85,12 +85,23 @@ impl SandboxStore {
         workspace_root: PathBuf,
         shared_base: Option<SharedBaseMount>,
     ) -> Result<SandboxRecord, ManagerError> {
+        self.create_with_shared_base_and_profile(id, workspace_root, shared_base, None)
+    }
+
+    pub fn create_with_shared_base_and_profile(
+        &self,
+        id: SandboxId,
+        workspace_root: PathBuf,
+        shared_base: Option<SharedBaseMount>,
+        resource_profile: Option<SandboxResourceProfile>,
+    ) -> Result<SandboxRecord, ManagerError> {
         let mut records = self.records()?;
         if records.contains_key(&id) {
             return Err(ManagerError::DuplicateSandbox { id });
         }
         let mut record = SandboxRecord::new(id.clone(), workspace_root, SandboxState::Creating);
         record.shared_base = shared_base;
+        record.resource_profile = resource_profile;
         records.insert(id, record.clone());
         self.persist(&records)?;
         Ok(record)

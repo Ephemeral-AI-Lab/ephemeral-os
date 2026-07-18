@@ -3,17 +3,68 @@ use std::path::PathBuf;
 use anyhow::Result;
 use sandbox_config::configs::daemon::DaemonServerConfig;
 
-use crate::serve_cli::{daemon_config_path_arg, load_runtime_config, DaemonCliConfig};
+use crate::serve_cli::{
+    build_daemon_runtime, build_runtime_config, daemon_config_path_arg, load_runtime_config,
+    DaemonCliConfig,
+};
 
 fn server_defaults() -> DaemonServerConfig {
     DaemonServerConfig {
         socket_path: PathBuf::from("/eos/runtime/default.sock"),
         pid_path: PathBuf::from("/eos/runtime/default.pid"),
-        max_worker_threads: 2,
-        max_concurrent_connections: 256,
+        worker_threads: 2,
+        max_blocking_threads: 8,
+        blocking_thread_keep_alive_s: 5.0,
+        max_concurrent_connections: 64,
         max_request_bytes: 16 * 1024 * 1024,
         request_read_timeout_s: 30.0,
+        legacy_worker_threads_alias_used: false,
     }
+}
+
+#[test]
+fn daemon_runtime_uses_the_exact_declared_worker_count() {
+    let runtime = build_daemon_runtime(&server_defaults()).expect("runtime builds");
+    assert_eq!(runtime.metrics().num_workers(), 2);
+}
+
+#[test]
+fn daemon_runtime_applies_the_selected_workload_profile() {
+    let config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../config/prd.yml");
+    let loaded = load_runtime_config(&config_path).expect("production config loads");
+    let runtime = build_runtime_config(
+        &loaded,
+        PathBuf::from("/workspace"),
+        Some(PathBuf::from("/sys/fs/cgroup/eos")),
+        None,
+    );
+    let limits = runtime
+        .workload_cgroup_limits
+        .expect("standard profile enables workload separation");
+
+    assert_eq!(limits.nano_cpus, 1_000_000_000);
+    assert_eq!(limits.memory_high_bytes, 384 * 1024 * 1024);
+    assert_eq!(limits.memory_max_bytes, 384 * 1024 * 1024);
+    assert_eq!(limits.pids_max, 224);
+}
+
+#[test]
+fn daemon_load_rejects_runtime_limits_that_do_not_match_selected_profile() {
+    let baseline = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../config/prd.yml");
+    let text = std::fs::read_to_string(&baseline).expect("production config is readable");
+    let mismatched = text.replacen("worker_threads: 2", "worker_threads: 3", 1);
+    assert_ne!(mismatched, text, "worker limit fixture must be replaced");
+    let path = unique_config_path("profile-worker-mismatch");
+    std::fs::write(&path, mismatched).expect("write mismatched config");
+
+    let error = match load_runtime_config(&path) {
+        Ok(_) => panic!("profile mismatch must fail closed"),
+        Err(error) => error,
+    };
+    let message = format!("{error:#}");
+    assert!(message.contains("validate selected daemon runtime profile"), "{message}");
+    assert!(message.contains("daemon.server.worker_threads"), "{message}");
+    let _ = std::fs::remove_file(path);
 }
 
 #[test]
@@ -77,10 +128,10 @@ fn spawned_foreground_args_omit_auth_token() -> Result<()> {
 
     assert_eq!(config.auth_token.as_deref(), Some("token-1"));
     assert!(
-        !config.foreground_args().iter().any(|arg| matches!(
-            arg.as_str(),
-            "--auth-token" | "token-1"
-        )),
+        !config
+            .foreground_args()
+            .iter()
+            .any(|arg| matches!(arg.as_str(), "--auth-token" | "token-1")),
         "auth token must be passed through the child environment, not argv"
     );
     Ok(())

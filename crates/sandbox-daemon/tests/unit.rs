@@ -48,8 +48,10 @@ mod connection_tests {
 
 mod dispatch_tests {
     pub(crate) use crate::rpc::dispatch::{
-        daemon_readiness_response, decode_request, strip_tcp_auth, validate_daemon_scope,
+        blocking_overload_response, daemon_readiness_response, decode_request, strip_tcp_auth,
+        validate_daemon_scope,
     };
+    pub(crate) use crate::rpc::BlockingAdmission;
     pub(crate) use crate::rpc::SandboxDaemonError;
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),

@@ -1,10 +1,20 @@
+mod cgroup;
 mod core;
+mod dispatcher;
 mod impls;
 mod model;
+mod recovery;
 mod snapshot;
 
 pub use core::WorkspaceSessionService;
+#[doc(hidden)]
+pub use dispatcher::HolderExitDispatcher;
 pub use impls::{
     AdmittedCommand, SessionExecutionToken, SweptDisposition, SweptSession, TokenSlot,
 };
-pub use model::{CreateSessionRequest, FinalizeOutcome, FinalizePolicy, WorkspaceSessionHandler};
+pub use model::{
+    CreateSessionRequest, FinalizationState, FinalizeOutcome, FinalizePolicy,
+    HolderExitDisposition, HolderExitOutcome, HolderLifecycleEvent, HolderLifecycleEventKind,
+    HolderLifecycleSnapshot, PublishFailureStage, PublishWorkspaceSessionResult,
+    WorkspaceSessionHandler, WorkspaceSessionPublishDetails,
+};

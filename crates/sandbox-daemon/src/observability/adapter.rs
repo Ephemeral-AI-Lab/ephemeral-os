@@ -4,20 +4,26 @@ use sandbox_observability_query::ports::{
     QueryLimits, WorkspaceSnapshot,
 };
 use sandbox_observability_telemetry::collect::process_topology::{
-    DaemonProcessMetrics, WorkspaceProcessInput, WorkspaceProcessTopology,
+    AppliedCgroupLimits, DaemonDiagnosticWorkspaceHolder, DaemonLifecycleMetrics,
+    DaemonOwnershipMetrics, DaemonProcessMetrics, DaemonRuntimeConfigMetrics, DaemonRuntimeUsage,
+    WorkspaceProcessInput, WorkspaceProcessTopology,
 };
 use sandbox_observability_telemetry::{sample_layerstack, LayerStackBytes, WalkBudget};
 use sandbox_runtime::{
-    LayerDeltaDescription, RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot,
-    RuntimeWorkspaceSnapshot, SandboxRuntimeOperations, StackObservation,
+    workspace_session::HolderLifecycleEventKind, LayerDeltaDescription,
+    RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
+    SandboxRuntimeOperations, StackObservation,
 };
 
 use super::DaemonObservability;
+use crate::rpc::{BlockingAdmission, ConnectionAdmission};
 
 pub(crate) struct DaemonObservabilityAdapter<'a> {
     state: (
         &'a SandboxRuntimeOperations,
         Option<&'a DaemonObservability>,
+        &'a BlockingAdmission,
+        &'a ConnectionAdmission,
     ),
 }
 
@@ -25,9 +31,16 @@ impl<'a> DaemonObservabilityAdapter<'a> {
     pub(crate) const fn new(
         operations: &'a SandboxRuntimeOperations,
         observability: Option<&'a DaemonObservability>,
+        blocking_admission: &'a BlockingAdmission,
+        connection_admission: &'a ConnectionAdmission,
     ) -> Self {
         Self {
-            state: (operations, observability),
+            state: (
+                operations,
+                observability,
+                blocking_admission,
+                connection_admission,
+            ),
         }
     }
 
@@ -37,6 +50,14 @@ impl<'a> DaemonObservabilityAdapter<'a> {
 
     fn observability(&self) -> Option<&DaemonObservability> {
         self.state.1
+    }
+
+    fn blocking_admission(&self) -> &BlockingAdmission {
+        self.state.2
+    }
+
+    fn connection_admission(&self) -> &ConnectionAdmission {
+        self.state.3
     }
 }
 
@@ -64,9 +85,73 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
     }
 
     fn cgroup_topology(&self) -> WorkspaceProcessTopology {
-        let daemon =
+        let mut daemon =
             DaemonProcessMetrics::collect(std::path::Path::new("/proc"), std::process::id());
         let snapshot = self.operations().observability_snapshot();
+        let workspace_holders = snapshot
+            .workspaces
+            .iter()
+            .map(|workspace| DaemonDiagnosticWorkspaceHolder {
+                workspace_id: workspace.workspace_id.0.clone(),
+                holder_pid: workspace.holder_pid,
+            })
+            .collect::<Vec<_>>();
+        let blocking_admission_in_use = self.blocking_admission().in_use();
+        let connection_admission_in_use = self.connection_admission().in_use();
+        let runtime_usage = DaemonRuntimeUsage {
+            active_async_tasks: Some(connection_admission_in_use),
+            active_blocking_tasks: Some(blocking_admission_in_use),
+            blocking_queue_depth: Some(0),
+            blocking_admission_in_use: Some(blocking_admission_in_use),
+            connection_admission_in_use: Some(connection_admission_in_use),
+            active_commands: Some(snapshot.active_namespace_executions.len()),
+            command_queue_depth: Some(0),
+        };
+        let namespace_control_fd_count = snapshot
+            .ownership
+            .namespace_fd_count
+            .zip(snapshot.ownership.control_fd_count)
+            .and_then(|(namespace, control)| namespace.checked_add(control));
+        let ownership = DaemonOwnershipMetrics {
+            open_workspaces: snapshot.workspaces.len(),
+            live_holders: snapshot
+                .workspaces
+                .iter()
+                .filter(|workspace| workspace.holder_live)
+                .count(),
+            exited_unreaped_holders: snapshot.ownership.exited_unreaped_holders,
+            namespace_fd_count: snapshot.ownership.namespace_fd_count,
+            control_fd_count: snapshot.ownership.control_fd_count,
+            namespace_control_fd_count,
+            active_scratch_directories: snapshot.ownership.active_scratch_directories,
+            persisted_workspace_handles: snapshot.ownership.persisted_workspace_handles,
+            active_layer_leases: self
+                .operations()
+                .observe_layerstack()
+                .ok()
+                .map(|observation| observation.active_lease_count),
+        };
+        let lifecycle = map_lifecycle(
+            self.operations()
+                .workspace_session
+                .holder_lifecycle_snapshot(),
+        );
+        daemon.runtime_config = self
+            .observability()
+            .map_or_else(DaemonRuntimeConfigMetrics::default, |observability| {
+                observability.runtime_config()
+            });
+        daemon.runtime_usage = runtime_usage;
+        daemon.ownership = ownership;
+        daemon.lifecycle = lifecycle;
+        if let Some(observability) = self.observability() {
+            daemon.diagnostics = observability.observe_diagnostics(
+                &daemon,
+                &daemon.runtime_usage,
+                &daemon.ownership,
+                &workspace_holders,
+            );
+        }
         if snapshot.workspaces.is_empty() && !snapshot.partial_errors.is_empty() {
             let mut topology = WorkspaceProcessTopology::unavailable(format!(
                 "runtime workspace snapshot failed: {}",
@@ -81,6 +166,17 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
             .map(|workspace| WorkspaceProcessInput {
                 workspace_id: workspace.workspace_id.0,
                 holder_pid: u32::try_from(workspace.holder_pid).unwrap_or(0),
+                cgroup_path: workspace.cgroup_path.as_deref().map(hierarchy_cgroup_path),
+                applied_cgroup_limits: workspace.applied_cgroup_limits.map(|limits| {
+                    AppliedCgroupLimits {
+                        nano_cpus: limits.nano_cpus,
+                        memory_high_bytes: limits.memory_high_bytes,
+                        memory_max_bytes: limits.memory_max_bytes,
+                        pids_max: limits.pids_max,
+                    }
+                }),
+                workload_cgroup_state: workspace.workload_cgroup_state,
+                workload_cgroup_reason: workspace.workload_cgroup_reason,
             })
             .collect();
         let mut topology =
@@ -116,6 +212,75 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
     }
 }
 
+/// Convert the runtime's controller-filesystem path into the unified cgroup
+/// hierarchy coordinates used by `/proc/*/cgroup` and the public topology.
+/// Keeping both daemon and workspace rows in one coordinate system also makes
+/// the public path safe to append to `/sys/fs/cgroup` for independent reads.
+pub(crate) fn hierarchy_cgroup_path(path: &std::path::Path) -> String {
+    const CGROUP_FS_ROOT: &str = "/sys/fs/cgroup";
+    let relative = path.strip_prefix(CGROUP_FS_ROOT).unwrap_or(path);
+    if relative.as_os_str().is_empty() {
+        return "/".to_owned();
+    }
+    let text = relative.to_string_lossy();
+    if text.starts_with('/') {
+        text.into_owned()
+    } else {
+        format!("/{text}")
+    }
+}
+
+pub(crate) fn map_lifecycle(
+    snapshot: sandbox_runtime::workspace_session::HolderLifecycleSnapshot,
+) -> DaemonLifecycleMetrics {
+    let mut last_holder_exit_reason = None;
+    let mut last_cleanup_failure = None;
+    let mut last_cleanup_result = None;
+    let mut last_cleanup_duration_ms = None;
+    for event in snapshot.events.iter().rev() {
+        match event.kind {
+            HolderLifecycleEventKind::ExitObserved if last_holder_exit_reason.is_none() => {
+                last_holder_exit_reason = Some(bounded_summary(&event.detail));
+            }
+            HolderLifecycleEventKind::CleanupTerminal if last_cleanup_result.is_none() => {
+                last_cleanup_result = Some(bounded_summary(&event.detail));
+                last_cleanup_duration_ms = event.cleanup_duration_ms;
+            }
+            HolderLifecycleEventKind::CleanupFailure if last_cleanup_failure.is_none() => {
+                last_cleanup_failure = Some(bounded_summary(&event.detail));
+            }
+            _ => {}
+        }
+        if last_holder_exit_reason.is_some() && last_cleanup_result.is_some() {
+            break;
+        }
+    }
+    DaemonLifecycleMetrics {
+        holder_exit_total: snapshot.holder_exit_total,
+        cleanup_attempt_total: snapshot.cleanup_attempt_total,
+        cleanup_failure_total: snapshot.cleanup_failure_total,
+        cleanup_terminal_total: snapshot.cleanup_terminal_total,
+        dropped_event_total: snapshot.dropped_event_total,
+        retained_event_count: snapshot.events.len(),
+        last_holder_exit_reason,
+        last_cleanup_failure,
+        last_cleanup_result,
+        last_cleanup_duration_ms,
+    }
+}
+
+fn bounded_summary(value: &str) -> String {
+    const LIMIT: usize = 512;
+    if value.len() <= LIMIT {
+        return value.to_owned();
+    }
+    let mut end = LIMIT;
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    value[..end].to_owned()
+}
+
 pub(crate) fn map_snapshot(snapshot: RuntimeObservabilitySnapshot) -> ObservabilitySnapshot {
     ObservabilitySnapshot {
         workspaces: snapshot.workspaces.into_iter().map(map_workspace).collect(),
@@ -133,6 +298,7 @@ fn map_workspace(workspace: RuntimeWorkspaceSnapshot) -> WorkspaceSnapshot {
         workspace_id: workspace.workspace_id.0,
         network_profile: workspace.network.as_str().to_owned(),
         finalize_policy: workspace.finalize_policy.as_str().to_owned(),
+        finalization_state: workspace.finalization_state.as_str().to_owned(),
         namespace_fd_count: workspace.namespace_fd_count,
         base_root_hash: workspace.base_root_hash,
         layer_count: workspace.layer_count,

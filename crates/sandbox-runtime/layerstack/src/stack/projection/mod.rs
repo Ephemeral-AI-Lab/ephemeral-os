@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 use std::io::{ErrorKind, Read};
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 mod apply;
@@ -22,7 +23,7 @@ use crate::whiteout::{is_kernel_whiteout, logical_whiteout_path_for_target, OPAQ
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum MergedEntry {
     Absent,
-    File { bytes: Vec<u8> },
+    File { bytes: Vec<u8>, executable: bool },
     Symlink { target: String },
     Directory,
 }
@@ -54,7 +55,7 @@ impl MergedView {
     ) -> Result<(Option<Vec<u8>>, bool), LayerStackError> {
         match self.read_entry_limited(path, manifest, max_bytes)? {
             MergedEntry::Absent => return Ok((None, false)),
-            MergedEntry::File { bytes } => return Ok((Some(bytes), true)),
+            MergedEntry::File { bytes, .. } => return Ok((Some(bytes), true)),
             MergedEntry::Symlink { target } => {
                 return Ok((Some(target.into_bytes()), true));
             }
@@ -99,12 +100,13 @@ impl MergedView {
                     });
                 }
                 Ok(meta) if meta.is_file() => {
+                    let executable = meta.permissions().mode() & 0o111 != 0;
                     let bytes = match read_file_limited(&target, &meta, max_bytes) {
                         Ok(bytes) => bytes,
                         Err(err @ LayerStackError::FileTooLarge { .. }) => return Err(err),
                         Err(err) => return Err(stale_layer_error(layer, rel.as_str(), Some(&err))),
                     };
-                    return Ok(MergedEntry::File { bytes });
+                    return Ok(MergedEntry::File { bytes, executable });
                 }
                 Ok(meta) if meta.is_dir() => return Ok(MergedEntry::Directory),
                 Ok(_) => return Err(stale_layer_error(layer, rel.as_str(), None)),
@@ -243,6 +245,9 @@ impl MergedView {
             if candidates.len() > limit {
                 break;
             }
+        }
+        if candidates.len() > limit {
+            return Ok(candidates.into_iter().collect());
         }
 
         let mut visible = Vec::new();
@@ -405,6 +410,14 @@ fn collect_candidate_descendants(
         };
         let meta = std::fs::symlink_metadata(&path)?;
         if meta.is_dir() {
+            if rel.starts_with(prefix) {
+                if let Ok(layer_path) = LayerPath::parse(rel) {
+                    candidates.insert(layer_path);
+                    if candidates.len() > limit {
+                        return Ok(());
+                    }
+                }
+            }
             collect_candidate_descendants(root, &path, prefix, limit, candidates)?;
             continue;
         }

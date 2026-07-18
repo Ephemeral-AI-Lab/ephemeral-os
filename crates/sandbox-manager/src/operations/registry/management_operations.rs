@@ -5,14 +5,14 @@ use sandbox_operation_catalog::manager::{
     LIST_DOCKER_IMAGES_SPEC, LIST_SANDBOXES_SPEC, LIST_WORKSPACE_DIRECTORIES_SPEC,
     SQUASH_LAYERSTACKS_SPEC,
 };
-use sandbox_operation_catalog::observability::{CGROUP_SPEC, SNAPSHOT_SPEC};
+use sandbox_operation_catalog::observability::{CGROUP_SPEC, RESOURCES_SPEC, SNAPSHOT_SPEC};
 use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScopeKind};
 use serde_json::{json, Value};
 
 use crate::management::{
     create_sandbox, destroy_sandbox, dispatch_export_changes, dispatch_resource_metrics,
-    dispatch_squash_layerstacks, inspect_sandbox, list_sandboxes, observability_snapshot,
-    CreateSandboxInput, SnapshotOptions,
+    dispatch_resources, dispatch_squash_layerstacks, inspect_sandbox, list_sandboxes,
+    observability_snapshot, CreateSandboxInput, SnapshotOptions,
 };
 use crate::operations::dispatch::ManagerOperationEntry;
 use crate::operations::ManagerServices;
@@ -51,6 +51,16 @@ const OPERATIONS: &[ManagerOperationEntry] = &[
         OperationScopeKind::Sandbox,
         &CGROUP_SPEC,
         dispatch_resource_metrics,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::System,
+        &RESOURCES_SPEC,
+        dispatch_resources,
+    ),
+    ManagerOperationEntry::new(
+        OperationScopeKind::Sandbox,
+        &RESOURCES_SPEC,
+        dispatch_resources,
     ),
     ManagerOperationEntry::new(
         OperationScopeKind::System,
@@ -269,6 +279,7 @@ fn record_value(record: SandboxRecord) -> Value {
         "daemon": record.daemon.map(endpoint_value),
         "daemon_http": record.daemon_http.map(http_endpoint_value),
         "shared_base": record.shared_base.map(shared_base_value),
+        "resource_profile": record.resource_profile,
     })
 }
 

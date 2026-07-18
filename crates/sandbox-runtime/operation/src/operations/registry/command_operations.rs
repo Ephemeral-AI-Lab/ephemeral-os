@@ -105,12 +105,29 @@ fn command_output_response(
 }
 
 fn command_service_error_response(error: CommandServiceError) -> OperationResponse {
+    if let CommandServiceError::CommandAdmissionOverloaded {
+        max_active_commands,
+    } = &error
+    {
+        return OperationResponse::fault_with_details(
+            "server_busy",
+            "daemon is at active command capacity",
+            json!({ "max_active_commands": *max_active_commands }),
+        );
+    }
     let details = command_error_details(&error);
     OperationResponse::fault_with_details("operation_failed", error.to_string(), details)
 }
 
 fn command_error_details(error: &CommandServiceError) -> Value {
     match error {
+        CommandServiceError::WorkspaceSession(
+            crate::workspace_session::WorkspaceSessionError::NotFound {
+                workspace_session_id,
+            },
+        ) => json!({
+            "workspace_session_id": workspace_session_id.0.as_str(),
+        }),
         CommandServiceError::CommandFinalizationFailed {
             command_session_id, ..
         } => json!({
@@ -155,7 +172,7 @@ fn status_name(status: CommandStatus) -> &'static str {
     status.as_str()
 }
 
-fn publish_reject_value(rejection: &sandbox_runtime_layerstack::PublishReject) -> Value {
+pub(super) fn publish_reject_value(rejection: &sandbox_runtime_layerstack::PublishReject) -> Value {
     json!({
         "path": rejection.path.as_ref().map(ToString::to_string),
         "reason": publish_reject_reason_name(rejection.reason),
@@ -172,7 +189,7 @@ fn publish_reject_value(rejection: &sandbox_runtime_layerstack::PublishReject) -
                 "reason": protected_drop_reason_name(drop.reason),
             })
         }),
-        "message": rejection.message.as_deref(),
+        "message": null,
     })
 }
 
@@ -235,5 +252,24 @@ fn content_fingerprint_value(
         sandbox_runtime_layerstack::ContentFingerprint::Directory => json!({
             "kind": "directory",
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn closed_workspace_command_error_keeps_the_structured_session_id() {
+        let error = CommandServiceError::WorkspaceSession(
+            crate::workspace_session::WorkspaceSessionError::NotFound {
+                workspace_session_id: WorkspaceSessionId("ws-closed".to_owned()),
+            },
+        );
+
+        assert_eq!(
+            command_error_details(&error),
+            json!({ "workspace_session_id": "ws-closed" })
+        );
     }
 }

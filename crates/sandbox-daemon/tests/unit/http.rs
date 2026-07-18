@@ -40,10 +40,18 @@ struct HttpTestServer {
     shutdown: CancellationToken,
     task: JoinHandle<()>,
     root: PathBuf,
+    operations: Arc<SandboxRuntimeOperations>,
 }
 
 impl HttpTestServer {
     async fn start() -> TestResult<Self> {
+        Self::start_with_admission(8, 256).await
+    }
+
+    async fn start_with_admission(
+        max_blocking_requests: usize,
+        max_concurrent_connections: usize,
+    ) -> TestResult<Self> {
         let root = test_root("server");
         let operations = test_operations(&root)?;
         let listener = TcpListener::bind("127.0.0.1:0").await?;
@@ -52,8 +60,11 @@ impl HttpTestServer {
         let task = crate::http::spawn(
             listener,
             server_config(&root),
-            operations,
+            Arc::clone(&operations),
             Observer::disabled(),
+            crate::rpc::BlockingAdmission::new(max_blocking_requests),
+            crate::rpc::ConnectionAdmission::new(max_concurrent_connections),
+            tokio_util::task::TaskTracker::new(),
             shutdown.clone(),
         );
         Ok(Self {
@@ -61,6 +72,7 @@ impl HttpTestServer {
             shutdown,
             task,
             root,
+            operations,
         })
     }
 
@@ -146,6 +158,45 @@ async fn health_and_router_are_an_exact_allowlist() -> TestResult {
     }
 
     server.stop().await
+}
+
+#[tokio::test]
+async fn http_connection_and_blocking_overloads_are_bounded_and_structured() -> TestResult {
+    let connection_limited = HttpTestServer::start_with_admission(8, 0).await?;
+    let response = send_request(
+        connection_limited.addr,
+        "POST",
+        "/files/list",
+        &[],
+        b"{}",
+    )
+    .await?;
+    assert_eq!(response.status, 503);
+    let body: Value = serde_json::from_slice(&response.body)?;
+    assert_eq!(body["error"]["kind"], "server_busy");
+    assert_eq!(
+        body["error"]["details"]["fields"]["max_concurrent_connections"],
+        0
+    );
+    connection_limited.stop().await?;
+
+    let blocking_limited = HttpTestServer::start_with_admission(0, 1).await?;
+    let response = send_request(
+        blocking_limited.addr,
+        "POST",
+        "/files/list",
+        &[],
+        b"{}",
+    )
+    .await?;
+    assert_eq!(response.status, 429);
+    let body: Value = serde_json::from_slice(&response.body)?;
+    assert_eq!(body["error"]["kind"], "server_busy");
+    assert_eq!(
+        body["error"]["details"]["fields"]["max_blocking_requests"],
+        0
+    );
+    blocking_limited.stop().await
 }
 
 #[tokio::test]
@@ -382,6 +433,34 @@ async fn isolated_forward_and_error_vocabulary_are_exact() -> TestResult {
 }
 
 #[tokio::test]
+async fn isolated_forward_rejects_a_finalize_failed_session() -> TestResult {
+    let server = HttpTestServer::start().await?;
+    let workspace_session_id = WorkspaceSessionId("live-1".to_owned());
+
+    assert!(
+        server
+            .operations
+            .workspace_session
+            .guarded_destroy(workspace_session_id, None)
+            .is_err(),
+        "the scripted destroy failure leaves the session cleanup-only"
+    );
+
+    let response = send_request(
+        server.addr,
+        "GET",
+        "/forward/isolated=live-1/3000/",
+        &[],
+        b"",
+    )
+    .await?;
+    assert_eq!(response.status, 404);
+    assert_eq!(response.body, b"unknown isolated workspace");
+
+    server.stop().await
+}
+
+#[tokio::test]
 async fn forward_upgrade_tunnels_bytes() -> TestResult {
     let server = HttpTestServer::start().await?;
     let upstream = TcpListener::bind("127.0.0.1:0").await?;
@@ -455,16 +534,22 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
     let create_snapshot = snapshot.clone();
     let workspace_runtime = Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
         WorkspaceRuntimeHooks {
+            take_holder_exit_subscription: Box::new(|| Ok(None)),
             isolated_ip: Box::new(|workspace_id| {
                 Ok((workspace_id.0 == "live-1").then_some(std::net::Ipv4Addr::LOCALHOST))
             }),
+            allocate_workspace_session_id: Box::new(|network| {
+                Ok(WorkspaceSessionId(
+                    match network {
+                        NetworkProfile::Isolated => "live-1",
+                        NetworkProfile::Shared => "no-ip",
+                    }
+                    .to_owned(),
+                ))
+            }),
             create_workspace: Box::new(move |request: CreateWorkspaceRequest| {
-                let workspace_id = match request.network {
-                    NetworkProfile::Isolated => "live-1",
-                    NetworkProfile::Shared => "no-ip",
-                };
                 Ok(WorkspaceHandle::without_launch_for_test(
-                    WorkspaceSessionId(workspace_id.to_owned()),
+                    request.workspace_session_id,
                     create_workspace_root.clone(),
                     request.network,
                     create_snapshot.clone(),
@@ -556,6 +641,9 @@ fn server_config(root: &Path) -> ServerConfig {
         observability: ObservabilityConfig::default(),
         limits: ProtocolLimits::default(),
         max_concurrent_connections: 256,
+        worker_threads: 2,
+        max_blocking_requests: 8,
+        blocking_thread_keep_alive_s: 5.0,
         forward: DaemonHttpForwardConfig {
             connect_timeout_s: 10.0,
             response_timeout_s: 0.1,

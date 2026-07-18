@@ -20,9 +20,21 @@ const FD_COUNT_LIMIT: usize = 4_096;
 pub struct WorkspaceProcessInput {
     pub workspace_id: String,
     pub holder_pid: u32,
+    pub cgroup_path: Option<String>,
+    pub applied_cgroup_limits: Option<AppliedCgroupLimits>,
+    pub workload_cgroup_state: String,
+    pub workload_cgroup_reason: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+pub struct AppliedCgroupLimits {
+    pub nano_cpus: u64,
+    pub memory_high_bytes: u64,
+    pub memory_max_bytes: u64,
+    pub pids_max: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct WorkspaceProcessTopology {
     pub schema_version: u8,
     pub available: bool,
@@ -34,7 +46,7 @@ pub struct WorkspaceProcessTopology {
     pub daemon: Option<DaemonProcessMetrics>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DaemonProcessMetrics {
     pub available: bool,
     pub error: Option<String>,
@@ -47,6 +59,8 @@ pub struct DaemonProcessMetrics {
     pub peak_resident_memory_bytes: Option<u64>,
     pub proportional_set_size_bytes: Option<u64>,
     pub unique_set_size_bytes: Option<u64>,
+    pub private_dirty_bytes: Option<u64>,
+    pub anonymous_huge_pages_bytes: Option<u64>,
     pub anonymous_memory_bytes: Option<u64>,
     pub file_memory_bytes: Option<u64>,
     pub shared_memory_bytes: Option<u64>,
@@ -63,7 +77,166 @@ pub struct DaemonProcessMetrics {
     pub voluntary_context_switches: Option<u64>,
     pub involuntary_context_switches: Option<u64>,
     pub cgroup_memberships: Vec<String>,
+    pub cgroup_path: Option<String>,
     pub warnings: Vec<String>,
+    pub runtime_config: DaemonRuntimeConfigMetrics,
+    pub runtime_usage: DaemonRuntimeUsage,
+    pub ownership: DaemonOwnershipMetrics,
+    pub lifecycle: DaemonLifecycleMetrics,
+    pub allocator: DaemonAllocatorMetrics,
+    pub diagnostics: DaemonDiagnosticState,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct DaemonRuntimeConfigMetrics {
+    pub worker_threads: Option<usize>,
+    pub max_blocking_threads: Option<usize>,
+    pub blocking_thread_keep_alive_s: Option<f64>,
+    pub max_concurrent_connections: Option<usize>,
+    pub max_active_commands: Option<usize>,
+    pub infrastructure_thread_allowance: Option<usize>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonRuntimeUsage {
+    pub active_async_tasks: Option<usize>,
+    pub active_blocking_tasks: Option<usize>,
+    pub blocking_queue_depth: Option<usize>,
+    pub blocking_admission_in_use: Option<usize>,
+    pub connection_admission_in_use: Option<usize>,
+    pub active_commands: Option<usize>,
+    pub command_queue_depth: Option<usize>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonOwnershipMetrics {
+    pub open_workspaces: usize,
+    pub live_holders: usize,
+    pub exited_unreaped_holders: Option<usize>,
+    pub namespace_fd_count: Option<usize>,
+    pub control_fd_count: Option<usize>,
+    pub namespace_control_fd_count: Option<usize>,
+    pub active_scratch_directories: Option<usize>,
+    pub persisted_workspace_handles: Option<usize>,
+    pub active_layer_leases: Option<usize>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonLifecycleMetrics {
+    pub holder_exit_total: u64,
+    pub cleanup_attempt_total: u64,
+    pub cleanup_failure_total: u64,
+    pub cleanup_terminal_total: u64,
+    pub dropped_event_total: u64,
+    pub retained_event_count: usize,
+    pub last_holder_exit_reason: Option<String>,
+    pub last_cleanup_failure: Option<String>,
+    pub last_cleanup_result: Option<String>,
+    pub last_cleanup_duration_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonAllocatorMetrics {
+    pub supported: bool,
+    pub allocated_bytes: Option<u64>,
+    pub active_bytes: Option<u64>,
+    pub mapped_bytes: Option<u64>,
+    pub resident_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DaemonDiagnosticTrigger {
+    Cpu,
+    AnonymousMemory,
+    ExitedUnreapedHolder,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonDiagnosticWindow {
+    pub trigger: Option<DaemonDiagnosticTrigger>,
+    pub started_at_unix_ms: Option<u64>,
+    pub elapsed_ms: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonDiagnosticCooldown {
+    pub active: bool,
+    pub until_unix_ms: Option<u64>,
+    pub remaining_ms: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct DaemonDiagnosticCpuInterval {
+    pub elapsed_ms: u64,
+    pub cpu_time_delta_us: Option<u64>,
+    pub percent_of_one_core: Option<f64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct DaemonDiagnosticMemory {
+    pub resident_memory_bytes: Option<u64>,
+    pub proportional_set_size_bytes: Option<u64>,
+    pub anonymous_memory_bytes: Option<u64>,
+    pub private_dirty_bytes: Option<u64>,
+    pub anonymous_huge_pages_bytes: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct DaemonDiagnosticRedaction {
+    pub workspace_file_content_excluded: bool,
+    pub environment_variables_excluded: bool,
+    pub authentication_material_excluded: bool,
+    pub full_command_lines_excluded: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub struct DaemonDiagnosticWorkspaceHolder {
+    pub workspace_id: String,
+    pub holder_pid: i32,
+}
+
+impl Default for DaemonDiagnosticRedaction {
+    fn default() -> Self {
+        Self {
+            workspace_file_content_excluded: true,
+            environment_variables_excluded: true,
+            authentication_material_excluded: true,
+            full_command_lines_excluded: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct DaemonDiagnosticSummary {
+    pub id: String,
+    pub fingerprint: String,
+    pub size_bytes: usize,
+    pub captured_at_unix_ms: u64,
+    pub trigger: DaemonDiagnosticTrigger,
+    pub activity_classes: Vec<String>,
+    pub cpu_interval: DaemonDiagnosticCpuInterval,
+    pub memory: DaemonDiagnosticMemory,
+    pub thread_count: Option<u64>,
+    pub runtime_config: DaemonRuntimeConfigMetrics,
+    pub runtime_usage: DaemonRuntimeUsage,
+    pub ownership: DaemonOwnershipMetrics,
+    pub workspace_ids: Vec<String>,
+    pub workspace_holders: Vec<DaemonDiagnosticWorkspaceHolder>,
+    pub workspace_ids_truncated: bool,
+    pub omitted_workspace_id_count: usize,
+    pub redaction: DaemonDiagnosticRedaction,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
+pub struct DaemonDiagnosticState {
+    pub enabled: bool,
+    pub max_artifact_bytes: usize,
+    pub trigger_count: u64,
+    pub active_window: DaemonDiagnosticWindow,
+    pub cooldown: DaemonDiagnosticCooldown,
+    pub latest: Option<DaemonDiagnosticSummary>,
+    pub last_error: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -71,6 +244,10 @@ pub struct WorkspaceProcesses {
     pub workspace_id: String,
     pub state: WorkspaceProcessState,
     pub holder_pid: u32,
+    pub cgroup_path: Option<String>,
+    pub applied_cgroup_limits: Option<AppliedCgroupLimits>,
+    pub workload_cgroup_state: String,
+    pub workload_cgroup_reason: Option<String>,
     pub pid_namespace: Option<String>,
     pub mount_namespace: Option<String>,
     pub processes: Vec<WorkspaceProcess>,
@@ -117,6 +294,15 @@ pub trait NamespaceIdentityReader {
     fn diagnostic(&self, path: &Path) -> Option<String>;
 }
 
+/// Enumerates the numeric process directories visible below one procfs root.
+///
+/// The separate port keeps the collector's scan count observable in tests and
+/// makes the empty namespace-index fast path explicit. Implementations return
+/// a sorted, de-duplicated PID list.
+pub trait ProcEntryReader {
+    fn numeric_entries(&self, proc_root: &Path) -> io::Result<Vec<u32>>;
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ProcNamespaceIdentityReader;
 
@@ -129,6 +315,15 @@ impl NamespaceIdentityReader for ProcNamespaceIdentityReader {
         std::fs::read_link(path)
             .ok()
             .map(|target| target.to_string_lossy().into_owned())
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ProcFsEntryReader;
+
+impl ProcEntryReader for ProcFsEntryReader {
+    fn numeric_entries(&self, proc_root: &Path) -> io::Result<Vec<u32>> {
+        numeric_proc_entries(proc_root)
     }
 }
 
@@ -151,8 +346,18 @@ impl WorkspaceProcessTopology {
     #[must_use]
     pub fn collect_with_reader(
         proc_root: &Path,
+        inputs: Vec<WorkspaceProcessInput>,
+        namespace_reader: &dyn NamespaceIdentityReader,
+    ) -> Self {
+        Self::collect_with_readers(proc_root, inputs, namespace_reader, &ProcFsEntryReader)
+    }
+
+    #[must_use]
+    pub fn collect_with_readers(
+        proc_root: &Path,
         mut inputs: Vec<WorkspaceProcessInput>,
         namespace_reader: &dyn NamespaceIdentityReader,
+        proc_entry_reader: &dyn ProcEntryReader,
     ) -> Self {
         inputs.sort_by(|left, right| left.workspace_id.cmp(&right.workspace_id));
         let mut warnings = WarningBuffer::default();
@@ -199,7 +404,11 @@ impl WorkspaceProcessTopology {
             }
         }
 
-        let pids = match numeric_proc_entries(proc_root) {
+        if reverse.is_empty() {
+            return finish_topology(builders, warnings, false);
+        }
+
+        let pids = match proc_entry_reader.numeric_entries(proc_root) {
             Ok(pids) => pids,
             Err(error) => {
                 return Self::unavailable(format!(
@@ -246,39 +455,7 @@ impl WorkspaceProcessTopology {
                 "workspace process rows truncated at {PROCESS_LIMIT}"
             ));
         }
-
-        for builder in &mut builders {
-            builder
-                .workspace
-                .processes
-                .sort_by_key(|process| process.pid);
-            builder.workspace.state = if builder.partial {
-                WorkspaceProcessState::Partial
-            } else if builder
-                .workspace
-                .processes
-                .iter()
-                .any(|process| process.namespace_pid != 1)
-            {
-                WorkspaceProcessState::Active
-            } else {
-                WorkspaceProcessState::Idle
-            };
-        }
-
-        Self {
-            schema_version: 2,
-            available: true,
-            source: Some("proc_namespaces".to_owned()),
-            error: None,
-            truncated,
-            warnings: warnings.finish(),
-            workspaces: builders
-                .into_iter()
-                .map(|builder| builder.workspace)
-                .collect(),
-            daemon: None,
-        }
+        finish_topology(builders, warnings, truncated)
     }
 }
 
@@ -319,6 +496,7 @@ impl DaemonProcessMetrics {
         if cgroup.truncated {
             warnings.push("daemon cgroup membership truncated".to_owned());
         }
+        let cgroup_memberships = complete_nonempty_lines(&cgroup.text, cgroup.truncated);
         Self {
             available: true,
             error: None,
@@ -331,6 +509,8 @@ impl DaemonProcessMetrics {
             peak_resident_memory_bytes: status.peak_resident_memory_bytes,
             proportional_set_size_bytes: memory.proportional_set_size_bytes,
             unique_set_size_bytes: memory.unique_set_size_bytes,
+            private_dirty_bytes: memory.private_dirty_bytes,
+            anonymous_huge_pages_bytes: memory.anonymous_huge_pages_bytes,
             anonymous_memory_bytes: status.anonymous_memory_bytes,
             file_memory_bytes: status.file_memory_bytes,
             shared_memory_bytes: status.shared_memory_bytes,
@@ -346,8 +526,15 @@ impl DaemonProcessMetrics {
             write_syscalls: io.write_syscalls,
             voluntary_context_switches: status.voluntary_context_switches,
             involuntary_context_switches: status.involuntary_context_switches,
-            cgroup_memberships: complete_nonempty_lines(&cgroup.text, cgroup.truncated),
+            cgroup_path: unified_cgroup_path(&cgroup_memberships),
+            cgroup_memberships,
             warnings: warnings.finish(),
+            runtime_config: DaemonRuntimeConfigMetrics::default(),
+            runtime_usage: DaemonRuntimeUsage::default(),
+            ownership: DaemonOwnershipMetrics::default(),
+            lifecycle: DaemonLifecycleMetrics::default(),
+            allocator: DaemonAllocatorMetrics::default(),
+            diagnostics: DaemonDiagnosticState::default(),
         }
     }
 
@@ -364,6 +551,8 @@ impl DaemonProcessMetrics {
             peak_resident_memory_bytes: None,
             proportional_set_size_bytes: None,
             unique_set_size_bytes: None,
+            private_dirty_bytes: None,
+            anonymous_huge_pages_bytes: None,
             anonymous_memory_bytes: None,
             file_memory_bytes: None,
             shared_memory_bytes: None,
@@ -380,7 +569,14 @@ impl DaemonProcessMetrics {
             voluntary_context_switches: None,
             involuntary_context_switches: None,
             cgroup_memberships: Vec::new(),
+            cgroup_path: None,
             warnings: Vec::new(),
+            runtime_config: DaemonRuntimeConfigMetrics::default(),
+            runtime_usage: DaemonRuntimeUsage::default(),
+            ownership: DaemonOwnershipMetrics::default(),
+            lifecycle: DaemonLifecycleMetrics::default(),
+            allocator: DaemonAllocatorMetrics::default(),
+            diagnostics: DaemonDiagnosticState::default(),
         }
     }
 }
@@ -389,6 +585,45 @@ struct WorkspaceBuilder {
     workspace: WorkspaceProcesses,
     identity: Option<(NamespaceIdentity, NamespaceIdentity)>,
     partial: bool,
+}
+
+fn finish_topology(
+    mut builders: Vec<WorkspaceBuilder>,
+    warnings: WarningBuffer,
+    truncated: bool,
+) -> WorkspaceProcessTopology {
+    for builder in &mut builders {
+        builder
+            .workspace
+            .processes
+            .sort_by_key(|process| process.pid);
+        builder.workspace.state = if builder.partial {
+            WorkspaceProcessState::Partial
+        } else if builder
+            .workspace
+            .processes
+            .iter()
+            .any(|process| process.namespace_pid != 1)
+        {
+            WorkspaceProcessState::Active
+        } else {
+            WorkspaceProcessState::Idle
+        };
+    }
+
+    WorkspaceProcessTopology {
+        schema_version: 2,
+        available: true,
+        source: Some("proc_namespaces".to_owned()),
+        error: None,
+        truncated,
+        warnings: warnings.finish(),
+        workspaces: builders
+            .into_iter()
+            .map(|builder| builder.workspace)
+            .collect(),
+        daemon: None,
+    }
 }
 
 impl WorkspaceBuilder {
@@ -423,6 +658,10 @@ impl WorkspaceBuilder {
                 workspace_id: input.workspace_id,
                 state: WorkspaceProcessState::Idle,
                 holder_pid: input.holder_pid,
+                cgroup_path: input.cgroup_path,
+                applied_cgroup_limits: input.applied_cgroup_limits,
+                workload_cgroup_state: input.workload_cgroup_state,
+                workload_cgroup_reason: input.workload_cgroup_reason,
                 pid_namespace,
                 mount_namespace,
                 processes: Vec::new(),
@@ -431,6 +670,17 @@ impl WorkspaceBuilder {
             partial,
         }
     }
+}
+
+fn unified_cgroup_path(memberships: &[String]) -> Option<String> {
+    memberships.iter().find_map(|membership| {
+        let mut parts = membership.splitn(3, ':');
+        let hierarchy = parts.next()?;
+        let controllers = parts.next()?;
+        let path = parts.next()?;
+        (hierarchy == "0" && controllers.is_empty() && path.starts_with('/'))
+            .then(|| path.to_owned())
+    })
 }
 
 fn numeric_proc_entries(proc_root: &Path) -> io::Result<Vec<u32>> {
@@ -692,6 +942,8 @@ fn parse_daemon_status(status: &str) -> DaemonStatus {
 struct DaemonSmaps {
     proportional_set_size_bytes: Option<u64>,
     unique_set_size_bytes: Option<u64>,
+    private_dirty_bytes: Option<u64>,
+    anonymous_huge_pages_bytes: Option<u64>,
 }
 
 fn read_daemon_smaps(pid_root: &Path, warnings: &mut WarningBuffer) -> DaemonSmaps {
@@ -708,6 +960,8 @@ fn read_daemon_smaps(pid_root: &Path, warnings: &mut WarningBuffer) -> DaemonSma
     };
     let mut proportional_set_size_bytes = None;
     let mut unique_set_size_bytes = Some(0_u64);
+    let mut private_dirty_bytes = None;
+    let mut anonymous_huge_pages_bytes = None;
     for line in smaps.text.lines() {
         let Some((key, value)) = line.split_once(':') else {
             continue;
@@ -715,16 +969,22 @@ fn read_daemon_smaps(pid_root: &Path, warnings: &mut WarningBuffer) -> DaemonSma
         match key {
             "Pss" => proportional_set_size_bytes = parse_kibibytes(value),
             "Private_Clean" | "Private_Dirty" | "Private_Hugetlb" => {
+                if key == "Private_Dirty" {
+                    private_dirty_bytes = parse_kibibytes(value);
+                }
                 unique_set_size_bytes = unique_set_size_bytes
                     .zip(parse_kibibytes(value))
                     .and_then(|(total, bytes)| total.checked_add(bytes));
             }
+            "AnonHugePages" => anonymous_huge_pages_bytes = parse_kibibytes(value),
             _ => {}
         }
     }
     DaemonSmaps {
         proportional_set_size_bytes,
         unique_set_size_bytes,
+        private_dirty_bytes,
+        anonymous_huge_pages_bytes,
     }
 }
 

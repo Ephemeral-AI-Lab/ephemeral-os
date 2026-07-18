@@ -66,7 +66,7 @@
     },
     {
       "name": "cgroup",
-      "description": "Fold the sample log for one scope into a time series with deltas: cgroup counters (cpu/mem/io from /sys/fs/cgroup) plus the disk sample (upperdir bytes/files) carried in the same record.",
+      "description": "Return a read-only resource time series. Sandbox scope reads CPU, memory, and block-I/O counters from the host Docker Engine; workspace scopes retain daemon disk samples.",
       "inputSchema": {
         "type": "object",
         "properties": {

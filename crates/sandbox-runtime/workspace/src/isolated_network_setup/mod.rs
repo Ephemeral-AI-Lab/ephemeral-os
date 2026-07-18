@@ -145,18 +145,22 @@ impl IsolatedNetwork {
         })
     }
 
-    pub(crate) fn teardown_veth(&mut self, allocation: &VethAllocation) {
+    pub(crate) fn teardown_veth(
+        &mut self,
+        allocation: &VethAllocation,
+    ) -> Result<(), WorkspaceManagerError> {
         #[cfg(target_os = "linux")]
         {
             let host_name = allocation.host_name.clone();
-            let _ = run_netlink(move |handle| async move {
+            run_netlink(move |handle| async move {
                 if let Some(index) = link_index(&handle, &host_name).await? {
                     ignore_not_found("delete host veth", handle.link().del(index).execute().await)?;
                 }
                 Ok(())
-            });
+            })?;
         }
         self.pool.free(allocation.ns_ip);
+        Ok(())
     }
 }
 

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::lifecycle::leases::{monotonic_seconds, next_handle_id};
+use crate::lifecycle::leases::monotonic_seconds;
 use crate::model::{LayerStackSnapshotRef, NetworkProfile, WorkspaceSessionId};
 use crate::namespace::NamespacePlan;
-use crate::overlay::dirs::create_overlay_dirs;
+use crate::overlay::dirs::{create_overlay_dirs, OverlayDirs};
 use crate::session::manager::WorkspaceManagerError;
 use crate::session::{validate_workspace_root, MountedWorkspace, WorkspaceManager};
 
@@ -47,8 +47,38 @@ impl WorkspaceManager {
         Ok(phases_ms)
     }
 
-    pub(crate) fn rollback_partial(&mut self, handle: &MountedWorkspace) {
-        let _ = self.teardown_handle(handle, 1.0);
+    pub(crate) fn rollback_partial(
+        &mut self,
+        handle: &MountedWorkspace,
+    ) -> Result<crate::session::ExitOutcome, WorkspaceManagerError> {
+        self.rollback_unpublished(handle)
+    }
+
+    fn fail_after_partial_create(
+        &mut self,
+        handle: &MountedWorkspace,
+        create_error: WorkspaceManagerError,
+    ) -> WorkspaceManagerError {
+        match self.rollback_partial(handle) {
+            Ok(_) => create_error,
+            Err(WorkspaceManagerError::TeardownFailed {
+                workspace_session_id,
+                mut failures,
+            }) => {
+                failures.insert(0, format!("CreateSetup: {create_error}"));
+                WorkspaceManagerError::TeardownFailed {
+                    workspace_session_id,
+                    failures,
+                }
+            }
+            Err(rollback_error) => WorkspaceManagerError::TeardownFailed {
+                workspace_session_id: handle.workspace_id.clone(),
+                failures: vec![
+                    format!("CreateSetup: {create_error}"),
+                    format!("Rollback: {rollback_error}"),
+                ],
+            },
+        }
     }
 
     fn setup_isolated_network_after_namespace(
@@ -76,28 +106,30 @@ impl WorkspaceManager {
 
     pub fn open(
         &mut self,
+        workspace_id: WorkspaceSessionId,
         snapshot: LayerStackSnapshotRef,
         network: NetworkProfile,
     ) -> Result<MountedWorkspace, WorkspaceManagerError> {
-        let workspace_root = self.validated_workspace_root()?;
-
-        let workspace_id = WorkspaceSessionId(next_handle_id());
-        let dirs =
-            create_overlay_dirs(self.workspace_session_root(&workspace_id)).map_err(|err| {
-                WorkspaceManagerError::SetupFailed {
-                    step: format!("create overlay scratch: {err}"),
-                }
-            })?;
-
+        self.ensure_workspace_available(&workspace_id)?;
+        let run_dir = self.workspace_session_root(&workspace_id);
+        let dirs = OverlayDirs {
+            upperdir: run_dir.join("upper"),
+            workdir: run_dir.join("work"),
+            run_dir,
+        };
         let now = monotonic_seconds();
         let mut handle = MountedWorkspace {
             workspace_id: workspace_id.clone(),
             network,
             snapshot,
-            workspace_root,
+            workspace_root: self.workspace_root.trim().to_owned(),
             dirs,
             ns_fds: Default::default(),
             holder_pid: 0,
+            holder_registration: crate::namespace::holder::HolderRegistration::detached_live(
+                workspace_id.clone(),
+                0,
+            ),
             readiness_fd: -1,
             control_fd: -1,
             veth: None,
@@ -106,16 +138,28 @@ impl WorkspaceManager {
             parked_lease_id: None,
         };
 
+        match self.validated_workspace_root() {
+            Ok(workspace_root) => handle.workspace_root = workspace_root,
+            Err(error) => return Err(self.fail_after_partial_create(&handle, error)),
+        }
+        match create_overlay_dirs(handle.dirs.run_dir.clone()) {
+            Ok(dirs) => handle.dirs = dirs,
+            Err(error) => {
+                let error = WorkspaceManagerError::SetupFailed {
+                    step: format!("create overlay scratch: {error}"),
+                };
+                return Err(self.fail_after_partial_create(&handle, error));
+            }
+        }
+
         if let Err(err) = self.initialize_handle(&mut handle) {
-            self.rollback_partial(&handle);
-            return Err(err);
+            return Err(self.fail_after_partial_create(&handle, err));
         }
 
         self.handles.insert(workspace_id.clone(), handle.clone());
         if let Err(err) = self.persist_handles() {
             self.handles.remove(&workspace_id);
-            self.rollback_partial(&handle);
-            return Err(err);
+            return Err(self.fail_after_partial_create(&handle, err));
         }
         Ok(handle)
     }

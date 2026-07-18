@@ -47,6 +47,11 @@ const CREATE_WORKSPACE_SESSION_ARGUMENTS: &[ArgumentProjection] = &[ArgumentProj
     "--network-profile",
 )];
 
+const PUBLISH_WORKSPACE_SESSION_ARGUMENTS: &[ArgumentProjection] = &[
+    ArgumentProjection::flag("workspace_session_id", "--workspace-session-id"),
+    ArgumentProjection::flag("grace_s", "--grace-s"),
+];
+
 const DESTROY_WORKSPACE_SESSION_ARGUMENTS: &[ArgumentProjection] = &[
     ArgumentProjection::flag("workspace_session_id", "--workspace-session-id"),
     ArgumentProjection::flag("grace_s", "--grace-s"),
@@ -129,6 +134,16 @@ const OPERATIONS: &[OperationProjection] = &[
             "sandbox-runtime-cli --sandbox-id ID create_workspace_session --network-profile isolated",
         ],
         arguments: CREATE_WORKSPACE_SESSION_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "publish_workspace_session",
+        path: &["runtime", "publish_workspace_session"],
+        usage: "sandbox-runtime-cli --sandbox-id ID publish_workspace_session --workspace-session-id ID [--grace-s SECONDS]",
+        examples: &[
+            "sandbox-runtime-cli --sandbox-id ID publish_workspace_session --workspace-session-id ws-1",
+            "sandbox-runtime-cli --sandbox-id ID publish_workspace_session --workspace-session-id ws-1 --grace-s 1",
+        ],
+        arguments: PUBLISH_WORKSPACE_SESSION_ARGUMENTS,
     },
     OperationProjection {
         name: "destroy_workspace_session",

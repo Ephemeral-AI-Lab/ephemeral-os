@@ -10,7 +10,9 @@ use sandbox_runtime::command::{
     CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
-use sandbox_runtime::{LayerStackService, NamespaceExecutionId, SandboxRuntimeOperations};
+use sandbox_runtime::{
+    LayerStackService, NamespaceExecutionId, SandboxRuntimeOperations, WorkloadCgroupLimits,
+};
 use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild, RunnerPlacement,
 };
@@ -20,7 +22,8 @@ use serde_json::json;
 
 use support::{
     build_services, build_services_with_launch_driver,
-    build_services_with_launch_driver_and_cgroup_root, create_request, success_exit,
+    build_services_with_launch_driver_and_cgroup_root,
+    build_services_with_launch_driver_and_workload_cgroup, create_request, success_exit,
     workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
     FakeLaunchDriver, FakeLauncher, FakeRunnerScript, FakeWorkspaceService, ScriptedCommandYield,
     TestServices,
@@ -135,6 +138,48 @@ fn exec_command_rejects_empty_command_before_workspace_resolution() {
 }
 
 #[test]
+fn command_admission_overload_is_a_structured_server_busy_fault(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver
+        .launcher()
+        .push_script(FakeRunnerScript::spawn_error(
+            NamespaceExecutionError::Admission { max_active: 4 },
+        ));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        NetworkProfile::Shared,
+    );
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&env.command),
+        Arc::clone(&env.workspace),
+        layerstack_service()?,
+        support::test_file_service(),
+    );
+    let request = OperationRequest::new(
+        "exec_command",
+        "req-command-overload",
+        OperationScope::sandbox("sbox-test"),
+        json!({
+            "workspace_session_id": workspace_session_id.0,
+            "cmd": "sleep 30",
+            "yield_time_ms": 0
+        }),
+    );
+
+    let response = sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
+
+    assert_eq!(response["error"]["kind"], "server_busy");
+    assert_eq!(response["error"]["details"]["max_active_commands"], 4);
+    Ok(())
+}
+
+#[test]
 fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session_on_completion() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
@@ -164,7 +209,10 @@ fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session
         "the response names the implicit session even though it is already finalized"
     );
     assert_eq!(output.publish_rejected, None);
-    assert_eq!(fake.create_requests(), vec![support::raw_create_request()]);
+    assert_eq!(
+        fake.create_requests(),
+        vec![support::raw_create_request("implicit-session")]
+    );
     assert_eq!(
         fake.destroy_calls(),
         vec![WorkspaceSessionId("implicit-session".to_owned())]
@@ -563,6 +611,62 @@ fn exec_command_places_shared_session_child_in_workspace_cgroup() {
     assert_eq!(
         launch_driver.recorded_cgroup_procs_paths(),
         vec![Some(expected_workspace_cgroup.join("cgroup.procs"))]
+    );
+}
+
+#[test]
+fn workload_cgroup_applies_profile_limits_before_command_admission() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    let cgroup_root = temp_root().join("cgroup-root");
+    let limits = WorkloadCgroupLimits {
+        nano_cpus: 1_500_000_000,
+        memory_high_bytes: 256 * 1024 * 1024,
+        memory_max_bytes: 320 * 1024 * 1024,
+        pids_max: 96,
+    };
+    let env = build_services_with_launch_driver_and_workload_cgroup(
+        Arc::clone(&fake),
+        Arc::clone(&launch_driver),
+        cgroup_root.clone(),
+        limits,
+    );
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "profiled-session",
+        PathBuf::from("/workspace/session"),
+        NetworkProfile::Shared,
+    );
+
+    env.command
+        .exec_command(exec_input(workspace_session_id))
+        .expect("session command exec succeeds");
+
+    let leaf = cgroup_root.join("workspace-profiled-session");
+    assert_eq!(
+        std::fs::read_to_string(leaf.join("cpu.max")).unwrap(),
+        "150000 100000"
+    );
+    assert_eq!(
+        std::fs::read_to_string(leaf.join("memory.high")).unwrap(),
+        (256 * 1024 * 1024).to_string()
+    );
+    assert_eq!(
+        std::fs::read_to_string(leaf.join("memory.max")).unwrap(),
+        (320 * 1024 * 1024).to_string()
+    );
+    assert_eq!(
+        std::fs::read_to_string(leaf.join("pids.max")).unwrap(),
+        "96"
+    );
+    assert_eq!(
+        std::fs::read_to_string(leaf.join("memory.oom.group")).unwrap(),
+        "1"
+    );
+    assert_eq!(
+        launch_driver.recorded_cgroup_procs_paths(),
+        vec![Some(leaf.join("cgroup.procs"))]
     );
 }
 

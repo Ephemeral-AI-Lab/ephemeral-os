@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use anyhow::{anyhow, Context, Result};
 use sandbox_config::configs::{
@@ -35,7 +36,17 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
     set_runner_config_env(&config.config_yaml_path);
     set_runner_sandbox_id_env(config.sandbox_id.as_deref());
     let workspace_root = config.workspace_root.clone();
-    let cgroup_root = crate::cgroup_setup::discover_and_prepare_root();
+    let workload_limits = selected_workload_cgroup_limits(&runtime_config);
+    let (cgroup_root, workload_cgroup_unavailable_reason) = match workload_limits {
+        Some(limits) => match crate::cgroup_setup::discover_and_prepare_root(limits) {
+            Ok(root) => (Some(root), None),
+            Err(reason) => {
+                cli_log(format!("workload cgroup unavailable: {reason}"));
+                (None, Some(reason))
+            }
+        },
+        None => (None, None),
+    };
     let server_config = sandbox_daemon::ServerConfig {
         socket_path: config.socket_path,
         pid_path: config.pid_path,
@@ -52,19 +63,21 @@ pub(crate) fn run(args: std::env::Args) -> Result<()> {
             request_read_timeout_s: daemon_config.server.request_read_timeout_s,
         },
         max_concurrent_connections: daemon_config.server.max_concurrent_connections,
+        worker_threads: daemon_config.server.worker_threads,
+        max_blocking_requests: daemon_config.server.max_blocking_threads,
+        blocking_thread_keep_alive_s: daemon_config.server.blocking_thread_keep_alive_s,
         forward: daemon_config.http.forward,
     };
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(daemon_worker_threads(
-            daemon_config.server.max_worker_threads,
-        ))
-        .enable_all()
-        .build()
-        .context("failed to build daemon tokio runtime")?;
+    let runtime = build_daemon_runtime(&daemon_config.server)?;
     let serve_result = runtime.block_on(async move {
         let server = sandbox_daemon::SandboxDaemonServer::new_with_runtime_config(
             server_config,
-            build_runtime_config(&runtime_config, workspace_root, cgroup_root),
+            build_runtime_config(
+                &runtime_config,
+                workspace_root,
+                cgroup_root,
+                workload_cgroup_unavailable_reason,
+            ),
         );
         server.serve().await
     });
@@ -76,15 +89,19 @@ pub(crate) struct DaemonRuntimeConfig {
     daemon: DaemonConfig,
     runtime: RuntimeConfig,
     observability: ObservabilityConfig,
+    manager: Option<ManagerConfig>,
 }
 
-fn build_runtime_config(
+pub(crate) fn build_runtime_config(
     config: &DaemonRuntimeConfig,
     workspace_root: PathBuf,
     cgroup_root: Option<PathBuf>,
+    workload_cgroup_unavailable_reason: Option<String>,
 ) -> sandbox_runtime::SandboxRuntimeConfig {
     sandbox_runtime::SandboxRuntimeConfig {
         cgroup_root,
+        workload_cgroup_limits: selected_workload_cgroup_limits(config),
+        workload_cgroup_unavailable_reason,
         workspace: sandbox_runtime::WorkspaceRuntimeConfig {
             workspace_root,
             layer_stack_root: config.runtime.workspace.layer_stack_root.clone(),
@@ -143,15 +160,25 @@ fn build_runtime_config(
 pub(crate) fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
     let doc = sandbox_config::load_path(path)
         .with_context(|| format!("load daemon config {}", path.display()))?;
-    validate_manager_config_section(&doc)?;
+    let manager = load_manager_config_section(&doc)?;
     let daemon = doc
         .section::<DaemonConfig>("daemon")
         .context("deserialize daemon config section")?;
     daemon.validate().context("validate daemon config")?;
+    if daemon.server.used_legacy_worker_threads() {
+        eprintln!(
+            "warning: daemon.server.max_worker_threads is deprecated; use daemon.server.worker_threads"
+        );
+    }
     let runtime = doc
         .section::<RuntimeConfig>("runtime")
         .context("deserialize runtime config section")?;
     runtime.validate().context("validate runtime config")?;
+    if let Some(docker) = manager.as_ref().and_then(|manager| manager.docker.as_ref()) {
+        docker
+            .validate_daemon_runtime_profile(&daemon, &runtime)
+            .context("validate selected daemon runtime profile")?;
+    }
     let observability = doc
         .section::<ObservabilityConfig>("observability")
         .unwrap_or_default();
@@ -168,21 +195,55 @@ pub(crate) fn load_runtime_config(path: &Path) -> Result<DaemonRuntimeConfig> {
         daemon,
         runtime,
         observability,
+        manager,
     })
 }
 
-fn validate_manager_config_section(doc: &sandbox_config::ConfigDocument) -> Result<()> {
+fn load_manager_config_section(
+    doc: &sandbox_config::ConfigDocument,
+) -> Result<Option<ManagerConfig>> {
     match doc.section::<ManagerConfig>("manager") {
-        Ok(_) => Ok(()),
+        Ok(manager) => {
+            manager.validate().context("validate manager config")?;
+            Ok(Some(manager))
+        }
         Err(sandbox_config::ConfigError::MissingSection { section }) if section == "manager" => {
-            Ok(())
+            Ok(None)
         }
         Err(error) => Err(error).context("deserialize manager config section"),
     }
 }
 
-fn daemon_worker_threads(max_worker_threads: usize) -> usize {
-    max_worker_threads.max(1)
+fn selected_workload_cgroup_limits(
+    config: &DaemonRuntimeConfig,
+) -> Option<sandbox_runtime::WorkloadCgroupLimits> {
+    let docker = config.manager.as_ref()?.docker.as_ref()?;
+    let profile = docker.selected_resource_profile()?;
+    if !profile.separate_workload_cgroup {
+        return None;
+    }
+    let outer_memory_max = docker.memory_bytes.unwrap_or(profile.memory_max_bytes);
+    let memory_high = profile.memory_high_bytes.min(outer_memory_max);
+    Some(sandbox_runtime::WorkloadCgroupLimits {
+        nano_cpus: u64::try_from(docker.nano_cpus.unwrap_or(profile.nano_cpus))
+            .expect("validated resource profile nano_cpus is positive"),
+        memory_high_bytes: u64::try_from(memory_high)
+            .expect("validated resource profile memory high is positive"),
+        memory_max_bytes: u64::try_from(profile.workload_memory_max_bytes().min(outer_memory_max))
+            .expect("validated resource profile workload memory max is positive"),
+        pids_max: u64::try_from(profile.workload_pids_max())
+            .expect("validated resource profile workload pids max is positive"),
+    })
+}
+
+pub(crate) fn build_daemon_runtime(server: &DaemonServerConfig) -> Result<tokio::runtime::Runtime> {
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(server.worker_threads)
+        .max_blocking_threads(server.max_blocking_threads)
+        .thread_keep_alive(Duration::from_secs_f64(server.blocking_thread_keep_alive_s))
+        .enable_all()
+        .build()
+        .context("failed to build daemon tokio runtime")
 }
 
 pub(crate) struct DaemonCliConfig {
@@ -413,4 +474,9 @@ fn process_is_live(pid: u32) -> bool {
     } else {
         pid > 0
     }
+}
+
+fn cli_log(message: impl AsRef<str>) {
+    let escaped = serde_json::to_string(message.as_ref()).unwrap_or_else(|_| "\"\"".to_owned());
+    eprintln!("cli_log({escaped})");
 }

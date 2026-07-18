@@ -23,8 +23,8 @@ pub use daemon_install::{SandboxDaemonInstaller, StartedDaemon};
 pub use error::ManagerError;
 pub use export_apply::ExportApplyCaps;
 pub use model::{
-    SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxState,
-    SharedBaseMount,
+    SandboxDaemonEndpoint, SandboxHttpEndpoint, SandboxId, SandboxRecord, SandboxResourceProfile,
+    SandboxState, SharedBaseMount,
 };
 pub use operations::{
     dispatch_operation, dispatch_operation_with_progress, manager_handler_keys, operation_catalog,

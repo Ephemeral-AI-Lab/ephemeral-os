@@ -3,7 +3,9 @@ use std::process::ExitCode;
 use std::sync::Arc;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use sandbox_config::configs::manager::ManagerConfig;
+use sandbox_config::configs::{
+    daemon::DaemonConfig, manager::ManagerConfig, runtime::RuntimeConfig,
+};
 use sandbox_config::ConfigDocument;
 use sandbox_gateway::{
     resolve_gateway_config, GatewayCliOverrides, GatewayConfig, SandboxGatewayServer,
@@ -138,6 +140,13 @@ fn build_docker_services(
     let document = document.ok_or("--config-yaml is required when --backend docker")?;
     let manager_config: ManagerConfig = document.section("manager")?;
     manager_config.validate()?;
+    let daemon_config: DaemonConfig = document.section("daemon")?;
+    daemon_config.validate()?;
+    let runtime_config: RuntimeConfig = document.section("runtime")?;
+    runtime_config.validate()?;
+    if let Some(docker) = manager_config.docker.as_ref() {
+        docker.validate_daemon_runtime_profile(&daemon_config, &runtime_config)?;
+    }
     let export_caps = ExportApplyCaps {
         max_stream_bytes: manager_config.export.max_stream_bytes,
         max_decompressed_bytes: manager_config.export.max_decompressed_bytes,

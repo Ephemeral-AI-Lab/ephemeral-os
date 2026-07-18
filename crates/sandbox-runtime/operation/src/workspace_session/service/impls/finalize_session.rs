@@ -37,9 +37,9 @@ impl WorkspaceSessionService {
                 );
                 let mut published = false;
                 let mut layer_committed = false;
-                match self.capture_finalize_changes(&handler) {
+                match self.capture_session_changes(&handler) {
                     Ok(captured) if captured.changes.is_empty() => {}
-                    Ok(captured) => match self.publish_finalize_changes(&handler, captured) {
+                    Ok(captured) => match self.publish_session_changes(&handler, captured) {
                         Ok(result) => {
                             published = true;
                             layer_committed = !result.no_op;
@@ -78,7 +78,7 @@ impl WorkspaceSessionService {
         }
     }
 
-    fn capture_finalize_changes(
+    pub(in crate::workspace_session::service::impls) fn capture_session_changes(
         &self,
         handler: &WorkspaceSessionHandler,
     ) -> Result<CapturedWorkspaceChanges, WorkspaceSessionError> {
@@ -93,7 +93,7 @@ impl WorkspaceSessionService {
             })
     }
 
-    fn publish_finalize_changes(
+    pub(in crate::workspace_session::service::impls) fn publish_session_changes(
         &self,
         handler: &WorkspaceSessionHandler,
         captured: CapturedWorkspaceChanges,
@@ -108,10 +108,7 @@ impl WorkspaceSessionService {
     }
 
     fn destroy_finalized_session(&self, handler: &WorkspaceSessionHandler) {
-        let destroyed = self.obs().scope(names::WORKSPACE_SESSION_DESTROY, |_span| {
-            let snapshot = self.snapshot_for_destroy(&handler.workspace_session_id)?;
-            self.destroy_snapshot(snapshot, DestroyWorkspaceRequest::default())
-        });
+        let destroyed = self.destroy_session(handler.clone(), DestroyWorkspaceRequest::default());
         if let Err(error) = destroyed {
             let failure = WorkspaceSessionError::FinalizationFailed {
                 workspace_session_id: handler.workspace_session_id.clone(),

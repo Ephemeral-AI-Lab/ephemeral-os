@@ -104,6 +104,22 @@ pub fn require_usize_at_least(
     }
 }
 
+/// Require `value <= maximum`.
+pub fn require_usize_at_most(
+    value: usize,
+    maximum: usize,
+    field: &'static str,
+) -> Result<(), ConfigFieldError> {
+    if value <= maximum {
+        Ok(())
+    } else {
+        Err(ConfigFieldError::new(
+            field,
+            format!("must be at most {maximum}"),
+        ))
+    }
+}
+
 /// Require a finite `value > minimum` (callers pass `0.0`).
 pub fn require_f64_gt(
     value: f64,

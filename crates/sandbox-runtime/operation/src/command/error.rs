@@ -29,6 +29,9 @@ pub enum CommandServiceError {
         error: String,
     },
 
+    #[error("command admission refused: {max_active_commands} active commands in flight")]
+    CommandAdmissionOverloaded { max_active_commands: usize },
+
     #[error("command finalization failed for {command_session_id:?}: {error}")]
     CommandFinalizationFailed {
         command_session_id: NamespaceExecutionId,

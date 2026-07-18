@@ -216,6 +216,7 @@ fn workspace_value(
     json!({
         "workspace_id": workspace.workspace_id,
         "lifecycle_state": "active",
+        "finalization_state": workspace.finalization_state,
         "network_profile": workspace.network_profile,
         "finalize_policy": workspace.finalize_policy,
         "layers": {

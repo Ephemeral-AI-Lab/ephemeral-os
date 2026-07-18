@@ -64,7 +64,11 @@ fn temp_root(label: &str) -> PathBuf {
 fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
     Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
         WorkspaceRuntimeHooks {
+            take_holder_exit_subscription: Box::new(|| Ok(None)),
             isolated_ip: Box::new(|_| Ok(None)),
+            allocate_workspace_session_id: Box::new(|_| {
+                Ok(WorkspaceSessionId("not-configured".to_owned()))
+            }),
             create_workspace: Box::new(|_request: CreateWorkspaceRequest| {
                 Err(WorkspaceError::Setup {
                     step: "not configured".to_owned(),
@@ -137,6 +141,19 @@ fn command_contract_keeps_session_selector_in_exec_input() {
 }
 
 #[test]
+fn command_runtime_default_matches_the_shipped_admission_cap() {
+    assert_eq!(
+        sandbox_runtime::CommandRuntimeConfig::default().max_active,
+        32
+    );
+    assert_eq!(CommandConfig::default().max_active, 32);
+    assert_eq!(
+        sandbox_runtime_namespace_execution::ExecutionCaps::default().max_active,
+        32
+    );
+}
+
+#[test]
 fn runtime_from_config_initializes_layerstack_workspace_base(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let base = temp_root("runtime-from-config-layerstack");
@@ -168,6 +185,8 @@ fn runtime_from_config_initializes_layerstack_workspace_base(
             command: sandbox_runtime::CommandRuntimeConfig::default(),
             file: sandbox_runtime::FileRuntimeConfig::default(),
             cgroup_root: None,
+            workload_cgroup_limits: None,
+            workload_cgroup_unavailable_reason: Some("test host has no delegation".to_owned()),
         },
         Observer::disabled(),
     );
@@ -215,6 +234,7 @@ fn runtime_operation_catalog_exports_only_public_runtime_operations() {
             "file_edit",
             "file_blame",
             "create_workspace_session",
+            "publish_workspace_session",
             "destroy_workspace_session",
         ]
     );
@@ -294,7 +314,7 @@ fn service_graph_workspace_session_source_boundaries_stay_private() {
     let adapter = include_str!("../src/operations/registry/workspace_session_operations.rs");
     assert!(adapter.contains(".create_workspace_session("));
     assert!(adapter.contains(".guarded_destroy("));
-    assert_eq!(adapter.matches("OperationEntry::public").count(), 2);
+    assert_eq!(adapter.matches("OperationEntry::public").count(), 3);
     assert!(!adapter.contains("WorkspaceDestroyAdmission"));
     assert!(!adapter.contains("begin_workspace_destroy_admission"));
 

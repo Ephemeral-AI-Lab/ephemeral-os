@@ -20,5 +20,5 @@ mod runtime;
 
 pub use installer::DockerSandboxDaemonInstaller;
 pub use launch::daemon_launch_argv;
-pub use runtime::DockerSandboxRuntime;
+pub use runtime::{DockerResourceLimits, DockerSandboxRuntime};
 pub use sandbox_config::configs::manager::DockerRuntimeConfig;

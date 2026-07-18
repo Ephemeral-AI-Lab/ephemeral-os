@@ -38,6 +38,7 @@ impl SandboxRuntime for FakeRuntime {
     ) -> Result<CreateSandboxResult, ManagerError> {
         Ok(CreateSandboxResult {
             id: sandbox_id("container-1"),
+            resource_profile: None,
         })
     }
 
@@ -255,6 +256,7 @@ fn env_with_store_and_caps(label: &str, store: Arc<SandboxStore>, caps: ExportAp
             daemon: Some(SandboxDaemonEndpoint::new("127.0.0.1", 7000, "token")),
             daemon_http: None,
             shared_base: None,
+            resource_profile: None,
         })
         .expect("insert sandbox");
     Env {
@@ -857,6 +859,7 @@ fn non_ready_sandbox_is_rejected_by_the_forward_gate_with_dest_untouched() {
             daemon: Some(SandboxDaemonEndpoint::new("127.0.0.1", 7000, "token")),
             daemon_http: None,
             shared_base: None,
+            resource_profile: None,
         })
         .expect("insert");
     let dest = env.base.join("untouched");
@@ -1260,6 +1263,7 @@ fn env_with_daemon_http(label: &str, port: u16) -> Env {
                 port,
             }),
             shared_base: None,
+            resource_profile: None,
         })
         .expect("insert sandbox");
     Env {

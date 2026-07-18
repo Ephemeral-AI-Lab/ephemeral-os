@@ -22,7 +22,7 @@ pub struct ExecutionCaps {
 impl Default for ExecutionCaps {
     fn default() -> Self {
         Self {
-            max_active: 256,
+            max_active: 32,
             setup_timeout_s: 30.0,
             stdin_write_deadline: Duration::from_secs(2),
             max_terminal_entries: 512,

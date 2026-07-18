@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use sandbox_runtime_namespace_execution::NamespaceTarget;
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NsFds};
 
+use crate::namespace::holder::{HolderExitReason, HolderRegistration};
 use crate::overlay::tree::TreeResourceStats;
 use crate::session::{HolderNsFds, MountedWorkspace};
 
@@ -13,6 +14,23 @@ pub struct WorkspaceSessionId(pub String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LeaseId(pub String);
+
+/// Bounded ownership accounting for workspace resources held by the runtime.
+///
+/// The snapshot includes both open workspaces and retryable teardown
+/// transactions. It is assembled from the manager's in-memory ownership
+/// ledger and does not scan `/proc`, scratch storage, or the daemon.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct WorkspaceOwnershipSnapshot {
+    pub namespace_fd_count: usize,
+    pub control_fd_count: usize,
+    pub active_scratch_directories: usize,
+    pub persisted_workspace_handles: usize,
+    /// A holder exit is observed only by `Child::try_wait`, which reaps it in
+    /// the same operation. Consequently the single supervisor never owns a
+    /// holder that is known exited but remains unreaped.
+    pub exited_unreaped_holders: usize,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BaseRevision {
@@ -130,6 +148,7 @@ pub struct WorkspaceHandle {
     pub network: NetworkProfile,
     pub snapshot: LayerStackSnapshotRef,
     pub holder_pid: i32,
+    holder_registration: HolderRegistration,
     launch: Option<WorkspaceLaunchContext>,
 }
 
@@ -140,6 +159,7 @@ impl fmt::Debug for WorkspaceHandle {
             .field("workspace_root", &self.workspace_root)
             .field("network", &self.network)
             .field("snapshot", &self.snapshot)
+            .field("holder_live", &self.holder_registration.is_live())
             .field("launch", &self.launch.as_ref().map(|_| "<available>"))
             .finish()
     }
@@ -151,6 +171,33 @@ impl WorkspaceHandle {
             .as_ref()
             .ok_or_else(WorkspaceEntryError::missing_launch_material)?
             .entry()
+    }
+
+    /// Returns false as soon as the single holder supervisor observes exit.
+    #[must_use]
+    pub fn holder_is_live(&self) -> bool {
+        self.holder_registration.is_live()
+    }
+
+    /// A stable, bounded holder-exit summary suitable for structured errors.
+    #[must_use]
+    pub fn holder_exit_reason(&self) -> Option<String> {
+        self.holder_registration.exit_event().map(|event| {
+            if event.reason == HolderExitReason::WaitError {
+                "wait-error".to_owned()
+            } else if let Some(signal) = event.exit.signal {
+                format!("signal:{signal}")
+            } else if let Some(status) = event.exit.exit_status {
+                format!("exit-status:{status}")
+            } else {
+                "exit-status:unknown".to_owned()
+            }
+        })
+    }
+
+    #[doc(hidden)]
+    pub fn mark_holder_exited_for_test(&self, detail: &str) {
+        self.holder_registration.mark_exited_for_test(detail);
     }
 
     #[must_use]
@@ -237,6 +284,7 @@ impl WorkspaceHandle {
             .and_then(|context| context.holder_fds)
             .map_or(0, |_| i32::try_from(std::process::id()).unwrap_or(i32::MAX));
         Self {
+            holder_registration: HolderRegistration::detached_live(id.clone(), holder_pid),
             id,
             workspace_root,
             network,
@@ -395,6 +443,7 @@ impl std::error::Error for WorkspaceEntryError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateWorkspaceRequest {
+    pub workspace_session_id: WorkspaceSessionId,
     pub network: NetworkProfile,
 }
 
@@ -481,6 +530,7 @@ impl From<&MountedWorkspace> for WorkspaceHandle {
             network: handle.network,
             snapshot: handle.snapshot.clone(),
             holder_pid: handle.holder_pid,
+            holder_registration: handle.holder_registration.clone(),
             launch: Some(WorkspaceLaunchContext {
                 network: handle.network,
                 workspace_root: PathBuf::from(&handle.workspace_root),

@@ -8,4 +8,4 @@ pub(crate) use service::impls::destroy_sandbox::destroy_sandbox;
 pub(crate) use service::impls::inspect_sandbox::inspect_sandbox;
 pub(crate) use service::impls::list_sandboxes::list_sandboxes;
 pub(crate) use service::impls::observability_snapshot::{observability_snapshot, SnapshotOptions};
-pub(crate) use service::impls::resource_metrics::dispatch_resource_metrics;
+pub(crate) use service::impls::resource_metrics::{dispatch_resource_metrics, dispatch_resources};

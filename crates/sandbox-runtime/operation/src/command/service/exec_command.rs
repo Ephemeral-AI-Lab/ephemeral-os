@@ -122,9 +122,16 @@ impl CommandOperationService {
             let exec = match exec {
                 Ok(exec) => exec,
                 Err(error) => {
-                    let error = CommandServiceError::CommandIo {
-                        command_session_id: id.clone(),
-                        error: error.to_string(),
+                    let error = match error {
+                        NamespaceExecutionError::Admission { max_active } => {
+                            CommandServiceError::CommandAdmissionOverloaded {
+                                max_active_commands: max_active,
+                            }
+                        }
+                        error => CommandServiceError::CommandIo {
+                            command_session_id: id.clone(),
+                            error: error.to_string(),
+                        },
                     };
                     self.cleanup_transcript_dir(&id);
                     self.complete_admitted(&admitted, &admission_guard);

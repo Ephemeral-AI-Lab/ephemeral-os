@@ -2,6 +2,11 @@
 fn config_prd_daemon_section_deserializes_and_validates() {
     let cfg = prd_config();
     cfg.validate().expect("prd daemon config is valid");
+    assert_eq!(cfg.server.worker_threads, 2);
+    assert_eq!(cfg.server.max_blocking_threads, 8);
+    assert!((cfg.server.blocking_thread_keep_alive_s - 5.0).abs() < f64::EPSILON);
+    assert_eq!(cfg.server.max_concurrent_connections, 64);
+    assert!(!cfg.server.used_legacy_worker_threads());
 }
 
 #[test]
@@ -18,18 +23,60 @@ fn config_prd_daemon_section_does_not_carry_dynamic_sandbox_identity() {
 #[test]
 fn config_validation_rejects_invalid_daemon_values() {
     let mut cfg = prd_config();
-    cfg.server.max_worker_threads = 0;
-    assert_invalid(cfg, "daemon.server.max_worker_threads");
+    cfg.server.worker_threads = 0;
+    assert_invalid(cfg, "daemon.server.worker_threads");
 }
 
 #[test]
 fn config_server_limits_default_to_shipped_policy() {
-    // prd.yml carries none of the limit keys, so the section must load to
-    // today's exact constants.
     let cfg = prd_config();
-    assert_eq!(cfg.server.max_concurrent_connections, 256);
+    assert_eq!(cfg.server.max_concurrent_connections, 64);
     assert_eq!(cfg.server.max_request_bytes, 16 * 1024 * 1024);
     assert!((cfg.server.request_read_timeout_s - 30.0).abs() < f64::EPSILON);
+}
+
+#[test]
+fn legacy_worker_name_is_a_validated_compatibility_alias() {
+    let cfg = daemon_config_with_worker_key("    max_worker_threads: 3\n", "")
+        .expect("legacy worker name remains readable for one migration window");
+    cfg.validate().expect("legacy worker value is valid");
+
+    assert_eq!(cfg.server.worker_threads, 3);
+    assert!(cfg.server.used_legacy_worker_threads());
+}
+
+#[test]
+fn old_and_new_worker_names_are_rejected_together() {
+    let error =
+        daemon_config_with_worker_key("    worker_threads: 2\n    max_worker_threads: 3\n", "")
+            .expect_err("ambiguous worker names must fail");
+
+    let message = error.to_string();
+    assert!(message.contains("worker_threads"), "{message}");
+    assert!(message.contains("max_worker_threads"), "{message}");
+}
+
+#[test]
+fn runtime_sizing_rejects_zero_and_values_above_safety_maxima() {
+    let mut cfg = prd_config();
+    cfg.server.max_blocking_threads = 0;
+    assert_invalid(cfg, "daemon.server.max_blocking_threads");
+
+    let mut cfg = prd_config();
+    cfg.server.blocking_thread_keep_alive_s = 0.0;
+    assert_invalid(cfg, "daemon.server.blocking_thread_keep_alive_s");
+
+    let mut cfg = prd_config();
+    cfg.server.worker_threads = usize::MAX;
+    assert_invalid(cfg, "daemon.server.worker_threads");
+
+    let mut cfg = prd_config();
+    cfg.server.max_blocking_threads = usize::MAX;
+    assert_invalid(cfg, "daemon.server.max_blocking_threads");
+
+    let mut cfg = prd_config();
+    cfg.server.max_concurrent_connections = usize::MAX;
+    assert_invalid(cfg, "daemon.server.max_concurrent_connections");
 }
 
 #[test]
@@ -106,13 +153,19 @@ fn config_validation_rejects_forward_timeout_edge_values() {
 }
 
 fn daemon_config(extra_yaml: &str) -> Result<DaemonConfig, crate::ConfigError> {
+    daemon_config_with_worker_key("    worker_threads: 2\n", extra_yaml)
+}
+
+fn daemon_config_with_worker_key(
+    worker_yaml: &str,
+    extra_yaml: &str,
+) -> Result<DaemonConfig, crate::ConfigError> {
     let yaml = format!(
         "daemon:
   server:
     socket_path: /eos/runtime/daemon/runtime.sock
     pid_path: /eos/runtime/daemon/runtime.pid
-    max_worker_threads: 32
-{extra_yaml}"
+{worker_yaml}{extra_yaml}"
     );
     crate::ConfigDocument::parse(std::path::Path::new("<test>"), &yaml)?.section("daemon")
 }

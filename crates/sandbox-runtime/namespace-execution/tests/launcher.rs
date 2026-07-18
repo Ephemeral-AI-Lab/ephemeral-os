@@ -20,6 +20,42 @@ pub mod launcher {
         use super::*;
 
         #[test]
+        fn configured_cgroup_placement_failure_terminates_and_reaps_spawned_runner() {
+            let (request_read, request_write) = request_pipe().expect("request pipe");
+            let (result_read, result_write) = result_pipe().expect("result pipe");
+            let mut command = Command::new("sh");
+            command
+                .arg("-c")
+                .arg("while true; do sleep 1; done")
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+            install_pgid_leader_hook(&mut command);
+            let child = command.spawn().expect("spawn child");
+            let pgid = child_pgid(&child).expect("child process group");
+            drop(request_read);
+            drop(result_write);
+            let mut spawned = SpawnedRunner {
+                child,
+                result_read,
+                request_write,
+                pgid,
+            };
+            let missing = std::env::temp_dir()
+                .join(format!("eos-missing-cgroup-{}", std::process::id()))
+                .join("cgroup.procs");
+
+            let error = place_spawned_child_in_cgroup(&mut spawned, Some(&missing))
+                .expect_err("configured placement fails closed");
+
+            assert!(error.to_string().contains("place ns-runner pid"));
+            assert!(
+                spawned.child.try_wait().expect("child state").is_some(),
+                "placement failure waits the runner before returning"
+            );
+        }
+
+        #[test]
         fn overlay_mount_completion_timeout_terminates_and_reaps_child() {
             let (result_read, result_write) = result_pipe().expect("result pipe");
             drop(result_write);
@@ -32,13 +68,14 @@ pub mod launcher {
                 .stderr(Stdio::null());
             install_pgid_leader_hook(&mut command);
             let child = command.spawn().expect("spawn child");
-            let mut runner = ForkRunnerChild {
+            let mut runner = ForkRunnerChild::new(
                 child,
                 result_read,
-                mode_flag: Some("--mount-overlay"),
-                setup_timeout_s: 0.01,
-                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
-            };
+                Some("--mount-overlay"),
+                0.01,
+                crate::caps::ExecutionCaps::default().max_runner_result_bytes,
+            )
+            .expect("runner");
 
             let error = runner.wait_completion().expect_err("timeout");
 
@@ -71,13 +108,14 @@ pub mod launcher {
                 .stderr(Stdio::null())
                 .spawn()
                 .expect("spawn child");
-            let mut runner = ForkRunnerChild {
+            let mut runner = ForkRunnerChild::new(
                 child,
                 result_read,
-                mode_flag: Some("--file-op"),
-                setup_timeout_s: 5.0,
-                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
-            };
+                Some("--file-op"),
+                5.0,
+                crate::caps::ExecutionCaps::default().max_runner_result_bytes,
+            )
+            .expect("runner");
 
             let error = runner
                 .wait_completion()
@@ -105,13 +143,14 @@ pub mod launcher {
                 .stderr(Stdio::null())
                 .spawn()
                 .expect("spawn child");
-            let mut runner = ForkRunnerChild {
+            let mut runner = ForkRunnerChild::new(
                 child,
                 result_read,
-                mode_flag: None,
-                setup_timeout_s: 0.0,
-                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
-            };
+                None,
+                0.0,
+                crate::caps::ExecutionCaps::default().max_runner_result_bytes,
+            )
+            .expect("runner");
 
             let error = runner
                 .wait_completion()
@@ -135,13 +174,14 @@ pub mod launcher {
                 .stderr(Stdio::null())
                 .spawn()
                 .expect("spawn child");
-            let mut runner = ForkRunnerChild {
+            let mut runner = ForkRunnerChild::new(
                 child,
                 result_read,
-                mode_flag: None,
-                setup_timeout_s: 0.0,
-                max_result_bytes: crate::caps::ExecutionCaps::default().max_runner_result_bytes,
-            };
+                None,
+                0.0,
+                crate::caps::ExecutionCaps::default().max_runner_result_bytes,
+            )
+            .expect("runner");
 
             let result = runner
                 .wait_completion()

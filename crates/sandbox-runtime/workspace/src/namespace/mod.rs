@@ -1,5 +1,8 @@
 mod fds;
-mod holder;
+pub(crate) mod holder;
+#[cfg(test)]
+#[path = "holder_tests.rs"]
+mod holder_tests;
 mod setns_runner;
 
 use std::sync::Arc;
@@ -97,6 +100,7 @@ pub(crate) fn setup_error(error: impl std::fmt::Display) -> WorkspaceManagerErro
 pub struct NamespaceRuntime {
     engine: Arc<NamespaceExecutionEngine>,
     obs: Observer,
+    holder_supervisor: Arc<holder::HolderSupervisor>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -119,6 +123,16 @@ impl NamespaceRuntime {
                 },
             )),
             obs,
+            holder_supervisor: Arc::new(holder::HolderSupervisor::new(
+                std::time::Duration::from_millis(50),
+                128,
+            )),
         }
+    }
+
+    pub(crate) fn take_holder_exit_subscription(
+        &self,
+    ) -> Result<crate::service::HolderExitSubscription, String> {
+        self.holder_supervisor.take_exit_subscription()
     }
 }

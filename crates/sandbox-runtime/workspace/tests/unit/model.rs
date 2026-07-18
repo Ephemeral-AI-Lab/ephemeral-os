@@ -10,7 +10,7 @@ use sandbox_runtime_workspace::model::{
 };
 use sandbox_runtime_workspace::overlay::dirs::OverlayDirs;
 use sandbox_runtime_workspace::overlay::tree::TreeResourceStats;
-use sandbox_runtime_workspace::session::{HolderNsFds, MountedWorkspace};
+use sandbox_runtime_workspace::session::{HolderNsFds, HolderRegistration, MountedWorkspace};
 
 fn test_manifest() -> sandbox_runtime_layerstack::Manifest {
     sandbox_runtime_layerstack::Manifest::new(
@@ -48,6 +48,10 @@ fn workspace_profile_handle() -> MountedWorkspace {
             net: Some(13),
         },
         holder_pid: 1234,
+        holder_registration: HolderRegistration::detached_for_test(
+            WorkspaceSessionId("namespace-handle".to_owned()),
+            1234,
+        ),
         readiness_fd: 13,
         control_fd: 14,
         veth: None,
@@ -210,6 +214,7 @@ fn public_dto_debug_does_not_expose_internal_storage_or_namespace_fields() {
         format!(
             "{:?}",
             CreateWorkspaceRequest {
+                workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
                 network: NetworkProfile::Shared,
             }
         ),
@@ -320,6 +325,7 @@ fn public_dtos_construct_clone_and_compare() {
         layer_count: 1,
     };
     let create = CreateWorkspaceRequest {
+        workspace_session_id: WorkspaceSessionId("workspace".to_owned()),
         network: NetworkProfile::Shared,
     };
     let handle = WorkspaceHandle::without_launch_for_test(

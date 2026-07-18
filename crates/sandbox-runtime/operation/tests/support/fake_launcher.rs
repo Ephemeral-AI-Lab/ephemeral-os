@@ -84,6 +84,17 @@ impl FakeCompletion {
             FakeCompletionOutcome::Failed(detail) => Err(NamespaceExecutionError::Spawn(detail)),
         }
     }
+
+    fn try_result(&self) -> Result<Option<RunResult>, NamespaceExecutionError> {
+        let slot = self.slot.lock().expect("fake completion mutex poisoned");
+        match slot.clone() {
+            Some(FakeCompletionOutcome::Completed(result)) => Ok(Some(result)),
+            Some(FakeCompletionOutcome::Failed(detail)) => {
+                Err(NamespaceExecutionError::Spawn(detail))
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 struct FakeRunnerChild {
@@ -95,6 +106,14 @@ impl RunnerChild for FakeRunnerChild {
     fn wait_completion(&mut self) -> Result<RunResult, NamespaceExecutionError> {
         self.completion.wait()
     }
+
+    fn try_wait_completion(&mut self) -> Result<Option<RunResult>, NamespaceExecutionError> {
+        self.completion.try_result()
+    }
+
+    fn terminate(&mut self) {
+        self.completion.cancel();
+    }
 }
 
 /// One scripted `spawn_pty` outcome, applied at spawn time so the caller's yield
@@ -105,6 +124,7 @@ pub struct FakeRunnerScript {
     completion: Option<RunResult>,
     pgid: Option<i32>,
     spawn_error: Option<NamespaceExecutionError>,
+    ignore_cancel: bool,
 }
 
 impl FakeRunnerScript {
@@ -140,6 +160,16 @@ impl FakeRunnerScript {
     #[must_use]
     pub fn pending() -> Self {
         Self::default()
+    }
+
+    /// Park the child and record cancellation without completing it. This
+    /// injects a stuck runner so teardown timeout/retry behavior can be proven.
+    #[must_use]
+    pub fn pending_ignoring_cancel() -> Self {
+        Self {
+            ignore_cancel: true,
+            ..Self::default()
+        }
     }
 
     /// Fail the spawn itself.
@@ -312,6 +342,7 @@ impl NsRunnerLauncher for FakeLauncher {
             let completion = Arc::clone(&completion);
             let state = Arc::clone(&self.state);
             let request_id = request.request_id.clone();
+            let ignore_cancel = script.ignore_cancel;
             move || {
                 cancelled.store(true, Ordering::Release);
                 state
@@ -319,7 +350,9 @@ impl NsRunnerLauncher for FakeLauncher {
                     .expect("fake launcher mutex poisoned")
                     .cancel_request_ids
                     .push(request_id.clone());
-                completion.cancel();
+                if !ignore_cancel {
+                    completion.cancel();
+                }
             }
         };
         let pty = PtyMaster::spawn(

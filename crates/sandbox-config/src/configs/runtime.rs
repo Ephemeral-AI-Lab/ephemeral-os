@@ -9,7 +9,7 @@ use serde::Deserialize;
 
 use crate::configs::validate::{
     require_absolute, require_f64_at_least, require_f64_gt, require_i32_in_range,
-    require_u64_at_least, require_usize_at_least, ConfigFieldError,
+    require_u64_at_least, require_usize_at_least, require_usize_at_most, ConfigFieldError,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -54,7 +54,7 @@ pub struct CommandConfig {
 impl Default for CommandConfig {
     fn default() -> Self {
         Self {
-            max_active: 256,
+            max_active: 32,
             read_lines_default: 200,
             read_lines_max: 1000,
         }
@@ -68,6 +68,7 @@ impl CommandConfig {
     /// Returns an error when a field violates command-operation policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
         require_usize_at_least(self.max_active, 1, "runtime.command.max_active")?;
+        require_usize_at_most(self.max_active, 1024, "runtime.command.max_active")?;
         require_usize_at_least(
             self.read_lines_default,
             1,

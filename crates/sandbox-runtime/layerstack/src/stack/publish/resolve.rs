@@ -4,7 +4,7 @@
 //! line's structural [`Origin`] — never an owner (boundary law: the runtime
 //! above layerstack maps origin to an owner string after the layer commits).
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::io::Read;
 
 use crate::error::LayerStackError;
@@ -15,10 +15,11 @@ use crate::stack::MergedView;
 use super::fingerprint::content_fingerprint;
 use super::merge::{three_way_merge, LineRange, MergeOutcome, Origin};
 use super::model::{
-    ContentFingerprint, PublishReject, PublishValidatedChangesRequest, ResolvedChangeset,
-    SourceConflict,
+    ContentFingerprint, PublishReject, PublishRejectReason, PublishValidatedChangesRequest,
+    ResolvedChangeset, SourceConflict,
 };
-use super::plan::PublishPlan;
+use super::opaque_dir::OPAQUE_DIR_EXPANSION_LIMIT;
+use super::plan::{PublishPlan, SourceValidationProvenance};
 use super::route::RouteKind;
 
 const MERGE_MAX_BYTES: usize = 8 * 1024 * 1024;
@@ -82,8 +83,9 @@ pub(crate) fn resolve_publish_changes(
     Ok(ResolvedChangeset { changes, origin })
 }
 
-/// Validate every source path against the active manifest. A clean path passes;
-/// a file-content mismatch with a write at that exact path attempts a three-way
+/// Validate every source path against the active manifest. A clean path or an
+/// idempotent concurrent creation of the same accepted directory passes; a
+/// file-content mismatch with a write at that exact path attempts a three-way
 /// merge (clean → merged bytes + origin); any other mismatch rejects.
 fn resolve_source_conflicts(
     view: &MergedView,
@@ -91,31 +93,55 @@ fn resolve_source_conflicts(
     active: &Manifest,
     plan: &PublishPlan,
 ) -> Result<HashMap<LayerPath, MergedPath>, LayerStackError> {
-    let writes: HashMap<&LayerPath, &LayerChange> = plan
+    let effective_changes: BTreeMap<&LayerPath, _> = plan
         .accepted()
         .iter()
-        .filter(|accepted| accepted.route == RouteKind::Source)
-        .filter_map(|accepted| match accepted.change {
-            LayerChange::Write { .. } | LayerChange::WriteFile { .. } => {
-                Some((accepted.change.path(), &accepted.change))
-            }
-            _ => None,
-        })
+        .map(|accepted| (accepted.change.path(), accepted))
         .collect();
 
     let mut merged = HashMap::new();
     for validation in plan.source_validations() {
+        if let SourceValidationProvenance::OpaqueDir { root } = &validation.provenance {
+            let effective_source_opaque = effective_changes.get(root).is_some_and(|accepted| {
+                accepted.route == RouteKind::Source
+                    && matches!(&accepted.change, LayerChange::OpaqueDir { .. })
+            });
+            if !effective_source_opaque {
+                continue;
+            }
+        }
         let actual = content_fingerprint(view, active, &validation.path)?;
-        if actual == validation.expected {
+        let effective = effective_changes.get(&validation.path).copied();
+        let compatible_directory_create = effective.is_some_and(|accepted| {
+            accepted.route == RouteKind::Source
+                && matches!(&accepted.change, LayerChange::Directory { .. })
+        }) && matches!(
+            (&validation.expected, &actual),
+            (ContentFingerprint::Absent, ContentFingerprint::Directory)
+        );
+        if actual == validation.expected || compatible_directory_create {
             continue;
         }
-        let Some(change) = writes.get(&validation.path) else {
+        let Some(accepted) = effective else {
             return Err(source_conflict(
                 &validation.path,
                 &validation.expected,
                 actual,
             ));
         };
+        if accepted.route != RouteKind::Source
+            || !matches!(
+                &accepted.change,
+                LayerChange::Write { .. } | LayerChange::WriteFile { .. }
+            )
+        {
+            return Err(source_conflict(
+                &validation.path,
+                &validation.expected,
+                actual,
+            ));
+        }
+        let change = &accepted.change;
         let command = read_command_bytes(change)?;
         match merge_path(view, base, active, &validation.path, &command)? {
             Some(resolved) => {
@@ -130,7 +156,59 @@ fn resolve_source_conflicts(
             }
         }
     }
+    validate_structural_source_conflicts(view, base, active, &effective_changes)?;
     Ok(merged)
+}
+
+fn validate_structural_source_conflicts(
+    view: &MergedView,
+    base: &Manifest,
+    active: &Manifest,
+    effective_changes: &BTreeMap<&LayerPath, &super::plan::AcceptedChange>,
+) -> Result<(), LayerStackError> {
+    if base == active {
+        return Ok(());
+    }
+    for (path, accepted) in effective_changes {
+        if accepted.route != RouteKind::Source
+            || !matches!(
+                accepted.change,
+                LayerChange::Write { .. }
+                    | LayerChange::WriteFile { .. }
+                    | LayerChange::Symlink { .. }
+                    | LayerChange::Delete { .. }
+                    | LayerChange::OpaqueDir { .. }
+            )
+            || content_fingerprint(view, base, path)? != ContentFingerprint::Directory
+        {
+            continue;
+        }
+
+        let base_descendants = view.visible_descendants(path, base, OPAQUE_DIR_EXPANSION_LIMIT)?;
+        let active_descendants =
+            view.visible_descendants(path, active, OPAQUE_DIR_EXPANSION_LIMIT)?;
+        if base_descendants.len() > OPAQUE_DIR_EXPANSION_LIMIT
+            || active_descendants.len() > OPAQUE_DIR_EXPANSION_LIMIT
+        {
+            return Err(expansion_limit(path));
+        }
+
+        let mut descendants = BTreeSet::new();
+        for descendant in base_descendants.into_iter().chain(active_descendants) {
+            descendants.insert(descendant);
+            if descendants.len() > OPAQUE_DIR_EXPANSION_LIMIT {
+                return Err(expansion_limit(path));
+            }
+        }
+        for descendant in descendants {
+            let expected = content_fingerprint(view, base, &descendant)?;
+            let actual = content_fingerprint(view, active, &descendant)?;
+            if actual != expected {
+                return Err(source_conflict(&descendant, &expected, actual));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Three-way merge of a concurrently-modified file. `None` is an ineligible or
@@ -185,7 +263,7 @@ fn read_file(
     path: &LayerPath,
 ) -> Result<FileBytes, LayerStackError> {
     match view.read_entry_limited(path.as_str(), manifest, MERGE_MAX_BYTES) {
-        Ok(MergedEntry::File { bytes }) => Ok(FileBytes::Bytes(bytes)),
+        Ok(MergedEntry::File { bytes, .. }) => Ok(FileBytes::Bytes(bytes)),
         Ok(MergedEntry::Absent) => Ok(FileBytes::Absent),
         Ok(MergedEntry::Symlink { .. } | MergedEntry::Directory) => Ok(FileBytes::NonFile),
         Err(LayerStackError::FileTooLarge { .. }) => Ok(FileBytes::NonFile),
@@ -220,4 +298,11 @@ fn source_conflict(
         expected: expected.clone(),
         actual,
     })))
+}
+
+fn expansion_limit(path: &LayerPath) -> LayerStackError {
+    LayerStackError::PublishRejected(Box::new(PublishReject::at_path(
+        path.clone(),
+        PublishRejectReason::OpaqueDirExpansionLimit,
+    )))
 }

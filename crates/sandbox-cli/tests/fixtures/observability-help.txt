@@ -18,6 +18,18 @@ Events
   events
     List domain-fact events across traces.
 
+Resources
+  Inspect manager-owned resource metrics.
+
+  resources
+    Read manager-owned sandbox resource metrics.
+
+Topology
+  Inspect workspace process topology.
+
+  topology
+    Read one sandbox's workspace process topology.
+
 Cgroup
   Inspect resource series.
 
@@ -29,6 +41,12 @@ Layerstack
 
   layerstack
     Per-layer leasing/booking inventory, and stack series.
+
+Resource isolation
+  Qualify observability memory and storage isolation.
+
+Resource efficiency
+  Qualify sandbox resource efficiency.
 
 Use:
   sandbox-observability-cli OPERATION

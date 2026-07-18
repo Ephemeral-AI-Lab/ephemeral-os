@@ -6,4 +6,5 @@ mod runtime;
 
 pub use error::SandboxDaemonError;
 pub(crate) use runtime::error_response;
+pub(crate) use runtime::{BlockingAdmission, ConnectionAdmission};
 pub use runtime::{SandboxDaemonServer, ServerConfig};

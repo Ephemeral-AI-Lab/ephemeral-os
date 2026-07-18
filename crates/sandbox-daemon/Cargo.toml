@@ -22,6 +22,7 @@ anyhow.workspace = true
 # preserve_order keeps incoming operation arguments in caller order while this
 # crate still accepts raw JSON requests.
 serde_json = { workspace = true, features = ["preserve_order"] }
+serde.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 thiserror.workspace = true
@@ -32,11 +33,11 @@ http-body-util.workspace = true
 bytes.workspace = true
 uuid.workspace = true
 rustix.workspace = true
+sha2.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-layerstack.workspace = true
 sandbox-runtime-workspace.workspace = true
-sha2.workspace = true
 
 [lints]
 workspace = true

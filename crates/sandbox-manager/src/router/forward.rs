@@ -1,7 +1,7 @@
 use sandbox_operation_catalog::internal;
 use sandbox_operation_catalog::runtime::{
     CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC, EXEC_COMMAND_SPEC,
-    FILE_EDIT_SPEC, FILE_WRITE_SPEC, WRITE_STDIN_SPEC,
+    FILE_EDIT_SPEC, FILE_WRITE_SPEC, PUBLISH_WORKSPACE_SESSION_SPEC, WRITE_STDIN_SPEC,
 };
 use sandbox_operation_contract::{OperationRequest, OperationResponse, OperationScope};
 
@@ -13,12 +13,25 @@ pub(crate) fn forward_sandbox_request(
 ) -> Result<OperationResponse, ManagerError> {
     let id = sandbox_id(&request.scope)?;
     let endpoint = daemon_endpoint(services, &id)?;
-    let advances_revision = is_mutation(&request.op);
+    let operation = request.op.clone();
     let response = services.daemon_client.invoke(&endpoint, request, None)?;
-    if advances_revision && response.as_json_value().get("error").is_none() {
+    if advances_activity_revision(&response, &operation) {
         services.store.advance_activity_revision(&id)?;
     }
     Ok(response)
+}
+
+fn advances_activity_revision(response: &OperationResponse, operation: &str) -> bool {
+    if !is_mutation(operation) {
+        return false;
+    }
+    let value = response.as_json_value();
+    if value.get("error").is_none() {
+        return true;
+    }
+    operation == PUBLISH_WORKSPACE_SESSION_SPEC.name
+        && value["error"]["details"]["stage"].as_str() == Some("destroy")
+        && value["error"]["details"]["publish_completed"].as_bool() == Some(true)
 }
 
 fn is_mutation(operation: &str) -> bool {
@@ -28,6 +41,7 @@ fn is_mutation(operation: &str) -> bool {
         FILE_WRITE_SPEC.name,
         FILE_EDIT_SPEC.name,
         CREATE_WORKSPACE_SESSION_SPEC.name,
+        PUBLISH_WORKSPACE_SESSION_SPEC.name,
         DESTROY_WORKSPACE_SESSION_SPEC.name,
         internal::runtime::SQUASH_LAYERSTACK,
     ]

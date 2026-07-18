@@ -7,12 +7,14 @@ use std::sync::Arc;
 use sandbox_observability_telemetry::Observer;
 use sandbox_runtime::command::ExecCommandInput;
 use sandbox_runtime::layerstack::LayerStackService;
-use sandbox_runtime::{CommandOperationService, SandboxRuntimeOperations};
+use sandbox_runtime::workspace_session::FinalizationState;
+use sandbox_runtime::{CommandOperationService, SandboxRuntimeOperations, WorkloadCgroupLimits};
 use sandbox_runtime_workspace::DestroyWorkspaceRequest;
 use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
 
 use support::{
-    build_services, create_request, workspace_handle, FakeWorkspaceService, TestServices,
+    build_services, build_services_with_launch_driver_and_workload_cgroup, create_request,
+    workspace_handle, FakeLaunchDriver, FakeWorkspaceService, TestServices,
 };
 
 #[test]
@@ -37,6 +39,7 @@ fn observability_snapshot_copies_active_workspace_fields(
     assert_eq!(workspace.workspace_id, workspace_session_id);
     assert_eq!(workspace.holder_pid, i32::try_from(std::process::id())?);
     assert_eq!(workspace.network, NetworkProfile::Isolated);
+    assert_eq!(workspace.finalization_state, FinalizationState::Active);
     assert_eq!(
         workspace.workspace_root,
         PathBuf::from("/workspace/session")
@@ -46,7 +49,14 @@ fn observability_snapshot_copies_active_workspace_fields(
     assert_eq!(workspace.namespace_fd_count, Some(4));
     assert_eq!(workspace.base_root_hash.as_deref(), Some("root"));
     assert_eq!(workspace.layer_count, Some(1));
+    assert_eq!(workspace.cgroup_path, None);
+    assert_eq!(workspace.applied_cgroup_limits, None);
     assert!(snapshot.active_namespace_executions.is_empty());
+    assert_eq!(snapshot.ownership.namespace_fd_count, Some(0));
+    assert_eq!(snapshot.ownership.control_fd_count, Some(0));
+    assert_eq!(snapshot.ownership.active_scratch_directories, Some(0));
+    assert_eq!(snapshot.ownership.persisted_workspace_handles, Some(0));
+    assert_eq!(snapshot.ownership.exited_unreaped_holders, Some(0));
 
     let handler = services
         .workspace
@@ -55,6 +65,56 @@ fn observability_snapshot_copies_active_workspace_fields(
         .workspace
         .destroy_session(handler, DestroyWorkspaceRequest::default())?;
     assert!(operations.observability_snapshot().workspaces.is_empty());
+    Ok(())
+}
+
+#[test]
+fn observability_snapshot_exposes_applied_workspace_cgroup_profile(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let cgroup_root = temp_root().join("cgroup-root");
+    let limits = WorkloadCgroupLimits {
+        nano_cpus: 750_000_000,
+        memory_high_bytes: 96 * 1024 * 1024,
+        memory_max_bytes: 128 * 1024 * 1024,
+        pids_max: 48,
+    };
+    let services = build_services_with_launch_driver_and_workload_cgroup(
+        Arc::clone(&fake),
+        Arc::new(FakeLaunchDriver::new()),
+        cgroup_root.clone(),
+        limits,
+    );
+    let workspace_session_id = create_session(
+        &fake,
+        &services,
+        "profiled-session",
+        PathBuf::from("/workspace/session"),
+        NetworkProfile::Shared,
+    );
+    let operations = operations_for(&services)?;
+
+    let allocated = operations.observability_snapshot();
+    assert_eq!(
+        allocated.workspaces[0].cgroup_path.as_deref(),
+        Some(cgroup_root.join("workspace-profiled-session").as_path())
+    );
+    assert_eq!(allocated.workspaces[0].applied_cgroup_limits, Some(limits));
+
+    services.command.exec_command(ExecCommandInput {
+        workspace_session_id: Some(workspace_session_id),
+        cmd: "printf ok".to_owned(),
+        timeout_ms: None,
+        yield_time_ms: Some(0),
+    })?;
+
+    let after_admission = operations.observability_snapshot();
+    let workspace = &after_admission.workspaces[0];
+    assert_eq!(
+        workspace.cgroup_path.as_deref(),
+        Some(cgroup_root.join("workspace-profiled-session").as_path())
+    );
+    assert_eq!(workspace.applied_cgroup_limits, Some(limits));
     Ok(())
 }
 

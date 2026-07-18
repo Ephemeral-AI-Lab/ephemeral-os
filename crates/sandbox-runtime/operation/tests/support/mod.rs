@@ -17,11 +17,12 @@ use sandbox_runtime::layerstack::LayerStackService;
 use sandbox_runtime::workspace_session::{
     CreateSessionRequest, FinalizePolicy, WorkspaceSessionService,
 };
+use sandbox_runtime::WorkloadCgroupLimits;
 use sandbox_runtime_workspace::{
-    CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp, LayerStackSnapshotRef, LeaseId,
-    NetworkProfile, ReadonlySnapshotHandle, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
-    WorkspaceRuntimeService, WorkspaceSessionId,
+    holder_exit_channel_for_test, CaptureChangesRequest, CapturedWorkspaceChanges,
+    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp,
+    LayerStackSnapshotRef, LeaseId, NetworkProfile, ReadonlySnapshotHandle, WorkspaceError,
+    WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 const TEST_MAX_ACTIVE_COMMANDS: usize = 256;
@@ -34,6 +35,7 @@ pub(crate) struct TestServices {
 
 #[derive(Default)]
 pub(crate) struct FakeWorkspaceService {
+    workspace_session_ids: Mutex<VecDeque<WorkspaceSessionId>>,
     create_results: Mutex<VecDeque<Result<WorkspaceHandle, WorkspaceError>>>,
     capture_results: Mutex<VecDeque<Result<CapturedWorkspaceChanges, WorkspaceError>>>,
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
@@ -42,11 +44,16 @@ pub(crate) struct FakeWorkspaceService {
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
     run_file_op_results: Mutex<VecDeque<Result<RunResult, WorkspaceError>>>,
     run_file_op_calls: Mutex<Vec<(WorkspaceSessionId, FileRunnerOp)>>,
+    create_barrier: Mutex<Option<std::sync::mpsc::Receiver<()>>>,
+    create_entered: Mutex<Option<std::sync::mpsc::Sender<()>>>,
+    capture_barrier: Mutex<Option<std::sync::mpsc::Receiver<()>>>,
+    capture_entered: Mutex<Option<std::sync::mpsc::Sender<()>>>,
     // Admission-gate test hook: while held closed, the destroy hook parks
     // inside the gate so a concurrent entrypoint's serialization is
     // observable deterministically.
     destroy_barrier: Mutex<Option<std::sync::mpsc::Receiver<()>>>,
     destroy_entered: Mutex<Option<std::sync::mpsc::Sender<()>>>,
+    holder_exit_notifier: Mutex<Option<sandbox_runtime_workspace::HolderExitNotifier>>,
 }
 
 /// A scripted command outcome (kept for the suites that script per yield). It is
@@ -131,10 +138,36 @@ impl FakeWorkspaceService {
     }
 
     pub(crate) fn push_create_result(&self, result: Result<WorkspaceHandle, WorkspaceError>) {
+        if let Ok(handle) = &result {
+            self.workspace_session_ids
+                .lock()
+                .expect("test operation succeeds")
+                .push_back(handle.id.clone());
+        }
         self.create_results
             .lock()
             .expect("test operation succeeds")
             .push_back(result);
+    }
+
+    pub(crate) fn push_workspace_session_id(&self, workspace_session_id: WorkspaceSessionId) {
+        self.workspace_session_ids
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(workspace_session_id);
+    }
+
+    fn allocate_workspace_session_id(
+        &self,
+        _network: NetworkProfile,
+    ) -> Result<WorkspaceSessionId, WorkspaceError> {
+        self.workspace_session_ids
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .ok_or_else(|| WorkspaceError::Setup {
+                step: "workspace session id not configured".to_owned(),
+            })
     }
 
     pub(crate) fn push_capture_result(
@@ -192,6 +225,15 @@ impl FakeWorkspaceService {
             .clone()
     }
 
+    pub(crate) fn notify_holder_exit(&self) {
+        self.holder_exit_notifier
+            .lock()
+            .expect("test operation succeeds")
+            .as_ref()
+            .expect("fake runtime installs holder exit notifier")
+            .notify_for_test();
+    }
+
     fn run_file_op(
         &self,
         handle: &WorkspaceHandle,
@@ -220,6 +262,22 @@ impl FakeWorkspaceService {
             .lock()
             .expect("test operation succeeds")
             .push(request);
+        if let Some(entered) = self
+            .create_entered
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = entered.send(());
+        }
+        if let Some(barrier) = self
+            .create_barrier
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = barrier.recv();
+        }
         self.create_results
             .lock()
             .expect("test operation succeeds")
@@ -240,6 +298,22 @@ impl FakeWorkspaceService {
             .lock()
             .expect("test operation succeeds")
             .push(handle.id.clone());
+        if let Some(entered) = self
+            .capture_entered
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = entered.send(());
+        }
+        if let Some(barrier) = self
+            .capture_barrier
+            .lock()
+            .expect("test operation succeeds")
+            .take()
+        {
+            let _ = barrier.recv();
+        }
         self.capture_results
             .lock()
             .expect("test operation succeeds")
@@ -291,6 +365,32 @@ impl FakeWorkspaceService {
 }
 
 impl FakeWorkspaceService {
+    pub(crate) fn park_next_create(
+        &self,
+    ) -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        *self.create_entered.lock().expect("test operation succeeds") = Some(entered_tx);
+        *self.create_barrier.lock().expect("test operation succeeds") = Some(release_rx);
+        (entered_rx, release_tx)
+    }
+
+    pub(crate) fn park_next_capture(
+        &self,
+    ) -> (std::sync::mpsc::Receiver<()>, std::sync::mpsc::Sender<()>) {
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (release_tx, release_rx) = std::sync::mpsc::channel();
+        *self
+            .capture_entered
+            .lock()
+            .expect("test operation succeeds") = Some(entered_tx);
+        *self
+            .capture_barrier
+            .lock()
+            .expect("test operation succeeds") = Some(release_rx);
+        (entered_rx, release_tx)
+    }
+
     /// Park the next destroy inside the admission gate: `entered` fires when
     /// the destroy hook is reached, and the destroy returns only when the
     /// test drops or signals the `release` sender.
@@ -314,9 +414,25 @@ impl FakeWorkspaceService {
 pub(crate) fn fake_workspace_runtime(
     fake: Arc<FakeWorkspaceService>,
 ) -> Arc<WorkspaceRuntimeService> {
+    let (holder_exit_notifier, holder_exit_subscription) = holder_exit_channel_for_test();
+    *fake
+        .holder_exit_notifier
+        .lock()
+        .expect("test operation succeeds") = Some(holder_exit_notifier);
+    let holder_exit_subscription = Arc::new(Mutex::new(Some(holder_exit_subscription)));
     Arc::new(WorkspaceRuntimeService::from_hooks_for_test(
         WorkspaceRuntimeHooks {
+            take_holder_exit_subscription: Box::new(move || {
+                Ok(holder_exit_subscription
+                    .lock()
+                    .expect("test operation succeeds")
+                    .take())
+            }),
             isolated_ip: Box::new(|_| Ok(None)),
+            allocate_workspace_session_id: Box::new({
+                let fake = Arc::clone(&fake);
+                move |network| fake.allocate_workspace_session_id(network)
+            }),
             create_workspace: Box::new({
                 let fake = Arc::clone(&fake);
                 move |request| fake.create_workspace(request)
@@ -358,6 +474,23 @@ pub(crate) fn build_services_with_launch_driver_and_cgroup_root(
         fake_workspace_runtime(fake),
         test_layerstack_service(),
         cgroup_root,
+        Observer::disabled(),
+    ));
+    let command = Arc::new(build_command_service(&workspace, &launch_driver));
+    TestServices { workspace, command }
+}
+
+pub(crate) fn build_services_with_launch_driver_and_workload_cgroup(
+    fake: Arc<FakeWorkspaceService>,
+    launch_driver: Arc<FakeLaunchDriver>,
+    cgroup_root: PathBuf,
+    limits: WorkloadCgroupLimits,
+) -> TestServices {
+    let workspace = Arc::new(WorkspaceSessionService::with_workload_cgroup(
+        fake_workspace_runtime(fake),
+        test_layerstack_service(),
+        cgroup_root,
+        limits,
         Observer::disabled(),
     ));
     let command = Arc::new(build_command_service(&workspace, &launch_driver));
@@ -454,8 +587,9 @@ pub(crate) fn create_request_with_policy(finalize_policy: FinalizePolicy) -> Cre
 
 /// The workspace-crate request the fake runtime records for one
 /// operation-level `create_request()`.
-pub(crate) fn raw_create_request() -> CreateWorkspaceRequest {
+pub(crate) fn raw_create_request(workspace_session_id: &str) -> CreateWorkspaceRequest {
     CreateWorkspaceRequest {
+        workspace_session_id: WorkspaceSessionId(workspace_session_id.to_owned()),
         network: NetworkProfile::Shared,
     }
 }

@@ -92,17 +92,20 @@ fn create_one(
         }
     };
     let id = created.id;
+    let resource_profile = created.resource_profile;
     progress.emit("recording sandbox");
-    let record = match services.store.create_with_shared_base(
+    let record = match services.store.create_with_shared_base_and_profile(
         id.clone(),
         workspace_root.clone(),
         Some(shared_base.clone()),
+        resource_profile.clone(),
     ) {
         Ok(record) => record,
         Err(error) => {
             progress.emit(error.to_string());
             let mut untracked = SandboxRecord::new(id, workspace_root, SandboxState::Creating);
             untracked.shared_base = Some(shared_base);
+            untracked.resource_profile = resource_profile;
             let _ = services.runtime.destroy_sandbox(&untracked);
             return Err(error);
         }

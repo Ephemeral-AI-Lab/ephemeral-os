@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorkspaceError {
     InvalidRequest {
         field: &'static str,
@@ -34,6 +34,11 @@ pub enum WorkspaceError {
     Publish {
         message: String,
     },
+
+    Cleanup {
+        workspace_session_id: String,
+        failures: Vec<String>,
+    },
 }
 
 impl std::fmt::Display for WorkspaceError {
@@ -57,6 +62,14 @@ impl std::fmt::Display for WorkspaceError {
             Self::Command { message } => write!(formatter, "command failed: {message}"),
             Self::Capture { message } => write!(formatter, "capture failed: {message}"),
             Self::Publish { message } => write!(formatter, "publish failed: {message}"),
+            Self::Cleanup {
+                workspace_session_id,
+                failures,
+            } => write!(
+                formatter,
+                "workspace cleanup remains retryable for {workspace_session_id}: {}",
+                failures.join("; ")
+            ),
         }
     }
 }
@@ -76,6 +89,7 @@ impl WorkspaceError {
             Self::Command { .. } => "command",
             Self::Capture { .. } => "capture",
             Self::Publish { .. } => "publish",
+            Self::Cleanup { .. } => "cleanup",
         }
     }
 }

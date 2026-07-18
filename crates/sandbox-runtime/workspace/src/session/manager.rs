@@ -12,7 +12,8 @@ use sandbox_observability_telemetry::Observer;
 use serde::Deserialize;
 
 use crate::isolated_network_setup::IsolatedNetwork;
-use crate::model::WorkspaceSessionId;
+use crate::lifecycle::destroy::TeardownTransaction;
+use crate::model::{WorkspaceOwnershipSnapshot, WorkspaceSessionId};
 use crate::namespace::NamespaceRuntime;
 pub use crate::session::{HolderNsFds, MountedWorkspace};
 
@@ -56,11 +57,22 @@ pub enum WorkspaceManagerError {
     #[error("workspace session is not open")]
     NotOpen,
 
+    #[error("workspace session is already open: {workspace_session_id:?}")]
+    AlreadyOpen {
+        workspace_session_id: WorkspaceSessionId,
+    },
+
     #[error("setup failed at step {step}")]
     SetupFailed { step: String },
 
     #[error("isolated network unavailable: {0}")]
     NetworkUnavailable(String),
+
+    #[error("workspace teardown remains retryable for {workspace_session_id:?}: {failures:?}")]
+    TeardownFailed {
+        workspace_session_id: WorkspaceSessionId,
+        failures: Vec<String>,
+    },
 }
 
 pub struct WorkspaceManager {
@@ -69,7 +81,13 @@ pub struct WorkspaceManager {
     pub(crate) runtime: Arc<NamespaceRuntime>,
     pub(crate) network: IsolatedNetwork,
     pub(crate) scratch_root: PathBuf,
+    /// Bound by [`crate::WorkspaceRuntimeService`] before the manager can
+    /// create or destroy a workspace. Keeping the root on the teardown owner
+    /// lets lease release participate in the same retryable transaction as
+    /// holder, fd, mount, scratch, and persisted-handle cleanup.
+    pub(crate) layer_stack_root: Option<PathBuf>,
     pub(crate) handles: HashMap<WorkspaceSessionId, MountedWorkspace>,
+    pub(crate) teardowns: HashMap<WorkspaceSessionId, TeardownTransaction>,
 }
 
 impl WorkspaceManager {
@@ -97,16 +115,77 @@ impl WorkspaceManager {
             runtime: Arc::new(runtime),
             network,
             scratch_root,
+            layer_stack_root: None,
             handles: HashMap::new(),
+            teardowns: HashMap::new(),
         }
+    }
+
+    pub(crate) fn bind_layer_stack_root(&mut self, layer_stack_root: PathBuf) {
+        self.layer_stack_root = Some(layer_stack_root);
+    }
+
+    pub(crate) fn take_holder_exit_subscription(
+        &self,
+    ) -> Result<crate::service::HolderExitSubscription, String> {
+        self.runtime.take_holder_exit_subscription()
     }
 
     pub(crate) fn handle(&self, workspace_id: &WorkspaceSessionId) -> Option<&MountedWorkspace> {
         self.handles.get(workspace_id)
     }
 
+    pub(crate) fn ensure_workspace_available(
+        &self,
+        workspace_id: &WorkspaceSessionId,
+    ) -> Result<(), WorkspaceManagerError> {
+        if self.handles.contains_key(workspace_id) || self.teardowns.contains_key(workspace_id) {
+            return Err(WorkspaceManagerError::AlreadyOpen {
+                workspace_session_id: workspace_id.clone(),
+            });
+        }
+        Ok(())
+    }
+
     pub(crate) fn workspace_session_root(&self, workspace_id: &WorkspaceSessionId) -> PathBuf {
         self.scratch_root.join(&workspace_id.0)
+    }
+
+    pub(crate) fn owned_handles(&self) -> impl Iterator<Item = &MountedWorkspace> {
+        self.handles.values().chain(
+            self.teardowns
+                .values()
+                .map(TeardownTransaction::owned_handle),
+        )
+    }
+
+    pub(crate) fn pending_teardown_ids(&self) -> Vec<WorkspaceSessionId> {
+        let mut ids = self.teardowns.keys().cloned().collect::<Vec<_>>();
+        ids.sort_by(|left, right| left.0.cmp(&right.0));
+        ids
+    }
+
+    pub(crate) fn ownership_snapshot(&self) -> WorkspaceOwnershipSnapshot {
+        let mut snapshot = WorkspaceOwnershipSnapshot::default();
+        for handle in self.owned_handles() {
+            snapshot.namespace_fd_count = snapshot
+                .namespace_fd_count
+                .saturating_add(handle.ns_fds.len());
+            snapshot.control_fd_count = snapshot
+                .control_fd_count
+                .saturating_add(usize::from(handle.readiness_fd >= 0))
+                .saturating_add(usize::from(handle.control_fd >= 0));
+            snapshot.active_scratch_directories = snapshot
+                .active_scratch_directories
+                .saturating_add(usize::from(handle.dirs.run_dir.is_dir()));
+        }
+        snapshot.persisted_workspace_handles = self.handles.len().saturating_add(
+            self.teardowns
+                .values()
+                .filter(|transaction| transaction.has_persisted_handle())
+                .count(),
+        );
+        snapshot
     }
 
     /// The isolated-network IP of a mounted workspace, when it has one. Shared

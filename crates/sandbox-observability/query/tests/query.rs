@@ -12,8 +12,10 @@ use sandbox_observability_telemetry::collect::process_topology::{
     WorkspaceProcessTopology, WorkspaceProcesses,
 };
 use sandbox_observability_telemetry::{LayerBytes, LayerStackBytes, Reader, SinkStats};
+use sandbox_operation_catalog::observability::CGROUP_SPEC;
 use sandbox_operation_contract::{
-    OperationRequest, OperationScope, OperationScopeKind, OperationVisibility,
+    OperationExecutionOwner, OperationRequest, OperationScope, OperationScopeKind,
+    OperationVisibility,
 };
 use sandbox_runtime_layerstack::service::{LayerStatus, StackObservation};
 use sandbox_runtime_layerstack::{
@@ -113,6 +115,8 @@ fn sandbox_registry_is_bijective_with_observability_domain_routes() {
         .filter(|route| {
             route.scope_kind == OperationScopeKind::Sandbox
                 && route.visibility == OperationVisibility::Public
+                && (route.execution_owner == OperationExecutionOwner::Observability
+                    || route.operation == CGROUP_SPEC.name)
         })
         .map(|route| (route.scope_kind, route.operation))
         .collect::<Vec<_>>();
@@ -153,7 +157,11 @@ fn snapshot_renders_neutral_runtime_state_and_latest_resources() {
     let input = FakeInput {
         log_path: Some(log_path),
         snapshot: ObservabilitySnapshot {
-            workspaces: vec![workspace("workspace-1", &["l0"])],
+            workspaces: vec![
+                workspace("workspace-1", &["l0"]),
+                workspace_with_state("workspace-finalizing", &[], "finalizing"),
+                workspace_with_state("workspace-finalize-failed", &[], "finalize_failed"),
+            ],
             active_namespace_executions: vec![NamespaceExecutionSnapshot {
                 namespace_execution_id: "namespace_execution_1".to_owned(),
                 workspace_session_id: "workspace-1".to_owned(),
@@ -199,6 +207,15 @@ fn snapshot_renders_neutral_runtime_state_and_latest_resources() {
         })
     );
     assert_eq!(value["workspaces"][0]["workspace_id"], "workspace-1");
+    assert_eq!(value["workspaces"][0]["lifecycle_state"], "active");
+    assert_eq!(value["workspaces"][0]["finalization_state"], "active");
+    assert_eq!(value["workspaces"][1]["lifecycle_state"], "active");
+    assert_eq!(value["workspaces"][1]["finalization_state"], "finalizing");
+    assert_eq!(value["workspaces"][2]["lifecycle_state"], "active");
+    assert_eq!(
+        value["workspaces"][2]["finalization_state"],
+        "finalize_failed"
+    );
     assert_eq!(
         value["workspaces"][0]["active_namespace_executions"][0]["namespace_execution_id"],
         "namespace_execution_1"
@@ -391,6 +408,10 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
                 workspace_id: "workspace-1".to_owned(),
                 state: WorkspaceProcessState::Active,
                 holder_pid: 41,
+                cgroup_path: Some("/eos/workspace-workspace-1".to_owned()),
+                applied_cgroup_limits: Some(Default::default()),
+                workload_cgroup_state: "applied".to_owned(),
+                workload_cgroup_reason: None,
                 pid_namespace: Some("pid:[100]".to_owned()),
                 mount_namespace: Some("mnt:[200]".to_owned()),
                 processes: vec![WorkspaceProcess {
@@ -418,6 +439,8 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
                 peak_resident_memory_bytes: Some(32_000_000),
                 proportional_set_size_bytes: Some(28_000_000),
                 unique_set_size_bytes: Some(26_000_000),
+                private_dirty_bytes: Some(25_000_000),
+                anonymous_huge_pages_bytes: Some(0),
                 anonymous_memory_bytes: Some(25_000_000),
                 file_memory_bytes: Some(4_000_000),
                 shared_memory_bytes: Some(1_000_000),
@@ -434,7 +457,14 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
                 voluntary_context_switches: Some(120),
                 involuntary_context_switches: Some(3),
                 cgroup_memberships: vec!["0::/_daemon".to_owned()],
+                cgroup_path: Some("/_daemon".to_owned()),
                 warnings: Vec::new(),
+                runtime_config: Default::default(),
+                runtime_usage: Default::default(),
+                ownership: Default::default(),
+                lifecycle: Default::default(),
+                allocator: Default::default(),
+                diagnostics: Default::default(),
             }),
         },
         ..FakeInput::default()
@@ -447,6 +477,10 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
     assert_eq!(response["topology"]["source"], "proc_namespaces");
     assert_eq!(response["topology"]["workspaces"][0]["state"], "active");
     assert_eq!(response["topology"]["workspaces"][0]["holder_pid"], 41);
+    assert_eq!(
+        response["topology"]["workspaces"][0]["cgroup_path"],
+        "/eos/workspace-workspace-1"
+    );
     assert_eq!(
         response["topology"]["workspaces"][0]["processes"][0]["name"],
         "worker"
@@ -472,11 +506,26 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
         12_345
     );
     assert_eq!(response["topology"]["daemon"]["pid"], 7);
+    assert_eq!(response["topology"]["daemon"]["cgroup_path"], "/_daemon");
     assert_eq!(
         response["topology"]["daemon"]["proportional_set_size_bytes"],
         28_000_000
     );
     assert_eq!(response["topology"]["daemon"]["file_descriptor_count"], 15);
+}
+
+#[test]
+fn topology_query_is_explicit_and_does_not_require_the_event_store() {
+    let input = FakeInput::default();
+
+    let response = dispatch_operation(&input, &request("topology", json!({}))).into_json_value();
+
+    assert_eq!(response["view"], "topology");
+    assert_eq!(response["scope"], "sandbox");
+    assert_eq!(response["topology"]["schema_version"], 2);
+    assert_eq!(response["topology"]["available"], false);
+    assert_eq!(response["topology"]["error"], "procfs unavailable");
+    assert!(response.get("series").is_none());
 }
 
 #[test]
@@ -666,10 +715,19 @@ fn request(operation: &str, args: Value) -> OperationRequest {
 }
 
 fn workspace(id: &str, layer_ids: &[&str]) -> WorkspaceSnapshot {
+    workspace_with_state(id, layer_ids, "active")
+}
+
+fn workspace_with_state(
+    id: &str,
+    layer_ids: &[&str],
+    finalization_state: &str,
+) -> WorkspaceSnapshot {
     WorkspaceSnapshot {
         workspace_id: id.to_owned(),
         network_profile: "shared".to_owned(),
         finalize_policy: "no_op".to_owned(),
+        finalization_state: finalization_state.to_owned(),
         namespace_fd_count: Some(3),
         base_root_hash: Some("root".to_owned()),
         layer_count: Some(layer_ids.len()),

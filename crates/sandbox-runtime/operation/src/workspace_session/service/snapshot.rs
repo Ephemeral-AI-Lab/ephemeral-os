@@ -3,6 +3,7 @@ use crate::workspace_session::WorkspaceSessionService;
 
 impl WorkspaceSessionService {
     pub(crate) fn snapshot_workspaces(&self) -> (Vec<RuntimeWorkspaceSnapshot>, Vec<String>) {
+        let _ = self.reconcile_holder_exits();
         let sessions = match self.lock_sessions() {
             Ok(sessions) => sessions,
             Err(error) => return (Vec::new(), vec![error.to_string()]),
@@ -12,6 +13,27 @@ impl WorkspaceSessionService {
         let mut snapshots = sessions
             .values()
             .map(|session| {
+                let cgroup_path = session.cgroup_path.clone();
+                let (workload_cgroup_state, workload_cgroup_reason) = match (
+                    cgroup_path.is_some(),
+                    self.workload_cgroup_limits().is_some(),
+                ) {
+                    (true, true) => ("applied".to_owned(), None),
+                    (true, false) => (
+                        "available_unprofiled".to_owned(),
+                        Some("workload cgroup limits are not configured".to_owned()),
+                    ),
+                    (false, true) => (
+                        "unsupported".to_owned(),
+                        self.workload_cgroup_unavailable_reason
+                            .clone()
+                            .or_else(|| Some("delegated cgroup v2 root is unavailable".to_owned())),
+                    ),
+                    (false, false) => (
+                        "not_configured".to_owned(),
+                        self.workload_cgroup_unavailable_reason.clone(),
+                    ),
+                };
                 let (upperdir, workdir, namespace_fd_count) = match session.handle.entry() {
                     Ok(entry) => (
                         Some(entry.upperdir),
@@ -30,8 +52,10 @@ impl WorkspaceSessionService {
                 RuntimeWorkspaceSnapshot {
                     workspace_id: session.workspace_session_id.clone(),
                     holder_pid: session.handle.holder_pid,
+                    holder_live: session.handle.holder_is_live(),
                     network: session.handle.network,
                     finalize_policy: session.finalize_policy,
+                    finalization_state: session.finalization_state,
                     workspace_root: session.handle.workspace_root.clone(),
                     upperdir,
                     workdir,
@@ -47,7 +71,10 @@ impl WorkspaceSessionService {
                         .rev()
                         .map(|layer| layer.layer_id.clone())
                         .collect(),
-                    cgroup_path: session.cgroup_path.clone(),
+                    applied_cgroup_limits: cgroup_path.as_ref().and(self.workload_cgroup_limits()),
+                    workload_cgroup_state,
+                    workload_cgroup_reason,
+                    cgroup_path,
                 }
             })
             .collect::<Vec<_>>();
