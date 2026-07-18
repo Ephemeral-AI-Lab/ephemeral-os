@@ -249,7 +249,7 @@ async fn manager_router_dispatches_system_manager_operation_locally() {
 }
 
 #[tokio::test]
-async fn manager_router_merges_host_resource_series_with_daemon_topology() {
+async fn manager_router_merges_host_resource_metrics_with_daemon_topology() {
     let sandbox = sandbox_id("sbox-host-ring");
     let runtime = Arc::new(FakeRuntime::default());
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
@@ -401,7 +401,7 @@ async fn manager_preserves_resource_series_when_topology_transport_is_unavailabl
 }
 
 #[test]
-fn manager_status_and_cgroup_reads_do_not_mutate_resource_ring() {
+fn manager_status_and_explicit_cgroup_reads_are_disk_pure_for_ten_thousand_iterations() {
     let runtime = Arc::new(FakeRuntime::default());
     let (services, store, daemon_client) = services_with_runtime(runtime.clone());
     store
