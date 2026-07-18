@@ -2,7 +2,7 @@ import { rpc, sandboxScope, systemScope } from "@/api/rpc";
 
 export interface ResourceSample {
   ts: number;
-  sample_delta_ms: number;
+  sample_delta_ms: number | null;
   metrics: Record<string, number | boolean | string>;
   deltas: Record<string, number>;
 }

@@ -17,6 +17,7 @@ import {
 import { rpc, systemScope } from "@/api/rpc";
 import type { SandboxList } from "@/api/types";
 import { inFlightCount, type SnapshotResult } from "@/api/observability";
+import { useFleetCurrentUsage } from "@/poll/useFleetCurrentUsage";
 import { useFleetSnapshots } from "@/poll/useFleetSnapshots";
 import { usePoll } from "@/poll/usePoll";
 import { CreateSandboxModal } from "@/pages/fleet/CreateSandboxModal";
@@ -74,6 +75,7 @@ export function FleetBoard() {
   }, [fleet]);
 
   const records = fleet?.sandboxes ?? [];
+  const currentUsage = useFleetCurrentUsage(records);
   const snapshots = new Map(
     (snapshot.data?.sandboxes ?? []).map((entry) => [entry.sandbox_id, entry]),
   );
@@ -114,7 +116,7 @@ export function FleetBoard() {
         </Group>
       </Box>
 
-      <FleetSummaryBar list={fleet} snapshot={snapshot.data} />
+      <FleetSummaryBar list={fleet} snapshot={snapshot.data} usage={currentUsage.data} />
 
       <Box data-fleet-scroll-owner data-route-scroll-owner="fleet">
         <Stack gap="md" p="md">
@@ -157,6 +159,7 @@ export function FleetBoard() {
                   key={record.id}
                   record={record}
                   snapshot={snapshots.get(record.id)}
+                  usage={currentUsage.data.get(record.id)}
                   createLogs={record.state === "creating" ? (createLogs ?? undefined) : undefined}
                 />
               ))}

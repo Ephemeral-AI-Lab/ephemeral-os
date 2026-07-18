@@ -1,6 +1,7 @@
 import type { SandboxList } from "@/api/types";
 import { inFlightCount, type SnapshotResult } from "@/api/observability";
 import { formatMegabytes } from "@/lib/format";
+import type { SandboxCurrentUsage } from "@/poll/useFleetCurrentUsage";
 import { Badge, Group, Text } from "@mantine/core";
 
 /**
@@ -10,9 +11,11 @@ import { Badge, Group, Text } from "@mantine/core";
 export function FleetSummaryBar({
   list,
   snapshot,
+  usage,
 }: {
   list: SandboxList | undefined;
   snapshot: SnapshotResult | undefined;
+  usage: ReadonlyMap<string, SandboxCurrentUsage>;
 }) {
   const records = list?.sandboxes ?? [];
   const byState = new Map<string, number>();
@@ -21,8 +24,8 @@ export function FleetSummaryBar({
   }
   const snapshots = snapshot?.sandboxes ?? [];
   const executions = snapshots.reduce((total, entry) => total + inFlightCount(entry), 0);
-  const memory = snapshots.reduce<number | null>((total, entry) => {
-    const mem = entry.resources.latest?.metrics["mem_cur"];
+  const memory = records.reduce<number | null>((total, record) => {
+    const mem = usage.get(record.id)?.memoryBytes;
     return typeof mem === "number" ? (total ?? 0) + mem : total;
   }, null);
 
