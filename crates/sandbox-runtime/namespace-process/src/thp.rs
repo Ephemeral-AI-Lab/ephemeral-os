@@ -1,7 +1,7 @@
-//! Linux process policy for anonymous transparent huge pages.
+//! Process policy for anonymous transparent huge pages.
 
 #[cfg(target_os = "linux")]
-pub(crate) fn set_daemon_policy(disabled: bool) -> std::io::Result<()> {
+pub fn set_transparent_huge_pages_disabled(disabled: bool) -> std::io::Result<()> {
     rustix::thread::disable_transparent_huge_pages(disabled)?;
     let observed = rustix::thread::transparent_huge_pages_are_disabled()?;
     if observed == disabled {
@@ -14,6 +14,6 @@ pub(crate) fn set_daemon_policy(disabled: bool) -> std::io::Result<()> {
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(crate) fn set_daemon_policy(_disabled: bool) -> std::io::Result<()> {
+pub fn set_transparent_huge_pages_disabled(_disabled: bool) -> std::io::Result<()> {
     Ok(())
 }

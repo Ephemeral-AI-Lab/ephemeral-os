@@ -35,7 +35,6 @@ mod gate_probe;
 mod holder;
 mod runner;
 mod serve;
-mod thp;
 
 use anyhow::{anyhow, Result};
 
@@ -49,7 +48,9 @@ fn main() -> Result<()> {
             Ok(())
         }
         Some("serve") => {
-            if let Err(error) = thp::set_daemon_policy(true) {
+            if let Err(error) =
+                sandbox_runtime_namespace_process::thp::set_transparent_huge_pages_disabled(true)
+            {
                 eprintln!("sandbox-daemon: failed to disable transparent huge pages: {error}");
             }
             serve::run(args)
@@ -78,7 +79,9 @@ fn main() -> Result<()> {
 }
 
 fn restore_workload_thp_policy() {
-    if let Err(error) = thp::set_daemon_policy(false) {
+    if let Err(error) =
+        sandbox_runtime_namespace_process::thp::set_transparent_huge_pages_disabled(false)
+    {
         eprintln!("sandbox-daemon child: failed to restore transparent huge pages: {error}");
     }
 }
