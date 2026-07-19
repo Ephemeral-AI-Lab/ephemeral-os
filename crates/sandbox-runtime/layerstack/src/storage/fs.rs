@@ -147,8 +147,14 @@ fn write_bytes_fsynced(path: &Path, bytes: &[u8]) -> Result<(), LayerStackError>
     Ok(())
 }
 
+#[cfg(not(windows))]
 pub(crate) fn fsync_dir(path: &Path) -> Result<(), LayerStackError> {
     std::fs::File::open(path)?.sync_all()?;
+    Ok(())
+}
+
+#[cfg(windows)]
+pub(crate) fn fsync_dir(_path: &Path) -> Result<(), LayerStackError> {
     Ok(())
 }
 
@@ -158,6 +164,7 @@ pub(crate) fn fsync_dir(path: &Path) -> Result<(), LayerStackError> {
 /// root directory instead; the supported daemon target is Linux ≥ 5.8 where
 /// `syncfs` reports writeback errors.
 pub(crate) fn syncfs_storage_root(storage_root: &Path) -> Result<(), LayerStackError> {
+    #[cfg(target_os = "linux")]
     let root = std::fs::File::open(storage_root)?;
     #[cfg(target_os = "linux")]
     rustix::fs::syncfs(&root).map_err(|errno| {
@@ -167,10 +174,11 @@ pub(crate) fn syncfs_storage_root(storage_root: &Path) -> Result<(), LayerStackE
         ))
     })?;
     #[cfg(not(target_os = "linux"))]
-    root.sync_all()?;
+    fsync_dir(storage_root)?;
     Ok(())
 }
 
+#[cfg(not(windows))]
 pub(crate) fn fsync_tree_files(root: &Path) -> Result<(), LayerStackError> {
     for entry in std::fs::read_dir(root)? {
         let entry = entry?;
@@ -182,6 +190,11 @@ pub(crate) fn fsync_tree_files(root: &Path) -> Result<(), LayerStackError> {
             std::fs::File::open(&path)?.sync_all()?;
         }
     }
+    Ok(())
+}
+
+#[cfg(windows)]
+pub(crate) fn fsync_tree_files(_root: &Path) -> Result<(), LayerStackError> {
     Ok(())
 }
 

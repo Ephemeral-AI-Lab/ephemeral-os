@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-use crate::configs::validate::{require_absolute, ConfigFieldError};
+use crate::configs::validate::{require_unix_absolute, ConfigFieldError};
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -35,7 +35,7 @@ impl RunnerConfig {
             ));
         }
         for path in &self.mount_mask.hidden_paths {
-            require_absolute(path, "runner.mount_mask.hidden_paths")?;
+            require_unix_absolute(path, "runner.mount_mask.hidden_paths")?;
         }
         Ok(())
     }

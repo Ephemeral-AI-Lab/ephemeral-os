@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use serde::{de, Deserialize, Deserializer};
 
 use crate::configs::validate::{
-    require_absolute, require_f64_gt, require_usize_at_least, require_usize_at_most,
+    require_f64_gt, require_unix_absolute, require_usize_at_least, require_usize_at_most,
     ConfigFieldError,
 };
 
@@ -140,8 +140,8 @@ impl DaemonConfig {
     /// # Errors
     /// Returns an error when a field violates daemon runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_absolute(&self.server.socket_path, "daemon.server.socket_path")?;
-        require_absolute(&self.server.pid_path, "daemon.server.pid_path")?;
+        require_unix_absolute(&self.server.socket_path, "daemon.server.socket_path")?;
+        require_unix_absolute(&self.server.pid_path, "daemon.server.pid_path")?;
         require_usize_at_least(
             self.server.worker_threads,
             1,

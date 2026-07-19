@@ -10,9 +10,13 @@ pub const LOGICAL_WHITEOUT_PREFIX: &str = ".wh.";
 /// The logical OCI opaque-directory marker entry name.
 pub const OPAQUE_MARKER: &str = ".wh..wh..opq";
 
+#[cfg(unix)]
 pub(crate) const TRUSTED_OVERLAY_WHITEOUT_XATTR: &str = "trusted.overlay.whiteout";
+#[cfg(unix)]
 pub(crate) const USER_OVERLAY_WHITEOUT_XATTR: &str = "user.overlay.whiteout";
+#[cfg(unix)]
 pub(crate) const TRUSTED_OVERLAY_OPAQUE_XATTR: &str = "trusted.overlay.opaque";
+#[cfg(unix)]
 pub(crate) const USER_OVERLAY_OPAQUE_XATTR: &str = "user.overlay.opaque";
 #[cfg(target_os = "linux")]
 const WHITEOUT_DEVICE_MAJOR: u32 = 0;

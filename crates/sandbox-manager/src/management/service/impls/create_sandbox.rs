@@ -170,7 +170,7 @@ fn shared_base_mount(
     ));
     Ok(SharedBaseMount {
         source: shared.base_mount_source,
-        target: PathBuf::from(CONTAINER_LAYER_STACK_ROOT).join(SHARED_BASE_DIR),
+        target: PathBuf::from(format!("{CONTAINER_LAYER_STACK_ROOT}/{SHARED_BASE_DIR}")),
         root_hash: shared.root_hash,
         readonly: true,
     })

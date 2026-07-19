@@ -194,7 +194,7 @@ fn collect_subtree(
                 collected.special.push(rel);
                 continue;
             };
-            std::os::unix::fs::symlink(&link_target, &target)?;
+            create_symlink(&link_target, &target)?;
             collected.entries.push(BaseEntry::Symlink {
                 path: rel,
                 link_target: link_target.to_string_lossy().into_owned(),
@@ -400,5 +400,23 @@ fn map_source_error(err: std::io::Error) -> CopyFileError {
         CopyFileError::SourceNotFound
     } else {
         CopyFileError::SourceUnreadable
+    }
+}
+
+#[cfg(unix)]
+fn create_symlink(source: &Path, target: &Path) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(source, target)
+}
+
+#[cfg(windows)]
+fn create_symlink(source: &Path, target: &Path) -> std::io::Result<()> {
+    let resolved = target
+        .parent()
+        .map(|parent| parent.join(source))
+        .unwrap_or_else(|| source.to_path_buf());
+    if resolved.is_dir() {
+        std::os::windows::fs::symlink_dir(source, target)
+    } else {
+        std::os::windows::fs::symlink_file(source, target)
     }
 }

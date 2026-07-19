@@ -51,7 +51,7 @@ pub(super) fn apply_layer(layer_dir: &Path, destination: &Path) -> Result<(), La
                     }
                     ProjectEntryKind::Symlink => {
                         let link_target = std::fs::read_link(entry.path)?;
-                        std::os::unix::fs::symlink(link_target, target)?;
+                        create_symlink(&link_target, target)?;
                     }
                     _ => {}
                 }
@@ -158,4 +158,22 @@ fn ensure_directory(path: &Path) -> Result<(), LayerStackError> {
     }
     std::fs::create_dir_all(path)?;
     Ok(())
+}
+
+#[cfg(unix)]
+fn create_symlink(target: &Path, link: PathBuf) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(target, link)
+}
+
+#[cfg(windows)]
+fn create_symlink(target: &Path, link: PathBuf) -> std::io::Result<()> {
+    let resolved = link
+        .parent()
+        .map(|parent| parent.join(target))
+        .unwrap_or_else(|| target.to_path_buf());
+    if resolved.is_dir() {
+        std::os::windows::fs::symlink_dir(target, link)
+    } else {
+        std::os::windows::fs::symlink_file(target, link)
+    }
 }

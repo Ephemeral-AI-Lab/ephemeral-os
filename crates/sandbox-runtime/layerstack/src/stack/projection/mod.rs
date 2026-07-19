@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 use std::io::{ErrorKind, Read};
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
@@ -100,7 +101,7 @@ impl MergedView {
                     });
                 }
                 Ok(meta) if meta.is_file() => {
-                    let executable = meta.permissions().mode() & 0o111 != 0;
+                    let executable = is_executable(&meta);
                     let bytes = match read_file_limited(&target, &meta, max_bytes) {
                         Ok(bytes) => bytes,
                         Err(err @ LayerStackError::FileTooLarge { .. }) => return Err(err),
@@ -474,4 +475,14 @@ fn stale_layer_error(
         "layer no longer present while reading {rel}: {}{detail}",
         layer.layer_id
     ))
+}
+
+#[cfg(unix)]
+fn is_executable(meta: &std::fs::Metadata) -> bool {
+    meta.permissions().mode() & 0o111 != 0
+}
+
+#[cfg(not(unix))]
+fn is_executable(_meta: &std::fs::Metadata) -> bool {
+    false
 }

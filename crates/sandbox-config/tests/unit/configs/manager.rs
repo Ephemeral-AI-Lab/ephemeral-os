@@ -241,9 +241,16 @@ fn manager_workspace_roots_default_and_overrides_validate() {
     let default = ManagerConfig::default();
     assert!(default.workspace_roots.is_none());
 
+    let root_a = std::env::temp_dir().join("eos-projects");
+    let root_b = std::env::temp_dir().join("eos-workspaces");
+    let yaml = format!(
+        "manager:\n  workspace_roots:\n    - {}\n    - {}\n",
+        yaml_single_quoted_path(&root_a),
+        yaml_single_quoted_path(&root_b)
+    );
     let doc = crate::ConfigDocument::parse(
         std::path::Path::new("<test>"),
-        "manager:\n  workspace_roots: [/Users/me/projects, /tmp/workspaces]\n",
+        &yaml,
     )
     .expect("document parses");
     let manager: ManagerConfig = doc
@@ -252,11 +259,12 @@ fn manager_workspace_roots_default_and_overrides_validate() {
     manager.validate().expect("workspace roots are valid");
     assert_eq!(
         manager.workspace_roots,
-        Some(vec![
-            PathBuf::from("/Users/me/projects"),
-            PathBuf::from("/tmp/workspaces")
-        ])
+        Some(vec![root_a, root_b])
     );
+}
+
+fn yaml_single_quoted_path(path: &std::path::Path) -> String {
+    format!("'{}'", path.to_string_lossy().replace('\'', "''"))
 }
 
 #[test]

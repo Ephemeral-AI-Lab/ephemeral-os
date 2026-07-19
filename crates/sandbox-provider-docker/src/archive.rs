@@ -3,6 +3,7 @@
 //! extracted with `path = "/"`.
 
 use std::io;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path};
 
@@ -132,7 +133,7 @@ fn append_host_file(
     let mut header = tar::Header::new_gnu();
     header.set_entry_type(tar::EntryType::Regular);
     header.set_size(metadata.len());
-    header.set_mode(metadata.permissions().mode() & 0o7777);
+    header.set_mode(file_mode(metadata));
     builder.append_data(&mut header, tar_entry_path(container_path), &mut file)
 }
 
@@ -192,11 +193,7 @@ fn append_host_entry(
     if file_type.is_symlink() {
         append_symlink(builder, source_path, container_path)
     } else if file_type.is_dir() {
-        append_dir_with_mode(
-            builder,
-            container_path,
-            metadata.permissions().mode() & 0o7777,
-        )?;
+        append_dir_with_mode(builder, container_path, file_mode(&metadata))?;
         append_host_tree(builder, source_path, container_path)
     } else if file_type.is_file() {
         append_host_file(builder, source_path, container_path, &metadata)
@@ -230,10 +227,25 @@ fn append_parent_dirs(builder: &mut tar::Builder<Vec<u8>>, file_path: &Path) -> 
 fn tar_entry_path(container_path: &Path) -> String {
     container_path
         .to_string_lossy()
+        .replace('\\', "/")
         .trim_start_matches('/')
         .to_owned()
 }
 
 fn json_error(error: serde_json::Error) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, error)
+}
+
+#[cfg(unix)]
+fn file_mode(metadata: &std::fs::Metadata) -> u32 {
+    metadata.permissions().mode() & 0o7777
+}
+
+#[cfg(not(unix))]
+fn file_mode(metadata: &std::fs::Metadata) -> u32 {
+    if metadata.is_dir() {
+        DIRECTORY_MODE
+    } else {
+        CONFIG_FILE_MODE
+    }
 }

@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use serde::Deserialize;
 
 use crate::configs::validate::{
-    require_absolute, require_f64_at_least, require_f64_gt, require_i32_in_range,
-    require_u64_at_least, require_usize_at_least, require_usize_at_most, ConfigFieldError,
+    require_f64_at_least, require_f64_gt, require_i32_in_range, require_u64_at_least,
+    require_unix_absolute, require_usize_at_least, require_usize_at_most, ConfigFieldError,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -224,8 +224,8 @@ impl WorkspaceConfig {
     /// # Errors
     /// Returns an error when a field violates workspace runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_absolute(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
-        require_absolute(&self.scratch_root, "runtime.workspace.scratch_root")?;
+        require_unix_absolute(&self.layer_stack_root, "runtime.workspace.layer_stack_root")?;
+        require_unix_absolute(&self.scratch_root, "runtime.workspace.scratch_root")?;
         require_f64_gt(
             self.setup_timeout_s,
             0.0,
@@ -281,7 +281,7 @@ impl NamespaceExecutionConfig {
     /// # Errors
     /// Returns an error when a field violates namespace-execution runtime policy.
     pub fn validate(&self) -> Result<(), ConfigFieldError> {
-        require_absolute(
+        require_unix_absolute(
             &self.scratch_root,
             "runtime.namespace_execution.scratch_root",
         )?;
