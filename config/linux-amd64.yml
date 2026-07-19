@@ -29,7 +29,11 @@ runner:
 
 manager:
   docker:
-    privileged: false
+    # Native Docker inside a Multipass Ubuntu VM blocks the namespace holder's
+    # unshare stack under the de-privileged Docker profile. Use privileged mode
+    # for local Linux VM setup until the provider grows a narrower native-Linux
+    # security profile.
+    privileged: true
     daemon_binary_path: dist/sandbox-daemon-linux-amd64
     daemon_config_yaml_path: config/linux-amd64.yml
     container_daemon_binary_path: /eos/bin/sandbox-daemon

@@ -23,6 +23,21 @@ fn mount_inputs_pin_only_lowerdirs_with_fd_paths(
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn legacy_lowerdir_value_preserves_newest_first_order() {
+    let lowerdirs = vec![
+        PathBuf::from("/proc/self/fd/10"),
+        PathBuf::from("/proc/self/fd/11"),
+        PathBuf::from("/proc/self/fd/12"),
+    ];
+
+    assert_eq!(
+        super::legacy_lowerdir_value(&lowerdirs),
+        "/proc/self/fd/10:/proc/self/fd/11:/proc/self/fd/12"
+    );
+}
+
 fn test_dir(name: &str) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
     let path = std::env::temp_dir().join(format!(
         "overlay-kernel-mount-{name}-{}",

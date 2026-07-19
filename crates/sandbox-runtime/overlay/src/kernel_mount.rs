@@ -123,24 +123,32 @@ pub fn mount_overlay(
     handle: &OverlayHandle,
 ) -> std::result::Result<OverlayMount, OverlayError> {
     let inputs = ValidatedMountInputs::open(workspace_root, handle)?;
-    let fsfd =
-        fsopen("overlay", FsOpenFlags::FSOPEN_CLOEXEC).map_mount_syscall("fsopen overlay")?;
-    for layer in &inputs.layer_paths {
-        fsconfig_set_string(fsfd.as_fd(), "lowerdir+", layer)
-            .map_mount_syscall("fsconfig lowerdir+")?;
-    }
-    fsconfig_set_flag(fsfd.as_fd(), "userxattr").map_mount_syscall("fsconfig userxattr")?;
-    fsconfig_set_string(fsfd.as_fd(), "upperdir", &inputs.upperdir)
-        .map_mount_syscall("fsconfig upperdir")?;
-    fsconfig_set_string(fsfd.as_fd(), "workdir", &inputs.workdir)
-        .map_mount_syscall("fsconfig workdir")?;
-    fsconfig_create(fsfd.as_fd()).map_mount_syscall("fsconfig create")?;
-    let mount_fd = fsmount(
-        fsfd.as_fd(),
-        FsMountFlags::FSMOUNT_CLOEXEC,
-        MountAttrFlags::empty(),
-    )
-    .map_mount_syscall("fsmount")?;
+    let fsfd = configured_overlay_fs(&inputs, LowerdirMode::Repeated)?;
+    let mount_fd = match fsconfig_create(fsfd.as_fd()) {
+        Ok(()) => fsmount(
+            fsfd.as_fd(),
+            FsMountFlags::FSMOUNT_CLOEXEC,
+            MountAttrFlags::empty(),
+        )
+        .map_mount_syscall("fsmount")?,
+        Err(Errno::INVAL) => {
+            let legacy_fsfd = configured_overlay_fs(&inputs, LowerdirMode::LegacyJoined)?;
+            fsconfig_create(legacy_fsfd.as_fd())
+                .map_mount_syscall("fsconfig create legacy lowerdir")?;
+            fsmount(
+                legacy_fsfd.as_fd(),
+                FsMountFlags::FSMOUNT_CLOEXEC,
+                MountAttrFlags::empty(),
+            )
+            .map_mount_syscall("fsmount legacy lowerdir")?
+        }
+        Err(err) => {
+            return Err(OverlayError::MountSyscall {
+                context: "fsconfig create",
+                source: std::io::Error::from(err),
+            });
+        }
+    };
     move_mount(
         mount_fd.as_fd(),
         "",
@@ -152,6 +160,53 @@ pub fn mount_overlay(
     Ok(OverlayMount {
         workspace_root: Some(inputs.workspace_root),
     })
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Clone, Copy)]
+enum LowerdirMode {
+    Repeated,
+    LegacyJoined,
+}
+
+#[cfg(target_os = "linux")]
+fn configured_overlay_fs(
+    inputs: &ValidatedMountInputs,
+    lowerdir_mode: LowerdirMode,
+) -> std::result::Result<std::os::fd::OwnedFd, OverlayError> {
+    let fsfd =
+        fsopen("overlay", FsOpenFlags::FSOPEN_CLOEXEC).map_mount_syscall("fsopen overlay")?;
+    match lowerdir_mode {
+        LowerdirMode::Repeated => {
+            for layer in &inputs.layer_paths {
+                fsconfig_set_string(fsfd.as_fd(), "lowerdir+", layer)
+                    .map_mount_syscall("fsconfig lowerdir+")?;
+            }
+        }
+        LowerdirMode::LegacyJoined => {
+            let lowerdir = legacy_lowerdir_value(&inputs.layer_paths);
+            fsconfig_set_string(fsfd.as_fd(), "lowerdir", lowerdir.as_str())
+                .map_mount_syscall("fsconfig lowerdir")?;
+        }
+    }
+    fsconfig_set_flag(fsfd.as_fd(), "userxattr").map_mount_syscall("fsconfig userxattr")?;
+    fsconfig_set_string(fsfd.as_fd(), "upperdir", &inputs.upperdir)
+        .map_mount_syscall("fsconfig upperdir")?;
+    fsconfig_set_string(fsfd.as_fd(), "workdir", &inputs.workdir)
+        .map_mount_syscall("fsconfig workdir")?;
+    Ok(fsfd)
+}
+
+#[cfg(target_os = "linux")]
+pub(crate) fn legacy_lowerdir_value(layer_paths: &[PathBuf]) -> String {
+    let mut joined = String::new();
+    for (index, path) in layer_paths.iter().enumerate() {
+        if index > 0 {
+            joined.push(':');
+        }
+        joined.push_str(&path.to_string_lossy());
+    }
+    joined
 }
 
 /// Non-Linux unsupported path: overlayfs mount syscalls do not exist off Linux.
