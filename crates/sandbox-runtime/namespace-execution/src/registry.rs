@@ -6,9 +6,9 @@ use crate::shell::NamespaceExecutionTerminalStatus;
 use crate::types::NamespaceExecutionId;
 
 /// Bounded execution table. Marking an entry terminal evicts the oldest
-/// terminal entry beyond `max_terminal`, dropping its value (which closes the
-/// pty master fd and releases whatever the value's own `Drop` owns). A drain
-/// against an evicted id observes a missing entry.
+/// terminal entry beyond `max_terminal`, dropping its value and releasing
+/// whatever the value's own `Drop` owns. A drain against an evicted id observes
+/// a missing entry.
 pub struct ExecutionRegistry<V> {
     inner: Mutex<RegistryState<V>>,
     max_active: usize,
@@ -40,9 +40,9 @@ impl<V> ExecutionRegistry<V> {
     pub fn new(max_active: usize, max_terminal: usize) -> Self {
         Self {
             inner: Mutex::new(RegistryState {
-                entries: HashMap::new(),
+                entries: HashMap::with_capacity(1),
                 active: 0,
-                terminal_order: VecDeque::new(),
+                terminal_order: VecDeque::with_capacity(1),
                 max_terminal,
             }),
             max_active,
@@ -154,6 +154,36 @@ impl<V> ExecutionRegistry<V> {
             .filter_map(|entry| entry.value.as_ref())
             .filter_map(f)
             .collect()
+    }
+
+    pub fn remove_terminal_values(&self, mut predicate: impl FnMut(&V) -> bool) -> usize {
+        let removed = {
+            let mut state = self.lock();
+            let mut removed = Vec::new();
+            let terminal_count = state.terminal_order.len();
+            for _ in 0..terminal_count {
+                let Some(id) = state.terminal_order.pop_front() else {
+                    break;
+                };
+                let should_remove = state
+                    .entries
+                    .get(&id)
+                    .filter(|entry| entry.terminal)
+                    .and_then(|entry| entry.value.as_ref())
+                    .is_some_and(&mut predicate);
+                if should_remove {
+                    if let Some(entry) = state.entries.remove(&id) {
+                        removed.push(entry);
+                    }
+                } else {
+                    state.terminal_order.push_back(id);
+                }
+            }
+            removed
+        };
+        let count = removed.len();
+        drop(removed);
+        count
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, RegistryState<V>> {

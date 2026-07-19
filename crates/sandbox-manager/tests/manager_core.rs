@@ -847,11 +847,12 @@ fn observability_snapshot_aggregates_ready_sandboxes_with_concrete_daemon_reques
 fn observability_snapshot_enriches_ready_nodes_with_host_resource_metrics() {
     let client = Arc::new(RecordingSnapshotClient::default());
     let (services, store) = services_with_client(client);
+    let sandbox_id = format!("sbox-host-resource-metrics-{}", std::process::id());
     store
         .insert(sandbox_record(
-            "sbox-1",
+            &sandbox_id,
             SandboxState::Ready,
-            Some(endpoint("sbox-1")),
+            Some(endpoint(&sandbox_id)),
         ))
         .expect("insert ready sandbox");
 
@@ -865,7 +866,7 @@ fn observability_snapshot_enriches_ready_nodes_with_host_resource_metrics() {
     assert_eq!(metrics["mem_cur"], 24_000_000);
     services
         .resource_ring()
-        .remove(&id("sbox-1"))
+        .remove(&id(&sandbox_id))
         .expect("clean resource ring");
 }
 

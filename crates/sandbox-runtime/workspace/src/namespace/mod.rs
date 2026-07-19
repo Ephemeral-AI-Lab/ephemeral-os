@@ -116,6 +116,7 @@ impl NamespaceRuntime {
                 ExecutionCaps {
                     max_active: MOUNT_MAX_ACTIVE,
                     setup_timeout_s,
+                    max_terminal_entries: 0,
                     ..ExecutionCaps::default()
                 },
             )),

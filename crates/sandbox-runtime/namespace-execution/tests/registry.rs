@@ -72,6 +72,21 @@ fn terminal_id_is_rejected_until_retention_evicts_it() {
 }
 
 #[test]
+fn zero_terminal_retention_releases_synchronous_execution_immediately() {
+    let registry = ExecutionRegistry::<()>::new(1, 0);
+    let completed_id = id(1);
+    registry.try_reserve(&completed_id).expect("slot");
+
+    registry.complete(&completed_id, NamespaceExecutionTerminalStatus::Ok, Some(0));
+
+    assert_eq!(registry.active_count(), 0);
+    assert!(!registry.is_completed(&completed_id));
+    registry
+        .try_reserve(&completed_id)
+        .expect("synchronous execution leaves no terminal lookup record");
+}
+
+#[test]
 fn completion_abort_race_releases_capacity_exactly_once() {
     for round in 0..32 {
         let registry = Arc::new(ExecutionRegistry::<()>::new(1, 1));
@@ -242,4 +257,24 @@ fn terminal_retention_never_evicts_live_entries() {
     assert_eq!(drops.load(Ordering::SeqCst), 1, "only id 2 was evicted");
     assert!(!registry.is_completed(&id(2)));
     assert!(registry.is_completed(&id(3)));
+}
+
+#[test]
+fn selective_terminal_release_preserves_other_terminal_and_live_entries() {
+    let registry = ExecutionRegistry::new(8, 512);
+    for (number, value) in [(1, "workspace-a"), (2, "workspace-b"), (3, "workspace-a")] {
+        registry.try_reserve(&id(number)).expect("slot");
+        registry.attach(&id(number), value.to_owned());
+    }
+    registry.complete(&id(1), NamespaceExecutionTerminalStatus::Ok, Some(0));
+    registry.complete(&id(2), NamespaceExecutionTerminalStatus::Ok, Some(0));
+
+    assert_eq!(
+        registry.remove_terminal_values(|value| value == "workspace-a"),
+        1
+    );
+    assert!(registry.with_value(&id(1), |_| ()).is_none());
+    assert!(registry.is_completed(&id(2)));
+    assert!(registry.is_live(&id(3)));
+    assert_eq!(registry.active_count(), 1);
 }

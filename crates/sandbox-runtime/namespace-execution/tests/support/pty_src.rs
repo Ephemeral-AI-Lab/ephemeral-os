@@ -1,3 +1,7 @@
+#[allow(
+    dead_code,
+    reason = "the focused PTY test does not include the engine snapshot consumer"
+)]
 pub mod pty {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/pty.rs"));
 

@@ -41,7 +41,6 @@ struct OutputReactor {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 pub(crate) struct OutputReactorSnapshot {
     pub(crate) worker_threads: usize,
     pub(crate) active_readers: usize,
@@ -51,7 +50,7 @@ static OUTPUT_REACTOR: OnceLock<OutputReactor> = OnceLock::new();
 
 pub struct PtyMaster {
     pgid: Option<i32>,
-    writer: Mutex<File>,
+    writer: Arc<Mutex<Option<File>>>,
     sink: TranscriptSink,
     cancel: Arc<dyn Fn() + Send + Sync>,
     stdin_write_deadline: Duration,
@@ -83,7 +82,7 @@ impl PtyMaster {
         };
         Ok(Self {
             pgid,
-            writer: Mutex::new(writer),
+            writer: Arc::new(Mutex::new(Some(writer))),
             sink,
             cancel: Arc::from(cancel),
             stdin_write_deadline,
@@ -104,6 +103,9 @@ impl PtyMaster {
 
     pub fn write_stdin(&self, bytes: &[u8]) -> io::Result<()> {
         let mut writer = self.writer.lock().expect("pty writer mutex poisoned");
+        let writer = writer
+            .as_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::BrokenPipe, "pty stdin closed"))?;
         let deadline = Instant::now() + self.stdin_write_deadline;
         let mut offset = 0;
         while offset < bytes.len() {
@@ -130,6 +132,16 @@ impl PtyMaster {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn terminal_release(&self) -> impl FnOnce() + Send + 'static {
+        let writer = Arc::clone(&self.writer);
+        move || {
+            writer
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .take();
+        }
     }
 
     pub fn output_len(&self) -> u64 {
@@ -164,7 +176,6 @@ fn spawn_output_reader(master: File, sink: impl FnMut(&[u8]) + Send + 'static) {
     output_reactor().register(master, Box::new(sink));
 }
 
-#[allow(dead_code)]
 pub(crate) fn output_reactor_snapshot() -> OutputReactorSnapshot {
     match OUTPUT_REACTOR.get() {
         Some(reactor) => OutputReactorSnapshot {
@@ -176,6 +187,10 @@ pub(crate) fn output_reactor_snapshot() -> OutputReactorSnapshot {
             active_readers: 0,
         },
     }
+}
+
+pub(crate) fn initialize_output_reactor() {
+    let _ = output_reactor();
 }
 
 fn output_reactor() -> &'static OutputReactor {

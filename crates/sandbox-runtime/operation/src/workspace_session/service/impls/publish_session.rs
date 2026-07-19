@@ -169,8 +169,12 @@ impl WorkspaceSessionService {
     fn mark_publish_finalize_failed(&self, workspace_session_id: &WorkspaceSessionId) {
         if let Ok(mut sessions) = self.lock_sessions() {
             if let Some(session) = sessions.get_mut(workspace_session_id) {
-                if session.finalization_state == FinalizationState::Finalizing {
+                if matches!(
+                    session.finalization_state,
+                    FinalizationState::Finalizing | FinalizationState::FinalizeFailed
+                ) {
                     session.finalization_state = FinalizationState::FinalizeFailed;
+                    session.holder_cleanup_terminal = true;
                 }
             }
         }

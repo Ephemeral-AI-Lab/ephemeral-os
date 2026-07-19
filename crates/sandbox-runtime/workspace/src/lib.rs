@@ -37,7 +37,8 @@ pub use model::{
 };
 #[doc(hidden)]
 pub use namespace::holder::{
-    HolderFinalization, HolderFinalizationUnknownClass, HolderProbe, HolderProbeUnknownClass,
+    HolderFinalization, HolderFinalizationProof, HolderFinalizationUnknownClass, HolderProbe,
+    HolderProbeUnknownClass,
 };
 pub use sandbox_runtime_namespace_process::runner::file_op::{
     decode_file_op_payload, run_result_err, run_result_ok, FileRunnerDirEntry,

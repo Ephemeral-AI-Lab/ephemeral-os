@@ -11,10 +11,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-#[cfg(target_os = "linux")]
-use rustix::process::{pidfd_open, Pid, PidfdFlags};
-#[cfg(target_os = "linux")]
-use std::os::fd::OwnedFd;
+use sandbox_runtime_namespace_process::pid_identity::{pin_pid_identity, PidIdentityGuard};
 
 const CGROUP_FS_ROOT: &str = "/sys/fs/cgroup";
 const DAEMON_LEAF: &str = "_daemon";
@@ -372,12 +369,6 @@ struct PinnedRootProcess {
     _pidfd: PidIdentityGuard,
 }
 
-#[cfg(target_os = "linux")]
-type PidIdentityGuard = OwnedFd;
-
-#[cfg(not(target_os = "linux"))]
-struct PidIdentityGuard;
-
 impl RootProcessOps for SystemRootProcessOps {
     type PinnedProcess = PinnedRootProcess;
 
@@ -429,19 +420,6 @@ impl RootProcessOps for SystemRootProcessOps {
         let process = self.pin_process(pid, expected_cgroup)?;
         self.validate_identity(&process, expected_cgroup)
     }
-}
-
-#[cfg(target_os = "linux")]
-fn pin_pid_identity(pid: u32) -> Result<PidIdentityGuard, String> {
-    let raw_pid = i32::try_from(pid).map_err(|_| format!("PID {pid} exceeds i32"))?;
-    let rustix_pid = Pid::from_raw(raw_pid).ok_or_else(|| format!("PID {pid} is invalid"))?;
-    pidfd_open(rustix_pid, PidfdFlags::empty())
-        .map_err(|error| format!("pidfd_open({pid}): {error}"))
-}
-
-#[cfg(not(target_os = "linux"))]
-fn pin_pid_identity(_pid: u32) -> Result<PidIdentityGuard, String> {
-    Err("pidfd identity pinning is unavailable on this platform".to_owned())
 }
 
 fn parse_start_time_ticks(stat: &str) -> Option<u64> {

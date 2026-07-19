@@ -3,6 +3,9 @@
 //! listener with no sniffing or multiplexing between them.
 #![forbid(unsafe_code)]
 
+#[global_allocator]
+static GLOBAL_ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 mod http;
 pub(crate) mod observability;
 mod rpc;

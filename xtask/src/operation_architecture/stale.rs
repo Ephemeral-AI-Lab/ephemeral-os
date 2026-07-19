@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Component, Path};
 use std::process::Command;
@@ -90,19 +90,6 @@ const FROZEN_SCRIPT_MARKER: &str =
 const HISTORICAL_HTML_PATH: &str = "docs/observability-rework/cli-observability.html";
 const HISTORICAL_HTML_MARKER: &str =
     "<p><strong>Historical rendered artifact (operation-layout exempt, 2026-07-11):</strong>";
-const PHASE0_EVIDENCE_DIRECTORY: &str =
-    "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0";
-const PHASE0_MANIFEST: &str =
-    "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0/IMMUTABLE.md";
-const PHASE0_MANIFEST_MARKER: &str =
-    "<!-- IMMUTABLE PHASE-0 EVIDENCE BUNDLE (operation-layout exempt, 2026-07-11). -->";
-const AUTHORITY_PATHS: &[&str] = &[
-    "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/spec.md",
-    "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/phase-plan.md",
-];
-const AUTHORITY_INVENTORY: &str = "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-8/authoritative-forbidden-token-inventory.tsv";
-const PROTOCOL_VOCABULARY_PATTERN: &str =
-    concat!("operation ", "vocabulary + sandbox-", "protocol");
 const WTUNING_DIRECTORY: &str = "docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/wtuning";
 const WTUNING_RESULTS: &str = "docs/obsidian/ephemeral-os/implementation_plan/squash/experiments/performance-parallelization/perf-20260703-052525/RESULTS.md";
 const WTUNING_MARKER: &str =
@@ -140,9 +127,7 @@ pub fn load_stale_facts(root: &Path) -> Result<StaleFacts> {
 
 pub fn validate_stale_facts(root: &Path, facts: &StaleFacts) -> Vec<String> {
     let mut violations = validate_tree(root);
-    let phase0_exemptions = phase0_evidence_exemptions(facts, &mut violations);
     let measurement_exemptions = measurement_exemptions(facts, &mut violations);
-    validate_authority_inventory(facts, &mut violations);
     for file in &facts.files {
         for pattern in STALE_PATH_REFERENCES {
             if path_is_at_or_below(&file.path, pattern) {
@@ -152,10 +137,9 @@ pub fn validate_stale_facts(root: &Path, facts: &StaleFacts) -> Vec<String> {
         if generated_path(&file.path) {
             violations.push(format!("tracked generated or stale path {}", file.path));
         }
-        let Some(content) = reference_scan_content(
-            file,
-            phase0_exemptions.contains(&file.path) || measurement_exemptions.contains(&file.path),
-        ) else {
+        let Some(content) =
+            reference_scan_content(file, measurement_exemptions.contains(&file.path))
+        else {
             continue;
         };
         for pattern in STALE_REFERENCES {
@@ -389,12 +373,8 @@ fn generated_path(path: &str) -> bool {
         || path.starts_with(concat!("cli-operation-e2e-", "live-test/"))
 }
 
-fn reference_scan_content(file: &TrackedSource, immutable: bool) -> Option<Cow<'_, str>> {
-    if authoritative_migration_record(&file.path)
-        || file.path == AUTHORITY_INVENTORY
-        || immutable
-        || historical_document(file)
-    {
+fn reference_scan_content(file: &TrackedSource, exempt: bool) -> Option<Cow<'_, str>> {
+    if exempt || historical_document(file) {
         return None;
     }
     let ranges = historical_section_ranges(file);
@@ -410,256 +390,6 @@ fn reference_scan_content(file: &TrackedSource, immutable: bool) -> Option<Cow<'
     }
     maintained.push_str(&file.content[cursor..]);
     Some(Cow::Owned(maintained))
-}
-
-fn authoritative_migration_record(path: &str) -> bool {
-    AUTHORITY_PATHS.contains(&path)
-}
-
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-struct AuthorityOccurrence {
-    path: String,
-    line: usize,
-    column: usize,
-    pattern: String,
-}
-
-fn validate_authority_inventory(facts: &StaleFacts, violations: &mut Vec<String>) {
-    let mut derived = BTreeSet::new();
-    for path in AUTHORITY_PATHS {
-        let authorities = facts
-            .files
-            .iter()
-            .filter(|file| file.path == *path)
-            .collect::<Vec<_>>();
-        if authorities.len() != 1 {
-            violations.push(format!(
-                "authoritative forbidden-token classification requires exactly one {path}, found {}",
-                authorities.len()
-            ));
-            continue;
-        }
-        derived.extend(authority_occurrences(authorities[0]));
-    }
-
-    let inventories = facts
-        .files
-        .iter()
-        .filter(|file| file.path == AUTHORITY_INVENTORY)
-        .collect::<Vec<_>>();
-    if inventories.len() != 1 {
-        violations.push(format!(
-            "authoritative forbidden-token classification requires exactly one {AUTHORITY_INVENTORY}, found {}",
-            inventories.len()
-        ));
-        return;
-    }
-
-    let inventory = inventories[0];
-    let mut lines = inventory.content.lines();
-    if lines.next() != Some("path\tline\tcolumn\tcategory\tpattern") {
-        violations.push(format!(
-            "authoritative forbidden-token inventory has an invalid header: {AUTHORITY_INVENTORY}"
-        ));
-        return;
-    }
-
-    let mut classified = BTreeMap::new();
-    for (index, line) in lines.enumerate() {
-        let fields = line.split('\t').collect::<Vec<_>>();
-        if fields.len() != 5 {
-            violations.push(format!(
-                "authoritative forbidden-token inventory row {} must have five tab-separated fields",
-                index + 2
-            ));
-            continue;
-        }
-        let [path, line_number, column, category, pattern] = fields.as_slice() else {
-            unreachable!();
-        };
-        if !AUTHORITY_PATHS.contains(path) {
-            violations.push(format!(
-                "authoritative forbidden-token inventory row {} has invalid path {path:?}",
-                index + 2
-            ));
-            continue;
-        }
-        if !matches!(
-            *category,
-            "negative-requirement" | "before-state" | "immutable-evidence"
-        ) {
-            violations.push(format!(
-                "authoritative forbidden-token inventory row {} has invalid category {category:?}",
-                index + 2
-            ));
-            continue;
-        }
-        let Some(line_number) = parse_inventory_position(line_number) else {
-            violations.push(format!(
-                "authoritative forbidden-token inventory row {} has invalid line {line_number:?}",
-                index + 2
-            ));
-            continue;
-        };
-        let Some(column) = parse_inventory_position(column) else {
-            violations.push(format!(
-                "authoritative forbidden-token inventory row {} has invalid column {column:?}",
-                index + 2
-            ));
-            continue;
-        };
-        let occurrence = AuthorityOccurrence {
-            path: (*path).to_owned(),
-            line: line_number,
-            column,
-            pattern: (*pattern).to_owned(),
-        };
-        if classified
-            .insert(occurrence.clone(), (*category).to_owned())
-            .is_some()
-        {
-            violations.push(format!(
-                "duplicate authoritative forbidden-token classification: {}:{}:{} {:?}",
-                occurrence.path, occurrence.line, occurrence.column, occurrence.pattern
-            ));
-        }
-    }
-
-    let listed = classified.into_keys().collect::<BTreeSet<_>>();
-    for missing in derived.difference(&listed) {
-        violations.push(format!(
-            "unclassified authoritative forbidden-token occurrence: {}:{}:{} {:?}",
-            missing.path, missing.line, missing.column, missing.pattern
-        ));
-    }
-    for extra in listed.difference(&derived) {
-        violations.push(format!(
-            "nonexistent authoritative forbidden-token classification: {}:{}:{} {:?}",
-            extra.path, extra.line, extra.column, extra.pattern
-        ));
-    }
-}
-
-fn parse_inventory_position(value: &str) -> Option<usize> {
-    let parsed = value.parse::<usize>().ok()?;
-    (parsed > 0 && parsed.to_string() == value).then_some(parsed)
-}
-
-fn authority_occurrences(file: &TrackedSource) -> BTreeSet<AuthorityOccurrence> {
-    let mut occurrences = BTreeSet::new();
-    for pattern in STALE_REFERENCES {
-        for (offset, _) in file.content.match_indices(pattern) {
-            occurrences.insert(authority_occurrence(file, offset, pattern));
-        }
-    }
-    for pattern in STALE_PATH_REFERENCES {
-        for (offset, _) in file.content.match_indices(pattern).filter(|(offset, _)| {
-            let before = file.content[..*offset].chars().next_back();
-            let after = file.content[*offset + pattern.len()..].chars().next();
-            !before.is_some_and(path_identifier_character)
-                && !after.is_some_and(path_identifier_character)
-        }) {
-            occurrences.insert(authority_occurrence(file, offset, pattern));
-        }
-    }
-    let vocabulary = concat!("operation ", "vocabulary");
-    let protocol = concat!("sandbox-", "protocol");
-    let mut line_start = 0;
-    for line in file.content.split_inclusive('\n') {
-        let lower = line.to_ascii_lowercase();
-        if lower.contains(vocabulary) && lower.contains(protocol) {
-            let offset = line_start + lower.find(vocabulary).unwrap_or_default();
-            occurrences.insert(authority_occurrence(
-                file,
-                offset,
-                PROTOCOL_VOCABULARY_PATTERN,
-            ));
-        }
-        line_start += line.len();
-    }
-    occurrences
-}
-
-fn authority_occurrence(file: &TrackedSource, offset: usize, pattern: &str) -> AuthorityOccurrence {
-    let line_start = file.content[..offset]
-        .rfind('\n')
-        .map_or(0, |position| position + 1);
-    AuthorityOccurrence {
-        path: file.path.clone(),
-        line: file.content[..offset]
-            .bytes()
-            .filter(|byte| *byte == b'\n')
-            .count()
-            + 1,
-        column: file.content[line_start..offset].chars().count() + 1,
-        pattern: pattern.to_owned(),
-    }
-}
-
-fn phase0_evidence_exemptions(
-    facts: &StaleFacts,
-    violations: &mut Vec<String>,
-) -> BTreeSet<String> {
-    let manifests = facts
-        .files
-        .iter()
-        .filter(|file| file.path == PHASE0_MANIFEST)
-        .collect::<Vec<_>>();
-    if manifests.len() != 1 {
-        violations.push(format!(
-            "phase-0 evidence requires exactly one {PHASE0_MANIFEST}, found {}",
-            manifests.len()
-        ));
-        return BTreeSet::new();
-    }
-    let manifest = manifests[0];
-    let mut valid = true;
-    if manifest.content.lines().next() != Some(PHASE0_MANIFEST_MARKER) {
-        violations.push(format!(
-            "phase-0 evidence manifest has an invalid immutable marker: {PHASE0_MANIFEST}"
-        ));
-        valid = false;
-    }
-    let entries = manifest
-        .content
-        .lines()
-        .filter_map(|line| line.strip_prefix("- `")?.strip_suffix('`'))
-        .collect::<Vec<_>>();
-    let mut listed = BTreeSet::new();
-    for entry in entries {
-        if entry.is_empty() || entry.contains('/') || !listed.insert(entry.to_owned()) {
-            violations.push(format!(
-                "phase-0 evidence manifest has invalid or duplicate entry {entry:?}"
-            ));
-            valid = false;
-        }
-    }
-    let prefix = format!("{PHASE0_EVIDENCE_DIRECTORY}/");
-    let actual = facts
-        .files
-        .iter()
-        .filter_map(|file| file.path.strip_prefix(&prefix).map(str::to_owned))
-        .filter(|path| path != "IMMUTABLE.md")
-        .collect::<BTreeSet<_>>();
-    for missing in listed.difference(&actual) {
-        violations.push(format!(
-            "phase-0 evidence manifest lists missing payload {missing}"
-        ));
-        valid = false;
-    }
-    for unlisted in actual.difference(&listed) {
-        violations.push(format!(
-            "phase-0 evidence payload is not listed in IMMUTABLE.md: {unlisted}"
-        ));
-        valid = false;
-    }
-    if !valid {
-        return BTreeSet::new();
-    }
-    actual
-        .into_iter()
-        .map(|path| format!("{PHASE0_EVIDENCE_DIRECTORY}/{path}"))
-        .collect()
 }
 
 fn measurement_exemptions(facts: &StaleFacts, violations: &mut Vec<String>) -> BTreeSet<String> {

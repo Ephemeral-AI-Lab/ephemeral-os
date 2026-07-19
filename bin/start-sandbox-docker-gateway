@@ -132,6 +132,7 @@ if [ "$show_help" -eq 0 ]; then
             find \
                 "$repo_root/Cargo.toml" \
                 "$repo_root/Cargo.lock" \
+                "$repo_root/.cargo/config.toml" \
                 "$repo_root/crates/sandbox-daemon/Cargo.toml" \
                 "$repo_root/crates/sandbox-daemon/src" \
                 "$repo_root/crates/sandbox-config/Cargo.toml" \

@@ -21,8 +21,10 @@ use sandbox_provider_docker::{DockerRuntimeConfig, DockerSandboxRuntime};
 
 #[test]
 fn container_limits_come_from_the_selected_named_profile() {
-    let mut config = DockerRuntimeConfig::default();
-    config.resource_profile = "build-heavy".to_owned();
+    let config = DockerRuntimeConfig {
+        resource_profile: "build-heavy".to_owned(),
+        ..DockerRuntimeConfig::default()
+    };
     let runtime = DockerSandboxRuntime::new(config);
 
     let limits = runtime
@@ -91,11 +93,13 @@ fn container_creation_persists_the_exact_resolved_resource_profile() {
     std::fs::create_dir_all(&workspace).expect("create workspace");
     std::fs::create_dir_all(&shared_base).expect("create shared base");
 
-    let mut config = DockerRuntimeConfig::default();
-    config.docker_endpoint = Some(docker.endpoint());
-    config.daemon_config_yaml_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../config/prd.yml");
-    config.resource_profile = "build-heavy".to_owned();
+    let config = DockerRuntimeConfig {
+        docker_endpoint: Some(docker.endpoint()),
+        daemon_config_yaml_path: PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../config/prd.yml"),
+        resource_profile: "build-heavy".to_owned(),
+        ..DockerRuntimeConfig::default()
+    };
     let runtime = DockerSandboxRuntime::new(config);
     let result = runtime
         .create_sandbox(&CreateSandboxRequest {
@@ -184,10 +188,12 @@ fn recovery_reads_the_persisted_profile_instead_of_current_config() {
             )
         }
     });
-    let mut config = DockerRuntimeConfig::default();
-    config.docker_endpoint = Some(docker.endpoint());
-    config.daemon_port = 7000;
-    config.daemon_http_port = 7001;
+    let config = DockerRuntimeConfig {
+        docker_endpoint: Some(docker.endpoint()),
+        daemon_port: 7000,
+        daemon_http_port: 7001,
+        ..DockerRuntimeConfig::default()
+    };
     let runtime = DockerSandboxRuntime::new(config);
 
     let records = runtime.recover_sandboxes().expect("recover fake container");

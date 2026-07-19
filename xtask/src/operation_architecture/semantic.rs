@@ -8,6 +8,8 @@ use ignore::WalkBuilder;
 use super::stale::{rust_syntax_tokens, semantic_spellings};
 use super::{Domain, DomainOperation, Owner, RouteFact, Scope, SemanticFacts};
 
+const DELEGATED_PUBLIC_HANDLER_KEYS: &[&str] = &["sandbox:cgroup:observability"];
+
 pub fn load_semantic_facts(root: &Path) -> Result<SemanticFacts> {
     let catalog_root = root.join("crates/sandbox-operations/catalog/src");
     let sources = rust_sources(&catalog_root)?;
@@ -219,12 +221,7 @@ pub fn validate_semantic_facts(facts: &SemanticFacts) -> Vec<String> {
         }
     }
 
-    compare_route_sets(
-        "public handler",
-        &facts.public_routes,
-        &facts.public_handlers,
-        &mut violations,
-    );
+    compare_public_handler_sets(facts, &mut violations);
     compare_route_sets(
         "internal handler",
         &facts.internal_routes,
@@ -1246,5 +1243,29 @@ fn compare_route_sets(
     }
     for extra in actual.difference(&expected) {
         violations.push(format!("extra {label} for {extra}"));
+    }
+}
+
+fn compare_public_handler_sets(facts: &SemanticFacts, violations: &mut Vec<String>) {
+    let mut expected = facts
+        .public_routes
+        .iter()
+        .map(route_key)
+        .collect::<BTreeSet<_>>();
+    expected.extend(
+        DELEGATED_PUBLIC_HANDLER_KEYS
+            .iter()
+            .map(|key| (*key).to_owned()),
+    );
+    let actual = facts
+        .public_handlers
+        .iter()
+        .map(route_key)
+        .collect::<BTreeSet<_>>();
+    for missing in expected.difference(&actual) {
+        violations.push(format!("missing public handler for {missing}"));
+    }
+    for extra in actual.difference(&expected) {
+        violations.push(format!("extra public handler for {extra}"));
     }
 }

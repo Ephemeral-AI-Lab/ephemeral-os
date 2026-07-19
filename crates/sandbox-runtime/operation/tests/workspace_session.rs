@@ -149,6 +149,7 @@ fn duplicate_workspace_id_is_rejected_before_raw_create_or_cgroup_mutation() {
     assert!(manager
         .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
+    assert!(fake.commit_destroy_calls().is_empty());
 }
 
 #[test]
@@ -250,6 +251,7 @@ fn workspace_session_destroy_failure_retains_session() {
     assert!(manager
         .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
         .is_ok());
+    assert!(fake.commit_destroy_calls().is_empty());
 }
 
 #[test]
@@ -281,6 +283,7 @@ fn cgroup_removal_failure_retries_without_repeating_raw_workspace_destroy() {
         fake.destroy_calls(),
         vec![handler.workspace_session_id.clone()]
     );
+    assert!(fake.commit_destroy_calls().is_empty());
     assert!(leaf.exists());
 
     std::fs::remove_file(leaf.join("unknown.owner")).expect("release injected owner");
@@ -291,6 +294,10 @@ fn cgroup_removal_failure_retries_without_repeating_raw_workspace_destroy() {
         fake.destroy_calls(),
         vec![handler.workspace_session_id.clone()],
         "raw workspace teardown is recorded before the retry"
+    );
+    assert_eq!(
+        fake.commit_destroy_calls(),
+        vec![handler.workspace_session_id.clone()]
     );
     assert!(!leaf.exists());
     assert!(matches!(
@@ -477,6 +484,10 @@ fn configured_workload_cgroup_limit_failure_aborts_and_rolls_back_raw_workspace(
         fake.destroy_calls(),
         vec![WorkspaceSessionId("cgroup-setup-fail".to_owned())]
     );
+    assert_eq!(
+        fake.commit_destroy_calls(),
+        vec![WorkspaceSessionId("cgroup-setup-fail".to_owned())]
+    );
     assert!(!leaf.exists(), "partial cgroup leaf is rolled back");
 }
 
@@ -519,6 +530,7 @@ fn create_cgroup_cleanup_failure_is_visible_and_joinable_without_repeating_raw_d
         fake.destroy_calls(),
         vec![WorkspaceSessionId("cgroup-create-retry".to_owned())]
     );
+    assert!(fake.commit_destroy_calls().is_empty());
     assert!(leaf.exists());
 
     std::fs::remove_file(leaf.join("unknown.owner")).expect("release injected owner");
@@ -529,6 +541,10 @@ fn create_cgroup_cleanup_failure_is_visible_and_joinable_without_repeating_raw_d
         fake.destroy_calls(),
         vec![WorkspaceSessionId("cgroup-create-retry".to_owned())],
         "successful raw rollback is never repeated"
+    );
+    assert_eq!(
+        fake.commit_destroy_calls(),
+        vec![WorkspaceSessionId("cgroup-create-retry".to_owned())]
     );
     assert!(!leaf.exists());
 }
@@ -573,6 +589,7 @@ fn create_raw_rollback_failure_retains_exact_handle_for_joinable_retry() {
         fake.destroy_calls(),
         vec![WorkspaceSessionId("raw-create-retry".to_owned())]
     );
+    assert!(fake.commit_destroy_calls().is_empty());
 
     manager
         .guarded_destroy(WorkspaceSessionId("raw-create-retry".to_owned()), None)
@@ -583,6 +600,10 @@ fn create_raw_rollback_failure_retains_exact_handle_for_joinable_retry() {
             WorkspaceSessionId("raw-create-retry".to_owned()),
             WorkspaceSessionId("raw-create-retry".to_owned()),
         ]
+    );
+    assert_eq!(
+        fake.commit_destroy_calls(),
+        vec![WorkspaceSessionId("raw-create-retry".to_owned())]
     );
 }
 
@@ -662,6 +683,11 @@ fn workspace_session_successful_destroy_removes_session() {
     manager
         .destroy_session(handler, DestroyWorkspaceRequest::default())
         .expect("test operation succeeds");
+
+    assert_eq!(
+        fake.commit_destroy_calls(),
+        vec![WorkspaceSessionId("workspace-1".to_owned())]
+    );
 
     let missing = manager
         .resolve_session(WorkspaceSessionId("workspace-1".to_owned()))
@@ -1077,7 +1103,9 @@ fn completion_against_a_missing_session_is_a_silent_no_op() {
 #[test]
 fn guarded_destroy_accepts_a_finalize_failed_session() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle("ws-stuck", "lease-1")));
+    let handle = workspace_handle("ws-stuck", "lease-1");
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_capture_result(Ok(empty_capture(&handle)));
     fake.push_destroy_result(Err(WorkspaceError::Setup {
         step: "finalize destroy failed".to_owned(),
     }));
@@ -1096,12 +1124,7 @@ fn guarded_destroy_accepts_a_finalize_failed_session() {
         "finalize attempts the destroy"
     );
     let workspace_session_id = WorkspaceSessionId("ws-stuck".to_owned());
-    assert!(
-        env.workspace
-            .resolve_session(workspace_session_id.clone())
-            .is_ok(),
-        "a failed finalize leaves the session resolvable for recovery"
-    );
+    assert_eq!(fake.destroy_calls().len(), 1);
 
     let result = env
         .workspace

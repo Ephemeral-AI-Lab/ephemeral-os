@@ -1004,7 +1004,12 @@ fn publish_required_holder_exit_commits_bounded_recovery_then_releases_workspace
     .expect("recovery manifest json");
     assert_eq!(manifest["workspace_session_id"], "publish-required");
     assert_eq!(manifest["finalization_state"], "finalization_failed");
-    assert!(manifest["artifact_max_bytes"].as_u64().unwrap() <= 1024 * 1024);
+    assert!(
+        manifest["artifact_max_bytes"]
+            .as_u64()
+            .expect("artifact_max_bytes is a u64")
+            <= 1024 * 1024
+    );
     assert!(fake.capture_calls().is_empty());
     assert_eq!(
         fake.destroy_calls(),
@@ -1094,10 +1099,11 @@ fn publish_required_last_command_completion_after_holder_exit_routes_to_recovery
         "normal capture/publish must not steal dead-holder teardown ownership"
     );
     assert_eq!(
-        fake.holder_probe_calls(),
+        fake.holder_finalization_calls(),
         1,
-        "the sole supervisor observation injects exit after ledger removal"
+        "the sole supervisor finalization boundary observes the exit after ledger removal"
     );
+    assert!(fake.capture_after_quiesce_calls().is_empty());
     assert_eq!(
         std::fs::read(artifact.join("files/unfinished.txt")).expect("recovery marker is durable"),
         b"preserve me\n"
@@ -1297,6 +1303,14 @@ fn raw_dead_publish_owner_preserves_recovery_before_teardown_and_is_joinable() {
     let explicit_manager = Arc::clone(&manager);
     let explicit_id = failed.workspace_session_id.clone();
     let explicit = std::thread::spawn(move || explicit_manager.guarded_destroy(explicit_id, None));
+    let join_deadline = Instant::now() + Duration::from_secs(1);
+    while manager.destroy_flight_waiter_count(&failed.workspace_session_id) == 0 {
+        assert!(
+            Instant::now() < join_deadline,
+            "explicit follower joins the raw destroy flight"
+        );
+        std::thread::yield_now();
+    }
     release_destroy.send(()).expect("release raw teardown");
 
     raw.join()

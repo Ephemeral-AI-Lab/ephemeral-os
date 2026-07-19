@@ -83,15 +83,17 @@ impl CommandOperationService {
             let workspace_session_id = command.workspace_session_id.clone();
             let outcome = command.finalize_outcome.get();
             let publish_rejected = outcome.and_then(|outcome| outcome.publish_reject_class);
-            let finalization_failed =
+            let finalization_failure_class =
                 outcome.and_then(|outcome| outcome.finalization_failure_class);
+            let finalization_attempts = outcome.and_then(|outcome| outcome.finalization_attempts);
             (
                 result,
                 window,
                 elapsed,
                 workspace_session_id,
                 publish_rejected,
-                finalization_failed,
+                finalization_failure_class,
+                finalization_attempts,
             )
         });
         let Some((
@@ -100,7 +102,8 @@ impl CommandOperationService {
             elapsed,
             workspace_session_id,
             publish_rejected,
-            finalization_failed,
+            finalization_failure_class,
+            finalization_attempts,
         )) = read
         else {
             return command_not_found(command_session_id);
@@ -125,7 +128,8 @@ impl CommandOperationService {
         );
         output.workspace_session_id = Some(workspace_session_id);
         output.publish_rejected = publish_rejected;
-        output.finalization_failed = finalization_failed;
+        output.finalization_failed = finalization_failure_class;
+        output.finalization_attempts = finalization_attempts;
         Ok(output)
     }
 }

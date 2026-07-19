@@ -32,8 +32,9 @@ http.workspace = true
 http-body-util.workspace = true
 bytes.workspace = true
 uuid.workspace = true
-rustix.workspace = true
 sha2.workspace = true
+tikv-jemallocator.workspace = true
+tikv-jemalloc-ctl.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-layerstack.workspace = true

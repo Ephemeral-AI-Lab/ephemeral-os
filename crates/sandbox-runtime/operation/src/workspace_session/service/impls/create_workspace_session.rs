@@ -55,6 +55,7 @@ impl WorkspaceSessionService {
                             error,
                         ));
                     }
+                    self.workspace().commit_workspace_destroy(&handle);
                     return Err(error);
                 }
             };
@@ -80,7 +81,7 @@ impl WorkspaceSessionService {
             if let Err(insert_error) = insert_result {
                 if let Err(rollback_error) = self
                     .workspace()
-                    .destroy_workspace(handle, DestroyWorkspaceRequest::default())
+                    .destroy_workspace(handle.clone(), DestroyWorkspaceRequest::default())
                 {
                     return Err(WorkspaceSessionError::CreateRollbackFailed {
                         workspace_session_id,
@@ -88,6 +89,7 @@ impl WorkspaceSessionService {
                         rollback_error,
                     });
                 }
+                self.workspace().commit_workspace_destroy(&handle);
                 if let Some(cgroup_path) = &cgroup_path {
                     let _ = cleanup_workspace_cgroup(cgroup_path);
                 }

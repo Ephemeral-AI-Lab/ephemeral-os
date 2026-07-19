@@ -43,7 +43,10 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         terminal_hook: Arc<dyn TerminalHook<NamespaceExecutionId>>,
         caps: ExecutionCaps,
     ) -> Self {
-        Self::with_launcher(Box::new(ForkRunnerLauncher::new(caps)), terminal_hook, caps)
+        let engine =
+            Self::with_launcher(Box::new(ForkRunnerLauncher::new(caps)), terminal_hook, caps);
+        crate::pty::initialize_output_reactor();
+        engine
     }
 
     pub fn with_launcher(
@@ -98,6 +101,10 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         self.registry.live_values(f)
     }
 
+    pub fn remove_terminal_values(&self, predicate: impl FnMut(&V) -> bool) -> usize {
+        self.registry.remove_terminal_values(predicate)
+    }
+
     #[must_use]
     pub fn active_count(&self) -> usize {
         self.registry.active_count()
@@ -142,12 +149,13 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             )
         })?;
         let promise = Arc::new(CompletionPromise::new());
+        let terminal_release = pty.terminal_release();
         self.spawn_watcher(
             id.clone(),
             child,
             Arc::clone(&promise),
             cancelled,
-            None,
+            terminal_release,
             move |outcome| {
                 let result = op.finalize(outcome);
                 on_complete(&result);
@@ -179,8 +187,8 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             child,
             Arc::clone(&promise),
             Arc::new(AtomicBool::new(false)),
-            Some(MOUNT_OVERLAY_MODE_FLAG),
-            |_| Ok(()),
+            || {},
+            |outcome| mount_exit_error(Some(MOUNT_OVERLAY_MODE_FLAG), &outcome).map_or(Ok(()), Err),
         )?;
         Ok(ExecutionHandle::new(id, promise))
     }
@@ -208,7 +216,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             child,
             Arc::clone(&promise),
             Arc::new(AtomicBool::new(false)),
-            None,
+            || {},
             |outcome| Ok(outcome.into_result()),
         )?;
         Ok(ExecutionHandle::new(id, promise))
@@ -239,7 +247,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             child,
             Arc::clone(&promise),
             Arc::new(AtomicBool::new(false)),
-            None,
+            || {},
             |outcome| Ok(outcome.into_result()),
         )?;
         Ok(ExecutionHandle::new(id, promise))
@@ -267,7 +275,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         child: Box<dyn RunnerChild>,
         promise: Arc<CompletionPromise<O>>,
         cancelled: Arc<AtomicBool>,
-        mount_error_mode: Option<&'static str>,
+        terminal_release: impl FnOnce() + Send + 'static,
         finalize: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
     ) -> Result<(), NamespaceExecutionError> {
         let registry = Arc::clone(&self.registry);
@@ -281,8 +289,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
                     let exec_status = outcome.status();
                     let exit_code = Some(outcome.exit_code());
                     terminal_hook.on_terminal(&id, exec_status.to_span_status(), exit_code);
-                    let result = mount_exit_error(mount_error_mode, &outcome)
-                        .map_or_else(|| finalize_outcome(finalize, outcome), Err);
+                    let result = finalize_outcome(finalize, outcome);
                     let live_status = if result.is_ok() {
                         exec_status
                     } else {
@@ -295,6 +302,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
                     (Err(error), NamespaceExecutionTerminalStatus::Error, None)
                 }
             };
+            terminal_release();
             registry.complete(&id, status, exit_code);
             promise.resolve(result);
         });

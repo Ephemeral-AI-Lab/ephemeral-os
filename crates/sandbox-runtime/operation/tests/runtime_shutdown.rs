@@ -167,7 +167,10 @@ fn shutdown_finalizes_an_idle_publish_policy_before_destroy() {
 
     assert!(report.is_complete());
     assert_eq!(report.sessions_converged, 1);
-    assert_eq!(fake.capture_calls(), [handler.workspace_session_id.clone()]);
+    assert_eq!(
+        fake.capture_calls().as_slice(),
+        std::slice::from_ref(&handler.workspace_session_id)
+    );
     assert_eq!(fake.destroy_calls(), [handler.workspace_session_id]);
 }
 

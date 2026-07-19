@@ -18,7 +18,7 @@ use sandbox_runtime::{LayerstackRuntimeConfig, SandboxRuntimeOperations};
 use sandbox_runtime_layerstack::{manifest_root_hash, LayerChange, LayerPath, LayerStack};
 use sandbox_runtime_workspace::{
     run_result_ok, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    FileRunnerDirEntry, FileRunnerDirEntryKind, FileRunnerResult, HolderProbe,
+    FileRunnerDirEntry, FileRunnerDirEntryKind, FileRunnerResult, HolderFinalization, HolderProbe,
     LayerStackSnapshotRef, LeaseId, NetworkProfile, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
@@ -632,6 +632,7 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
                     HolderProbe::Exited
                 }
             }),
+            holder_finalization: Box::new(|_| HolderFinalization::Exited),
             holder_exit_reason: Box::new(WorkspaceHandle::holder_exit_reason),
             allocate_workspace_session_id: Box::new(|network| {
                 Ok(WorkspaceSessionId(
@@ -657,6 +658,13 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
                     })
                 },
             ),
+            capture_changes_after_holder_quiesced: Box::new(
+                |_handle, _proof, _request| {
+                    Err(WorkspaceError::Capture {
+                        message: "not configured".to_owned(),
+                    })
+                },
+            ),
             destroy_workspace: Box::new(
                 |_handle: WorkspaceHandle, _request: DestroyWorkspaceRequest| {
                     Err(WorkspaceError::Setup {
@@ -664,6 +672,7 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
                     })
                 },
             ),
+            commit_workspace_destroy: Box::new(|_| {}),
             run_file_op: Box::new(|_handle, _op| {
                 Ok(run_result_ok(&FileRunnerResult::ListDir {
                     existed: true,

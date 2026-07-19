@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError, Weak};
 
 use sandbox_observability_telemetry::Observer;
@@ -43,6 +44,7 @@ pub(crate) struct DestroyFlight {
     pub(crate) holder_plan: Option<HolderDestroyPlan>,
     pub(crate) terminal: Mutex<Option<DestroyFlightTerminal>>,
     pub(crate) ready: Condvar,
+    pub(crate) waiters: AtomicUsize,
 }
 
 pub(crate) struct CreateReservation<'a> {
@@ -70,6 +72,7 @@ impl DestroyFlight {
             holder_plan,
             terminal: Mutex::new(None),
             ready: Condvar::new(),
+            waiters: AtomicUsize::new(0),
         }
     }
 }
@@ -193,10 +196,10 @@ impl WorkspaceSessionService {
         obs: Observer,
     ) -> Self {
         Self {
-            sessions: Mutex::new(HashMap::new()),
-            creating_sessions: Mutex::new(HashSet::new()),
-            gates: Mutex::new(HashMap::new()),
-            destroy_flights: Mutex::new(HashMap::new()),
+            sessions: Mutex::new(HashMap::with_capacity(1)),
+            creating_sessions: Mutex::new(HashSet::with_capacity(1)),
+            gates: Mutex::new(HashMap::with_capacity(1)),
+            destroy_flights: Mutex::new(HashMap::with_capacity(1)),
             holder_lifecycle: Mutex::new(HolderLifecycleLog::new()),
             command_teardown: Mutex::new(None),
             workspace,
@@ -219,10 +222,10 @@ impl WorkspaceSessionService {
         obs: Observer,
     ) -> Self {
         Self {
-            sessions: Mutex::new(HashMap::new()),
-            creating_sessions: Mutex::new(HashSet::new()),
-            gates: Mutex::new(HashMap::new()),
-            destroy_flights: Mutex::new(HashMap::new()),
+            sessions: Mutex::new(HashMap::with_capacity(1)),
+            creating_sessions: Mutex::new(HashSet::with_capacity(1)),
+            gates: Mutex::new(HashMap::with_capacity(1)),
+            destroy_flights: Mutex::new(HashMap::with_capacity(1)),
             holder_lifecycle: Mutex::new(HolderLifecycleLog::new()),
             command_teardown: Mutex::new(None),
             workspace,
@@ -243,10 +246,10 @@ impl WorkspaceSessionService {
         obs: Observer,
     ) -> Self {
         Self {
-            sessions: Mutex::new(HashMap::new()),
-            creating_sessions: Mutex::new(HashSet::new()),
-            gates: Mutex::new(HashMap::new()),
-            destroy_flights: Mutex::new(HashMap::new()),
+            sessions: Mutex::new(HashMap::with_capacity(1)),
+            creating_sessions: Mutex::new(HashSet::with_capacity(1)),
+            gates: Mutex::new(HashMap::with_capacity(1)),
+            destroy_flights: Mutex::new(HashMap::with_capacity(1)),
             holder_lifecycle: Mutex::new(HolderLifecycleLog::new()),
             command_teardown: Mutex::new(None),
             workspace,
@@ -319,6 +322,16 @@ impl WorkspaceSessionService {
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .len()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn destroy_flight_waiter_count(&self, workspace_session_id: &WorkspaceSessionId) -> usize {
+        self.destroy_flights
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .get(workspace_session_id)
+            .map_or(0, |flight| flight.waiters.load(Ordering::Acquire))
     }
 
     /// Snapshot of the live session ids for the post-commit remount sweep.
@@ -484,6 +497,21 @@ impl WorkspaceSessionService {
             .and_then(Weak::upgrade)
             .ok_or_else(|| "command teardown owner is unavailable".to_owned())?;
         teardown.cancel_and_join(workspace_session_id, command_ids)
+    }
+
+    pub(crate) fn release_terminal_commands(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+    ) -> usize {
+        let teardown = self
+            .command_teardown
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()
+            .and_then(Weak::upgrade);
+        teardown.map_or(0, |teardown| {
+            teardown.release_terminal(workspace_session_id)
+        })
     }
 }
 

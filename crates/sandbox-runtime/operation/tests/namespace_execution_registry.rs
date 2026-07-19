@@ -7,6 +7,7 @@
 mod support;
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use sandbox_observability_telemetry::{Observer, SpanRegistry};
@@ -16,15 +17,18 @@ use sandbox_runtime::command::{
 };
 use sandbox_runtime::workspace_session::WorkspaceSessionService;
 use sandbox_runtime_namespace_execution::NamespaceExecutionEngine;
-use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
+use sandbox_runtime_workspace::{NetworkProfile, WorkspaceError, WorkspaceSessionId};
 
 use support::{FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield, TestServices};
+
+static RETENTION_ENV_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 fn retention_services(
     fake: &Arc<FakeWorkspaceService>,
     launch_driver: &Arc<FakeLaunchDriver>,
     max_terminal: usize,
 ) -> TestServices {
+    let env_id = RETENTION_ENV_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let obs = Observer::disabled();
     let workspace = Arc::new(WorkspaceSessionService::new(
         support::fake_workspace_runtime(Arc::clone(fake)),
@@ -42,8 +46,8 @@ fn retention_services(
         Arc::clone(&workspace),
         sandbox_runtime::command::CommandConfig {
             scratch_root: std::env::temp_dir().join(format!(
-                "namespace-execution-retention-{}-{max_terminal}",
-                std::process::id()
+                "namespace-execution-retention-{}-{max_terminal}-{env_id}",
+                std::process::id(),
             )),
             ..sandbox_runtime::command::CommandConfig::default()
         },
@@ -140,4 +144,118 @@ fn terminal_eviction_removes_scratch_dir_and_drains_return_command_not_found() {
         CommandStatus::Ok,
         "the newest terminal entry stays drainable"
     );
+}
+
+#[test]
+fn workspace_destroy_releases_its_retained_terminal_commands() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = support::workspace_handle(
+        "ws-destroy-release",
+        "lease-destroy-release",
+        PathBuf::from("/workspace/destroy-release"),
+        NetworkProfile::Shared,
+    );
+    fake.push_create_result(Ok(handle));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "terminal output\n",
+    )));
+    let env = retention_services(&fake, &launch_driver, 512);
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(support::create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+
+    let output = env
+        .command
+        .exec_command(exec_await(workspace_session_id.clone()))
+        .expect("command completes");
+    assert_eq!(output.status, CommandStatus::Ok);
+    let command_session_id =
+        sandbox_runtime::NamespaceExecutionId("namespace_execution_1".to_owned());
+    let scratch = env
+        .command
+        .config()
+        .scratch_root
+        .join(&command_session_id.0);
+    assert!(
+        scratch.is_dir(),
+        "terminal command is retained before destroy"
+    );
+
+    env.workspace
+        .guarded_destroy(workspace_session_id, None)
+        .expect("workspace destroy succeeds");
+
+    assert!(
+        !scratch.exists(),
+        "destroy drops the workspace's retained terminal command"
+    );
+    let drain = env.command.write_command_stdin(WriteCommandStdinInput {
+        command_session_id: command_session_id.clone(),
+        stdin: "late\n".to_owned(),
+        yield_time_ms: Some(0),
+    });
+    assert!(matches!(
+        drain,
+        Err(CommandServiceError::CommandNotFound { command_session_id: missing })
+            if missing == command_session_id
+    ));
+}
+
+#[test]
+fn failed_workspace_destroy_preserves_its_retained_terminal_commands() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = support::workspace_handle(
+        "ws-failed-destroy-retention",
+        "lease-failed-destroy-retention",
+        PathBuf::from("/workspace/failed-destroy-retention"),
+        NetworkProfile::Shared,
+    );
+    fake.push_create_result(Ok(handle));
+    fake.push_destroy_result(Err(WorkspaceError::Setup {
+        step: "injected destroy failure".to_owned(),
+    }));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(support::success_exit(
+        "terminal output\n",
+    )));
+    let env = retention_services(&fake, &launch_driver, 512);
+    let workspace_session_id = env
+        .workspace
+        .create_workspace_session(support::create_request())
+        .expect("session create succeeds")
+        .workspace_session_id;
+
+    let output = env
+        .command
+        .exec_command(exec_await(workspace_session_id.clone()))
+        .expect("command completes");
+    assert_eq!(output.status, CommandStatus::Ok);
+    let command_session_id =
+        sandbox_runtime::NamespaceExecutionId("namespace_execution_1".to_owned());
+    let scratch = env
+        .command
+        .config()
+        .scratch_root
+        .join(&command_session_id.0);
+
+    env.workspace
+        .guarded_destroy(workspace_session_id, None)
+        .expect_err("workspace destroy fails");
+
+    assert!(
+        scratch.is_dir(),
+        "failed destroy preserves the terminal command for a later retry"
+    );
+    let drain = env.command.write_command_stdin(WriteCommandStdinInput {
+        command_session_id,
+        stdin: "late\n".to_owned(),
+        yield_time_ms: Some(0),
+    });
+    assert!(matches!(
+        drain,
+        Err(CommandServiceError::CommandAlreadyCompleted { .. })
+    ));
 }

@@ -43,6 +43,7 @@ pub struct CreateSessionRequest {
 pub struct FinalizeOutcome {
     pub publish_reject_class: Option<&'static str>,
     pub finalization_failure_class: Option<&'static str>,
+    pub finalization_attempts: Option<usize>,
 }
 
 impl FinalizeOutcome {
@@ -50,13 +51,15 @@ impl FinalizeOutcome {
         Self {
             publish_reject_class: Some(class),
             finalization_failure_class: None,
+            finalization_attempts: None,
         }
     }
 
-    pub(crate) const fn finalization_failed(class: &'static str) -> Self {
+    pub(crate) const fn finalization_failed(class: &'static str, attempts: usize) -> Self {
         Self {
             publish_reject_class: None,
             finalization_failure_class: Some(class),
+            finalization_attempts: Some(attempts),
         }
     }
 }

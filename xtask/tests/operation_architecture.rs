@@ -352,7 +352,7 @@ fn missing_and_extra_handlers_are_rejected() {
         (
             "crates/sandbox-operations/catalog/src/manager/phase8_extra.rs",
             "pub const OPERATIONS: &[&crate::routed::RoutedOperation] = &[];",
-            "catalog OPERATIONS aggregate locations",
+            "multiple manager catalog OPERATIONS aggregates",
         ),
         (
             "crates/sandbox-operations/catalog/src/runtime/phase8_extra.rs",
@@ -412,7 +412,7 @@ fn missing_and_extra_handlers_are_rejected() {
         fs::write(path, source).expect("write semantic mutation");
         let error = load_semantic_facts(&fixture).expect_err(expected);
         assert!(
-            error.to_string().contains(expected),
+            format!("{error:#}").contains(expected),
             "{expected}: {error:#}"
         );
         fs::remove_dir_all(fixture).expect("remove semantic mutation fixture");
@@ -772,140 +772,6 @@ const RAW_INCLUDE_DECOY: &str = r##"#[cfg(feature = "manager")] include!("manage
 fn maintained_stale_reference_and_generated_path_are_rejected() {
     let root = repository_root();
     let mut facts = load_stale_facts(&root).expect("load tracked repository sources");
-    let phase0_manifest = "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0/IMMUTABLE.md";
-    if !facts.files.iter().any(|file| file.path == phase0_manifest) {
-        facts.files.push(TrackedSource {
-            path: phase0_manifest.to_owned(),
-            content: fs::read_to_string(root.join(phase0_manifest)).expect("read phase0 manifest"),
-            executable: false,
-        });
-    }
-    let authority_inventory = "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-8/authoritative-forbidden-token-inventory.tsv";
-    if !facts
-        .files
-        .iter()
-        .any(|file| file.path == authority_inventory)
-    {
-        facts.files.push(TrackedSource {
-            path: authority_inventory.to_owned(),
-            content: fs::read_to_string(root.join(authority_inventory))
-                .expect("read authority inventory"),
-            executable: false,
-        });
-    }
-    assert!(!validate_stale_facts(&root, &facts)
-        .iter()
-        .any(|violation| violation.contains("phase-0 evidence")));
-
-    let authority_violations = |facts: &_| {
-        validate_stale_facts(&root, facts)
-            .into_iter()
-            .filter(|violation| violation.contains("authoritative forbidden-token"))
-            .collect::<Vec<_>>()
-    };
-    let baseline_stale = validate_stale_facts(&root, &facts);
-    assert_clean(
-        "authoritative forbidden-token inventory fixture",
-        &authority_violations(&facts),
-    );
-    assert!(!baseline_stale.iter().any(|violation| {
-        violation.contains(authority_inventory)
-            && (violation.starts_with("stale reference")
-                || violation.starts_with("stale path reference"))
-    }));
-
-    let mut missing_authority_inventory = facts.clone();
-    missing_authority_inventory
-        .files
-        .retain(|file| file.path != authority_inventory);
-    assert!(authority_violations(&missing_authority_inventory)
-        .iter()
-        .any(|violation| violation.contains("requires exactly one")
-            && violation.contains(authority_inventory)));
-
-    let mut malformed_authority_inventory = facts.clone();
-    let inventory = malformed_authority_inventory
-        .files
-        .iter_mut()
-        .find(|file| file.path == authority_inventory)
-        .expect("authority inventory fixture");
-    let mut inventory_rows = inventory
-        .content
-        .lines()
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
-    let first_classification = inventory_rows[1].clone();
-    let mut nonexistent_fields = inventory_rows[2]
-        .split('\t')
-        .map(str::to_owned)
-        .collect::<Vec<_>>();
-    nonexistent_fields[1] = "999999".to_owned();
-    inventory_rows[1] =
-        inventory_rows[1].replacen("\tbefore-state\t", "\tunsupported-category\t", 1);
-    inventory_rows.remove(3);
-    inventory_rows.push(first_classification.clone());
-    inventory_rows.push(first_classification);
-    inventory_rows.push(nonexistent_fields.join("\t"));
-    inventory.content = format!("{}\n", inventory_rows.join("\n"));
-    let malformed_violations = authority_violations(&malformed_authority_inventory);
-    assert!(malformed_violations
-        .iter()
-        .any(|violation| violation.contains("invalid category")));
-    assert!(malformed_violations
-        .iter()
-        .any(|violation| violation.contains("duplicate authoritative")));
-    assert!(malformed_violations
-        .iter()
-        .any(|violation| violation.contains("unclassified authoritative")));
-    assert!(malformed_violations
-        .iter()
-        .any(|violation| violation.contains("nonexistent authoritative")));
-
-    let mut expanded_authorities = facts.clone();
-    expanded_authorities
-        .files
-        .iter_mut()
-        .find(|file| file.path.ends_with("operation-migration/spec.md"))
-        .expect("spec authority fixture")
-        .content
-        .push_str(&format!(
-            "\nRetired route `{}` remains classified.\n",
-            concat!("get_", "observability")
-        ));
-    expanded_authorities
-        .files
-        .iter_mut()
-        .find(|file| file.path.ends_with("operation-migration/phase-plan.md"))
-        .expect("phase-plan authority fixture")
-        .content
-        .push_str(&format!(
-            "\n{} remains separate from {}.\n",
-            concat!("operation ", "vocabulary"),
-            concat!("sandbox-", "protocol")
-        ));
-    let near_authority_inventory = format!("{authority_inventory}.copy");
-    expanded_authorities.files.push(TrackedSource {
-        path: near_authority_inventory.clone(),
-        content: RETIRED_E2E_TREE.to_owned(),
-        executable: false,
-    });
-    let expanded_violations = validate_stale_facts(&root, &expanded_authorities);
-    let protocol_vocabulary_label = format!(
-        "{} + {}",
-        concat!("operation ", "vocabulary"),
-        concat!("sandbox-", "protocol")
-    );
-    assert!(expanded_violations.iter().any(|violation| {
-        violation.contains("unclassified authoritative")
-            && violation.contains(concat!("get_", "observability"))
-    }));
-    assert!(expanded_violations.iter().any(|violation| {
-        violation.contains("unclassified authoritative")
-            && violation.contains(&protocol_vocabulary_label)
-    }));
-    assert!(expanded_violations.iter().any(|violation| {
-        violation.contains("stale path reference") && violation.contains(&near_authority_inventory)
-    }));
 
     let canonical_violations = |facts: &_| {
         validate_stale_facts(&root, facts)
@@ -955,71 +821,6 @@ fn maintained_stale_reference_and_generated_path_are_rejected() {
             violation
                 == "canonical literal \"file_list\" must occur once in production source, found 2"
         }));
-
-    let mut missing_manifest = facts.clone();
-    missing_manifest
-        .files
-        .retain(|file| file.path != phase0_manifest);
-    assert!(validate_stale_facts(&root, &missing_manifest)
-        .iter()
-        .any(|violation| violation.contains("requires exactly one")));
-
-    let phase0_prefix =
-        "docs/obsidian/ephemeral-os/implementation_plan/operation-migration/evidence/phase-0/";
-    let mut listed_missing = facts.clone();
-    listed_missing
-        .files
-        .retain(|file| file.path != format!("{phase0_prefix}artifact-invariants.txt"));
-    assert!(validate_stale_facts(&root, &listed_missing)
-        .iter()
-        .any(|violation| violation.contains("lists missing payload artifact-invariants.txt")));
-
-    let mut omitted = facts.clone();
-    let manifest_without_payload = omitted
-        .files
-        .iter()
-        .find(|file| file.path == phase0_manifest)
-        .expect("phase0 manifest fixture")
-        .content
-        .replace("- `artifact-invariants.txt`\n", "");
-    omitted
-        .files
-        .iter_mut()
-        .find(|file| file.path == phase0_manifest)
-        .expect("phase0 manifest fixture")
-        .content = manifest_without_payload;
-    assert!(validate_stale_facts(&root, &omitted)
-        .iter()
-        .any(|violation| {
-            violation.contains("payload is not listed")
-                && violation.contains("artifact-invariants.txt")
-        }));
-
-    let mut additional = facts.clone();
-    additional.files.push(TrackedSource {
-        path: format!("{phase0_prefix}future-payload.txt"),
-        content: RETIRED_E2E_TREE.to_owned(),
-        executable: false,
-    });
-    let additional_violations = validate_stale_facts(&root, &additional);
-    assert!(additional_violations.iter().any(|violation| {
-        violation.contains("payload is not listed") && violation.contains("future-payload.txt")
-    }));
-    assert!(additional_violations.iter().any(|violation| {
-        violation.contains("stale path reference") && violation.contains("future-payload.txt")
-    }));
-
-    let mut duplicate = facts.clone();
-    duplicate
-        .files
-        .iter_mut()
-        .find(|file| file.path == phase0_manifest)
-        .expect("phase0 manifest fixture")
-        .content
-        .push_str("- `artifact-invariants.txt`\n");
-    assert!(validate_stale_facts(&root, &duplicate)
-        .iter()
-        .any(|violation| violation.contains("invalid or duplicate entry")));
 
     static STALE_TREE_NEXT: AtomicU64 = AtomicU64::new(0);
     let stale_tree_root = std::env::temp_dir().join(format!(

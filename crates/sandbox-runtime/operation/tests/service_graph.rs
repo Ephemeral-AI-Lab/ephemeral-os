@@ -14,8 +14,8 @@ use sandbox_runtime::{
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 use sandbox_runtime_workspace::{
-    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, HolderProbe,
-    WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, HolderFinalization,
+    HolderProbe, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
     WorkspaceSessionId,
 };
 
@@ -75,6 +75,7 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
                     HolderProbe::Exited
                 }
             }),
+            holder_finalization: Box::new(|_| HolderFinalization::Exited),
             holder_exit_reason: Box::new(WorkspaceHandle::holder_exit_reason),
             allocate_workspace_session_id: Box::new(|_| {
                 Ok(WorkspaceSessionId("not-configured".to_owned()))
@@ -91,6 +92,11 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
                     })
                 },
             ),
+            capture_changes_after_holder_quiesced: Box::new(|_handle, _proof, _request| {
+                Err(WorkspaceError::Capture {
+                    message: "not configured".to_owned(),
+                })
+            }),
             destroy_workspace: Box::new(
                 |_handle: WorkspaceHandle, _request: DestroyWorkspaceRequest| {
                     Err(WorkspaceError::Setup {
@@ -98,6 +104,7 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
                     })
                 },
             ),
+            commit_workspace_destroy: Box::new(|_| {}),
             run_file_op: Box::new(|_handle, _op| {
                 Err(WorkspaceError::Setup {
                     step: "not configured".to_owned(),

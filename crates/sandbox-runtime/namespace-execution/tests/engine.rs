@@ -6,6 +6,7 @@ include!("support/namespace_execution_src.rs");
 mod support;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use sandbox_observability_telemetry::{NoopHook, SpanStatus, TraceContext};
 use sandbox_runtime_namespace_process::runner::protocol::NamespaceRunnerRequest;
@@ -71,6 +72,28 @@ fn shell_execution_resolves_finalized_output_and_records_terminal() {
         1,
         "only the terminal edge is recorded"
     );
+}
+
+#[test]
+fn shell_terminal_releases_stdin_while_retaining_execution() {
+    let fake = FakeLauncher::new();
+    let observer = Arc::new(FakeObserver::new());
+    let engine = test_engine(&fake, observer, 4);
+    let id = id("terminal_release");
+
+    let exec = engine
+        .run_shell_interactive(OkShellOp, sample_target(), id.clone(), |_| {}, None, None)
+        .expect("shell admitted");
+    let completion = exec.completion();
+
+    fake.complete_latest(run_result(0, "ok"));
+    assert!(completion.wait_timeout(Duration::from_secs(2)));
+
+    let error = exec
+        .write_stdin(b"still retained")
+        .expect_err("terminal execution released stdin");
+    assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+    assert!(engine.is_completed(&id));
 }
 
 #[test]
@@ -403,6 +426,24 @@ fn engine_allocates_monotonic_namespace_execution_ids() {
 
     assert_eq!(engine.allocate_id().0, "namespace_execution_1");
     assert_eq!(engine.allocate_id().0, "namespace_execution_2");
+}
+
+#[test]
+fn production_engine_initializes_the_stable_pty_reactor() {
+    let engine: NamespaceExecutionEngine = NamespaceExecutionEngine::new(
+        Arc::new(NoopHook),
+        ExecutionCaps {
+            max_active: 4,
+            setup_timeout_s: 30.0,
+            ..ExecutionCaps::default()
+        },
+    );
+
+    let workers = engine.background_worker_snapshot();
+    assert_eq!(workers.pty_reactor_threads, 1);
+    assert_eq!(workers.active_pty_readers, 0);
+    assert_eq!(workers.completion_supervisor_threads, 0);
+    assert_eq!(workers.active_completions, 0);
 }
 
 #[test]

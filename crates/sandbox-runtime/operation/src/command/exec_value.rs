@@ -17,8 +17,7 @@ use crate::workspace_session::FinalizeOutcome;
 /// command layer owns beyond `InteractiveExecution`: the transcript window, the
 /// elapsed-time clocks, the streaming snapshot offset, and the finalize-outcome
 /// slot set at attach (§2.5). Dropping the value — retention eviction or engine
-/// teardown — removes the command's scratch directory alongside the pty fd the
-/// wrapped execution holds.
+/// teardown — removes the command's scratch directory.
 pub struct CommandExecValue {
     pub(crate) exec: InteractiveExecution<CommandTerminalResult>,
     transcript_path: PathBuf,

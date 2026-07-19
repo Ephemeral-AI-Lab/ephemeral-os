@@ -144,4 +144,8 @@ impl WorkspaceCommandTeardown for NamespaceExecutionEngine<CommandExecValue> {
         )
         .map_err(|error| error.to_string())
     }
+
+    fn release_terminal(&self, workspace_session_id: &WorkspaceSessionId) -> usize {
+        self.remove_terminal_values(|command| command.workspace_session_id == *workspace_session_id)
+    }
 }

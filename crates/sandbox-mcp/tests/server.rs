@@ -253,6 +253,7 @@ fn expected_names(set: OperationSet) -> &'static [&'static str] {
             "trace",
             "events",
             "resources",
+            "daemon",
             "topology",
             "cgroup",
             "layerstack",

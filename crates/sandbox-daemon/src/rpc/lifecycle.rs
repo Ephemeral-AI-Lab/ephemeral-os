@@ -133,8 +133,8 @@ async fn serve_listeners(
         })
     };
 
-    let mut http_server = match http_listener {
-        Some(listener) => Some(crate::http::spawn(
+    let mut http_server = http_listener.map(|listener| {
+        crate::http::spawn(
             listener,
             server.config.clone(),
             Arc::clone(&server.operations),
@@ -143,9 +143,8 @@ async fn serve_listeners(
             server.connection_admission.clone(),
             connection_tasks.clone(),
             server.shutdown.clone(),
-        )),
-        None => None,
-    };
+        )
+    });
 
     let mut tcp_server = match tcp_listener {
         Some(listener) => {

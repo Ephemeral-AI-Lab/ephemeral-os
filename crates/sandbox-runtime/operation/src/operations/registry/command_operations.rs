@@ -181,6 +181,9 @@ fn command_output_value(output: CommandOutput) -> Value {
     if let Some(failure_class) = output.finalization_failed {
         value["finalization_failed"] = Value::Bool(true);
         value["finalization_failure_class"] = Value::String(failure_class.to_owned());
+        if let Some(attempts) = output.finalization_attempts {
+            value["finalization_attempts"] = json!(attempts);
+        }
     }
     value
 }

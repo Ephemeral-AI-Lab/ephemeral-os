@@ -126,7 +126,9 @@ impl HolderProbeUnknownClass {
 #[doc(hidden)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HolderFinalization {
-    Quiesced { proof: HolderFinalizationProof },
+    Quiesced {
+        proof: HolderFinalizationProof,
+    },
     Exited,
     Unknown {
         class: HolderFinalizationUnknownClass,
@@ -187,6 +189,7 @@ pub(crate) struct HolderSupervisorStats {
     pub(crate) wait_error_total: u64,
     pub(crate) identity_mismatch_total: u64,
     pub(crate) dropped_event_total: u64,
+    pub(crate) retained_event_count: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -336,7 +339,6 @@ pub(crate) struct HolderSupervisor {
     lifecycle: Mutex<SupervisorLifecycle>,
     lifecycle_changed: Condvar,
     log: Arc<Mutex<SupervisorLog>>,
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     next_generation: Arc<AtomicU64>,
 }
 
@@ -401,12 +403,17 @@ impl HolderSupervisor {
         }
     }
 
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub(crate) fn next_generation(&self) -> u64 {
         self.next_generation.fetch_add(1, Ordering::Relaxed)
     }
 
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    #[cfg_attr(
+        not(target_os = "linux"),
+        expect(
+            dead_code,
+            reason = "Linux holder startup uses the synchronous entry point"
+        )
+    )]
     pub(crate) fn spawn_process<F>(
         &self,
         workspace_session_id: WorkspaceSessionId,
@@ -419,7 +426,6 @@ impl HolderSupervisor {
             .receive()
     }
 
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub(crate) fn enqueue_spawn_process<F>(
         &self,
         workspace_session_id: WorkspaceSessionId,
@@ -603,7 +609,6 @@ impl Drop for HolderSupervisor {
 }
 
 enum SupervisorCommand {
-    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     Spawn {
         workspace_session_id: WorkspaceSessionId,
         generation: u64,
@@ -651,6 +656,7 @@ enum TerminationWaiter {
 fn notify_termination_success(
     waiters: Vec<TerminationWaiter>,
     report: &HolderKillReport,
+    finalization_proof: Option<HolderFinalizationProof>,
 ) {
     for waiter in waiters {
         match waiter {
@@ -658,16 +664,19 @@ fn notify_termination_success(
                 let _ = reply.send(Ok(report.clone()));
             }
             TerminationWaiter::Finalization(reply) => {
-                let _ = reply.send(HolderFinalization::Quiesced);
+                let result = finalization_proof.clone().map_or(
+                    HolderFinalization::Unknown {
+                        class: HolderFinalizationUnknownClass::TerminationFailed,
+                    },
+                    |proof| HolderFinalization::Quiesced { proof },
+                );
+                let _ = reply.send(result);
             }
         }
     }
 }
 
-fn notify_termination_failure(
-    waiters: Vec<TerminationWaiter>,
-    error: &HolderSupervisorError,
-) {
+fn notify_termination_failure(waiters: Vec<TerminationWaiter>, error: &HolderSupervisorError) {
     for waiter in waiters {
         match waiter {
             TerminationWaiter::Destroy(reply) => {
@@ -684,9 +693,7 @@ fn notify_termination_failure(
                     HolderSupervisorError::Unknown { .. } => {
                         HolderFinalizationUnknownClass::NotRegistered
                     }
-                    HolderSupervisorError::Overloaded => {
-                        HolderFinalizationUnknownClass::Overloaded
-                    }
+                    HolderSupervisorError::Overloaded => HolderFinalizationUnknownClass::Overloaded,
                     HolderSupervisorError::Unavailable
                     | HolderSupervisorError::WorkerTerminated => {
                         HolderFinalizationUnknownClass::Unavailable
@@ -723,6 +730,7 @@ struct SupervisorLog {
     events: VecDeque<HolderExitEvent>,
     capacity: usize,
     next_sequence: u64,
+    reconciliation_exit_total: u64,
     stats: HolderSupervisorStats,
     exit_notifier: Option<HolderExitNotifier>,
 }
@@ -733,6 +741,7 @@ impl SupervisorLog {
             events: VecDeque::with_capacity(capacity),
             capacity,
             next_sequence: 1,
+            reconciliation_exit_total: 0,
             stats: HolderSupervisorStats::default(),
             exit_notifier: None,
         }
@@ -743,7 +752,7 @@ impl SupervisorLog {
             return Err("holder exit subscription already taken".to_owned());
         }
         let (notifier, subscription) = holder_exit_channel();
-        if self.stats.holder_exit_total != 0 {
+        if self.reconciliation_exit_total != 0 {
             notifier.notify();
         }
         self.exit_notifier = Some(notifier);
@@ -765,14 +774,19 @@ impl SupervisorLog {
         };
         self.next_sequence = self.next_sequence.saturating_add(1);
         self.stats.holder_exit_total = self.stats.holder_exit_total.saturating_add(1);
-        if self.capacity == 0 {
-            self.stats.dropped_event_total = self.stats.dropped_event_total.saturating_add(1);
-        } else {
-            if self.events.len() == self.capacity {
-                self.events.pop_front();
+        if reason != HolderExitReason::Destroy {
+            self.reconciliation_exit_total = self.reconciliation_exit_total.saturating_add(1);
+            if self.capacity == 0 {
                 self.stats.dropped_event_total = self.stats.dropped_event_total.saturating_add(1);
+            } else {
+                if self.events.len() == self.capacity {
+                    self.events.pop_front();
+                    self.stats.dropped_event_total =
+                        self.stats.dropped_event_total.saturating_add(1);
+                }
+                self.events.push_back(event.clone());
             }
-            self.events.push_back(event.clone());
+            self.stats.retained_event_count = self.events.len();
         }
         event
     }
@@ -784,7 +798,7 @@ fn supervisor_loop(
     poll_interval: Duration,
 ) {
     let poll_interval = poll_interval.max(Duration::from_millis(1));
-    let mut records: HashMap<RegistrationKey, HolderRecord> = HashMap::new();
+    let mut records: HashMap<RegistrationKey, HolderRecord> = HashMap::with_capacity(1);
     loop {
         if records.is_empty() {
             match rx.recv() {
@@ -838,12 +852,18 @@ fn shutdown_holder_records(
             }
         };
         if let Some(report) = completion {
-            let waiters = records
-                .remove(key)
-                .and_then(|mut record| record.termination.take())
-                .map(|attempt| attempt.waiters)
-                .unwrap_or_default();
-            notify_termination_success(waiters, &report);
+            let (waiters, finalization_proof) = records.remove(key).map_or_else(
+                || (Vec::new(), None),
+                |mut record| {
+                    let waiters = record
+                        .termination
+                        .take()
+                        .map(|attempt| attempt.waiters)
+                        .unwrap_or_default();
+                    (waiters, record.registration.finalization_proof())
+                },
+            );
+            notify_termination_success(waiters, &report, finalization_proof);
         }
     }
 
@@ -869,7 +889,8 @@ fn shutdown_holder_records(
         match wait_reap_owned(record.process.as_mut()) {
             Ok(exit) => {
                 let report = finish_record(&record, HolderExitReason::Destroy, exit, true, log);
-                notify_termination_success(waiters, &report);
+                let finalization_proof = record.registration.finalization_proof();
+                notify_termination_success(waiters, &report, finalization_proof);
             }
             Err(message) => {
                 publish_wait_error_terminal(&mut record, log);
@@ -1047,7 +1068,8 @@ fn handle_supervisor_command(
             };
             if let Some((report, waiters)) = completion {
                 records.remove(&key);
-                notify_termination_success(waiters, &report);
+                let finalization_proof = registration.finalization_proof();
+                notify_termination_success(waiters, &report, finalization_proof);
             }
             let _ = reply.send(probe);
         }
@@ -1081,13 +1103,7 @@ fn handle_supervisor_command(
 
             match record.process.try_wait() {
                 Ok(Some(exit)) => {
-                    let _ = finish_record(
-                        record,
-                        HolderExitReason::Unexpected,
-                        exit,
-                        false,
-                        log,
-                    );
+                    let _ = finish_record(record, HolderExitReason::Unexpected, exit, false, log);
                     records.remove(&key);
                     let _ = reply.send(HolderFinalization::Exited);
                 }
@@ -1146,8 +1162,14 @@ fn handle_supervisor_command(
                                     true,
                                     log,
                                 );
+                                let result = record.registration.finalization_proof().map_or(
+                                    HolderFinalization::Unknown {
+                                        class: HolderFinalizationUnknownClass::TerminationFailed,
+                                    },
+                                    |proof| HolderFinalization::Quiesced { proof },
+                                );
                                 records.remove(&key);
-                                let _ = reply.send(HolderFinalization::Quiesced);
+                                let _ = reply.send(result);
                             }
                             Ok(None) => {
                                 record.destroy_requested = false;
@@ -1213,6 +1235,7 @@ enum PollCompletion {
     Exited {
         report: HolderKillReport,
         waiters: Vec<TerminationWaiter>,
+        finalization_proof: Option<HolderFinalizationProof>,
     },
     AttemptFailed {
         error: HolderSupervisorError,
@@ -1234,9 +1257,13 @@ fn poll_holder_records(
         };
         match completion {
             PollCompletion::None => {}
-            PollCompletion::Exited { report, waiters } => {
+            PollCompletion::Exited {
+                report,
+                waiters,
+                finalization_proof,
+            } => {
                 records.remove(&key);
-                notify_termination_success(waiters, &report);
+                notify_termination_success(waiters, &report, finalization_proof);
             }
             PollCompletion::AttemptFailed { error, waiters } => {
                 notify_termination_failure(waiters, &error);
@@ -1265,7 +1292,12 @@ fn poll_holder_record(
                 .map(|attempt| attempt.waiters)
                 .unwrap_or_default();
             let report = finish_record(record, reason, exit, holder_was_alive, log);
-            return PollCompletion::Exited { report, waiters };
+            let finalization_proof = record.registration.finalization_proof();
+            return PollCompletion::Exited {
+                report,
+                waiters,
+                finalization_proof,
+            };
         }
         Ok(None) => record.consecutive_wait_errors = 0,
         Err(message) => {
@@ -1281,6 +1313,7 @@ fn poll_holder_record(
                 return PollCompletion::Exited {
                     report,
                     waiters: Vec::new(),
+                    finalization_proof: record.registration.finalization_proof(),
                 };
             }
             Ok(None) => {
@@ -1323,6 +1356,7 @@ fn poll_holder_record(
                 return PollCompletion::Exited {
                     report,
                     waiters: Vec::new(),
+                    finalization_proof: record.registration.finalization_proof(),
                 };
             }
             Err(_) => {
@@ -1371,7 +1405,11 @@ fn poll_holder_record(
             match wait_reap_owned(record.process.as_mut()) {
                 Ok(exit) => {
                     let report = finish_record(record, HolderExitReason::Destroy, exit, true, log);
-                    return PollCompletion::Exited { report, waiters };
+                    return PollCompletion::Exited {
+                        report,
+                        waiters,
+                        finalization_proof: record.registration.finalization_proof(),
+                    };
                 }
                 Err(message) => {
                     record.termination = Some(TerminationAttempt {
@@ -1487,7 +1525,9 @@ fn publish_registration_exit(
             log.stats.wait_error_total = log.stats.wait_error_total.saturating_add(1);
         }
         *slot = Some(log.publish(registration, reason, exit));
-        log.exit_notifier.clone()
+        (reason != HolderExitReason::Destroy)
+            .then(|| log.exit_notifier.clone())
+            .flatten()
     };
     registration.exit.1.notify_all();
     if let Some(notifier) = notifier {

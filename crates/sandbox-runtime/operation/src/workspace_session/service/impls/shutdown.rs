@@ -1,7 +1,10 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Arc, OnceLock, PoisonError};
 
-use crate::workspace_crate::{DestroyWorkspaceRequest, WorkspaceSessionId};
+use sandbox_observability_telemetry::record::names;
+use serde_json::json;
+
+use crate::workspace_crate::{DestroyWorkspaceRequest, HolderFinalization, WorkspaceSessionId};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::model::{FinalizationState, FinalizeOutcome, FinalizePolicy};
@@ -116,10 +119,53 @@ impl WorkspaceSessionService {
                     }
                     session.finalization_state = FinalizationState::Finalizing;
                 }
-                self.finalize_session_snapshot(
-                    handler.clone(),
-                    &Arc::new(OnceLock::<FinalizeOutcome>::new()),
-                );
+                let (finalization, attempts) = self.quiesce_session_holder(&handler);
+                match finalization {
+                    HolderFinalization::Quiesced { proof } => {
+                        if let Err(error) = self.mark_holder_quiesced_for_finalization(&handler) {
+                            self.mark_destroy_failed(&handler);
+                            drop(admission);
+                            return Err(error.to_string());
+                        }
+                        self.finalize_session_snapshot(
+                            handler.clone(),
+                            &proof,
+                            attempts,
+                            &Arc::new(OnceLock::<FinalizeOutcome>::new()),
+                        );
+                    }
+                    HolderFinalization::Exited => {
+                        let (flight, leader) = self
+                            .claim_holder_destroy_flight(&handler)
+                            .map_err(|error| error.to_string())?;
+                        drop(admission);
+                        if leader {
+                            self.run_holder_destroy(flight, DestroyWorkspaceRequest::default())
+                                .map_err(|error| error.to_string())?;
+                        } else {
+                            Self::wait_destroy_flight(&flight)
+                                .map_err(|error| error.to_string())?;
+                        }
+                        return Ok(());
+                    }
+                    HolderFinalization::Unknown { class } => {
+                        self.mark_destroy_failed(&handler);
+                        self.obs().event(
+                            names::WORKSPACE_SESSION_FINALIZE_FAILED,
+                            json!({
+                                "workspace_session_id": handler.workspace_session_id.0,
+                                "stage": "shutdown_holder_finalization",
+                                "class": class.as_str(),
+                                "attempts": attempts,
+                            }),
+                        );
+                        drop(admission);
+                        return Err(format!(
+                            "holder finalization failed after {attempts} attempts: {}",
+                            class.as_str()
+                        ));
+                    }
+                }
                 let retained_state = self
                     .lock_sessions()
                     .map_err(|error| error.to_string())?

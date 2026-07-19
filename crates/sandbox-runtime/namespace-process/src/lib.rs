@@ -8,5 +8,6 @@
 
 pub mod gate;
 pub mod holder;
+pub mod pid_identity;
 pub mod runner;
 pub mod thp;

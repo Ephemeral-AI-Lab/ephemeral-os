@@ -9,11 +9,13 @@ use crate::layerstack::{
 };
 use crate::workspace_crate::{
     BaseRevision, CaptureChangesRequest, CapturedWorkspaceChanges, DestroyWorkspaceRequest,
-    ProtectedPathDrop, ProtectedPathDropReason,
+    HolderFinalization, HolderFinalizationProof, ProtectedPathDrop, ProtectedPathDropReason,
 };
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::model::{FinalizationState, FinalizeOutcome, WorkspaceSessionHandler};
+
+const HOLDER_FINALIZATION_MAX_ATTEMPTS: usize = 3;
 
 impl WorkspaceSessionService {
     /// The `publish_then_destroy` policy runner: capture the session's upperdir
@@ -27,6 +29,8 @@ impl WorkspaceSessionService {
     pub(crate) fn finalize_session_snapshot(
         &self,
         handler: WorkspaceSessionHandler,
+        proof: &HolderFinalizationProof,
+        finalization_attempts: usize,
         finalize_outcome: &Arc<OnceLock<FinalizeOutcome>>,
     ) {
         let result: Result<(), std::convert::Infallible> =
@@ -37,7 +41,7 @@ impl WorkspaceSessionService {
                 );
                 let mut published = false;
                 let mut layer_committed = false;
-                match self.capture_session_changes(&handler) {
+                match self.capture_session_changes_after_holder_quiesced(&handler, proof) {
                     Ok(captured) if captured.changes.is_empty() => {}
                     Ok(captured) => match self.publish_session_changes(&handler, captured) {
                         Ok(result) => {
@@ -60,12 +64,40 @@ impl WorkspaceSessionService {
                             );
                         }
                     },
-                    Err(error) => {
-                        span.attr("capture_error", error.to_string());
+                    Err(_) => {
+                        let class = "holder_finalization_capture_failed";
+                        let _ = finalize_outcome.set(FinalizeOutcome::finalization_failed(
+                            class,
+                            finalization_attempts,
+                        ));
+                        self.mark_destroy_failed(&handler);
+                        let recovery_preserved = self
+                            .preserve_holder_recovery_artifact(
+                                &handler.workspace_session_id,
+                                &handler,
+                            )
+                            .is_ok();
+                        span.status(SpanStatus::Error)
+                            .attr("capture_failed", true)
+                            .attr("recovery_preserved", recovery_preserved);
+                        self.obs().event(
+                            names::WORKSPACE_SESSION_FINALIZE_FAILED,
+                            json!({
+                                "workspace_session_id": handler.workspace_session_id.0,
+                                "stage": "capture_after_holder_quiesced",
+                                "class": class,
+                                "recovery_preserved": recovery_preserved,
+                            }),
+                        );
                     }
                 }
                 span.attr("published", published);
-                self.destroy_finalized_session(&handler);
+                if !self.destroy_finalized_session(&handler) {
+                    let _ = finalize_outcome.set(FinalizeOutcome::finalization_failed(
+                        "holder_finalization_destroy_failed",
+                        finalization_attempts,
+                    ));
+                }
                 if layer_committed {
                     self.layerstack().notify_autosquash_layer_committed();
                 }
@@ -92,6 +124,59 @@ impl WorkspaceSessionService {
             })
     }
 
+    pub(in crate::workspace_session::service::impls) fn capture_session_changes_after_holder_quiesced(
+        &self,
+        handler: &WorkspaceSessionHandler,
+        proof: &HolderFinalizationProof,
+    ) -> Result<CapturedWorkspaceChanges, WorkspaceSessionError> {
+        self.obs()
+            .scope(names::WORKSPACE_SESSION_CAPTURE_CHANGES, |_span| {
+                Ok(self.workspace().capture_changes_after_holder_quiesced(
+                    &handler.handle,
+                    proof,
+                    CaptureChangesRequest {
+                        include_stats: false,
+                    },
+                )?)
+            })
+    }
+
+    pub(in crate::workspace_session::service::impls) fn quiesce_session_holder(
+        &self,
+        handler: &WorkspaceSessionHandler,
+    ) -> (HolderFinalization, usize) {
+        for attempt in 1..=HOLDER_FINALIZATION_MAX_ATTEMPTS {
+            let result = self
+                .workspace()
+                .quiesce_holder_for_finalization(&handler.handle);
+            if !matches!(result, HolderFinalization::Unknown { .. })
+                || attempt == HOLDER_FINALIZATION_MAX_ATTEMPTS
+            {
+                return (result, attempt);
+            }
+        }
+        unreachable!("bounded holder finalization loop always returns")
+    }
+
+    pub(in crate::workspace_session::service::impls) fn mark_holder_quiesced_for_finalization(
+        &self,
+        handler: &WorkspaceSessionHandler,
+    ) -> Result<(), WorkspaceSessionError> {
+        let mut sessions = self.lock_sessions()?;
+        let session = sessions
+            .get_mut(&handler.workspace_session_id)
+            .ok_or_else(|| WorkspaceSessionError::not_found(&handler.workspace_session_id))?;
+        if session.handler() != *handler
+            || session.finalization_state != FinalizationState::Finalizing
+        {
+            return Err(WorkspaceSessionError::not_found(
+                &handler.workspace_session_id,
+            ));
+        }
+        session.holder_quiesced_for_finalization = true;
+        Ok(())
+    }
+
     pub(in crate::workspace_session::service::impls) fn publish_session_changes(
         &self,
         handler: &WorkspaceSessionHandler,
@@ -106,7 +191,7 @@ impl WorkspaceSessionService {
         })
     }
 
-    fn destroy_finalized_session(&self, handler: &WorkspaceSessionHandler) {
+    fn destroy_finalized_session(&self, handler: &WorkspaceSessionHandler) -> bool {
         let destroyed =
             self.destroy_session_under_gate(handler.clone(), DestroyWorkspaceRequest::default());
         if let Err(error) = destroyed {
@@ -126,6 +211,9 @@ impl WorkspaceSessionService {
                     "error": failure.to_string(),
                 }),
             );
+            false
+        } else {
+            true
         }
     }
 }

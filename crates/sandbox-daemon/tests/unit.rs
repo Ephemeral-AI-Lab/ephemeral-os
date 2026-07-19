@@ -47,6 +47,10 @@ mod connection_tests {
     ));
 }
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "test fixtures and negative assertions intentionally fail immediately"
+)]
 mod dispatch_tests {
     pub(crate) use crate::rpc::dispatch::{
         blocking_overload_response, daemon_readiness_response, decode_request,
@@ -71,6 +75,10 @@ mod http_tests {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/unit/http.rs"));
 }
 
+#[allow(
+    clippy::unwrap_used,
+    reason = "test fixture setup intentionally fails immediately on malformed state"
+)]
 mod cgroup_setup_tests {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),

@@ -175,7 +175,7 @@ pub(crate) struct WorkspaceRuntimeState {
 
 enum WorkspaceRuntimeBackend {
     Runtime(Box<Mutex<WorkspaceRuntimeState>>),
-    Hooks(WorkspaceRuntimeHooks),
+    Hooks(Box<WorkspaceRuntimeHooks>),
 }
 
 impl WorkspaceRuntimeService {
@@ -198,16 +198,16 @@ impl WorkspaceRuntimeService {
     #[must_use]
     pub fn from_hooks_for_test(hooks: WorkspaceRuntimeHooks) -> Self {
         Self {
-            backend: WorkspaceRuntimeBackend::Hooks(hooks),
+            backend: WorkspaceRuntimeBackend::Hooks(Box::new(hooks)),
             admission: RwLock::new(()),
             shutdown_control: ShutdownControl::default(),
         }
     }
 
-    pub(crate) const fn hooks(&self) -> Option<&WorkspaceRuntimeHooks> {
+    pub(crate) fn hooks(&self) -> Option<&WorkspaceRuntimeHooks> {
         match &self.backend {
             WorkspaceRuntimeBackend::Runtime(_) => None,
-            WorkspaceRuntimeBackend::Hooks(hooks) => Some(hooks),
+            WorkspaceRuntimeBackend::Hooks(hooks) => Some(hooks.as_ref()),
         }
     }
 
@@ -240,6 +240,18 @@ impl WorkspaceRuntimeService {
                 Ok(self.lock_state()?.manager.ownership_snapshot())
             }
             WorkspaceRuntimeBackend::Hooks(_) => Ok(WorkspaceOwnershipSnapshot::default()),
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn commit_workspace_destroy(&self, handle: &crate::model::WorkspaceHandle) {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Runtime(state) => state
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .manager
+                .forget_completed_teardown(handle),
+            WorkspaceRuntimeBackend::Hooks(hooks) => (hooks.commit_workspace_destroy)(handle),
         }
     }
 

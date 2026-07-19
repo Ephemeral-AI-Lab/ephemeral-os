@@ -53,6 +53,10 @@ mod model;
 mod observability;
 #[path = "../src/service/mod.rs"]
 pub mod service;
+#[allow(
+    unused_imports,
+    reason = "the test harness re-includes stack exports used by the library facade"
+)]
 #[path = "../src/stack/mod.rs"]
 mod stack;
 #[path = "../src/storage/whiteout.rs"]

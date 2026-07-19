@@ -331,7 +331,7 @@ impl<K: Eq + Hash> SpanRegistry<K> {
     pub fn new(obs: Observer) -> Self {
         Self {
             obs,
-            open: Mutex::new(HashMap::new()),
+            open: Mutex::new(HashMap::with_capacity(1)),
         }
     }
 

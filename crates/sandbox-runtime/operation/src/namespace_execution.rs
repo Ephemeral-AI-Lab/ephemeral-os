@@ -13,6 +13,8 @@ pub(crate) trait WorkspaceCommandTeardown: Send + Sync {
         workspace_session_id: &WorkspaceSessionId,
         command_ids: &[NamespaceExecutionId],
     ) -> Result<(), String>;
+
+    fn release_terminal(&self, workspace_session_id: &WorkspaceSessionId) -> usize;
 }
 
 #[derive(Debug, Clone, PartialEq)]

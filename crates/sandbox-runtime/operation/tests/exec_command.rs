@@ -21,14 +21,16 @@ use sandbox_runtime_namespace_execution::{
 };
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NamespaceRunnerRequest};
 use sandbox_runtime_workspace::{
-    CapturedWorkspaceChanges, HolderProbe, HolderProbeUnknownClass, NetworkProfile,
-    WorkspaceHandle, WorkspaceSessionId,
+    CapturedWorkspaceChanges, HolderFinalization, HolderFinalizationProof,
+    HolderFinalizationUnknownClass, NetworkProfile, WorkspaceError, WorkspaceHandle,
+    WorkspaceSessionId,
 };
 use serde_json::json;
 
 use support::{
     build_services, build_services_with_launch_driver,
     build_services_with_launch_driver_and_cgroup_root,
+    build_services_with_launch_driver_and_layerstack,
     build_services_with_launch_driver_and_workload_cgroup, create_request, success_exit,
     workspace_handle, workspace_handle_unavailable_launch, workspace_handle_without_launch,
     FakeLaunchDriver, FakeLauncher, FakeRunnerScript, FakeWorkspaceService, ScriptedCommandYield,
@@ -287,12 +289,14 @@ fn closed_workspace_command_error_keeps_the_structured_session_id(
 #[test]
 fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session_on_completion() {
     let fake = Arc::new(FakeWorkspaceService::new());
-    fake.push_create_result(Ok(workspace_handle(
+    let handle = workspace_handle(
         "implicit-session",
         "lease-1",
         PathBuf::from("/workspace/implicit"),
         NetworkProfile::Shared,
-    )));
+    );
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_capture_result(Ok(empty_capture(&handle)));
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit(
         "implicit done\n",
@@ -326,7 +330,7 @@ fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session
 }
 
 #[test]
-fn transient_unknown_holder_probe_retries_before_implicit_finalize() {
+fn transient_unknown_holder_finalization_retries_before_implicit_finalize() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let handle = workspace_handle(
         "implicit-probe-retry",
@@ -336,10 +340,9 @@ fn transient_unknown_holder_probe_retries_before_implicit_finalize() {
     );
     fake.push_create_result(Ok(handle.clone()));
     fake.push_capture_result(Ok(empty_capture(&handle)));
-    fake.push_holder_probe_result(HolderProbe::Unknown {
-        class: HolderProbeUnknownClass::TimedOut,
+    fake.push_holder_finalization_result(HolderFinalization::Unknown {
+        class: HolderFinalizationUnknownClass::TimedOut,
     });
-    fake.push_holder_probe_result(HolderProbe::Running);
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
@@ -349,7 +352,7 @@ fn transient_unknown_holder_probe_retries_before_implicit_finalize() {
         .exec_command(implicit_exec_input_await_completion())
         .expect("bounded probe retry lets ordinary finalization finish");
 
-    assert_eq!(fake.holder_probe_calls(), 2);
+    assert_eq!(fake.holder_finalization_calls(), 2);
     assert_eq!(output.status, CommandStatus::Ok);
     assert_eq!(output.exit_code, Some(0));
     assert_eq!(output.output, "done");
@@ -357,6 +360,10 @@ fn transient_unknown_holder_probe_retries_before_implicit_finalize() {
     assert_eq!(output.finalization_failed, None);
     assert_eq!(
         fake.capture_calls(),
+        vec![WorkspaceSessionId("implicit-probe-retry".to_owned())]
+    );
+    assert_eq!(
+        fake.capture_after_quiesce_calls(),
         vec![WorkspaceSessionId("implicit-probe-retry".to_owned())]
     );
     assert_eq!(
@@ -371,7 +378,7 @@ fn transient_unknown_holder_probe_retries_before_implicit_finalize() {
 }
 
 #[test]
-fn persistent_unknown_holder_probe_is_visible_and_never_strands_an_active_session() {
+fn persistent_unknown_holder_finalization_is_visible_and_recovers_after_exit() {
     let fake = Arc::new(FakeWorkspaceService::new());
     let handle = workspace_handle(
         "implicit-probe-failed",
@@ -388,29 +395,43 @@ fn persistent_unknown_holder_probe_is_visible_and_never_strands_an_active_sessio
         .expect("seed recovery source");
     fake.push_create_result(Ok(handle.clone()));
     for _ in 0..3 {
-        fake.push_holder_probe_result(HolderProbe::Unknown {
-            class: HolderProbeUnknownClass::Overloaded,
+        fake.push_holder_finalization_result(HolderFinalization::Unknown {
+            class: HolderFinalizationUnknownClass::Overloaded,
         });
     }
     let launch_driver = Arc::new(FakeLaunchDriver::new());
     launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
     let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&env.command),
+        Arc::clone(&env.workspace),
+        layerstack_service().expect("create operation layerstack"),
+        support::test_file_service(),
+    );
+    let request = OperationRequest::new(
+        "exec_command",
+        "req-persistent-holder-finalization-failure",
+        OperationScope::sandbox("sbox-test"),
+        json!({
+            "cmd": "printf ok",
+            "yield_time_ms": 250
+        }),
+    );
 
-    let output = env
-        .command
-        .exec_command(implicit_exec_input_await_completion())
-        .expect("command result remains readable when finalization probe fails");
+    let output = sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
     let workspace_session_id = WorkspaceSessionId("implicit-probe-failed".to_owned());
 
-    assert_eq!(fake.holder_probe_calls(), 3);
-    assert_eq!(output.status, CommandStatus::Ok);
-    assert_eq!(output.exit_code, Some(0));
-    assert_eq!(output.output, "done");
-    assert_eq!(output.publish_rejected, None);
+    assert_eq!(fake.holder_finalization_calls(), 3);
+    assert_eq!(output["status"], "ok");
+    assert_eq!(output["exit_code"], 0);
+    assert_eq!(output["output"], "done");
+    assert!(output.get("publish_rejected").is_none());
+    assert_eq!(output["finalization_failed"], true);
     assert_eq!(
-        output.finalization_failed.as_deref(),
-        Some("holder_probe_overloaded")
+        output["finalization_failure_class"],
+        "holder_finalization_overloaded"
     );
+    assert_eq!(output["finalization_attempts"], 3);
     assert!(fake.capture_calls().is_empty());
     assert!(fake.destroy_calls().is_empty());
     assert!(matches!(
@@ -456,6 +477,154 @@ fn persistent_unknown_holder_probe_is_visible_and_never_strands_an_active_sessio
         Err(WorkspaceSessionError::NotFound { .. })
     ));
     assert!(env.workspace.reconcile_holder_exits().is_empty());
+}
+
+#[test]
+fn implicit_capture_failure_preserves_recovery_artifact_and_converges_teardown() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = workspace_handle(
+        "implicit-capture-failed",
+        "lease-capture-failed",
+        PathBuf::from("/workspace/implicit-capture-failed"),
+        NetworkProfile::Shared,
+    );
+    let upperdir = handle
+        .entry()
+        .expect("holder exposes a recovery source")
+        .upperdir;
+    std::fs::create_dir_all(&upperdir).expect("create recovery source");
+    std::fs::write(
+        upperdir.join("unfinished.txt"),
+        b"preserve capture failure\n",
+    )
+    .expect("seed recovery source");
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_capture_result(Err(WorkspaceError::Capture {
+        message: "injected proof-aware capture failure".to_owned(),
+    }));
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
+    let layerstack =
+        support::observed_layerstack_service(sandbox_observability_telemetry::Observer::disabled());
+    let recovery_root = layerstack
+        .layer_stack_root()
+        .parent()
+        .unwrap_or(layerstack.layer_stack_root())
+        .join("storage")
+        .join("workspace_recovery");
+    let env = build_services_with_launch_driver_and_layerstack(
+        Arc::clone(&fake),
+        launch_driver,
+        layerstack,
+    );
+
+    let output = env
+        .command
+        .exec_command(implicit_exec_input_await_completion())
+        .expect("command output survives implicit capture failure");
+
+    assert_eq!(
+        output.finalization_failed,
+        Some("holder_finalization_capture_failed")
+    );
+    assert_eq!(output.finalization_attempts, Some(1));
+    assert_eq!(fake.holder_finalization_calls(), 1);
+    assert_eq!(
+        fake.capture_after_quiesce_calls(),
+        vec![WorkspaceSessionId("implicit-capture-failed".to_owned())]
+    );
+    assert_eq!(
+        fake.capture_calls(),
+        vec![WorkspaceSessionId("implicit-capture-failed".to_owned())]
+    );
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("implicit-capture-failed".to_owned())]
+    );
+    let artifacts = std::fs::read_dir(recovery_root)
+        .expect("capture failure creates a recovery artifact")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("recovery artifact directory is readable");
+    assert_eq!(artifacts.len(), 1);
+    assert_eq!(
+        std::fs::read(artifacts[0].path().join("files/unfinished.txt"))
+            .expect("recovery artifact preserves unfinished data"),
+        b"preserve capture failure\n"
+    );
+}
+
+#[test]
+fn implicit_forged_quiesce_proof_is_refused_before_capture() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = workspace_handle(
+        "implicit-forged-proof",
+        "lease-forged-proof",
+        PathBuf::from("/workspace/implicit-forged-proof"),
+        NetworkProfile::Shared,
+    );
+    let upperdir = handle
+        .entry()
+        .expect("holder exposes a recovery source")
+        .upperdir;
+    std::fs::create_dir_all(&upperdir).expect("create recovery source");
+    std::fs::write(upperdir.join("unfinished.txt"), b"preserve forged proof\n")
+        .expect("seed recovery source");
+    fake.push_create_result(Ok(handle.clone()));
+    let mut forged_identity = handle.holder_identity();
+    forged_identity.generation += 1;
+    fake.push_holder_finalization_result(HolderFinalization::Quiesced {
+        proof: HolderFinalizationProof {
+            workspace_session_id: handle.id.clone(),
+            holder_identity: forged_identity,
+            exit_sequence: 1,
+        },
+    });
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
+    let layerstack =
+        support::observed_layerstack_service(sandbox_observability_telemetry::Observer::disabled());
+    let recovery_root = layerstack
+        .layer_stack_root()
+        .parent()
+        .unwrap_or(layerstack.layer_stack_root())
+        .join("storage")
+        .join("workspace_recovery");
+    let env = build_services_with_launch_driver_and_layerstack(
+        Arc::clone(&fake),
+        launch_driver,
+        layerstack,
+    );
+
+    let output = env
+        .command
+        .exec_command(implicit_exec_input_await_completion())
+        .expect("command output survives forged proof refusal");
+
+    assert_eq!(
+        output.finalization_failed,
+        Some("holder_finalization_capture_failed")
+    );
+    assert_eq!(output.finalization_attempts, Some(1));
+    assert_eq!(fake.holder_finalization_calls(), 1);
+    assert_eq!(
+        fake.capture_after_quiesce_calls(),
+        vec![WorkspaceSessionId("implicit-forged-proof".to_owned())]
+    );
+    assert!(fake.capture_calls().is_empty());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("implicit-forged-proof".to_owned())]
+    );
+    let artifacts = std::fs::read_dir(recovery_root)
+        .expect("forged proof creates a recovery artifact")
+        .collect::<Result<Vec<_>, _>>()
+        .expect("recovery artifact directory is readable");
+    assert_eq!(artifacts.len(), 1);
+    assert_eq!(
+        std::fs::read(artifacts[0].path().join("files/unfinished.txt"))
+            .expect("recovery artifact preserves refused capture data"),
+        b"preserve forged proof\n"
+    );
 }
 
 #[test]
@@ -884,23 +1053,23 @@ fn workload_cgroup_applies_profile_limits_before_command_admission() {
 
     let leaf = cgroup_root.join("workspace-profiled-session");
     assert_eq!(
-        std::fs::read_to_string(leaf.join("cpu.max")).unwrap(),
+        std::fs::read_to_string(leaf.join("cpu.max")).expect("read cpu.max"),
         "150000 100000"
     );
     assert_eq!(
-        std::fs::read_to_string(leaf.join("memory.high")).unwrap(),
+        std::fs::read_to_string(leaf.join("memory.high")).expect("read memory.high"),
         (256 * 1024 * 1024).to_string()
     );
     assert_eq!(
-        std::fs::read_to_string(leaf.join("memory.max")).unwrap(),
+        std::fs::read_to_string(leaf.join("memory.max")).expect("read memory.max"),
         (320 * 1024 * 1024).to_string()
     );
     assert_eq!(
-        std::fs::read_to_string(leaf.join("pids.max")).unwrap(),
+        std::fs::read_to_string(leaf.join("pids.max")).expect("read pids.max"),
         "96"
     );
     assert_eq!(
-        std::fs::read_to_string(leaf.join("memory.oom.group")).unwrap(),
+        std::fs::read_to_string(leaf.join("memory.oom.group")).expect("read memory.oom.group"),
         "1"
     );
     assert_eq!(

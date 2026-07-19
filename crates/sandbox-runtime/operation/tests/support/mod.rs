@@ -20,9 +20,10 @@ use sandbox_runtime::workspace_session::{
 use sandbox_runtime::WorkloadCgroupLimits;
 use sandbox_runtime_workspace::{
     holder_exit_channel, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
-    DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp, HolderProbe,
-    LayerStackSnapshotRef, LeaseId, NetworkProfile, ReadonlySnapshotHandle, WorkspaceError,
-    WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp, HolderFinalization,
+    HolderFinalizationProof, HolderProbe, LayerStackSnapshotRef, LeaseId, NetworkProfile,
+    ReadonlySnapshotHandle, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
+    WorkspaceRuntimeService, WorkspaceSessionId,
 };
 
 const TEST_MAX_ACTIVE_COMMANDS: usize = 256;
@@ -41,7 +42,9 @@ pub(crate) struct FakeWorkspaceService {
     destroy_results: Mutex<VecDeque<Result<DestroyWorkspaceResult, WorkspaceError>>>,
     create_requests: Mutex<Vec<CreateWorkspaceRequest>>,
     capture_calls: Mutex<Vec<WorkspaceSessionId>>,
+    capture_after_quiesce_calls: Mutex<Vec<WorkspaceSessionId>>,
     destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
+    commit_destroy_calls: Mutex<Vec<WorkspaceSessionId>>,
     run_file_op_results: Mutex<VecDeque<Result<RunResult, WorkspaceError>>>,
     run_file_op_calls: Mutex<Vec<(WorkspaceSessionId, FileRunnerOp)>>,
     create_barrier: Mutex<Option<std::sync::mpsc::Receiver<()>>>,
@@ -58,6 +61,10 @@ pub(crate) struct FakeWorkspaceService {
     exit_on_holder_check: Mutex<Option<(WorkspaceHandle, String)>>,
     holder_probe_results: Mutex<VecDeque<HolderProbe>>,
     holder_probe_calls: AtomicU64,
+    holder_finalization_results: Mutex<VecDeque<HolderFinalization>>,
+    holder_finalization_calls: AtomicU64,
+    holder_finalization_sequence: AtomicU64,
+    quiesced_holders: Mutex<Vec<(WorkspaceHandle, HolderFinalizationProof)>>,
 }
 
 /// A scripted command outcome (kept for the suites that script per yield). It is
@@ -208,8 +215,22 @@ impl FakeWorkspaceService {
             .clone()
     }
 
+    pub(crate) fn commit_destroy_calls(&self) -> Vec<WorkspaceSessionId> {
+        self.commit_destroy_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+
     pub(crate) fn capture_calls(&self) -> Vec<WorkspaceSessionId> {
         self.capture_calls
+            .lock()
+            .expect("test operation succeeds")
+            .clone()
+    }
+
+    pub(crate) fn capture_after_quiesce_calls(&self) -> Vec<WorkspaceSessionId> {
+        self.capture_after_quiesce_calls
             .lock()
             .expect("test operation succeeds")
             .clone()
@@ -267,6 +288,17 @@ impl FakeWorkspaceService {
         self.holder_probe_calls.load(Ordering::Relaxed)
     }
 
+    pub(crate) fn push_holder_finalization_result(&self, result: HolderFinalization) {
+        self.holder_finalization_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
+    }
+
+    pub(crate) fn holder_finalization_calls(&self) -> u64 {
+        self.holder_finalization_calls.load(Ordering::Relaxed)
+    }
+
     fn probe_holder(&self, handle: &WorkspaceHandle) -> HolderProbe {
         self.holder_probe_calls.fetch_add(1, Ordering::Relaxed);
         if let Some(result) = self
@@ -282,6 +314,55 @@ impl FakeWorkspaceService {
         } else {
             HolderProbe::Exited
         }
+    }
+
+    fn quiesce_holder_for_finalization(&self, handle: &WorkspaceHandle) -> HolderFinalization {
+        self.holder_finalization_calls
+            .fetch_add(1, Ordering::Relaxed);
+        let result = self
+            .holder_finalization_results
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+            .unwrap_or_else(|| {
+                if self.holder_is_live(handle) {
+                    HolderFinalization::Quiesced {
+                        proof: HolderFinalizationProof {
+                            workspace_session_id: handle.id.clone(),
+                            holder_identity: handle.holder_identity(),
+                            exit_sequence: self
+                                .holder_finalization_sequence
+                                .fetch_add(1, Ordering::Relaxed)
+                                .saturating_add(1),
+                        },
+                    }
+                } else {
+                    HolderFinalization::Exited
+                }
+            });
+        match &result {
+            HolderFinalization::Quiesced { proof }
+                if proof.workspace_session_id == handle.id
+                    && proof.holder_identity == handle.holder_identity() =>
+            {
+                self.quiesced_holders
+                    .lock()
+                    .expect("test operation succeeds")
+                    .push((handle.clone(), proof.clone()));
+                let mut exited = self.exited_holders.lock().expect("test operation succeeds");
+                if !exited.iter().any(|(candidate, _)| candidate == handle) {
+                    exited.push((handle.clone(), "planned-destroy".to_owned()));
+                }
+            }
+            HolderFinalization::Exited => {
+                let mut exited = self.exited_holders.lock().expect("test operation succeeds");
+                if !exited.iter().any(|(candidate, _)| candidate == handle) {
+                    exited.push((handle.clone(), "planned-boundary-exit".to_owned()));
+                }
+            }
+            HolderFinalization::Quiesced { .. } | HolderFinalization::Unknown { .. } => {}
+        }
+        result
     }
 
     fn holder_is_live(&self, handle: &WorkspaceHandle) -> bool {
@@ -408,6 +489,30 @@ impl FakeWorkspaceService {
             })
     }
 
+    fn capture_changes_after_holder_quiesced(
+        &self,
+        handle: &WorkspaceHandle,
+        proof: &HolderFinalizationProof,
+        request: CaptureChangesRequest,
+    ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
+        self.capture_after_quiesce_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
+        let proof_matches = proof.workspace_session_id == handle.id
+            && proof.holder_identity == handle.holder_identity()
+            && self
+                .quiesced_holders
+                .lock()
+                .expect("test operation succeeds")
+                .iter()
+                .any(|(candidate, issued)| candidate == handle && issued == proof);
+        if !proof_matches {
+            return Err(WorkspaceError::NotOpen);
+        }
+        self.capture_changes(handle, request)
+    }
+
     fn destroy_workspace(
         &self,
         handle: WorkspaceHandle,
@@ -438,6 +543,13 @@ impl FakeWorkspaceService {
             .expect("test operation succeeds")
             .pop_front()
             .unwrap_or_else(|| Ok(destroy_result(&handle)))
+    }
+
+    fn commit_workspace_destroy(&self, handle: &WorkspaceHandle) {
+        self.commit_destroy_calls
+            .lock()
+            .expect("test operation succeeds")
+            .push(handle.id.clone());
     }
 
     fn latest_snapshot(&self) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
@@ -520,6 +632,10 @@ pub(crate) fn fake_workspace_runtime(
                 let fake = Arc::clone(&fake);
                 move |handle| fake.probe_holder(handle)
             }),
+            holder_finalization: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle| fake.quiesce_holder_for_finalization(handle)
+            }),
             holder_exit_reason: Box::new({
                 let fake = Arc::clone(&fake);
                 move |handle| fake.holder_exit_reason(handle)
@@ -536,9 +652,19 @@ pub(crate) fn fake_workspace_runtime(
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.capture_changes(handle, request)
             }),
+            capture_changes_after_holder_quiesced: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle, proof, request| {
+                    fake.capture_changes_after_holder_quiesced(handle, proof, request)
+                }
+            }),
             destroy_workspace: Box::new({
                 let fake = Arc::clone(&fake);
                 move |handle, request| fake.destroy_workspace(handle, request)
+            }),
+            commit_workspace_destroy: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle| fake.commit_workspace_destroy(handle)
             }),
             run_file_op: Box::new({
                 let fake = Arc::clone(&fake);

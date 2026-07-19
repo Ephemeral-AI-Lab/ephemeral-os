@@ -1,5 +1,10 @@
 #![forbid(unsafe_code)]
-#![allow(dead_code, unused_imports)]
+#![allow(
+    dead_code,
+    unused_imports,
+    unfulfilled_lint_expectations,
+    reason = "the integration harness path-includes production modules and exercises target-specific internals"
+)]
 
 #[path = "../src/error.rs"]
 pub mod error;

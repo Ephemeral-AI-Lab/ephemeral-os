@@ -34,6 +34,20 @@ fn write_stdin_reaches_the_slave() {
 }
 
 #[test]
+fn terminal_release_closes_stdin() {
+    let (master, _slave) = open_pty_pair().expect("openpt pair");
+    let pty = PtyMaster::spawn(master, None, None, Box::new(|| {}), Duration::from_secs(2))
+        .expect("pty master");
+
+    pty.terminal_release()();
+
+    let error = pty
+        .write_stdin(b"after terminal")
+        .expect_err("terminal release closes stdin");
+    assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+}
+
+#[test]
 fn file_backed_reader_appends_timestamp_prefixed_transcript() {
     let dir = std::env::temp_dir().join(format!(
         "ns-exec-pty-file-{}-{:?}",

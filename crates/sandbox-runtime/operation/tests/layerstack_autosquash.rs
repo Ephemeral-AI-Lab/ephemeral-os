@@ -456,7 +456,7 @@ fn manifest(root: &Path) -> sandbox_runtime_layerstack::Manifest {
 }
 
 fn wait_for_evaluation(log: &TempTraceLog, observed_layers: usize) {
-    let _ = wait_for_record(log, |record| match record {
+    wait_for_record(log, |record| match record {
         Record::Span(span)
             if span.name == names::LAYERSTACK_AUTOSQUASH_EVALUATE
                 && span.attrs.get("observed_layers")

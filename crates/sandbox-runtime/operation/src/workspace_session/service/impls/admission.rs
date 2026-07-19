@@ -5,15 +5,13 @@ use sandbox_observability_telemetry::record::names;
 use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 use serde_json::json;
 
-use crate::workspace_crate::{DestroyWorkspaceRequest, HolderProbe, WorkspaceSessionId};
+use crate::workspace_crate::{DestroyWorkspaceRequest, HolderFinalization, WorkspaceSessionId};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
 use super::super::core::DestroyFlight;
 use super::super::model::{
     FinalizationState, FinalizeOutcome, FinalizePolicy, WorkspaceSessionHandler,
 };
-
-const HOLDER_PROBE_MAX_ATTEMPTS: usize = 3;
 
 enum PostGateCompletion {
     None,
@@ -261,56 +259,65 @@ impl WorkspaceSessionService {
             session.handler()
         };
 
-        let mut last_unknown = None;
-        for _ in 0..HOLDER_PROBE_MAX_ATTEMPTS {
-            match self.workspace().probe_holder(&candidate.handle) {
-                HolderProbe::Running => {
-                    self.finalize_session_snapshot(candidate, finalize_outcome);
+        let (finalization, attempts) = self.quiesce_session_holder(&candidate);
+        match finalization {
+            HolderFinalization::Quiesced { proof } => {
+                if let Err(error) = self.mark_holder_quiesced_for_finalization(&candidate) {
+                    self.fail_completion_finalization(
+                        &candidate,
+                        command_session_id,
+                        finalize_outcome,
+                        "holder_finalization_state_changed",
+                        attempts,
+                    );
+                    self.obs().event(
+                        names::WORKSPACE_SESSION_FINALIZE_FAILED,
+                        json!({
+                            "workspace_session_id": candidate.workspace_session_id.0,
+                            "command_session_id": command_session_id.0,
+                            "stage": "holder_finalization_state",
+                            "error_present": !error.to_string().is_empty(),
+                        }),
+                    );
                     return PostGateCompletion::None;
                 }
-                HolderProbe::Exited => {
-                    return match self.claim_holder_destroy_flight(&candidate) {
-                        Ok((flight, true)) => {
-                            debug_assert!(
-                                flight
-                                    .holder_plan
-                                    .as_ref()
-                                    .is_some_and(|plan| plan.command_ids.is_empty()),
-                                "last-command completion may lead only an empty-ledger holder flight"
-                            );
-                            PostGateCompletion::HolderDestroyLeader(flight)
-                        }
-                        // A pre-existing teardown may be joining the command
-                        // whose callback is executing now. Hand off without
-                        // waiting so that owner can make progress.
-                        Ok((_flight, false)) => PostGateCompletion::None,
-                        Err(error) => {
-                            self.fail_completion_probe(
-                                &candidate,
-                                command_session_id,
-                                finalize_outcome,
-                                "holder_probe_cleanup_claim_failed",
-                                &error.to_string(),
-                            );
-                            PostGateCompletion::None
-                        }
-                    };
+                self.finalize_session_snapshot(candidate, &proof, attempts, finalize_outcome);
+                PostGateCompletion::None
+            }
+            HolderFinalization::Exited => match self.claim_holder_destroy_flight(&candidate) {
+                Ok((flight, true)) => {
+                    debug_assert!(
+                        flight
+                            .holder_plan
+                            .as_ref()
+                            .is_some_and(|plan| plan.command_ids.is_empty()),
+                        "last-command completion may lead only an empty-ledger holder flight"
+                    );
+                    PostGateCompletion::HolderDestroyLeader(flight)
                 }
-                HolderProbe::Unknown { class } => last_unknown = Some(class),
+                Ok((_flight, false)) => PostGateCompletion::None,
+                Err(_) => {
+                    self.fail_completion_finalization(
+                        &candidate,
+                        command_session_id,
+                        finalize_outcome,
+                        "holder_finalization_cleanup_claim_failed",
+                        attempts,
+                    );
+                    PostGateCompletion::None
+                }
+            },
+            HolderFinalization::Unknown { class } => {
+                self.fail_completion_finalization(
+                    &candidate,
+                    command_session_id,
+                    finalize_outcome,
+                    class.as_str(),
+                    attempts,
+                );
+                PostGateCompletion::None
             }
         }
-
-        let class = last_unknown
-            .expect("a completed bounded probe loop always retains its unknown classification")
-            .as_str();
-        self.fail_completion_probe(
-            &candidate,
-            command_session_id,
-            finalize_outcome,
-            class,
-            "holder supervisor could not establish exact-generation liveness",
-        );
-        PostGateCompletion::None
     }
 
     fn complete_after_gate(&self, completion: PostGateCompletion) {
@@ -319,25 +326,24 @@ impl WorkspaceSessionService {
         }
     }
 
-    fn fail_completion_probe(
+    fn fail_completion_finalization(
         &self,
         handler: &WorkspaceSessionHandler,
         command_session_id: &NamespaceExecutionId,
         finalize_outcome: &Arc<OnceLock<FinalizeOutcome>>,
         class: &'static str,
-        detail: &str,
+        attempts: usize,
     ) {
         self.mark_destroy_failed(handler);
-        let _ = finalize_outcome.set(FinalizeOutcome::finalization_failed(class));
+        let _ = finalize_outcome.set(FinalizeOutcome::finalization_failed(class, attempts));
         self.obs().event(
             names::WORKSPACE_SESSION_FINALIZE_FAILED,
             json!({
                 "workspace_session_id": handler.workspace_session_id.0,
                 "command_session_id": command_session_id.0,
-                "stage": "holder_probe",
+                "stage": "holder_finalization",
                 "class": class,
-                "attempts": HOLDER_PROBE_MAX_ATTEMPTS,
-                "detail": detail,
+                "attempts": attempts,
             }),
         );
     }

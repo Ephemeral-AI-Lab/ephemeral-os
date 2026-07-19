@@ -55,7 +55,7 @@ impl CommandStatus {
 /// `publish_rejected` carries the reject class when this command's completion
 /// ran a finalize whose publish was rejected. `finalization_failed` carries a
 /// non-publish failure class (for example an unavailable holder supervisor).
-/// Both are terminal-response-only and mutually exclusive.
+/// These fields are terminal-response-only.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CommandOutput {
     pub command_session_id: Option<NamespaceExecutionId>,
@@ -71,4 +71,5 @@ pub struct CommandOutput {
     pub output: String,
     pub publish_rejected: Option<&'static str>,
     pub finalization_failed: Option<&'static str>,
+    pub finalization_attempts: Option<usize>,
 }

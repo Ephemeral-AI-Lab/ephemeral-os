@@ -1,4 +1,5 @@
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, PoisonError};
 
 use sandbox_observability_telemetry::record::names;
@@ -209,18 +210,23 @@ impl WorkspaceSessionService {
     pub(crate) fn wait_destroy_terminal(
         flight: &Arc<DestroyFlight>,
     ) -> Result<DestroyFlightTerminal, WorkspaceSessionError> {
-        let terminal = flight
-            .terminal
-            .lock()
-            .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
-        let terminal = flight
-            .ready
-            .wait_while(terminal, |terminal| terminal.is_none())
-            .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
-        Ok(terminal
-            .as_ref()
-            .expect("destroy leader always publishes a terminal result")
-            .clone())
+        flight.waiters.fetch_add(1, Ordering::AcqRel);
+        let result = (|| {
+            let terminal = flight
+                .terminal
+                .lock()
+                .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
+            let terminal = flight
+                .ready
+                .wait_while(terminal, |terminal| terminal.is_none())
+                .map_err(|_| WorkspaceSessionError::LockPoisoned)?;
+            Ok(terminal
+                .as_ref()
+                .expect("destroy leader always publishes a terminal result")
+                .clone())
+        })();
+        flight.waiters.fetch_sub(1, Ordering::AcqRel);
+        result
     }
 
     pub(crate) fn wait_destroy_flight(
@@ -418,6 +424,8 @@ impl WorkspaceSessionService {
             }
             sessions.remove(&workspace_session_id);
         }
+        self.workspace().commit_workspace_destroy(&handler.handle);
+        self.release_terminal_commands(&workspace_session_id);
         self.drop_session_gate(&workspace_session_id);
         self.obs()
             .event(names::LEASE_RELEASED, json!({ "revision": revision }));

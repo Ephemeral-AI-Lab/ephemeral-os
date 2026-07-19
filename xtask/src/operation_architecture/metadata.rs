@@ -555,7 +555,7 @@ fn validate_catalog_edge(
         ));
     }
     let expected: Option<&[&str]> = match package.name.as_str() {
-        "sandbox-manager" => Some(&["manager", "observability"]),
+        "sandbox-manager" => Some(&["manager", "runtime", "observability"]),
         "sandbox-runtime" => Some(&["runtime"]),
         "sandbox-observability-query" => Some(&["observability"]),
         "sandbox-daemon" => Some(&["runtime", "observability"]),
@@ -639,6 +639,10 @@ fn validate_library_and_binaries(package: &PackageFact, violations: &mut Vec<Str
             ("sandbox-manager-cli", &["manager"]),
             ("sandbox-runtime-cli", &["runtime"]),
             ("sandbox-observability-cli", &["observability"]),
+            (
+                "sandbox-catalog-export",
+                &["manager", "runtime", "observability"],
+            ),
         ],
         "sandbox-mcp" => &[("sandbox-mcp", &[])],
         "sandbox-gateway" => &[("sandbox-gateway", &[])],

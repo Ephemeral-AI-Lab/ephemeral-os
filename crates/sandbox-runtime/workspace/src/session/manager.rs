@@ -153,8 +153,8 @@ impl WorkspaceManager {
             network,
             scratch_root,
             layer_stack_root: None,
-            handles: HashMap::new(),
-            teardowns: HashMap::new(),
+            handles: HashMap::with_capacity(1),
+            teardowns: HashMap::with_capacity(1),
             completed_teardowns: VecDeque::with_capacity(COMPLETED_TEARDOWN_CAPACITY),
         }
     }
@@ -221,6 +221,11 @@ impl WorkspaceManager {
     pub(crate) fn forget_completed_teardowns(&mut self, workspace_session_id: &WorkspaceSessionId) {
         self.completed_teardowns
             .retain(|completed| completed.workspace_session_id != *workspace_session_id);
+    }
+
+    pub(crate) fn forget_completed_teardown(&mut self, handle: &WorkspaceHandle) {
+        self.completed_teardowns
+            .retain(|completed| !completed.matches(handle));
     }
 
     pub(crate) fn ensure_workspace_available(

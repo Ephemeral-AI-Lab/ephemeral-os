@@ -6,8 +6,8 @@ use std::time::{Duration, Instant};
 use crate::model::WorkspaceSessionId;
 use crate::namespace::holder::{
     HolderExitEvent, HolderExitReason, HolderFinalization, HolderFinalizationUnknownClass,
-    HolderIdentity, HolderProbe, HolderProbeUnknownClass, HolderProcess, HolderProcessExit,
-    HolderRegistration, HolderSignal, HolderSupervisor, HolderSupervisorError,
+    HolderIdentity, HolderProcess, HolderProcessExit, HolderRegistration, HolderSignal,
+    HolderSupervisor, HolderSupervisorError,
 };
 use sandbox_runtime_workspace::HolderExitWait;
 
@@ -327,67 +327,119 @@ fn unexpected_signal_exit_reports_sigkill_and_reaps_once() {
 }
 
 #[test]
-fn supervisor_probe_reports_running_from_the_sole_wait_owner() {
+fn finalization_quiesces_exact_generation_and_returns_exact_proof() {
     let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
     let process = Arc::new(FakeProcessState::default());
-    let registration = registered(&supervisor, "workspace-probe-running", &process);
+    let registration = registered(&supervisor, "workspace-finalize-running", &process);
     wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
 
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Running);
-    assert!(registration.exit_event().is_none());
-    assert_eq!(process.reaps.load(Ordering::SeqCst), 0);
-
-    process.exited.store(true, Ordering::SeqCst);
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Exited);
+    let first = supervisor.quiesce_for_finalization(&registration);
+    let proof = match first {
+        HolderFinalization::Quiesced { proof } => proof,
+        other => panic!("expected a quiesced holder, got {other:?}"),
+    };
+    assert!(registration.matches_finalization_proof(&proof));
+    let mut wrong_session = proof.clone();
+    wrong_session.workspace_session_id = WorkspaceSessionId("workspace-other".to_owned());
+    assert!(!registration.matches_finalization_proof(&wrong_session));
+    let mut wrong_identity = proof.clone();
+    wrong_identity.holder_identity.generation += 1;
+    assert!(!registration.matches_finalization_proof(&wrong_identity));
+    let mut wrong_sequence = proof.clone();
+    wrong_sequence.exit_sequence += 1;
+    assert!(!registration.matches_finalization_proof(&wrong_sequence));
+    assert_eq!(
+        registration.exit_event().map(|event| event.reason),
+        Some(HolderExitReason::Destroy)
+    );
+    assert_eq!(process.signals.load(Ordering::SeqCst), 1);
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
+    assert_eq!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Exited
+    );
+    assert_eq!(process.signals.load(Ordering::SeqCst), 1);
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
 }
 
 #[test]
-fn exited_probe_reaps_once_and_publishes_state_before_reply() {
+fn planned_finalization_is_proven_without_reconciliation_history_or_wake() {
+    let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
+    let subscription = supervisor
+        .take_exit_subscription()
+        .expect("one subscription is available");
+    let (listener, shutdown) = subscription.into_parts();
+    let process = Arc::new(FakeProcessState::default());
+    let registration = registered(&supervisor, "workspace-planned-finalization", &process);
+    wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
+
+    let proof = match supervisor.quiesce_for_finalization(&registration) {
+        HolderFinalization::Quiesced { proof } => proof,
+        other => panic!("expected a quiesced holder, got {other:?}"),
+    };
+
+    assert!(registration.matches_finalization_proof(&proof));
+    assert_eq!(supervisor.stats().holder_exit_total, 1);
+    assert_eq!(supervisor.stats().retained_event_count, 0);
+    assert_eq!(supervisor.stats().dropped_event_total, 0);
+    assert_eq!(
+        listener.wait_for_retry(Duration::ZERO),
+        HolderExitWait::RetryDeadline
+    );
+    shutdown.stop();
+}
+
+#[test]
+fn finalization_observes_preexisting_exit_without_issuing_proof() {
     let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
     let process = Arc::new(FakeProcessState::default());
-    let registration = registered(&supervisor, "workspace-probe-exited", &process);
+    let registration = registered(&supervisor, "workspace-finalize-exited", &process);
     wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
 
     process.exited.store(true, Ordering::SeqCst);
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Exited);
+    assert_eq!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Exited
+    );
 
     let event = registration
         .exit_event()
-        .expect("an exited probe reply follows registration publication");
+        .expect("an exited finalization reply follows registration publication");
     assert_eq!(event.reason, HolderExitReason::Unexpected);
     assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Exited);
+    assert_eq!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Exited
+    );
     assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
     assert_eq!(supervisor.stats().holder_exit_total, 1);
 }
 
 #[test]
-fn transient_probe_wait_error_is_unknown_then_running() {
+fn transient_finalization_wait_error_is_unknown_then_quiesced() {
     let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
     let process = Arc::new(FakeProcessState::default());
-    let registration = registered(&supervisor, "workspace-probe-transient", &process);
+    let registration = registered(&supervisor, "workspace-finalize-transient", &process);
     wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
     process.wait_errors_remaining.store(1, Ordering::SeqCst);
 
     assert_eq!(
-        supervisor.probe(&registration),
-        HolderProbe::Unknown {
-            class: HolderProbeUnknownClass::ObservationFailed,
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Unknown {
+            class: HolderFinalizationUnknownClass::ObservationFailed,
         }
     );
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Running);
-    assert!(registration.exit_event().is_none());
-    assert_eq!(process.reaps.load(Ordering::SeqCst), 0);
-
-    process.exited.store(true, Ordering::SeqCst);
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Exited);
+    let retry = supervisor.quiesce_for_finalization(&registration);
+    assert!(matches!(retry, HolderFinalization::Quiesced { .. }));
+    assert_eq!(process.signals.load(Ordering::SeqCst), 1);
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
 }
 
 #[test]
-fn forged_generation_probe_is_rejected_without_affecting_peer() {
+fn forged_generation_finalization_is_rejected_without_affecting_peer() {
     let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
     let process = Arc::new(FakeProcessState::default());
-    let registration = registered(&supervisor, "workspace-probe-generation", &process);
+    let registration = registered(&supervisor, "workspace-finalize-generation", &process);
     wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
 
     let foreign_supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
@@ -395,25 +447,153 @@ fn forged_generation_probe_is_rejected_without_affecting_peer() {
     let foreign_process = Arc::new(FakeProcessState::default());
     let forged = registered(
         &foreign_supervisor,
-        "workspace-probe-generation",
+        "workspace-finalize-generation",
         &foreign_process,
     );
     wait_for_count(&foreign_process.try_wait_calls, 1, Duration::from_secs(1));
 
     assert_eq!(
-        supervisor.probe(&forged),
-        HolderProbe::Unknown {
-            class: HolderProbeUnknownClass::NotRegistered,
+        supervisor.quiesce_for_finalization(&forged),
+        HolderFinalization::Unknown {
+            class: HolderFinalizationUnknownClass::NotRegistered,
         }
     );
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Running);
     assert_eq!(process.signals.load(Ordering::SeqCst), 0);
     assert_eq!(process.reaps.load(Ordering::SeqCst), 0);
 
-    process.exited.store(true, Ordering::SeqCst);
-    foreign_process.exited.store(true, Ordering::SeqCst);
-    assert_eq!(supervisor.probe(&registration), HolderProbe::Exited);
-    assert_eq!(foreign_supervisor.probe(&forged), HolderProbe::Exited);
+    assert!(matches!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Quiesced { .. }
+    ));
+    assert!(matches!(
+        foreign_supervisor.quiesce_for_finalization(&forged),
+        HolderFinalization::Quiesced { .. }
+    ));
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
+    assert_eq!(foreign_process.reaps.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn finalization_signal_failure_is_retryable_without_false_proof() {
+    let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
+    let process = Arc::new(FakeProcessState::default());
+    let registration = registered(&supervisor, "workspace-finalize-signal-failure", &process);
+    wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
+    process.signal_errors_remaining.store(1, Ordering::SeqCst);
+
+    assert_eq!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Unknown {
+            class: HolderFinalizationUnknownClass::TerminationFailed,
+        }
+    );
+    assert!(registration.is_live());
+    assert!(registration.exit_event().is_none());
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 0);
+
+    let retry = supervisor.quiesce_for_finalization(&registration);
+    assert!(matches!(retry, HolderFinalization::Quiesced { .. }));
+    assert_eq!(process.signals.load(Ordering::SeqCst), 1);
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn finalization_identity_mismatch_refuses_signal_and_proof() {
+    let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
+    let process = Arc::new(FakeProcessState::default());
+    let registration = registered(&supervisor, "workspace-finalize-identity", &process);
+    wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
+    process.mutate_identity(|identity| identity.start_time_ticks += 1);
+
+    assert_eq!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Unknown {
+            class: HolderFinalizationUnknownClass::IdentityMismatch,
+        }
+    );
+    assert!(registration.is_live());
+    assert!(registration.exit_event().is_none());
+    assert_eq!(process.signals.load(Ordering::SeqCst), 0);
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 0);
+
+    process.set_identity(identity(41, 1));
+    assert!(matches!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Quiesced { .. }
+    ));
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn finalization_wait_error_terminal_is_exited_without_false_proof() {
+    let supervisor = HolderSupervisor::new(Duration::from_secs(60), 8);
+    let process = Arc::new(FakeProcessState::default());
+    let registration = registered(&supervisor, "workspace-finalize-wait-error", &process);
+    wait_for_count(&process.try_wait_calls, 1, Duration::from_secs(1));
+    process
+        .wait_errors_remaining
+        .store(usize::MAX, Ordering::SeqCst);
+
+    assert!(matches!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Unknown {
+            class: HolderFinalizationUnknownClass::ObservationFailed,
+        }
+    ));
+    assert_eq!(
+        supervisor.quiesce_for_finalization(&registration),
+        HolderFinalization::Exited
+    );
+    assert_eq!(
+        registration.exit_event().map(|event| event.reason),
+        Some(HolderExitReason::WaitError)
+    );
+    wait_for_count(&process.reaps, 1, Duration::from_secs(1));
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn concurrent_finalization_and_destroy_share_one_reap() {
+    let supervisor = Arc::new(HolderSupervisor::new(Duration::from_millis(2), 8));
+    let process = Arc::new(FakeProcessState::default());
+    let registration = registered(&supervisor, "workspace-finalize-destroy-race", &process);
+    let start = Arc::new(Barrier::new(3));
+
+    let finalize_supervisor = Arc::clone(&supervisor);
+    let finalize_registration = registration.clone();
+    let finalize_start = Arc::clone(&start);
+    let finalize = std::thread::spawn(move || {
+        finalize_start.wait();
+        finalize_supervisor.quiesce_for_finalization(&finalize_registration)
+    });
+    let destroy_supervisor = Arc::clone(&supervisor);
+    let destroy_registration = registration.clone();
+    let destroy_start = Arc::clone(&start);
+    let destroy = std::thread::spawn(move || {
+        destroy_start.wait();
+        destroy_supervisor.terminate(&destroy_registration, Duration::ZERO)
+    });
+    start.wait();
+
+    let finalization = finalize.join().expect("finalization joins");
+    let destroy = destroy
+        .join()
+        .expect("destroy joins")
+        .expect("destroy succeeds");
+    assert!(matches!(
+        &finalization,
+        HolderFinalization::Quiesced { .. }
+            | HolderFinalization::Exited
+            | HolderFinalization::Unknown {
+                class: HolderFinalizationUnknownClass::TerminationInProgress,
+            }
+    ));
+    assert!(
+        destroy.holder_was_alive || matches!(&finalization, HolderFinalization::Quiesced { .. })
+    );
+    assert_eq!(destroy.signal, Some(9));
+    assert_eq!(process.reaps.load(Ordering::SeqCst), 1);
+    assert_eq!(supervisor.stats().holder_exit_total, 1);
 }
 
 #[test]
@@ -803,6 +983,7 @@ fn holder_event_history_is_bounded_and_counters_are_monotonic() {
 
     assert_eq!(supervisor.stats().holder_exit_total, 3);
     assert_eq!(supervisor.stats().dropped_event_total, 1);
+    assert_eq!(supervisor.stats().retained_event_count, 2);
 }
 
 fn decrement_if_positive(counter: &AtomicUsize) -> bool {

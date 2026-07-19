@@ -70,6 +70,8 @@ hyper-util = { version = "0.1", features = ["tokio"] }
 http = "1"
 http-body-util = "0.1"
 rmcp = { version = "=0.11.0", features = ["transport-io"] }
+tikv-jemallocator = "0.7"
+tikv-jemalloc-ctl = { version = "0.7", features = ["stats"] }
 
 sandbox-runtime = { path = "crates/sandbox-runtime/operation" }
 sandbox-operation-contract = { path = "crates/sandbox-operations/contract" }

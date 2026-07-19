@@ -7,7 +7,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use sandbox_observability_telemetry::Observer;
 
 use crate::lifecycle::destroy::{ExitOutcome, TeardownLedger, TeardownStep, TeardownStepExecutor};
-use crate::model::{LayerStackSnapshotRef, LeaseId, NetworkProfile, WorkspaceSessionId};
+use crate::model::{
+    LayerStackSnapshotRef, LeaseId, NetworkProfile, WorkspaceHandle, WorkspaceSessionId,
+};
 use crate::namespace::holder::HolderRegistration;
 use crate::overlay::dirs::OverlayDirs;
 use crate::session::{HolderNsFds, MountedWorkspace};
@@ -154,6 +156,32 @@ fn completed_teardown_cache_is_bounded_and_cleared_by_workspace_id() {
 
     let retained = WorkspaceSessionId("workspace-9999".to_owned());
     manager.forget_completed_teardowns(&retained);
+    assert_eq!(manager.completed_teardowns.len(), 127);
+
+    let committed = WorkspaceSessionId("workspace-commit".to_owned());
+    let handle = WorkspaceHandle::without_launch_for_test(
+        committed.clone(),
+        PathBuf::from("/workspace"),
+        NetworkProfile::Shared,
+        LayerStackSnapshotRef {
+            lease_id: LeaseId("lease-commit".to_owned()),
+            manifest_version: 1,
+            root_hash: "root".to_owned(),
+            manifest: sandbox_runtime_layerstack::Manifest::new(1, Vec::new(), 1)
+                .expect("valid manifest"),
+            layer_paths: Vec::new(),
+        },
+    );
+    manager.record_completed_teardown(
+        committed.clone(),
+        handle.holder_registration().clone(),
+        outcome(committed),
+    );
+    assert!(manager.owns_handle_generation(&handle));
+    assert_eq!(manager.completed_teardowns.len(), 128);
+
+    manager.forget_completed_teardown(&handle);
+    assert!(!manager.owns_handle_generation(&handle));
     assert_eq!(manager.completed_teardowns.len(), 127);
 }
 

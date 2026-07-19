@@ -51,6 +51,7 @@ fn read_command_window(
     if let Some(outcome) = command.finalize_outcome.get() {
         output.publish_rejected = outcome.publish_reject_class;
         output.finalization_failed = outcome.finalization_failure_class;
+        output.finalization_attempts = outcome.finalization_attempts;
     }
     output
 }
