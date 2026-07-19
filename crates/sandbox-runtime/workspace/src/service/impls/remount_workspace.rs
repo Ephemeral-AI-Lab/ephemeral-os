@@ -21,6 +21,7 @@ impl WorkspaceRuntimeService {
         workspace_session_id: &WorkspaceSessionId,
         cgroup_procs_path: Option<PathBuf>,
     ) -> Result<Option<RemountOutcome>, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if self.hooks().is_some() {
             return Err(WorkspaceError::Setup {
                 step: "workspace runtime hooks do not implement remount".to_owned(),
@@ -57,6 +58,7 @@ impl WorkspaceRuntimeService {
     /// Returns [`WorkspaceError`] when the runtime state lock is unavailable or
     /// the handle-file write fails.
     pub fn persist_handles(&self) -> Result<(), WorkspaceError> {
+        let _admission = self.admit_work()?;
         if self.hooks().is_some() {
             return Ok(());
         }
@@ -78,6 +80,7 @@ impl WorkspaceRuntimeService {
         &self,
         workspace_session_id: &WorkspaceSessionId,
     ) -> Result<Option<crate::model::WorkspaceHandle>, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if self.hooks().is_some() {
             return Ok(None);
         }
@@ -96,6 +99,7 @@ impl WorkspaceRuntimeService {
     /// Returns [`WorkspaceError`] when the runtime state lock is
     /// unavailable; hook-backed services reap nothing.
     pub fn reap_persisted_sessions(&self) -> Result<Vec<ReapedSession>, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if self.hooks().is_some() {
             return Ok(Vec::new());
         }

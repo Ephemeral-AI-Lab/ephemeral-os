@@ -58,6 +58,11 @@ impl<V> ExecutionRegistry<V> {
 
     pub fn try_reserve(&self, id: &NamespaceExecutionId) -> Result<(), NamespaceExecutionError> {
         let mut state = self.lock();
+        if state.entries.contains_key(id) {
+            return Err(NamespaceExecutionError::Duplicate {
+                execution_id: id.0.clone(),
+            });
+        }
         if state.active >= self.max_active {
             return Err(NamespaceExecutionError::Admission {
                 max_active: self.max_active,
@@ -76,10 +81,11 @@ impl<V> ExecutionRegistry<V> {
 
     pub fn abort(&self, id: &NamespaceExecutionId) {
         let mut state = self.lock();
-        if let Some(entry) = state.entries.remove(id) {
-            if !entry.terminal {
-                state.active = state.active.saturating_sub(1);
-            }
+        if state.entries.get(id).is_some_and(|entry| entry.terminal) {
+            return;
+        }
+        if state.entries.remove(id).is_some() {
+            state.active = state.active.saturating_sub(1);
         }
     }
 
@@ -133,6 +139,11 @@ impl<V> ExecutionRegistry<V> {
             .entries
             .get(id)
             .is_some_and(|entry| entry.terminal)
+    }
+
+    #[must_use]
+    pub fn active_count(&self) -> usize {
+        self.lock().active
     }
 
     pub fn live_values<R>(&self, f: impl Fn(&V) -> Option<R>) -> Vec<R> {

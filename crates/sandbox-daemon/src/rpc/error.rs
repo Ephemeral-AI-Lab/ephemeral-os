@@ -15,6 +15,9 @@ pub enum SandboxDaemonError {
 
     #[error("daemon request authentication failed")]
     Unauthorized,
+
+    #[error("daemon lifecycle error: {message}")]
+    Lifecycle { message: String },
 }
 
 impl SandboxDaemonError {

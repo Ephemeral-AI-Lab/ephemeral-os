@@ -13,7 +13,8 @@ use crate::workspace_session::WorkspaceSessionError;
 
 use super::cgroup::cleanup_workspace_cgroup;
 use super::model::{
-    HolderLifecycleEvent, HolderLifecycleEventKind, HolderLifecycleSnapshot, WorkspaceSession,
+    FinalizePolicy, HolderExitDisposition, HolderLifecycleEvent, HolderLifecycleEventKind,
+    HolderLifecycleSnapshot, WorkspaceSession, WorkspaceSessionHandler,
 };
 
 const HOLDER_LIFECYCLE_EVENT_CAPACITY: usize = 128;
@@ -21,8 +22,26 @@ const HOLDER_LIFECYCLE_DETAIL_CAPACITY: usize = 512;
 
 pub(crate) type DestroyFlightResult = Result<DestroyWorkspaceResult, WorkspaceSessionError>;
 
+#[derive(Clone)]
+pub(crate) struct HolderDestroyPlan {
+    pub(crate) handler: WorkspaceSessionHandler,
+    pub(crate) policy: FinalizePolicy,
+    pub(crate) command_ids: Vec<NamespaceExecutionId>,
+    pub(crate) reason: String,
+    pub(crate) newly_observed: bool,
+    pub(crate) attempt: u8,
+}
+
+#[derive(Clone)]
+pub(crate) struct DestroyFlightTerminal {
+    pub(crate) result: DestroyFlightResult,
+    pub(crate) holder_disposition: Option<HolderExitDisposition>,
+}
+
 pub(crate) struct DestroyFlight {
-    pub(crate) result: Mutex<Option<DestroyFlightResult>>,
+    pub(crate) handler: WorkspaceSessionHandler,
+    pub(crate) holder_plan: Option<HolderDestroyPlan>,
+    pub(crate) terminal: Mutex<Option<DestroyFlightTerminal>>,
     pub(crate) ready: Condvar,
 }
 
@@ -42,9 +61,14 @@ impl Drop for CreateReservation<'_> {
 }
 
 impl DestroyFlight {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(
+        handler: WorkspaceSessionHandler,
+        holder_plan: Option<HolderDestroyPlan>,
+    ) -> Self {
         Self {
-            result: Mutex::new(None),
+            handler,
+            holder_plan,
+            terminal: Mutex::new(None),
             ready: Condvar::new(),
         }
     }

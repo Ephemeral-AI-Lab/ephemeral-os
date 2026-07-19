@@ -7,6 +7,7 @@ use crate::model::{
     DestroyWorkspaceRequest, DestroyWorkspaceResult, NetworkProfile, ReadonlySnapshotHandle,
     WorkspaceHandle, WorkspaceSessionId,
 };
+use crate::namespace::holder::{HolderFinalization, HolderProbe};
 use crate::service::HolderExitSubscription;
 
 #[doc(hidden)]
@@ -22,6 +23,14 @@ pub struct WorkspaceRuntimeHooks {
             + Send
             + Sync,
     >,
+    pub holder_is_live: Box<dyn Fn(&WorkspaceHandle) -> bool + Send + Sync>,
+    pub holder_probe: Box<dyn Fn(&WorkspaceHandle) -> HolderProbe + Send + Sync>,
+    pub holder_finalization: Box<dyn Fn(&WorkspaceHandle) -> HolderFinalization + Send + Sync>,
+    #[expect(
+        clippy::type_complexity,
+        reason = "hook signatures stay explicit by policy"
+    )]
+    pub holder_exit_reason: Box<dyn Fn(&WorkspaceHandle) -> Option<String> + Send + Sync>,
     #[expect(
         clippy::type_complexity,
         reason = "hook signatures stay explicit by policy"

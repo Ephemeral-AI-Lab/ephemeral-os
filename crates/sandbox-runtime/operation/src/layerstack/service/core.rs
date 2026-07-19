@@ -31,6 +31,7 @@ pub struct LayerStackService {
     pub(crate) squash_gate: Mutex<()>,
     pub(crate) autosquash_queue: Option<Arc<AutosquashQueue>>,
     pub(crate) export_spools: Mutex<HashMap<String, ExportSpool>>,
+    active_lease_counter: sandbox_runtime_layerstack::ActiveLeaseCounter,
 }
 
 impl LayerStackService {
@@ -47,6 +48,13 @@ impl LayerStackService {
                 error: error.to_string(),
             },
         )?;
+        let active_lease_counter =
+            sandbox_runtime_layerstack::LayerStack::open(layer_stack_root.clone())
+                .map_err(|error| LayerStackServiceError::LayerStack {
+                    operation: "open active lease counter",
+                    error,
+                })?
+                .active_lease_counter();
         let autosquash_queue = config
             .autosquash_squash_at_n_layers
             .map(|_| Arc::new(AutosquashQueue::new()));
@@ -60,12 +68,18 @@ impl LayerStackService {
             squash_gate: Mutex::new(()),
             autosquash_queue,
             export_spools: Mutex::new(HashMap::new()),
+            active_lease_counter,
         })
     }
 
     #[must_use]
     pub fn layer_stack_root(&self) -> &std::path::Path {
         &self.layer_stack_root
+    }
+
+    #[must_use]
+    pub fn active_lease_count(&self) -> usize {
+        self.active_lease_counter.active_lease_count()
     }
 
     #[must_use]

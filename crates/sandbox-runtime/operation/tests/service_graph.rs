@@ -14,8 +14,9 @@ use sandbox_runtime::{
     WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 use sandbox_runtime_workspace::{
-    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, WorkspaceError,
-    WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, HolderProbe,
+    WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService,
+    WorkspaceSessionId,
 };
 
 fn workspace_session(layerstack: &Arc<LayerStackService>) -> Arc<WorkspaceSessionService> {
@@ -66,6 +67,15 @@ fn noop_workspace_runtime() -> Arc<WorkspaceRuntimeService> {
         WorkspaceRuntimeHooks {
             take_holder_exit_subscription: Box::new(|| Ok(None)),
             isolated_ip: Box::new(|_| Ok(None)),
+            holder_is_live: Box::new(WorkspaceHandle::holder_is_live),
+            holder_probe: Box::new(|handle| {
+                if handle.holder_is_live() {
+                    HolderProbe::Running
+                } else {
+                    HolderProbe::Exited
+                }
+            }),
+            holder_exit_reason: Box::new(WorkspaceHandle::holder_exit_reason),
             allocate_workspace_session_id: Box::new(|_| {
                 Ok(WorkspaceSessionId("not-configured".to_owned()))
             }),

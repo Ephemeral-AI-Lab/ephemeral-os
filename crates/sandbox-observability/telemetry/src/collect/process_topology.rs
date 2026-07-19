@@ -139,6 +139,9 @@ pub struct DaemonLifecycleMetrics {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct DaemonAllocatorMetrics {
+    /// True only when the selected allocator exposes all four process-wide
+    /// counters below. Process RSS or anonymous memory is not an allocator
+    /// residence substitute.
     pub supported: bool,
     pub allocated_bytes: Option<u64>,
     pub active_bytes: Option<u64>,
@@ -445,6 +448,7 @@ impl WorkspaceProcessTopology {
                 Ok(process) => process,
                 Err(error) if is_proc_race(&error) => continue,
                 Err(error) => {
+                    builders[index].partial = true;
                     warnings.push(format!("process {pid} metadata read failed: {error}"));
                     continue;
                 }

@@ -1,4 +1,3 @@
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
@@ -8,10 +7,7 @@ use crate::workspace_session::{
     HolderExitDisposition, WorkspaceSessionError, WorkspaceSessionService,
 };
 
-// One initial teardown plus three bounded retries. Backoff exists only while a
-// failed holder cleanup is pending; there is no recurring idle timer.
-const HOLDER_EXIT_CLEANUP_ATTEMPTS: usize = 4;
-const HOLDER_EXIT_RETRY_BACKOFF: [Duration; HOLDER_EXIT_CLEANUP_ATTEMPTS - 1] = [
+const HOLDER_EXIT_RETRY_BACKOFF: [Duration; 3] = [
     Duration::from_millis(10),
     Duration::from_millis(25),
     Duration::from_millis(50),
@@ -28,8 +24,6 @@ const HOLDER_EXIT_RETRY_BACKOFF: [Duration; HOLDER_EXIT_CLEANUP_ATTEMPTS - 1] = 
 pub struct HolderExitDispatcher {
     shutdown: Mutex<Option<HolderExitShutdown>>,
     worker: Mutex<Option<JoinHandle<()>>>,
-    joined: Arc<AtomicBool>,
-    reconcile_passes_started: Arc<AtomicU64>,
 }
 
 impl HolderExitDispatcher {
@@ -43,19 +37,10 @@ impl HolderExitDispatcher {
         };
         let (listener, shutdown) = subscription.into_parts();
         let sessions = Arc::downgrade(sessions);
-        let joined = Arc::new(AtomicBool::new(false));
-        let worker_joined = Arc::clone(&joined);
-        let reconcile_passes_started = Arc::new(AtomicU64::new(0));
-        let worker_reconcile_passes_started = Arc::clone(&reconcile_passes_started);
         let worker = thread::Builder::new()
             .name("eos-holder-exit-dispatch".to_owned())
             .spawn(move || {
-                dispatcher_loop(
-                    listener,
-                    sessions,
-                    worker_joined,
-                    worker_reconcile_passes_started,
-                );
+                dispatcher_loop(listener, sessions);
             })
             .map_err(|error| {
                 WorkspaceSessionError::Workspace(WorkspaceError::Setup {
@@ -65,8 +50,6 @@ impl HolderExitDispatcher {
         Ok(Some(Arc::new(Self {
             shutdown: Mutex::new(Some(shutdown)),
             worker: Mutex::new(Some(worker)),
-            joined,
-            reconcile_passes_started,
         })))
     }
 
@@ -89,24 +72,6 @@ impl HolderExitDispatcher {
             let _ = worker.join();
         }
     }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn is_joined_for_test(&self) -> bool {
-        self.joined.load(Ordering::Acquire)
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub const fn cleanup_attempt_limit_for_test() -> usize {
-        HOLDER_EXIT_CLEANUP_ATTEMPTS
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn reconcile_passes_started_for_test(&self) -> u64 {
-        self.reconcile_passes_started.load(Ordering::Acquire)
-    }
 }
 
 impl Drop for HolderExitDispatcher {
@@ -118,22 +83,17 @@ impl Drop for HolderExitDispatcher {
 fn dispatcher_loop(
     listener: crate::workspace_crate::HolderExitListener,
     sessions: Weak<WorkspaceSessionService>,
-    joined: Arc<AtomicBool>,
-    reconcile_passes_started: Arc<AtomicU64>,
 ) {
-    struct JoinedOnDrop(Arc<AtomicBool>);
-    impl Drop for JoinedOnDrop {
-        fn drop(&mut self) {
-            self.0.store(true, Ordering::Release);
-        }
-    }
-    let _joined = JoinedOnDrop(joined);
     while listener.wait() {
         let Some(sessions) = sessions.upgrade() else {
             break;
         };
-        for attempt in 0..HOLDER_EXIT_CLEANUP_ATTEMPTS {
-            reconcile_passes_started.fetch_add(1, Ordering::Release);
+        for retry_delay in HOLDER_EXIT_RETRY_BACKOFF
+            .iter()
+            .copied()
+            .map(Some)
+            .chain(std::iter::once(None))
+        {
             let outcomes = sessions.reconcile_holder_exits();
             let retry_pending = outcomes.iter().any(|outcome| {
                 matches!(
@@ -141,10 +101,13 @@ fn dispatcher_loop(
                     HolderExitDisposition::RetryableCleanupFailure { .. }
                 )
             });
-            if !retry_pending || attempt + 1 == HOLDER_EXIT_CLEANUP_ATTEMPTS {
+            let Some(retry_delay) = retry_delay else {
+                break;
+            };
+            if !retry_pending {
                 break;
             }
-            match listener.wait_for_retry(HOLDER_EXIT_RETRY_BACKOFF[attempt]) {
+            match listener.wait_for_retry(retry_delay) {
                 HolderExitWait::Wake | HolderExitWait::RetryDeadline => {}
                 HolderExitWait::Shutdown => return,
             }

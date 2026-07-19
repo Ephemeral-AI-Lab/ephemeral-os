@@ -14,6 +14,7 @@ use http::{Request, Response, StatusCode};
 use hyper::body::Incoming;
 use sandbox_observability_telemetry::record::names;
 use sandbox_observability_telemetry::{Observer, SpanStatus, TraceContext};
+use tokio_util::task::TaskTracker;
 
 use self::route::ForwardRoute;
 use crate::http::response::{self, BoxBody};
@@ -73,14 +74,22 @@ impl ForwardError {
 }
 
 /// Handle one `/forward` request end to end, recording its span on completion.
-pub(crate) async fn handle(state: Arc<HttpState>, req: Request<Incoming>) -> Response<BoxBody> {
+pub(crate) async fn handle(
+    state: Arc<HttpState>,
+    child_tasks: TaskTracker,
+    req: Request<Incoming>,
+) -> Response<BoxBody> {
     let start = Instant::now();
-    let (response, observation) = forward(&state, req).await;
+    let (response, observation) = forward(&state, &child_tasks, req).await;
     emit_span(&state.observer, observation, start.elapsed().as_millis());
     response
 }
 
-async fn forward(state: &HttpState, req: Request<Incoming>) -> (Response<BoxBody>, Observation) {
+async fn forward(
+    state: &HttpState,
+    child_tasks: &TaskTracker,
+    req: Request<Incoming>,
+) -> (Response<BoxBody>, Observation) {
     let method = req.method().to_string();
     let bytes_in = content_length(req.headers());
     let route = match ForwardRoute::parse(req.uri()) {
@@ -101,7 +110,17 @@ async fn forward(state: &HttpState, req: Request<Incoming>) -> (Response<BoxBody
             )
         }
     };
-    match proxy::run(&target, &route, req, state.config.forward).await {
+    match proxy::run(
+        &target,
+        &route,
+        req,
+        state.config.forward,
+        &state.async_tasks,
+        child_tasks,
+        &state.shutdown,
+    )
+    .await
+    {
         Ok(response) => {
             let status = response.status().as_u16();
             let bytes_out = content_length(response.headers());

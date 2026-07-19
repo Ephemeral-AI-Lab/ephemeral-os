@@ -1,7 +1,7 @@
 #![cfg(feature = "observability")]
 
 use sandbox_operation_catalog::observability::{
-    observability_catalog, CGROUP_SPEC, RESOURCES_SPEC, SNAPSHOT_SPEC, TOPOLOGY_SPEC,
+    observability_catalog, CGROUP_SPEC, DAEMON_SPEC, RESOURCES_SPEC, SNAPSHOT_SPEC, TOPOLOGY_SPEC,
 };
 use sandbox_operation_contract::{
     catalog_to_value, OperationDomain, OperationExecutionOwner, OperationScopeKind,
@@ -31,6 +31,7 @@ fn observability_catalog_is_the_exact_public_set() {
             "trace",
             "events",
             "resources",
+            "daemon",
             "topology",
             "cgroup",
             "layerstack",
@@ -45,6 +46,7 @@ fn observability_catalog_is_the_exact_public_set() {
             "trace",
             "events",
             "resources",
+            "daemon",
             "topology",
             "cgroup",
             "layerstack"
@@ -58,6 +60,7 @@ fn observability_catalog_is_the_exact_public_set() {
             "trace",
             "events",
             "resources",
+            "daemon",
             "topology",
             "cgroup",
             "layerstack",
@@ -90,7 +93,8 @@ fn snapshot_and_resources_are_the_only_aggregate_capable_operations() {
 fn resources_are_manager_only_and_topology_is_one_explicit_daemon_route() {
     let catalog = observability_catalog();
     assert!(std::ptr::eq(catalog.operations[3], &RESOURCES_SPEC));
-    assert!(std::ptr::eq(catalog.operations[4], &TOPOLOGY_SPEC));
+    assert!(std::ptr::eq(catalog.operations[4], &DAEMON_SPEC));
+    assert!(std::ptr::eq(catalog.operations[5], &TOPOLOGY_SPEC));
 
     let resources = sandbox_operation_catalog::routes::observability_routes()
         .iter()
@@ -115,6 +119,17 @@ fn resources_are_manager_only_and_topology_is_one_explicit_daemon_route() {
     assert_eq!(topology[0].scope_kind, OperationScopeKind::Sandbox);
     assert_eq!(
         topology[0].execution_owner,
+        OperationExecutionOwner::Observability
+    );
+
+    let daemon = sandbox_operation_catalog::routes::observability_routes()
+        .iter()
+        .filter(|route| route.operation == DAEMON_SPEC.name)
+        .collect::<Vec<_>>();
+    assert_eq!(daemon.len(), 1);
+    assert_eq!(daemon[0].scope_kind, OperationScopeKind::Sandbox);
+    assert_eq!(
+        daemon[0].execution_owner,
         OperationExecutionOwner::Observability
     );
 }

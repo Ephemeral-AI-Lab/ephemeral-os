@@ -1,5 +1,7 @@
+use std::collections::{HashMap, HashSet};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
 
 #[cfg(target_os = "linux")]
 use rustix::io::Errno;
@@ -11,20 +13,173 @@ use sandbox_runtime_layerstack::service::StackObservation;
 use crate::command::CommandOperationService;
 use crate::file::FileService;
 use crate::layerstack::LayerStackService;
-use crate::observability::{RuntimeObservabilitySnapshot, RuntimeOwnershipSnapshot};
+use crate::observability::{
+    RuntimeObservabilitySnapshot, RuntimeOwnershipSnapshot, RuntimeOwnershipTopologySnapshot,
+};
 use crate::workspace_crate::{session::WorkspaceManager, WorkspaceRuntimeService};
-use crate::workspace_session::{HolderExitDispatcher, WorkspaceSessionService};
+use crate::workspace_session::{
+    HolderExitDispatcher, WorkspaceSessionService, WorkspaceSessionShutdownOutcome,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeShutdownPhase {
+    Autosquash,
+    HolderExitDispatcher,
+    WorkspaceSession,
+    CommandSupervisor,
+    WorkspaceRuntime,
+    Internal,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeShutdownFailure {
+    pub phase: RuntimeShutdownPhase,
+    pub workspace_session_id: Option<crate::workspace_crate::WorkspaceSessionId>,
+    pub diagnostic: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RuntimeShutdownReport {
+    pub sessions_observed: usize,
+    pub sessions_converged: usize,
+    pub failures: Vec<RuntimeShutdownFailure>,
+}
+
+impl RuntimeShutdownReport {
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.failures.is_empty()
+    }
+}
+
+enum RuntimeShutdownState {
+    Open,
+    Running,
+    Complete(RuntimeShutdownReport),
+}
+
+struct RuntimeShutdownCoordinator {
+    state: Mutex<RuntimeShutdownState>,
+    ready: Condvar,
+}
+
+impl RuntimeShutdownCoordinator {
+    fn new() -> Self {
+        Self {
+            state: Mutex::new(RuntimeShutdownState::Open),
+            ready: Condvar::new(),
+        }
+    }
+
+    fn begin(&self) -> Option<RuntimeShutdownReport> {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        loop {
+            match &*state {
+                RuntimeShutdownState::Open => {
+                    *state = RuntimeShutdownState::Running;
+                    return None;
+                }
+                RuntimeShutdownState::Running => {
+                    state = self
+                        .ready
+                        .wait(state)
+                        .unwrap_or_else(PoisonError::into_inner);
+                }
+                RuntimeShutdownState::Complete(report) => return Some(report.clone()),
+            }
+        }
+    }
+
+    fn complete(&self, report: RuntimeShutdownReport) {
+        *self.state.lock().unwrap_or_else(PoisonError::into_inner) =
+            RuntimeShutdownState::Complete(report);
+        self.ready.notify_all();
+    }
+}
+
+#[derive(Default)]
+struct RuntimeShutdownReportBuilder {
+    observed: HashSet<crate::workspace_crate::WorkspaceSessionId>,
+    converged: HashSet<crate::workspace_crate::WorkspaceSessionId>,
+    session_failures: HashMap<crate::workspace_crate::WorkspaceSessionId, String>,
+    session_registry_failure: Option<String>,
+    other_failures: Vec<RuntimeShutdownFailure>,
+}
+
+impl RuntimeShutdownReportBuilder {
+    fn record_sessions(&mut self, outcomes: Vec<WorkspaceSessionShutdownOutcome>) {
+        self.session_registry_failure = None;
+        for outcome in outcomes {
+            self.observed.insert(outcome.workspace_session_id.clone());
+            match outcome.result {
+                Ok(()) => {
+                    self.converged.insert(outcome.workspace_session_id.clone());
+                    self.session_failures.remove(&outcome.workspace_session_id);
+                }
+                Err(diagnostic) => {
+                    self.converged.remove(&outcome.workspace_session_id);
+                    self.session_failures
+                        .insert(outcome.workspace_session_id, diagnostic);
+                }
+            }
+        }
+    }
+
+    fn failure(&mut self, phase: RuntimeShutdownPhase, diagnostic: String) {
+        self.other_failures.push(RuntimeShutdownFailure {
+            phase,
+            workspace_session_id: None,
+            diagnostic,
+        });
+    }
+
+    fn session_registry_failure(&mut self, diagnostic: String) {
+        self.session_registry_failure = Some(diagnostic);
+    }
+
+    fn finish(self) -> RuntimeShutdownReport {
+        let mut failures = self
+            .session_failures
+            .into_iter()
+            .map(
+                |(workspace_session_id, diagnostic)| RuntimeShutdownFailure {
+                    phase: RuntimeShutdownPhase::WorkspaceSession,
+                    workspace_session_id: Some(workspace_session_id),
+                    diagnostic,
+                },
+            )
+            .collect::<Vec<_>>();
+        failures.sort_by(|left, right| {
+            left.workspace_session_id
+                .as_ref()
+                .map(|id| id.0.as_str())
+                .cmp(&right.workspace_session_id.as_ref().map(|id| id.0.as_str()))
+        });
+        if let Some(diagnostic) = self.session_registry_failure {
+            failures.push(RuntimeShutdownFailure {
+                phase: RuntimeShutdownPhase::WorkspaceSession,
+                workspace_session_id: None,
+                diagnostic,
+            });
+        }
+        failures.extend(self.other_failures);
+        RuntimeShutdownReport {
+            sessions_observed: self.observed.len(),
+            sessions_converged: self.converged.len(),
+            failures,
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct SandboxRuntimeOperations {
-    // Declared first so last-drop stops/joins while the service Arcs below are
-    // still alive. Every clone shares this one daemon-wide owner.
     _holder_exit_dispatcher: Option<Arc<HolderExitDispatcher>>,
     pub command: Arc<CommandOperationService>,
     pub workspace_session: Arc<WorkspaceSessionService>,
     pub layerstack: Arc<LayerStackService>,
     pub file: Arc<FileService>,
     _autosquash_engine: Arc<crate::layerstack::autosquash_engine::AutosquashEngine>,
+    shutdown: Arc<RuntimeShutdownCoordinator>,
 }
 
 impl SandboxRuntimeOperations {
@@ -50,6 +205,107 @@ impl SandboxRuntimeOperations {
             layerstack,
             file,
             _autosquash_engine: autosquash_engine,
+            shutdown: Arc::new(RuntimeShutdownCoordinator::new()),
+        }
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn autosquash_worker_threads(&self) -> usize {
+        self._autosquash_engine.worker_threads()
+    }
+
+    /// Stop every operation-owned background worker and converge all runtime
+    /// resources. Concurrent and repeated callers receive the same report.
+    #[must_use]
+    pub fn shutdown(&self) -> RuntimeShutdownReport {
+        if let Some(report) = self.shutdown.begin() {
+            return report;
+        }
+        let report =
+            catch_unwind(AssertUnwindSafe(|| self.perform_shutdown())).unwrap_or_else(|_| {
+                RuntimeShutdownReport {
+                    sessions_observed: 0,
+                    sessions_converged: 0,
+                    failures: vec![RuntimeShutdownFailure {
+                        phase: RuntimeShutdownPhase::Internal,
+                        workspace_session_id: None,
+                        diagnostic: "runtime shutdown panicked".to_owned(),
+                    }],
+                }
+            });
+        self.shutdown.complete(report.clone());
+        report
+    }
+
+    fn perform_shutdown(&self) -> RuntimeShutdownReport {
+        let mut report = RuntimeShutdownReportBuilder::default();
+        if catch_unwind(AssertUnwindSafe(|| {
+            self._autosquash_engine.shutdown_and_join();
+        }))
+        .is_err()
+        {
+            report.failure(
+                RuntimeShutdownPhase::Autosquash,
+                "autosquash shutdown panicked".to_owned(),
+            );
+        }
+        if let Some(dispatcher) = &self._holder_exit_dispatcher {
+            if catch_unwind(AssertUnwindSafe(|| dispatcher.shutdown_and_join())).is_err() {
+                report.failure(
+                    RuntimeShutdownPhase::HolderExitDispatcher,
+                    "holder-exit dispatcher shutdown panicked".to_owned(),
+                );
+            }
+        }
+
+        self.converge_sessions(&mut report);
+        match catch_unwind(AssertUnwindSafe(|| self.command.shutdown_and_join())) {
+            Ok(Ok(())) => {}
+            Ok(Err(diagnostic)) => {
+                report.failure(RuntimeShutdownPhase::CommandSupervisor, diagnostic);
+            }
+            Err(_) => report.failure(
+                RuntimeShutdownPhase::CommandSupervisor,
+                "command supervisor shutdown panicked".to_owned(),
+            ),
+        }
+        self.converge_sessions(&mut report);
+
+        match catch_unwind(AssertUnwindSafe(|| {
+            let first = self.workspace_session.workspace().shutdown();
+            if first.is_complete() {
+                first
+            } else {
+                self.workspace_session.workspace().shutdown()
+            }
+        })) {
+            Ok(raw) if raw.is_complete() => {}
+            Ok(raw) => report.failure(
+                RuntimeShutdownPhase::WorkspaceRuntime,
+                format!(
+                    "raw workspace shutdown incomplete: remaining={}, retryable_failures={}, namespace_stopped={}, namespace_error={}",
+                    raw.workspaces.remaining_workspace_ids.len(),
+                    raw.workspaces.retryable_failures.len(),
+                    raw.namespace_stopped,
+                    raw.namespace_error.as_deref().unwrap_or("none")
+                ),
+            ),
+            Err(_) => report.failure(
+                RuntimeShutdownPhase::WorkspaceRuntime,
+                "raw workspace shutdown panicked".to_owned(),
+            ),
+        }
+        report.finish()
+    }
+
+    fn converge_sessions(&self, report: &mut RuntimeShutdownReportBuilder) {
+        match catch_unwind(AssertUnwindSafe(|| {
+            self.workspace_session.shutdown_sessions()
+        })) {
+            Ok(Ok(outcomes)) => report.record_sessions(outcomes),
+            Ok(Err(diagnostic)) => report.session_registry_failure(diagnostic),
+            Err(_) => report.session_registry_failure("session shutdown panicked".to_owned()),
         }
     }
 
@@ -155,7 +411,31 @@ impl SandboxRuntimeOperations {
     pub fn observability_snapshot(&self) -> RuntimeObservabilitySnapshot {
         let (workspaces, mut partial_errors) = self.workspace_session.snapshot_workspaces();
         let active_namespace_executions = self.command.active_namespace_executions();
-        let ownership = match self.workspace_session.workspace().ownership_snapshot() {
+        let ownership = self.ownership_snapshot(&mut partial_errors);
+        RuntimeObservabilitySnapshot {
+            workspaces,
+            active_namespace_executions,
+            ownership,
+            partial_errors,
+        }
+    }
+
+    #[must_use]
+    pub fn ownership_topology_snapshot(&self) -> RuntimeOwnershipTopologySnapshot {
+        let (workspaces, mut partial_errors) =
+            self.workspace_session.snapshot_topology_workspaces();
+        let ownership = self.ownership_snapshot(&mut partial_errors);
+        RuntimeOwnershipTopologySnapshot {
+            workspaces,
+            active_command_count: self.command.active_namespace_execution_count(),
+            active_layer_lease_count: self.layerstack.active_lease_count(),
+            ownership,
+            partial_errors,
+        }
+    }
+
+    fn ownership_snapshot(&self, partial_errors: &mut Vec<String>) -> RuntimeOwnershipSnapshot {
+        match self.workspace_session.workspace().ownership_snapshot() {
             Ok(snapshot) => RuntimeOwnershipSnapshot {
                 namespace_fd_count: Some(snapshot.namespace_fd_count),
                 control_fd_count: Some(snapshot.control_fd_count),
@@ -167,12 +447,6 @@ impl SandboxRuntimeOperations {
                 partial_errors.push(format!("workspace ownership snapshot failed: {error}"));
                 RuntimeOwnershipSnapshot::default()
             }
-        };
-        RuntimeObservabilitySnapshot {
-            workspaces,
-            active_namespace_executions,
-            ownership,
-            partial_errors,
         }
     }
 

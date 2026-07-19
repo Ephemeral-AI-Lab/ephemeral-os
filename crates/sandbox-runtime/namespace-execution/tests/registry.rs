@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Barrier};
 
 use sandbox_runtime_namespace_execution::{
     ExecutionRegistry, NamespaceExecutionError, NamespaceExecutionId,
@@ -20,6 +20,135 @@ fn admits_up_to_capacity_then_refuses() {
         refused,
         NamespaceExecutionError::Admission { max_active: 2 }
     ));
+}
+
+#[test]
+fn live_duplicate_is_rejected_without_consuming_capacity() {
+    let registry = ExecutionRegistry::<()>::new(2, 512);
+    let duplicate_id = id(1);
+    registry.try_reserve(&duplicate_id).expect("first slot");
+
+    let error = registry
+        .try_reserve(&duplicate_id)
+        .expect_err("live duplicate must be rejected");
+
+    assert!(matches!(
+        error,
+        NamespaceExecutionError::Duplicate { execution_id }
+            if execution_id == duplicate_id.0
+    ));
+    registry
+        .try_reserve(&id(2))
+        .expect("duplicate attempt did not consume capacity");
+    assert!(matches!(
+        registry.try_reserve(&id(3)),
+        Err(NamespaceExecutionError::Admission { max_active: 2 })
+    ));
+}
+
+#[test]
+fn terminal_id_is_rejected_until_retention_evicts_it() {
+    let registry = ExecutionRegistry::<()>::new(2, 1);
+    let retained_id = id(1);
+    registry.try_reserve(&retained_id).expect("first slot");
+    registry.complete(&retained_id, NamespaceExecutionTerminalStatus::Ok, Some(0));
+
+    let error = registry
+        .try_reserve(&retained_id)
+        .expect_err("retained terminal id must not be reused");
+    assert!(matches!(
+        error,
+        NamespaceExecutionError::Duplicate { execution_id }
+            if execution_id == retained_id.0
+    ));
+
+    let evicting_id = id(2);
+    registry.try_reserve(&evicting_id).expect("second slot");
+    registry.complete(&evicting_id, NamespaceExecutionTerminalStatus::Ok, Some(0));
+    assert!(!registry.is_completed(&retained_id));
+    registry
+        .try_reserve(&retained_id)
+        .expect("evicted terminal id may be reused");
+}
+
+#[test]
+fn completion_abort_race_releases_capacity_exactly_once() {
+    for round in 0..32 {
+        let registry = Arc::new(ExecutionRegistry::<()>::new(1, 1));
+        let raced_id = id(round);
+        registry.try_reserve(&raced_id).expect("raced slot");
+        let start = Arc::new(Barrier::new(3));
+
+        let complete_registry = Arc::clone(&registry);
+        let complete_start = Arc::clone(&start);
+        let complete_id = raced_id.clone();
+        let complete = std::thread::spawn(move || {
+            complete_start.wait();
+            complete_registry.complete(&complete_id, NamespaceExecutionTerminalStatus::Ok, Some(0));
+        });
+
+        let abort_registry = Arc::clone(&registry);
+        let abort_start = Arc::clone(&start);
+        let abort_id = raced_id.clone();
+        let abort = std::thread::spawn(move || {
+            abort_start.wait();
+            abort_registry.abort(&abort_id);
+        });
+
+        start.wait();
+        complete.join().expect("completion thread");
+        abort.join().expect("abort thread");
+
+        assert!(!registry.is_live(&raced_id));
+        registry
+            .try_reserve(&id(round + 1_000))
+            .expect("race released the only active slot exactly once");
+    }
+}
+
+#[test]
+fn abort_after_completion_preserves_the_terminal_result() {
+    let registry = ExecutionRegistry::<()>::new(1, 1);
+    let completed_id = id(1);
+    registry.try_reserve(&completed_id).expect("first slot");
+    registry.complete(&completed_id, NamespaceExecutionTerminalStatus::Ok, Some(0));
+
+    registry.abort(&completed_id);
+
+    assert!(registry.is_completed(&completed_id));
+    assert!(matches!(
+        registry.try_reserve(&completed_id),
+        Err(NamespaceExecutionError::Duplicate { .. })
+    ));
+    registry
+        .try_reserve(&id(2))
+        .expect("terminal entry does not consume active capacity");
+}
+
+#[test]
+fn duplicate_rejection_recovers_capacity_after_abort_and_completion() {
+    let registry = ExecutionRegistry::<()>::new(1, 1);
+    let first_id = id(1);
+    registry.try_reserve(&first_id).expect("first slot");
+    assert!(matches!(
+        registry.try_reserve(&first_id),
+        Err(NamespaceExecutionError::Duplicate { .. })
+    ));
+    registry.abort(&first_id);
+
+    let second_id = id(2);
+    registry
+        .try_reserve(&second_id)
+        .expect("abort restored capacity");
+    assert!(matches!(
+        registry.try_reserve(&second_id),
+        Err(NamespaceExecutionError::Duplicate { .. })
+    ));
+    registry.complete(&second_id, NamespaceExecutionTerminalStatus::Ok, Some(0));
+
+    registry
+        .try_reserve(&id(3))
+        .expect("completion restored capacity");
 }
 
 #[test]

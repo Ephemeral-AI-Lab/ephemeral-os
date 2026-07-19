@@ -122,3 +122,22 @@ async fn rpc_connection_limit_rejects_before_spawn_and_recovers_after_release() 
     drop(permit);
     assert_eq!(admission.in_use(), 0);
 }
+
+#[tokio::test]
+async fn closed_rpc_admission_returns_shutdown_instead_of_overload() {
+    let admission = ConnectionAdmission::new(1);
+    admission.close();
+    let (mut client, server) = tokio::io::duplex(4 * 1024);
+
+    assert!(admit_rpc_connection(server, &admission, 1).await.is_none());
+
+    let mut framed = Vec::new();
+    client
+        .read_to_end(&mut framed)
+        .await
+        .expect("read structured shutdown response");
+    assert_eq!(framed.pop(), Some(b'\n'));
+    let response: serde_json::Value = serde_json::from_slice(&framed).expect("shutdown JSON");
+    assert_eq!(response["error"]["kind"], "server_shutting_down");
+    assert_ne!(response["error"]["kind"], "server_busy");
+}

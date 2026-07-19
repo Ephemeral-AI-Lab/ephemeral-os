@@ -13,12 +13,12 @@ impl WorkspaceSessionService {
             .get(&workspace_session_id)
             .ok_or_else(|| WorkspaceSessionError::not_found(&workspace_session_id))?;
 
-        if !session.handle.holder_is_live() {
+        if !self.workspace().holder_is_live(&session.handle) {
             return Err(WorkspaceSessionError::HolderExited {
                 workspace_session_id,
-                reason: session
-                    .handle
-                    .holder_exit_reason()
+                reason: self
+                    .workspace()
+                    .holder_exit_reason(&session.handle)
                     .unwrap_or_else(|| "exit-status:unknown".to_owned()),
                 cleanup_state: session.finalization_state,
             });

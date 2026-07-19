@@ -14,16 +14,13 @@ impl WorkspaceManager {
     pub(crate) fn persist_handles(&self) -> Result<(), WorkspaceManagerError> {
         std::fs::create_dir_all(&self.scratch_root)
             .map_err(|err| manager_setup_error("manager_root", err))?;
-        // Retain peer teardown records until their own resource ledger reaches
-        // persistence. A successful destroy must not erase a different
-        // workspace's retry handle merely because both share manager.json.
         let handles: Vec<Value> = self
             .handles
             .values()
             .chain(self.teardowns.values().filter_map(|transaction| {
                 transaction
                     .has_persisted_handle()
-                    .then(|| transaction.owned_handle())
+                    .then_some(transaction.owned_handle())
             }))
             .map(persisted_handle_json)
             .collect();

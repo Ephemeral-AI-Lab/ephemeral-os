@@ -2,7 +2,8 @@ mod support;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
+use std::time::Duration;
 
 use sandbox_observability_telemetry::Observer;
 use sandbox_runtime::command::ExecCommandInput;
@@ -13,8 +14,9 @@ use sandbox_runtime_workspace::DestroyWorkspaceRequest;
 use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
 
 use support::{
-    build_services, build_services_with_launch_driver_and_workload_cgroup, create_request,
-    workspace_handle, FakeLaunchDriver, FakeWorkspaceService, TestServices,
+    build_services, build_services_with_launch_driver,
+    build_services_with_launch_driver_and_workload_cgroup, create_request, workspace_handle,
+    FakeLaunchDriver, FakeWorkspaceService, ScriptedCommandYield, TestServices,
 };
 
 #[test]
@@ -155,6 +157,134 @@ fn observability_snapshot_reports_active_command_namespace_execution(
     );
     assert_eq!(namespace_execution.operation_name, "exec_command");
     assert_eq!(namespace_execution.command.as_deref(), Some("printf ok"));
+    Ok(())
+}
+
+#[test]
+fn ownership_topology_snapshot_does_not_copy_layer_or_command_payloads(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    const INVENTORY_SIZE: usize = 64;
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    let services = build_services_with_launch_driver(Arc::clone(&fake), Arc::clone(&launch_driver));
+    let sensitive_layer_marker = "layer-payload-must-not-enter-topology";
+    let sensitive_command_marker = "command-payload-must-not-enter-topology";
+    let mut handle = workspace_handle(
+        "bounded-topology-workspace",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        NetworkProfile::Shared,
+    );
+    handle.snapshot.manifest = sandbox_runtime_layerstack::Manifest::new(
+        1,
+        (0..INVENTORY_SIZE)
+            .map(|index| sandbox_runtime_layerstack::LayerRef {
+                layer_id: format!("{sensitive_layer_marker}-{index}-{}", "x".repeat(16 * 1024)),
+                path: format!("layers/layer-{index}"),
+            })
+            .collect(),
+        sandbox_runtime_layerstack::MANIFEST_SCHEMA_VERSION,
+    )?;
+    handle.snapshot.layer_paths = (0..INVENTORY_SIZE)
+        .map(|index| PathBuf::from(format!("/layers/layer-{index}")))
+        .collect();
+    fake.push_create_result(Ok(handle));
+    let workspace_session_id = services
+        .workspace
+        .create_workspace_session(create_request())?
+        .workspace_session_id;
+
+    for index in 0..INVENTORY_SIZE {
+        launch_driver.push_outcome(ScriptedCommandYield::Running(String::new()));
+        services.command.exec_command(ExecCommandInput {
+            workspace_session_id: Some(workspace_session_id.clone()),
+            cmd: format!(
+                "{sensitive_command_marker}-{index}-{}",
+                "y".repeat(16 * 1024)
+            ),
+            timeout_ms: None,
+            yield_time_ms: Some(0),
+        })?;
+    }
+    let operations = operations_for(&services)?;
+
+    let snapshot = operations.ownership_topology_snapshot();
+    let rendered = format!("{snapshot:?}");
+    let owned_text_bytes = snapshot
+        .workspaces
+        .iter()
+        .map(|workspace| {
+            workspace.workspace_id.0.len()
+                + workspace
+                    .cgroup_path
+                    .as_ref()
+                    .map_or(0, |path| path.as_os_str().len())
+                + workspace.workload_cgroup_state.len()
+                + workspace
+                    .workload_cgroup_reason
+                    .as_ref()
+                    .map_or(0, String::len)
+        })
+        .sum::<usize>()
+        + snapshot
+            .partial_errors
+            .iter()
+            .map(String::len)
+            .sum::<usize>();
+
+    assert_eq!(snapshot.workspaces.len(), 1);
+    assert_eq!(snapshot.active_command_count, INVENTORY_SIZE);
+    assert!(owned_text_bytes < 1024);
+    assert!(!rendered.contains(sensitive_layer_marker));
+    assert!(!rendered.contains(sensitive_command_marker));
+    Ok(())
+}
+
+#[test]
+fn ownership_topology_snapshot_does_not_join_holder_teardown(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let services = build_services(Arc::clone(&fake));
+    let handle = workspace_handle(
+        "dead-topology-workspace",
+        "lease-1",
+        PathBuf::from("/workspace/session"),
+        NetworkProfile::Shared,
+    );
+    fake.push_create_result(Ok(handle.clone()));
+    services
+        .workspace
+        .create_workspace_session(create_request())?;
+    let operations = Arc::new(operations_for(&services)?);
+    let (destroy_entered, release_destroy) = fake.park_next_destroy();
+    fake.mark_holder_exited(&handle, "synthetic holder exit");
+
+    let (done_tx, done_rx) = mpsc::channel();
+    let snapshot_operations = Arc::clone(&operations);
+    let snapshotter = std::thread::spawn(move || {
+        let _ = done_tx.send(snapshot_operations.ownership_topology_snapshot());
+    });
+    let snapshot = match done_rx.recv_timeout(Duration::from_secs(1)) {
+        Ok(snapshot) => snapshot,
+        Err(error) => {
+            let _ = release_destroy.send(());
+            let _ = snapshotter.join();
+            panic!("topology snapshot joined parked holder teardown: {error}");
+        }
+    };
+
+    assert!(
+        destroy_entered.try_recv().is_err(),
+        "topology snapshot must not enter holder teardown"
+    );
+    assert!(
+        fake.destroy_calls().is_empty(),
+        "topology snapshot must be a read-only operation"
+    );
+    assert_eq!(snapshot.workspaces.len(), 1);
+    assert!(!snapshot.workspaces[0].holder_live);
+    drop(release_destroy);
+    snapshotter.join().expect("snapshot thread");
     Ok(())
 }
 

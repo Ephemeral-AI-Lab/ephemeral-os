@@ -300,6 +300,147 @@ fn cgroup_removal_failure_retries_without_repeating_raw_workspace_destroy() {
 }
 
 #[test]
+fn cgroup_kill_and_drained_events_are_removed_with_the_session() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("cgroup-drained", "lease-1")));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let manager = WorkspaceSessionService::with_cgroup_root(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        Some(cgroup_root.clone()),
+        Observer::disabled(),
+    );
+    let handler = manager
+        .create_workspace_session(create_request())
+        .expect("session creates");
+    let leaf = cgroup_root.join("workspace-cgroup-drained");
+    std::fs::write(leaf.join("cgroup.kill"), "").expect("create kill control");
+    std::fs::write(leaf.join("cgroup.events"), "populated 0\nfrozen 0\n")
+        .expect("create drained events control");
+
+    manager
+        .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
+        .expect("drained cgroup cleanup succeeds");
+
+    assert!(!leaf.exists());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![handler.workspace_session_id.clone()]
+    );
+    assert!(matches!(
+        manager.resolve_session(handler.workspace_session_id),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+}
+
+#[test]
+fn workspace_cgroup_kill_cleanup_is_leaf_scoped_and_preserves_peer() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("pressured", "lease-pressure")));
+    fake.push_create_result(Ok(workspace_handle("peer", "lease-peer")));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let manager = WorkspaceSessionService::with_workload_cgroup(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        cgroup_root.clone(),
+        WorkloadCgroupLimits {
+            nano_cpus: 500_000_000,
+            memory_high_bytes: 64 * 1024 * 1024,
+            memory_max_bytes: 96 * 1024 * 1024,
+            pids_max: 32,
+        },
+        Observer::disabled(),
+    );
+    let pressured = manager
+        .create_workspace_session(create_request())
+        .expect("pressured session creates");
+    let peer = manager
+        .create_workspace_session(create_request())
+        .expect("peer session creates");
+    let pressured_leaf = cgroup_root.join("workspace-pressured");
+    let peer_leaf = cgroup_root.join("workspace-peer");
+    std::fs::write(pressured_leaf.join("cgroup.kill"), "").expect("create kill control");
+    std::fs::write(pressured_leaf.join("cgroup.events"), "populated 0\n")
+        .expect("record pressure workload drained");
+    std::fs::write(peer_leaf.join("cgroup.procs"), "4242").expect("record peer cgroup ownership");
+
+    manager
+        .destroy_session(pressured.clone(), DestroyWorkspaceRequest::default())
+        .expect("pressured leaf cleanup succeeds");
+
+    assert!(!pressured_leaf.exists());
+    assert!(peer_leaf.is_dir());
+    assert_eq!(
+        std::fs::read_to_string(peer_leaf.join("cgroup.procs"))
+            .expect("peer cgroup ownership remains readable"),
+        "4242"
+    );
+    assert!(manager
+        .resolve_session(peer.workspace_session_id.clone())
+        .is_ok());
+    assert_eq!(fake.destroy_calls(), vec![pressured.workspace_session_id]);
+
+    manager
+        .destroy_session(peer.clone(), DestroyWorkspaceRequest::default())
+        .expect("peer cleanup remains independently joinable");
+    assert!(!peer_leaf.exists());
+    assert!(matches!(
+        manager.resolve_session(peer.workspace_session_id),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+}
+
+#[test]
+fn populated_cgroup_without_kill_is_retained_until_a_bounded_retry() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    fake.push_create_result(Ok(workspace_handle("cgroup-populated", "lease-1")));
+    let cgroup_root = temp_root().join("cgroup-root");
+    let manager = WorkspaceSessionService::with_cgroup_root(
+        support::fake_workspace_runtime(Arc::clone(&fake)),
+        support::observed_layerstack_service(Observer::disabled()),
+        Some(cgroup_root.clone()),
+        Observer::disabled(),
+    );
+    let handler = manager
+        .create_workspace_session(create_request())
+        .expect("session creates");
+    let leaf = cgroup_root.join("workspace-cgroup-populated");
+    std::fs::write(leaf.join("cgroup.events"), "populated 1\n")
+        .expect("create populated events control");
+
+    let first = manager
+        .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
+        .expect_err("populated leaf without cgroup.kill fails closed");
+
+    assert!(matches!(
+        first,
+        WorkspaceSessionError::TeardownIncomplete { failures, .. }
+            if failures.iter().any(|failure| failure.contains("cgroup.kill is unavailable"))
+    ));
+    assert!(leaf.exists());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![handler.workspace_session_id.clone()]
+    );
+
+    std::fs::write(leaf.join("cgroup.events"), "populated 0\n").expect("record drained events");
+    manager
+        .destroy_session(handler.clone(), DestroyWorkspaceRequest::default())
+        .expect("retry removes the drained leaf");
+
+    assert!(!leaf.exists());
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![handler.workspace_session_id.clone()],
+        "raw workspace teardown is not repeated while cgroup cleanup retries"
+    );
+    assert!(matches!(
+        manager.resolve_session(handler.workspace_session_id),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+}
+
+#[test]
 fn configured_workload_cgroup_limit_failure_aborts_and_rolls_back_raw_workspace() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle("cgroup-setup-fail", "lease-1")));
@@ -577,7 +718,10 @@ fn stale_destroy_handler_cannot_destroy_recreated_same_id_session() {
             workspace_session_id
         } if workspace_session_id == current.workspace_session_id
     ));
-    assert_eq!(fake.destroy_calls(), vec![current.workspace_session_id.clone()]);
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![current.workspace_session_id.clone()]
+    );
     assert_eq!(
         manager
             .resolve_session(current.workspace_session_id.clone())

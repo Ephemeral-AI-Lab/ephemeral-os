@@ -21,7 +21,8 @@ pub use namespace_execution::{
     NamespaceExecutionId, NamespaceExecutionTerminalStatus, RuntimeNamespaceExecutionSnapshot,
 };
 pub use observability::{
-    RuntimeObservabilitySnapshot, RuntimeOwnershipSnapshot, RuntimeWorkspaceSnapshot,
+    RuntimeObservabilitySnapshot, RuntimeOwnershipSnapshot, RuntimeOwnershipTopologySnapshot,
+    RuntimeTopologyWorkspaceSnapshot, RuntimeWorkspaceSnapshot,
 };
 pub use sandbox_runtime_layerstack::service::{LayerStatus, StackObservation};
 pub use sandbox_runtime_layerstack::{
@@ -29,8 +30,9 @@ pub use sandbox_runtime_layerstack::{
 };
 pub use services::{
     CommandRuntimeConfig, FileRuntimeConfig, LayerstackRuntimeConfig, NamespaceExecutionCaps,
-    NamespaceExecutionRuntimeConfig, Rfc1918Egress, SandboxRuntimeConfig, SandboxRuntimeOperations,
-    WorkloadCgroupLimits, WorkspaceResourceCaps, WorkspaceRuntimeConfig,
+    NamespaceExecutionRuntimeConfig, Rfc1918Egress, RuntimeShutdownFailure, RuntimeShutdownPhase,
+    RuntimeShutdownReport, SandboxRuntimeConfig, SandboxRuntimeOperations, WorkloadCgroupLimits,
+    WorkspaceResourceCaps, WorkspaceRuntimeConfig,
 };
 pub use workspace_crate::{NetworkProfile, WorkspaceSessionId};
 pub use workspace_session::WorkspaceSessionService;

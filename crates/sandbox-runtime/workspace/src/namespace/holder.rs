@@ -1,9 +1,9 @@
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
+use std::panic::{self, AssertUnwindSafe};
 use std::path::PathBuf;
-#[cfg(target_os = "linux")]
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TrySendError};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TryRecvError, TrySendError};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
@@ -24,7 +24,7 @@ use nix::unistd::pipe2;
 #[cfg(target_os = "linux")]
 use rustix::process::{pidfd_open, pidfd_send_signal, Pid, PidfdFlags, Signal};
 
-use crate::model::WorkspaceSessionId;
+use crate::model::{WorkspaceHolderIdentity, WorkspaceSessionId};
 use crate::service::{holder_exit_channel, HolderExitNotifier, HolderExitSubscription};
 use crate::session::{MountedWorkspace, WorkspaceManagerError};
 
@@ -35,8 +35,13 @@ use super::setup_error;
 use super::{HolderKillReport, NamespacePlan, NamespaceRuntime};
 
 const SUPERVISOR_QUEUE_CAPACITY: usize = 64;
+const HOLDER_PROBE_REPLY_TIMEOUT: Duration = Duration::from_millis(250);
+const HOLDER_FINALIZATION_REPLY_TIMEOUT: Duration = Duration::from_millis(1_500);
 const KILL_REAP_TIMEOUT: Duration = Duration::from_secs(1);
+const WAIT_REAP_RETRY_BACKOFF: Duration = Duration::from_millis(50);
 const WAIT_ERROR_LIMIT: u8 = 3;
+#[cfg(target_os = "linux")]
+const HOLDER_STDERR_LIMIT: usize = 64 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct HolderIdentity {
@@ -87,6 +92,86 @@ pub(crate) enum HolderExitReason {
     Destroy,
 }
 
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HolderProbe {
+    Running,
+    Exited,
+    Unknown { class: HolderProbeUnknownClass },
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HolderProbeUnknownClass {
+    ObservationFailed,
+    NotRegistered,
+    Overloaded,
+    Unavailable,
+    TimedOut,
+}
+
+impl HolderProbeUnknownClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ObservationFailed => "holder_probe_observation_failed",
+            Self::NotRegistered => "holder_probe_not_registered",
+            Self::Overloaded => "holder_probe_overloaded",
+            Self::Unavailable => "holder_probe_unavailable",
+            Self::TimedOut => "holder_probe_timed_out",
+        }
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HolderFinalization {
+    Quiesced { proof: HolderFinalizationProof },
+    Exited,
+    Unknown {
+        class: HolderFinalizationUnknownClass,
+    },
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HolderFinalizationProof {
+    pub workspace_session_id: WorkspaceSessionId,
+    pub holder_identity: WorkspaceHolderIdentity,
+    pub exit_sequence: u64,
+}
+
+#[doc(hidden)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HolderFinalizationUnknownClass {
+    ObservationFailed,
+    NotRegistered,
+    IdentityMismatch,
+    IdentityValidationFailed,
+    TerminationInProgress,
+    TerminationFailed,
+    Overloaded,
+    Unavailable,
+    TimedOut,
+}
+
+impl HolderFinalizationUnknownClass {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::ObservationFailed => "holder_finalization_observation_failed",
+            Self::NotRegistered => "holder_finalization_not_registered",
+            Self::IdentityMismatch => "holder_finalization_identity_mismatch",
+            Self::IdentityValidationFailed => "holder_finalization_identity_validation_failed",
+            Self::TerminationInProgress => "holder_finalization_termination_in_progress",
+            Self::TerminationFailed => "holder_finalization_termination_failed",
+            Self::Overloaded => "holder_finalization_overloaded",
+            Self::Unavailable => "holder_finalization_unavailable",
+            Self::TimedOut => "holder_finalization_timed_out",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct HolderExitEvent {
     pub(crate) sequence: u64,
@@ -110,6 +195,8 @@ pub(crate) enum HolderSupervisorError {
     Overloaded,
     #[error("holder supervisor is unavailable")]
     Unavailable,
+    #[error("holder supervisor worker terminated unexpectedly")]
+    WorkerTerminated,
     #[error("holder {workspace_session_id:?} is not registered for this generation")]
     Unknown {
         workspace_session_id: WorkspaceSessionId,
@@ -143,6 +230,10 @@ pub(crate) trait HolderProcess: Send {
     fn send_signal(&mut self, signal: HolderSignal) -> Result<(), String>;
 }
 
+type HolderProcessFactory = Box<
+    dyn FnOnce(u64) -> Result<(HolderIdentity, Box<dyn HolderProcess>), String> + Send + 'static,
+>;
+
 #[derive(Clone)]
 pub struct HolderRegistration {
     workspace_session_id: WorkspaceSessionId,
@@ -172,7 +263,7 @@ impl Eq for HolderRegistration {}
 
 impl HolderRegistration {
     #[doc(hidden)]
-    pub fn detached_for_test(workspace_session_id: WorkspaceSessionId, pid: i32) -> Self {
+    pub fn unmanaged(workspace_session_id: WorkspaceSessionId, pid: i32) -> Self {
         Self {
             workspace_session_id,
             identity: HolderIdentity {
@@ -187,16 +278,23 @@ impl HolderRegistration {
         }
     }
 
-    pub(crate) fn detached_live(workspace_session_id: WorkspaceSessionId, pid: i32) -> Self {
-        Self::detached_for_test(workspace_session_id, pid)
-    }
-
     pub(crate) fn is_live(&self) -> bool {
         self.exit
             .0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .is_none()
+    }
+
+    pub(crate) fn identity_snapshot(&self) -> WorkspaceHolderIdentity {
+        WorkspaceHolderIdentity {
+            pid: self.identity.pid,
+            parent_pid: self.identity.parent_pid,
+            start_time_ticks: self.identity.start_time_ticks,
+            executable: self.identity.executable.clone(),
+            generation: self.identity.generation,
+            pidfd_available: self.identity.pidfd_available,
+        }
     }
 
     pub(crate) fn exit_event(&self) -> Option<HolderExitEvent> {
@@ -207,46 +305,72 @@ impl HolderRegistration {
             .clone()
     }
 
-    #[cfg(test)]
-    pub(crate) fn wait_for_exit(&self, timeout: Duration) -> Option<HolderExitEvent> {
-        let guard = self
-            .exit
-            .0
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        let (guard, _) = self
-            .exit
-            .1
-            .wait_timeout_while(guard, timeout, |event| event.is_none())
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        guard.clone()
+    pub(crate) fn matches_finalization_proof(&self, proof: &HolderFinalizationProof) -> bool {
+        if proof.workspace_session_id != self.workspace_session_id
+            || proof.holder_identity != self.identity_snapshot()
+        {
+            return false;
+        }
+        self.exit_event().is_some_and(|event| {
+            event.sequence == proof.exit_sequence
+                && event.workspace_session_id == self.workspace_session_id
+                && event.identity == self.identity
+                && event.reason == HolderExitReason::Destroy
+        })
     }
 
-    pub(crate) fn mark_exited_for_test(&self, detail: &str) {
-        let signal = detail
-            .strip_prefix("signal:")
-            .and_then(|value| value.parse::<i32>().ok());
-        let event = HolderExitEvent {
-            sequence: 0,
-            workspace_session_id: self.workspace_session_id.clone(),
-            identity: self.identity.clone(),
-            reason: HolderExitReason::Unexpected,
-            exit: HolderProcessExit {
-                exit_status: None,
-                signal,
-                status_raw: signal,
-            },
-        };
-        publish_registration_exit(self, event);
+    fn finalization_proof(&self) -> Option<HolderFinalizationProof> {
+        let event = self.exit_event()?;
+        (event.workspace_session_id == self.workspace_session_id
+            && event.identity == self.identity
+            && event.reason == HolderExitReason::Destroy)
+            .then(|| HolderFinalizationProof {
+                workspace_session_id: self.workspace_session_id.clone(),
+                holder_identity: self.identity_snapshot(),
+                exit_sequence: event.sequence,
+            })
     }
 }
 
 pub(crate) struct HolderSupervisor {
-    tx: Option<SyncSender<SupervisorCommand>>,
-    worker: Mutex<Option<JoinHandle<()>>>,
+    lifecycle: Mutex<SupervisorLifecycle>,
+    lifecycle_changed: Condvar,
     log: Arc<Mutex<SupervisorLog>>,
-    #[cfg(target_os = "linux")]
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     next_generation: Arc<AtomicU64>,
+}
+
+struct SupervisorLifecycle {
+    tx: Option<SyncSender<SupervisorCommand>>,
+    worker: SupervisorWorker,
+}
+
+enum SupervisorWorker {
+    Running(JoinHandle<()>),
+    Joining,
+    Stopped(Result<(), HolderSupervisorError>),
+}
+
+/// Owns the caller side of a pending registration until the caller has
+/// actually received and claimed it. A bounded result channel alone is not
+/// sufficient: `send` can succeed into its buffer immediately before the
+/// receiver is dropped, leaving a live holder with no reachable owner.
+pub(crate) struct HolderSpawnReply {
+    result: Receiver<Result<HolderRegistration, HolderSupervisorError>>,
+    claim: SyncSender<()>,
+}
+
+impl HolderSpawnReply {
+    fn receive(self) -> Result<HolderRegistration, HolderSupervisorError> {
+        let registration = self
+            .result
+            .recv()
+            .map_err(|_| HolderSupervisorError::Unavailable)??;
+        self.claim
+            .send(())
+            .map_err(|_| HolderSupervisorError::Unavailable)?;
+        Ok(registration)
+    }
 }
 
 impl fmt::Debug for HolderSupervisor {
@@ -267,57 +391,56 @@ impl HolderSupervisor {
             .spawn(move || supervisor_loop(rx, worker_log, poll_interval))
             .expect("holder supervisor thread must start");
         Self {
-            tx: Some(tx),
-            worker: Mutex::new(Some(worker)),
+            lifecycle: Mutex::new(SupervisorLifecycle {
+                tx: Some(tx),
+                worker: SupervisorWorker::Running(worker),
+            }),
+            lifecycle_changed: Condvar::new(),
             log,
-            #[cfg(target_os = "linux")]
             next_generation: Arc::new(AtomicU64::new(1)),
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
     pub(crate) fn next_generation(&self) -> u64 {
         self.next_generation.fetch_add(1, Ordering::Relaxed)
     }
 
-    #[cfg_attr(not(any(target_os = "linux", test)), allow(dead_code))]
-    pub(crate) fn register_process(
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub(crate) fn spawn_process<F>(
         &self,
         workspace_session_id: WorkspaceSessionId,
-        identity: HolderIdentity,
-        process: Box<dyn HolderProcess>,
-    ) -> Result<HolderRegistration, HolderSupervisorError> {
-        let registration = HolderRegistration {
-            workspace_session_id: workspace_session_id.clone(),
-            identity: identity.clone(),
-            exit: Arc::new((Mutex::new(None), Condvar::new())),
-        };
+        factory: F,
+    ) -> Result<HolderRegistration, HolderSupervisorError>
+    where
+        F: FnOnce(u64) -> Result<(HolderIdentity, Box<dyn HolderProcess>), String> + Send + 'static,
+    {
+        self.enqueue_spawn_process(workspace_session_id, factory)?
+            .receive()
+    }
+
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    pub(crate) fn enqueue_spawn_process<F>(
+        &self,
+        workspace_session_id: WorkspaceSessionId,
+        factory: F,
+    ) -> Result<HolderSpawnReply, HolderSupervisorError>
+    where
+        F: FnOnce(u64) -> Result<(HolderIdentity, Box<dyn HolderProcess>), String> + Send + 'static,
+    {
         let (reply_tx, reply_rx) = mpsc::sync_channel(1);
-        let command = SupervisorCommand::Register {
-            registration: registration.clone(),
-            process,
+        let (claim_tx, claim_rx) = mpsc::sync_channel(1);
+        self.try_command(SupervisorCommand::Spawn {
+            workspace_session_id,
+            generation: self.next_generation(),
+            factory: Box::new(factory),
             reply: reply_tx,
-        };
-        match self
-            .tx
-            .as_ref()
-            .expect("holder supervisor sender exists until drop")
-            .try_send(command)
-        {
-            Ok(()) => {}
-            Err(TrySendError::Full(command)) => {
-                abort_rejected_registration(command, &identity);
-                return Err(HolderSupervisorError::Overloaded);
-            }
-            Err(TrySendError::Disconnected(command)) => {
-                abort_rejected_registration(command, &identity);
-                return Err(HolderSupervisorError::Unavailable);
-            }
-        }
-        reply_rx
-            .recv()
-            .map_err(|_| HolderSupervisorError::Unavailable)??;
-        Ok(registration)
+            claim: claim_rx,
+        })?;
+        Ok(HolderSpawnReply {
+            result: reply_rx,
+            claim: claim_tx,
+        })
     }
 
     pub(crate) fn terminate(
@@ -336,16 +459,65 @@ impl HolderSupervisor {
             .map_err(|_| HolderSupervisorError::Unavailable)?
     }
 
-    #[cfg(test)]
-    pub(crate) fn events_after(&self, sequence: u64) -> Vec<HolderExitEvent> {
-        self.log
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .events
-            .iter()
-            .filter(|event| event.sequence > sequence)
-            .cloned()
-            .collect()
+    pub(crate) fn probe(&self, registration: &HolderRegistration) -> HolderProbe {
+        let (reply_tx, reply_rx) = mpsc::sync_channel(1);
+        if let Err(error) = self.try_command(SupervisorCommand::Probe {
+            registration: registration.clone(),
+            reply: reply_tx,
+        }) {
+            return HolderProbe::Unknown {
+                class: match error {
+                    HolderSupervisorError::Overloaded => HolderProbeUnknownClass::Overloaded,
+                    HolderSupervisorError::Unavailable
+                    | HolderSupervisorError::WorkerTerminated
+                    | HolderSupervisorError::Unknown { .. }
+                    | HolderSupervisorError::IdentityMismatch { .. }
+                    | HolderSupervisorError::Process { .. } => HolderProbeUnknownClass::Unavailable,
+                },
+            };
+        }
+        match reply_rx.recv_timeout(HOLDER_PROBE_REPLY_TIMEOUT) {
+            Ok(probe) => probe,
+            Err(RecvTimeoutError::Timeout) => HolderProbe::Unknown {
+                class: HolderProbeUnknownClass::TimedOut,
+            },
+            Err(RecvTimeoutError::Disconnected) => HolderProbe::Unknown {
+                class: HolderProbeUnknownClass::Unavailable,
+            },
+        }
+    }
+
+    pub(crate) fn quiesce_for_finalization(
+        &self,
+        registration: &HolderRegistration,
+    ) -> HolderFinalization {
+        let (reply_tx, reply_rx) = mpsc::sync_channel(1);
+        if let Err(error) = self.try_command(SupervisorCommand::QuiesceForFinalization {
+            registration: registration.clone(),
+            reply: reply_tx,
+        }) {
+            return HolderFinalization::Unknown {
+                class: match error {
+                    HolderSupervisorError::Overloaded => HolderFinalizationUnknownClass::Overloaded,
+                    HolderSupervisorError::Unavailable
+                    | HolderSupervisorError::WorkerTerminated
+                    | HolderSupervisorError::Unknown { .. }
+                    | HolderSupervisorError::IdentityMismatch { .. }
+                    | HolderSupervisorError::Process { .. } => {
+                        HolderFinalizationUnknownClass::Unavailable
+                    }
+                },
+            };
+        }
+        match reply_rx.recv_timeout(HOLDER_FINALIZATION_REPLY_TIMEOUT) {
+            Ok(result) => result,
+            Err(RecvTimeoutError::Timeout) => HolderFinalization::Unknown {
+                class: HolderFinalizationUnknownClass::TimedOut,
+            },
+            Err(RecvTimeoutError::Disconnected) => HolderFinalization::Unknown {
+                class: HolderFinalizationUnknownClass::Unavailable,
+            },
+        }
     }
 
     pub(crate) fn stats(&self) -> HolderSupervisorStats {
@@ -362,13 +534,61 @@ impl HolderSupervisor {
             .take_subscription()
     }
 
+    pub(crate) fn shutdown(&self) -> Result<(), HolderSupervisorError> {
+        let worker = {
+            let mut lifecycle = self
+                .lifecycle
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            loop {
+                match &lifecycle.worker {
+                    SupervisorWorker::Running(_) => {
+                        lifecycle.tx.take();
+                        let SupervisorWorker::Running(worker) =
+                            std::mem::replace(&mut lifecycle.worker, SupervisorWorker::Joining)
+                        else {
+                            unreachable!("running supervisor worker was checked")
+                        };
+                        break worker;
+                    }
+                    SupervisorWorker::Joining => {
+                        lifecycle = self
+                            .lifecycle_changed
+                            .wait(lifecycle)
+                            .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    }
+                    SupervisorWorker::Stopped(result) => return result.clone(),
+                }
+            }
+        };
+
+        let result = worker
+            .join()
+            .map_err(|_| HolderSupervisorError::WorkerTerminated);
+        let mut lifecycle = self
+            .lifecycle
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        lifecycle.worker = SupervisorWorker::Stopped(result.clone());
+        self.lifecycle_changed.notify_all();
+        result
+    }
+
     fn try_command(&self, command: SupervisorCommand) -> Result<(), HolderSupervisorError> {
-        match self
-            .tx
-            .as_ref()
-            .expect("holder supervisor sender exists until drop")
-            .try_send(command)
-        {
+        let tx = {
+            let lifecycle = self
+                .lifecycle
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if !matches!(&lifecycle.worker, SupervisorWorker::Running(_)) {
+                return Err(HolderSupervisorError::Unavailable);
+            }
+            lifecycle
+                .tx
+                .clone()
+                .ok_or(HolderSupervisorError::Unavailable)?
+        };
+        match tx.try_send(command) {
             Ok(()) => Ok(()),
             Err(TrySendError::Full(_)) => Err(HolderSupervisorError::Overloaded),
             Err(TrySendError::Disconnected(_)) => Err(HolderSupervisorError::Unavailable),
@@ -378,38 +598,39 @@ impl HolderSupervisor {
 
 impl Drop for HolderSupervisor {
     fn drop(&mut self) {
-        // Disconnect is the worker's explicit shutdown request. The worker
-        // drains/reaps its owned children before returning, and drop joins so
-        // neither holder children nor the reaper thread outlive the runtime.
-        self.tx.take();
-        let worker = self
-            .worker
-            .get_mut()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .take();
-        if let Some(worker) = worker {
-            let _ = worker.join();
-        }
+        let _ = self.shutdown();
     }
 }
 
 enum SupervisorCommand {
-    #[cfg_attr(not(any(target_os = "linux", test)), allow(dead_code))]
-    Register {
-        registration: HolderRegistration,
-        process: Box<dyn HolderProcess>,
-        reply: SyncSender<Result<(), HolderSupervisorError>>,
+    #[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+    Spawn {
+        workspace_session_id: WorkspaceSessionId,
+        generation: u64,
+        factory: HolderProcessFactory,
+        reply: SyncSender<Result<HolderRegistration, HolderSupervisorError>>,
+        claim: Receiver<()>,
     },
     Terminate {
         registration: HolderRegistration,
         grace: Duration,
         reply: SyncSender<Result<HolderKillReport, HolderSupervisorError>>,
     },
+    Probe {
+        registration: HolderRegistration,
+        reply: SyncSender<HolderProbe>,
+    },
+    QuiesceForFinalization {
+        registration: HolderRegistration,
+        reply: SyncSender<HolderFinalization>,
+    },
 }
 
 struct HolderRecord {
     registration: HolderRegistration,
     process: Box<dyn HolderProcess>,
+    spawn_claim: Option<Receiver<()>>,
+    unclaimed_cleanup_required: bool,
     termination: Option<TerminationAttempt>,
     destroy_requested: bool,
     consecutive_wait_errors: u8,
@@ -419,7 +640,62 @@ struct HolderRecord {
 
 struct TerminationAttempt {
     phase: TerminationPhase,
-    waiters: Vec<SyncSender<Result<HolderKillReport, HolderSupervisorError>>>,
+    waiters: Vec<TerminationWaiter>,
+}
+
+enum TerminationWaiter {
+    Destroy(SyncSender<Result<HolderKillReport, HolderSupervisorError>>),
+    Finalization(SyncSender<HolderFinalization>),
+}
+
+fn notify_termination_success(
+    waiters: Vec<TerminationWaiter>,
+    report: &HolderKillReport,
+) {
+    for waiter in waiters {
+        match waiter {
+            TerminationWaiter::Destroy(reply) => {
+                let _ = reply.send(Ok(report.clone()));
+            }
+            TerminationWaiter::Finalization(reply) => {
+                let _ = reply.send(HolderFinalization::Quiesced);
+            }
+        }
+    }
+}
+
+fn notify_termination_failure(
+    waiters: Vec<TerminationWaiter>,
+    error: &HolderSupervisorError,
+) {
+    for waiter in waiters {
+        match waiter {
+            TerminationWaiter::Destroy(reply) => {
+                let _ = reply.send(Err(error.clone()));
+            }
+            TerminationWaiter::Finalization(reply) => {
+                let class = match error {
+                    HolderSupervisorError::IdentityMismatch { .. } => {
+                        HolderFinalizationUnknownClass::IdentityMismatch
+                    }
+                    HolderSupervisorError::Process { .. } => {
+                        HolderFinalizationUnknownClass::TerminationFailed
+                    }
+                    HolderSupervisorError::Unknown { .. } => {
+                        HolderFinalizationUnknownClass::NotRegistered
+                    }
+                    HolderSupervisorError::Overloaded => {
+                        HolderFinalizationUnknownClass::Overloaded
+                    }
+                    HolderSupervisorError::Unavailable
+                    | HolderSupervisorError::WorkerTerminated => {
+                        HolderFinalizationUnknownClass::Unavailable
+                    }
+                };
+                let _ = reply.send(HolderFinalization::Unknown { class });
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -467,9 +743,9 @@ impl SupervisorLog {
             return Err("holder exit subscription already taken".to_owned());
         }
         let (notifier, subscription) = holder_exit_channel();
-        // Reconcile a holder that exited before dispatcher startup; this wake
-        // safely coalesces with a concurrent exit publication.
-        notifier.notify();
+        if self.stats.holder_exit_total != 0 {
+            notifier.notify();
+        }
         self.exit_notifier = Some(notifier);
         Ok(subscription)
     }
@@ -497,9 +773,6 @@ impl SupervisorLog {
                 self.stats.dropped_event_total = self.stats.dropped_event_total.saturating_add(1);
             }
             self.events.push_back(event.clone());
-        }
-        if let Some(notifier) = &self.exit_notifier {
-            notifier.notify();
         }
         event
     }
@@ -570,16 +843,10 @@ fn shutdown_holder_records(
                 .and_then(|mut record| record.termination.take())
                 .map(|attempt| attempt.waiters)
                 .unwrap_or_default();
-            for waiter in waiters {
-                let _ = waiter.send(Ok(report.clone()));
-            }
+            notify_termination_success(waiters, &report);
         }
     }
 
-    // Signal every remaining child before blocking on any one of them. A
-    // pidfd is intrinsically stable; raw PID fallback still passes through
-    // the immediate identity check. Identity or signal failure never grants
-    // permission to abandon the owned child: it is waited naturally instead.
     for key in &keys {
         let Some(record) = records.get_mut(key) else {
             continue;
@@ -602,16 +869,12 @@ fn shutdown_holder_records(
         match wait_reap_owned(record.process.as_mut()) {
             Ok(exit) => {
                 let report = finish_record(&record, HolderExitReason::Destroy, exit, true, log);
-                for waiter in waiters {
-                    let _ = waiter.send(Ok(report.clone()));
-                }
+                notify_termination_success(waiters, &report);
             }
             Err(message) => {
                 publish_wait_error_terminal(&mut record, log);
                 let error = process_error(&record, message);
-                for waiter in waiters {
-                    let _ = waiter.send(Err(error.clone()));
-                }
+                notify_termination_failure(waiters, &error);
             }
         }
     }
@@ -623,32 +886,67 @@ fn handle_supervisor_command(
     log: &Arc<Mutex<SupervisorLog>>,
 ) {
     match command {
-        SupervisorCommand::Register {
-            registration,
-            mut process,
+        SupervisorCommand::Spawn {
+            workspace_session_id,
+            generation,
+            factory,
             reply,
+            claim,
         } => {
-            let key = RegistrationKey::from(&registration);
-            let result = if records.contains_key(&key) || registration.exit_event().is_some() {
-                abort_unregistered_process(process.as_mut(), &registration.identity);
-                Err(HolderSupervisorError::Process {
-                    workspace_session_id: registration.workspace_session_id.clone(),
-                    message: "duplicate holder registration".to_owned(),
-                })
-            } else {
-                records.insert(
-                    key,
-                    HolderRecord {
-                        registration,
-                        process,
-                        termination: None,
-                        destroy_requested: false,
-                        consecutive_wait_errors: 0,
-                        wait_error_terminal: false,
-                        wait_error_kill_attempted: false,
-                    },
-                );
-                Ok(())
+            let factory_result = panic::catch_unwind(AssertUnwindSafe(|| factory(generation)));
+            let result = match factory_result {
+                Err(_) => Err(HolderSupervisorError::Process {
+                    workspace_session_id,
+                    message: "holder factory panicked".to_owned(),
+                }),
+                Ok(Err(message)) => Err(HolderSupervisorError::Process {
+                    workspace_session_id,
+                    message,
+                }),
+                Ok(Ok((identity, mut process))) if identity.generation != generation => {
+                    abort_unregistered_process(process.as_mut(), &identity);
+                    Err(HolderSupervisorError::Process {
+                        workspace_session_id,
+                        message: format!(
+                            "holder factory returned generation {}, expected {generation}",
+                            identity.generation
+                        ),
+                    })
+                }
+                Ok(Ok((identity, mut process))) => {
+                    let registration = HolderRegistration {
+                        workspace_session_id: workspace_session_id.clone(),
+                        identity: identity.clone(),
+                        exit: Arc::new((Mutex::new(None), Condvar::new())),
+                    };
+                    let key = RegistrationKey::from(&registration);
+                    let duplicate_workspace = records.values().any(|record| {
+                        record.registration.workspace_session_id == workspace_session_id
+                    });
+                    if records.contains_key(&key) || duplicate_workspace {
+                        abort_unregistered_process(process.as_mut(), &identity);
+                        Err(HolderSupervisorError::Process {
+                            workspace_session_id,
+                            message: "duplicate holder registration".to_owned(),
+                        })
+                    } else {
+                        records.insert(
+                            key,
+                            HolderRecord {
+                                registration: registration.clone(),
+                                process,
+                                spawn_claim: Some(claim),
+                                unclaimed_cleanup_required: false,
+                                termination: None,
+                                destroy_requested: false,
+                                consecutive_wait_errors: 0,
+                                wait_error_terminal: false,
+                                wait_error_kill_attempted: false,
+                            },
+                        );
+                        Ok(registration)
+                    }
+                }
             };
             let _ = reply.send(result);
         }
@@ -671,7 +969,7 @@ fn handle_supervisor_command(
                 return;
             };
             if let Some(termination) = record.termination.as_mut() {
-                termination.waiters.push(reply);
+                termination.waiters.push(TerminationWaiter::Destroy(reply));
                 return;
             }
             match start_termination(record, grace, log) {
@@ -685,10 +983,192 @@ fn handle_supervisor_command(
                         .as_mut()
                         .expect("successful termination start installs state")
                         .waiters
-                        .push(reply);
+                        .push(TerminationWaiter::Destroy(reply));
                 }
                 Err(error) => {
                     let _ = reply.send(Err(error));
+                }
+            }
+        }
+        SupervisorCommand::Probe {
+            registration,
+            reply,
+        } => {
+            let key = RegistrationKey::from(&registration);
+            if registration.exit_event().is_some() {
+                let _ = reply.send(HolderProbe::Exited);
+                return;
+            }
+            let Some(record) = records.get_mut(&key) else {
+                let _ = reply.send(HolderProbe::Unknown {
+                    class: HolderProbeUnknownClass::NotRegistered,
+                });
+                return;
+            };
+            if record.registration != registration {
+                let _ = reply.send(HolderProbe::Unknown {
+                    class: HolderProbeUnknownClass::NotRegistered,
+                });
+                return;
+            }
+            let (probe, completion) = match record.process.try_wait() {
+                Ok(None) => {
+                    record.consecutive_wait_errors = 0;
+                    (HolderProbe::Running, None)
+                }
+                Ok(Some(exit)) => {
+                    let reason = if record.destroy_requested {
+                        HolderExitReason::Destroy
+                    } else {
+                        HolderExitReason::Unexpected
+                    };
+                    let holder_was_alive = record.destroy_requested;
+                    let waiters = record
+                        .termination
+                        .take()
+                        .map(|attempt| attempt.waiters)
+                        .unwrap_or_default();
+                    let report = finish_record(record, reason, exit, holder_was_alive, log);
+                    (HolderProbe::Exited, Some((report, waiters)))
+                }
+                Err(message) => {
+                    observe_wait_error(record, &message, log);
+                    if record.wait_error_terminal {
+                        (HolderProbe::Exited, None)
+                    } else {
+                        (
+                            HolderProbe::Unknown {
+                                class: HolderProbeUnknownClass::ObservationFailed,
+                            },
+                            None,
+                        )
+                    }
+                }
+            };
+            if let Some((report, waiters)) = completion {
+                records.remove(&key);
+                notify_termination_success(waiters, &report);
+            }
+            let _ = reply.send(probe);
+        }
+        SupervisorCommand::QuiesceForFinalization {
+            registration,
+            reply,
+        } => {
+            let key = RegistrationKey::from(&registration);
+            if registration.exit_event().is_some() {
+                let _ = reply.send(HolderFinalization::Exited);
+                return;
+            }
+            let Some(record) = records.get_mut(&key) else {
+                let _ = reply.send(HolderFinalization::Unknown {
+                    class: HolderFinalizationUnknownClass::NotRegistered,
+                });
+                return;
+            };
+            if record.registration != registration {
+                let _ = reply.send(HolderFinalization::Unknown {
+                    class: HolderFinalizationUnknownClass::NotRegistered,
+                });
+                return;
+            }
+            if record.termination.is_some() || record.destroy_requested {
+                let _ = reply.send(HolderFinalization::Unknown {
+                    class: HolderFinalizationUnknownClass::TerminationInProgress,
+                });
+                return;
+            }
+
+            match record.process.try_wait() {
+                Ok(Some(exit)) => {
+                    let _ = finish_record(
+                        record,
+                        HolderExitReason::Unexpected,
+                        exit,
+                        false,
+                        log,
+                    );
+                    records.remove(&key);
+                    let _ = reply.send(HolderFinalization::Exited);
+                }
+                Err(message) => {
+                    observe_wait_error(record, &message, log);
+                    let result = if record.wait_error_terminal {
+                        HolderFinalization::Exited
+                    } else {
+                        HolderFinalization::Unknown {
+                            class: HolderFinalizationUnknownClass::ObservationFailed,
+                        }
+                    };
+                    let _ = reply.send(result);
+                }
+                Ok(None) => {
+                    record.consecutive_wait_errors = 0;
+                    if let Err(error) = ensure_identity(record, log) {
+                        let class = match error {
+                            HolderSupervisorError::IdentityMismatch { .. } => {
+                                HolderFinalizationUnknownClass::IdentityMismatch
+                            }
+                            HolderSupervisorError::Process { .. } => {
+                                HolderFinalizationUnknownClass::IdentityValidationFailed
+                            }
+                            HolderSupervisorError::Overloaded => {
+                                HolderFinalizationUnknownClass::Overloaded
+                            }
+                            HolderSupervisorError::Unavailable
+                            | HolderSupervisorError::WorkerTerminated => {
+                                HolderFinalizationUnknownClass::Unavailable
+                            }
+                            HolderSupervisorError::Unknown { .. } => {
+                                HolderFinalizationUnknownClass::NotRegistered
+                            }
+                        };
+                        let _ = reply.send(HolderFinalization::Unknown { class });
+                        return;
+                    }
+
+                    record.destroy_requested = true;
+                    match record.process.send_signal(HolderSignal::Terminate) {
+                        Ok(()) => {
+                            record.termination = Some(TerminationAttempt {
+                                phase: TerminationPhase::Grace {
+                                    deadline: Instant::now(),
+                                },
+                                waiters: vec![TerminationWaiter::Finalization(reply)],
+                            });
+                        }
+                        Err(_) => match record.process.try_wait() {
+                            Ok(Some(exit)) => {
+                                let _ = finish_record(
+                                    record,
+                                    HolderExitReason::Destroy,
+                                    exit,
+                                    true,
+                                    log,
+                                );
+                                records.remove(&key);
+                                let _ = reply.send(HolderFinalization::Quiesced);
+                            }
+                            Ok(None) => {
+                                record.destroy_requested = false;
+                                let _ = reply.send(HolderFinalization::Unknown {
+                                    class: HolderFinalizationUnknownClass::TerminationFailed,
+                                });
+                            }
+                            Err(message) => {
+                                observe_wait_error(record, &message, log);
+                                record.destroy_requested = false;
+                                let result = if record.wait_error_terminal {
+                                    HolderFinalization::Exited
+                                } else {
+                                    HolderFinalization::Unknown {
+                                        class: HolderFinalizationUnknownClass::TerminationFailed,
+                                    }
+                                };
+                                let _ = reply.send(result);
+                            }
+                        },
+                    }
                 }
             }
         }
@@ -732,11 +1212,11 @@ enum PollCompletion {
     None,
     Exited {
         report: HolderKillReport,
-        waiters: Vec<SyncSender<Result<HolderKillReport, HolderSupervisorError>>>,
+        waiters: Vec<TerminationWaiter>,
     },
     AttemptFailed {
         error: HolderSupervisorError,
-        waiters: Vec<SyncSender<Result<HolderKillReport, HolderSupervisorError>>>,
+        waiters: Vec<TerminationWaiter>,
     },
 }
 
@@ -756,14 +1236,10 @@ fn poll_holder_records(
             PollCompletion::None => {}
             PollCompletion::Exited { report, waiters } => {
                 records.remove(&key);
-                for waiter in waiters {
-                    let _ = waiter.send(Ok(report.clone()));
-                }
+                notify_termination_success(waiters, &report);
             }
             PollCompletion::AttemptFailed { error, waiters } => {
-                for waiter in waiters {
-                    let _ = waiter.send(Err(error.clone()));
-                }
+                notify_termination_failure(waiters, &error);
             }
         }
     }
@@ -773,6 +1249,7 @@ fn poll_holder_record(
     record: &mut HolderRecord,
     log: &Arc<Mutex<SupervisorLog>>,
 ) -> PollCompletion {
+    observe_spawn_claim(record);
     let mut wait_failed = false;
     match record.process.try_wait() {
         Ok(Some(exit)) => {
@@ -797,6 +1274,31 @@ fn poll_holder_record(
         }
     }
 
+    if record.unclaimed_cleanup_required && record.termination.is_none() {
+        match start_termination(record, Duration::ZERO, log) {
+            Ok(Some(report)) => {
+                record.unclaimed_cleanup_required = false;
+                return PollCompletion::Exited {
+                    report,
+                    waiters: Vec::new(),
+                };
+            }
+            Ok(None) => {
+                record.unclaimed_cleanup_required = false;
+                return PollCompletion::None;
+            }
+            Err(error) => {
+                // Keep ownership and retry on the next bounded poll. Dropping
+                // the record after one identity/signal failure could orphan a
+                // child that no caller can reach.
+                return PollCompletion::AttemptFailed {
+                    error,
+                    waiters: Vec::new(),
+                };
+            }
+        }
+    }
+
     if wait_failed
         && record.wait_error_terminal
         && !record.wait_error_kill_attempted
@@ -815,12 +1317,23 @@ fn poll_holder_record(
             };
         }
         record.wait_error_kill_attempted = true;
-        record.termination = Some(TerminationAttempt {
-            phase: TerminationPhase::Kill {
-                deadline: Instant::now() + KILL_REAP_TIMEOUT,
-            },
-            waiters: Vec::new(),
-        });
+        match wait_reap_owned(record.process.as_mut()) {
+            Ok(exit) => {
+                let report = finish_record(record, HolderExitReason::WaitError, exit, true, log);
+                return PollCompletion::Exited {
+                    report,
+                    waiters: Vec::new(),
+                };
+            }
+            Err(_) => {
+                record.termination = Some(TerminationAttempt {
+                    phase: TerminationPhase::Kill {
+                        deadline: Instant::now() + WAIT_REAP_RETRY_BACKOFF,
+                    },
+                    waiters: Vec::new(),
+                });
+            }
+        }
     }
 
     let Some(phase) = record.termination.as_ref().map(|attempt| attempt.phase) else {
@@ -855,17 +1368,43 @@ fn poll_holder_record(
                 .take()
                 .map(|attempt| attempt.waiters)
                 .unwrap_or_default();
-            return PollCompletion::AttemptFailed {
-                error: process_error(
-                    record,
-                    "holder did not become reapable within one second after SIGKILL".to_owned(),
-                ),
-                waiters,
-            };
+            match wait_reap_owned(record.process.as_mut()) {
+                Ok(exit) => {
+                    let report = finish_record(record, HolderExitReason::Destroy, exit, true, log);
+                    return PollCompletion::Exited { report, waiters };
+                }
+                Err(message) => {
+                    record.termination = Some(TerminationAttempt {
+                        phase: TerminationPhase::Kill {
+                            deadline: Instant::now() + WAIT_REAP_RETRY_BACKOFF,
+                        },
+                        waiters: Vec::new(),
+                    });
+                    return PollCompletion::AttemptFailed {
+                        error: process_error(record, message),
+                        waiters,
+                    };
+                }
+            }
         }
         TerminationPhase::Grace { .. } | TerminationPhase::Kill { .. } => {}
     }
     PollCompletion::None
+}
+
+fn observe_spawn_claim(record: &mut HolderRecord) {
+    let Some(claim) = record.spawn_claim.as_ref() else {
+        return;
+    };
+    match claim.try_recv() {
+        Ok(()) => record.spawn_claim = None,
+        Err(TryRecvError::Empty) => {}
+        Err(TryRecvError::Disconnected) => {
+            record.spawn_claim = None;
+            record.unclaimed_cleanup_required = true;
+            record.destroy_requested = true;
+        }
+    }
 }
 
 fn observe_wait_error(record: &mut HolderRecord, _message: &str, log: &Arc<Mutex<SupervisorLog>>) {
@@ -881,18 +1420,13 @@ fn publish_wait_error_terminal(record: &mut HolderRecord, log: &Arc<Mutex<Superv
     if record.wait_error_terminal {
         return;
     }
-    // Repeated wait failures mean the sole reap owner can no longer prove the
-    // holder is alive. Fail the public liveness gate closed immediately, then
-    // keep the owned process record so teardown can safely signal and retry
-    // the one and only reap operation.
     record.wait_error_terminal = true;
-    let exit = HolderProcessExit::unknown();
-    let event = {
-        let mut log = log.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-        log.stats.wait_error_total = log.stats.wait_error_total.saturating_add(1);
-        log.publish(&record.registration, HolderExitReason::WaitError, exit)
-    };
-    publish_registration_exit(&record.registration, event);
+    publish_registration_exit(
+        &record.registration,
+        HolderExitReason::WaitError,
+        HolderProcessExit::unknown(),
+        log,
+    );
 }
 
 fn ensure_identity(
@@ -929,42 +1463,40 @@ fn finish_record(
     holder_was_alive: bool,
     log: &Arc<Mutex<SupervisorLog>>,
 ) -> HolderKillReport {
-    // A persistent wait error publishes a fail-closed terminal notification
-    // before the child is eventually reapable. Preserve that first event and
-    // its monotonic counter when the same owner later completes the reap.
-    if record.registration.exit_event().is_some() {
-        return exit.report(holder_was_alive);
-    }
-    let event = log
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
-        .publish(&record.registration, reason, exit);
-    publish_registration_exit(&record.registration, event);
+    publish_registration_exit(&record.registration, reason, exit, log);
     exit.report(holder_was_alive)
 }
 
-fn publish_registration_exit(registration: &HolderRegistration, event: HolderExitEvent) {
-    let mut slot = registration
-        .exit
-        .0
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
-    if slot.is_none() {
-        *slot = Some(event);
-        registration.exit.1.notify_all();
+fn publish_registration_exit(
+    registration: &HolderRegistration,
+    reason: HolderExitReason,
+    exit: HolderProcessExit,
+    log: &Arc<Mutex<SupervisorLog>>,
+) {
+    let notifier = {
+        let mut slot = registration
+            .exit
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if slot.is_some() {
+            return;
+        }
+        let mut log = log.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        if reason == HolderExitReason::WaitError {
+            log.stats.wait_error_total = log.stats.wait_error_total.saturating_add(1);
+        }
+        *slot = Some(log.publish(registration, reason, exit));
+        log.exit_notifier.clone()
+    };
+    registration.exit.1.notify_all();
+    if let Some(notifier) = notifier {
+        notifier.notify();
     }
 }
 
-#[cfg_attr(not(any(target_os = "linux", test)), allow(dead_code))]
-fn abort_rejected_registration(command: SupervisorCommand, identity: &HolderIdentity) {
-    if let SupervisorCommand::Register { mut process, .. } = command {
-        abort_unregistered_process(process.as_mut(), identity);
-    }
-}
-
-/// Before a register command is accepted, the spawning thread is still the
-/// process owner. Once accepted, this helper runs only on the supervisor
-/// thread. In both cases there remains exactly one caller of `try_wait`.
+/// A factory result that cannot be registered remains owned by the stable
+/// supervisor thread until this bounded cleanup attempt has completed.
 fn abort_unregistered_process(process: &mut dyn HolderProcess, identity: &HolderIdentity) {
     if matches!(process.try_wait(), Ok(Some(_))) {
         return;
@@ -1006,7 +1538,7 @@ impl NamespaceRuntime {
         {
             let _ = (setup_timeout_s, plan);
             handle.holder_registration =
-                HolderRegistration::detached_live(handle.workspace_id.clone(), 0);
+                HolderRegistration::unmanaged(handle.workspace_id.clone(), 0);
             Ok(0)
         }
         #[cfg(target_os = "linux")]
@@ -1017,51 +1549,35 @@ impl NamespaceRuntime {
             let control_child_fd = control_read.as_raw_fd();
             clear_cloexec(readiness_child_fd)?;
             clear_cloexec(control_child_fd)?;
-            let mut child = Command::new(std::env::current_exe().map_err(setup_error)?)
-                .arg("ns-holder")
-                .arg(readiness_child_fd.to_string())
-                .arg(control_child_fd.to_string())
-                .arg(plan.network.holder_arg())
-                .stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::piped())
-                .spawn()
-                .map_err(setup_error)?;
-            drop(readiness_write);
-            drop(control_read);
+            let executable = std::env::current_exe().map_err(setup_error)?;
+            let stderr = Arc::new(Mutex::new(None));
+            let process_stderr = Arc::clone(&stderr);
+            let network_arg = plan.network.holder_arg();
+            let registration = self
+                .holder_supervisor
+                .spawn_process(handle.workspace_id.clone(), move |generation| {
+                    spawn_linux_holder_process(
+                        executable,
+                        readiness_write,
+                        control_read,
+                        network_arg,
+                        generation,
+                        process_stderr,
+                    )
+                })
+                .map_err(|error| ns_holder_spawn_error(error, &stderr))?;
+            let holder_pid = registration.identity.pid;
             let readiness_fd = readiness_read.as_raw_fd();
             if let Err(error) = set_nonblocking(readiness_fd)
                 .and_then(|()| expect_line(readiness_fd, b"ns-up", setup_timeout_s))
             {
-                let stderr = child.stderr.take();
-                return Err(ns_holder_startup_error(error, &mut child, stderr));
+                return Err(ns_holder_startup_error(
+                    error,
+                    &registration,
+                    &self.holder_supervisor,
+                    &stderr,
+                ));
             }
-            let holder_pid = match i32::try_from(child.id()) {
-                Ok(holder_pid) => holder_pid,
-                Err(_) => {
-                    let stderr = child.stderr.take();
-                    let error =
-                        setup_error(format!("ns-holder pid does not fit i32: {}", child.id()));
-                    return Err(ns_holder_startup_error(error, &mut child, stderr));
-                }
-            };
-            let generation = self.holder_supervisor.next_generation();
-            let (identity, pidfd) = match inspect_linux_holder(holder_pid, generation) {
-                Ok(identity) => identity,
-                Err(error) => {
-                    let stderr = child.stderr.take();
-                    return Err(ns_holder_startup_error(error, &mut child, stderr));
-                }
-            };
-            let process = LinuxHolderProcess {
-                child,
-                identity: identity.clone(),
-                pidfd,
-            };
-            let registration = self
-                .holder_supervisor
-                .register_process(handle.workspace_id.clone(), identity, Box::new(process))
-                .map_err(setup_error)?;
             handle.readiness_fd = readiness_read.into_raw_fd();
             handle.control_fd = control_write.into_raw_fd();
             handle.holder_pid = holder_pid;
@@ -1091,6 +1607,61 @@ struct LinuxHolderProcess {
     child: Child,
     identity: HolderIdentity,
     pidfd: Option<OwnedFd>,
+    _stderr: Arc<Mutex<Option<ChildStderr>>>,
+}
+
+#[cfg(target_os = "linux")]
+fn spawn_linux_holder_process(
+    executable: PathBuf,
+    readiness_write: OwnedFd,
+    control_read: OwnedFd,
+    network_arg: &'static str,
+    generation: u64,
+    stderr: Arc<Mutex<Option<ChildStderr>>>,
+) -> Result<(HolderIdentity, Box<dyn HolderProcess>), String> {
+    let readiness_child_fd = readiness_write.as_raw_fd();
+    let control_child_fd = control_read.as_raw_fd();
+    let mut child = Command::new(executable)
+        .arg("ns-holder")
+        .arg(readiness_child_fd.to_string())
+        .arg(control_child_fd.to_string())
+        .arg(network_arg)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    *stderr
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = child.stderr.take();
+    let holder_pid = match i32::try_from(child.id()) {
+        Ok(holder_pid) => holder_pid,
+        Err(_) => {
+            let message = format!("ns-holder pid does not fit i32: {}", child.id());
+            return Err(abort_spawned_linux_holder(message, &mut child));
+        }
+    };
+    let (identity, pidfd) = match inspect_linux_holder(holder_pid, generation) {
+        Ok(identity) => identity,
+        Err(error) => return Err(abort_spawned_linux_holder(error.to_string(), &mut child)),
+    };
+    let process = LinuxHolderProcess {
+        child,
+        identity: identity.clone(),
+        pidfd,
+        _stderr: stderr,
+    };
+    Ok((identity, Box::new(process)))
+}
+
+#[cfg(target_os = "linux")]
+fn abort_spawned_linux_holder(message: String, child: &mut Child) -> String {
+    let _ = child.kill();
+    let status = child.wait().ok();
+    format!(
+        "{message}; ns-holder {}",
+        format_exit_status(status.as_ref())
+    )
 }
 
 #[cfg(target_os = "linux")]
@@ -1124,9 +1695,6 @@ impl HolderProcess for LinuxHolderProcess {
     fn wait_reap(&mut self) -> Result<HolderProcessExit, String> {
         match self.child.wait() {
             Ok(status) => Ok(process_exit(status)),
-            // Rust's Unix wait path already retries EINTR. ECHILD means the
-            // kernel has no waitable child, so retaining or looping the Child
-            // handle cannot reap anything and would only hang shutdown.
             Err(error) if error.raw_os_error() == Some(nix::libc::ECHILD) => {
                 Ok(HolderProcessExit::unknown())
             }
@@ -1191,23 +1759,45 @@ fn process_exit(status: std::process::ExitStatus) -> HolderProcessExit {
 }
 
 #[cfg(target_os = "linux")]
+fn ns_holder_spawn_error(
+    error: HolderSupervisorError,
+    stderr: &Arc<Mutex<Option<ChildStderr>>>,
+) -> WorkspaceManagerError {
+    let stderr = take_child_stderr(stderr);
+    WorkspaceManagerError::SetupFailed {
+        step: format!(
+            "{error}; ns-holder stderr: {}",
+            stderr_summary(&read_child_stderr(stderr))
+        ),
+    }
+}
+
+#[cfg(target_os = "linux")]
 fn ns_holder_startup_error(
     error: WorkspaceManagerError,
-    child: &mut Child,
-    stderr: Option<ChildStderr>,
+    registration: &HolderRegistration,
+    supervisor: &HolderSupervisor,
+    stderr: &Arc<Mutex<Option<ChildStderr>>>,
 ) -> WorkspaceManagerError {
     let original_step = match error {
         WorkspaceManagerError::SetupFailed { step } => step,
         other => other.to_string(),
     };
-    let _ = child.kill();
-    let status = child.wait().ok();
-    let stderr = read_child_stderr(stderr);
+    let cleanup = supervisor.terminate(registration, Duration::ZERO);
+    let stderr = take_child_stderr(stderr);
+    let stderr = match &cleanup {
+        Ok(_) => stderr_summary(&read_child_stderr(stderr)),
+        Err(_) => {
+            drop(stderr);
+            "<not read because holder cleanup failed>".to_owned()
+        }
+    };
     WorkspaceManagerError::SetupFailed {
         step: format!(
-            "{original_step}; ns-holder {}; stderr: {}",
-            format_exit_status(status.as_ref()),
-            stderr_summary(&stderr)
+            "{original_step}; ns-holder cleanup: {}; stderr: {stderr}",
+            cleanup
+                .map(|report| format!("{report:?}"))
+                .unwrap_or_else(|cleanup_error| format!("failed: {cleanup_error}")),
         ),
     }
 }
@@ -1232,12 +1822,29 @@ pub(super) fn ns_holder_runtime_error(
 }
 
 #[cfg(target_os = "linux")]
+fn take_child_stderr(stderr: &Arc<Mutex<Option<ChildStderr>>>) -> Option<ChildStderr> {
+    stderr
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .take()
+}
+
+#[cfg(target_os = "linux")]
 fn read_child_stderr(stderr: Option<ChildStderr>) -> String {
     let Some(mut stderr) = stderr else {
         return String::new();
     };
-    let mut output = String::new();
-    let _ = stderr.read_to_string(&mut output);
+    let mut output = Vec::with_capacity(HOLDER_STDERR_LIMIT.min(4096));
+    let _ = stderr
+        .by_ref()
+        .take((HOLDER_STDERR_LIMIT + 1) as u64)
+        .read_to_end(&mut output);
+    let truncated = output.len() > HOLDER_STDERR_LIMIT;
+    output.truncate(HOLDER_STDERR_LIMIT);
+    let mut output = String::from_utf8_lossy(&output).into_owned();
+    if truncated {
+        output.push_str("\n<truncated>");
+    }
     output
 }
 

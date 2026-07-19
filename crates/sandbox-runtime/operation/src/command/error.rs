@@ -32,6 +32,11 @@ pub enum CommandServiceError {
     #[error("command admission refused: {max_active_commands} active commands in flight")]
     CommandAdmissionOverloaded { max_active_commands: usize },
 
+    #[error("command already exists: {command_session_id:?}")]
+    CommandAlreadyExists {
+        command_session_id: NamespaceExecutionId,
+    },
+
     #[error("command finalization failed for {command_session_id:?}: {error}")]
     CommandFinalizationFailed {
         command_session_id: NamespaceExecutionId,

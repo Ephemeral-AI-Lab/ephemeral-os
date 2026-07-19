@@ -166,10 +166,15 @@ fn spawn_output_reader(master: File, sink: impl FnMut(&[u8]) + Send + 'static) {
 
 #[allow(dead_code)]
 pub(crate) fn output_reactor_snapshot() -> OutputReactorSnapshot {
-    let reactor = output_reactor();
-    OutputReactorSnapshot {
-        worker_threads: 1,
-        active_readers: reactor.active_readers.load(Ordering::Acquire),
+    match OUTPUT_REACTOR.get() {
+        Some(reactor) => OutputReactorSnapshot {
+            worker_threads: 1,
+            active_readers: reactor.active_readers.load(Ordering::Acquire),
+        },
+        None => OutputReactorSnapshot {
+            worker_threads: 0,
+            active_readers: 0,
+        },
     }
 }
 

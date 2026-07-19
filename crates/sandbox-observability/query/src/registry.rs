@@ -1,5 +1,6 @@
 use sandbox_operation_catalog::observability::{
-    CGROUP_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TOPOLOGY_SPEC, TRACE_SPEC,
+    CGROUP_SPEC, DAEMON_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TOPOLOGY_SPEC,
+    TRACE_SPEC,
 };
 use sandbox_operation_contract::{
     OperationRequest, OperationResponse, OperationScopeKind, OperationSpec,
@@ -22,6 +23,7 @@ const OPERATIONS: &[OperationEntry] = &[
     OperationEntry::new(&EVENTS_SPEC, query::events),
     OperationEntry::new(&CGROUP_SPEC, query::cgroup),
     OperationEntry::new(&TOPOLOGY_SPEC, query::topology),
+    OperationEntry::new(&DAEMON_SPEC, query::daemon),
     OperationEntry::new(&LAYERSTACK_SPEC, query::layerstack),
 ];
 

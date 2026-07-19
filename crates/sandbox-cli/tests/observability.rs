@@ -33,6 +33,7 @@ async fn help_lists_exact_observability_catalog() {
             "trace",
             "events",
             "resources",
+            "daemon",
             "topology",
             "cgroup",
             "layerstack"
@@ -107,6 +108,7 @@ async fn scoped_operations_use_concrete_names_and_catalog_defaults() {
         ("trace", json!({"trace_id": "last"})),
         ("events", json!({})),
         ("resources", json!({"window_ms": 60000})),
+        ("daemon", json!({})),
         ("topology", json!({})),
         ("cgroup", json!({"scope": "sandbox", "window_ms": 60000})),
         ("layerstack", json!({"window_ms": 60000})),
@@ -143,7 +145,14 @@ async fn scoped_operations_use_concrete_names_and_catalog_defaults() {
 
 #[tokio::test]
 async fn non_snapshot_views_require_sandbox_id_before_gateway_io() {
-    for view in ["trace", "events", "topology", "cgroup", "layerstack"] {
+    for view in [
+        "trace",
+        "events",
+        "daemon",
+        "topology",
+        "cgroup",
+        "layerstack",
+    ] {
         let listener = TcpListener::bind("127.0.0.1:0")
             .await
             .expect("bind unreachable gateway");

@@ -22,6 +22,9 @@ const RESOURCES_ARGUMENTS: &[ArgumentProjection] = &[
     ArgumentProjection::flag("window_ms", "--window-ms"),
 ];
 
+const DAEMON_ARGUMENTS: &[ArgumentProjection] =
+    &[ArgumentProjection::flag("sandbox_id", "--sandbox-id")];
+
 const TOPOLOGY_ARGUMENTS: &[ArgumentProjection] =
     &[ArgumentProjection::flag("sandbox_id", "--sandbox-id")];
 
@@ -78,6 +81,13 @@ const OPERATIONS: &[OperationProjection] = &[
             "sandbox-observability-cli resources --sandbox-id eos-abc --window-ms 60000",
         ],
         arguments: RESOURCES_ARGUMENTS,
+    },
+    OperationProjection {
+        name: "daemon",
+        path: &["observability", "daemon"],
+        usage: "sandbox-observability-cli daemon --sandbox-id ID",
+        examples: &["sandbox-observability-cli daemon --sandbox-id eos-abc"],
+        arguments: DAEMON_ARGUMENTS,
     },
     OperationProjection {
         name: "topology",

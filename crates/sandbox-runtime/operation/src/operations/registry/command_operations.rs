@@ -115,6 +115,16 @@ fn command_service_error_response(error: CommandServiceError) -> OperationRespon
             json!({ "max_active_commands": *max_active_commands }),
         );
     }
+    if let CommandServiceError::CommandAlreadyExists { command_session_id } = &error {
+        return OperationResponse::fault_with_details(
+            "operation_conflict",
+            "command session id already exists",
+            json!({
+                "command_session_id": command_session_id.0.as_str(),
+                "conflict": "duplicate_command_session_id",
+            }),
+        );
+    }
     let details = command_error_details(&error);
     OperationResponse::fault_with_details("operation_failed", error.to_string(), details)
 }
@@ -129,6 +139,9 @@ fn command_error_details(error: &CommandServiceError) -> Value {
             "workspace_session_id": workspace_session_id.0.as_str(),
         }),
         CommandServiceError::CommandFinalizationFailed {
+            command_session_id, ..
+        }
+        | CommandServiceError::CommandAlreadyExists {
             command_session_id, ..
         } => json!({
             "command_session_id": command_session_id.0.as_str(),
@@ -164,6 +177,10 @@ fn command_output_value(output: CommandOutput) -> Value {
     if let Some(reject_class) = output.publish_rejected {
         value["publish_rejected"] = Value::Bool(true);
         value["publish_reject_class"] = Value::String(reject_class.to_owned());
+    }
+    if let Some(failure_class) = output.finalization_failed {
+        value["finalization_failed"] = Value::Bool(true);
+        value["finalization_failure_class"] = Value::String(failure_class.to_owned());
     }
     value
 }
@@ -252,24 +269,5 @@ fn content_fingerprint_value(
         sandbox_runtime_layerstack::ContentFingerprint::Directory => json!({
             "kind": "directory",
         }),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn closed_workspace_command_error_keeps_the_structured_session_id() {
-        let error = CommandServiceError::WorkspaceSession(
-            crate::workspace_session::WorkspaceSessionError::NotFound {
-                workspace_session_id: WorkspaceSessionId("ws-closed".to_owned()),
-            },
-        );
-
-        assert_eq!(
-            command_error_details(&error),
-            json!({ "workspace_session_id": "ws-closed" })
-        );
     }
 }

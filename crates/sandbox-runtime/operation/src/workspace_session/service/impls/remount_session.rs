@@ -113,7 +113,7 @@ impl WorkspaceSessionService {
             }
             Err(error) => return vec![format!("resolve for destroy: {error}")],
         };
-        match self.destroy_session(
+        match self.destroy_session_under_gate(
             handler,
             crate::workspace_crate::DestroyWorkspaceRequest::default(),
         ) {

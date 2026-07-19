@@ -5,6 +5,7 @@ use crate::service::WorkspaceRuntimeService;
 
 impl WorkspaceRuntimeService {
     pub fn latest_snapshot(&self) -> Result<ReadonlySnapshotHandle, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if let Some(hooks) = self.hooks() {
             return (hooks.latest_snapshot)();
         }

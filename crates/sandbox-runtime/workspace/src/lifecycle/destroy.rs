@@ -8,7 +8,9 @@ use serde_json::{json, Value};
 use crate::model::{NetworkProfile, WorkspaceSessionId};
 use crate::namespace::HolderKillReport;
 use crate::overlay::tree::TreeResourceStats;
-use crate::session::manager::WorkspaceManagerError;
+use crate::session::manager::{
+    WorkspaceManagerError, WorkspaceManagerShutdownReport, WorkspaceShutdownFailure,
+};
 use crate::session::{MountedWorkspace, WorkspaceManager};
 
 use super::{monotonic_seconds, record_phase_ms};
@@ -213,6 +215,50 @@ pub struct ExitOutcome {
 }
 
 impl WorkspaceManager {
+    #[must_use]
+    pub fn shutdown_all(&mut self) -> WorkspaceManagerShutdownReport {
+        let mut workspace_ids = self
+            .handles
+            .keys()
+            .chain(self.teardowns.keys())
+            .cloned()
+            .collect::<Vec<_>>();
+        workspace_ids.sort_by(|left, right| left.0.cmp(&right.0));
+        workspace_ids.dedup();
+
+        let mut report = WorkspaceManagerShutdownReport {
+            attempted_workspace_ids: workspace_ids.clone(),
+            ..WorkspaceManagerShutdownReport::default()
+        };
+        for workspace_session_id in workspace_ids {
+            match self.close(&workspace_session_id, None) {
+                Ok(_) => report.closed_workspace_ids.push(workspace_session_id),
+                Err(WorkspaceManagerError::TeardownFailed {
+                    workspace_session_id,
+                    failures,
+                }) => report.retryable_failures.push(WorkspaceShutdownFailure {
+                    workspace_session_id,
+                    failures,
+                }),
+                Err(error) => report.retryable_failures.push(WorkspaceShutdownFailure {
+                    workspace_session_id,
+                    failures: vec![error.to_string()],
+                }),
+            }
+        }
+        report.remaining_workspace_ids = self
+            .handles
+            .keys()
+            .chain(self.teardowns.keys())
+            .cloned()
+            .collect();
+        report
+            .remaining_workspace_ids
+            .sort_by(|left, right| left.0.cmp(&right.0));
+        report.remaining_workspace_ids.dedup();
+        report
+    }
+
     pub fn close(
         &mut self,
         workspace_id: &WorkspaceSessionId,
@@ -266,11 +312,6 @@ impl WorkspaceManager {
                 .map(|failure| format!("{:?}: {}", failure.step, failure.message))
                 .collect::<Vec<_>>();
             self.teardowns.insert(workspace_id.clone(), transaction);
-
-            // During execution the current transaction is intentionally out
-            // of the map, so terminal persistence can remove its old record.
-            // Once a step fails, put it back first and durably retain that
-            // retry handle. A persistence outage remains explicit too.
             if let Err(error) = self.persist_handles() {
                 failures.push(format!("RetainPersistence: {error}"));
             }
@@ -280,7 +321,10 @@ impl WorkspaceManager {
             });
         }
 
-        Ok(transaction.outcome(self))
+        let holder_registration = transaction.handle.holder_registration.clone();
+        let outcome = transaction.outcome(self);
+        self.record_completed_teardown(workspace_id, holder_registration, outcome.clone());
+        Ok(outcome)
     }
 }
 
@@ -295,9 +339,6 @@ impl TeardownStepExecutor for ManagerTeardownExecutor<'_> {
         let started_at = Instant::now();
         let result = match step {
             TeardownStep::Holder => self.terminate_holder(),
-            // Command sessions are owned by the operation layer. It clears
-            // that ledger under the admission gate before calling manager
-            // teardown; killing the holder also terminates its descendants.
             TeardownStep::Commands => Ok(()),
             TeardownStep::NamespaceFds => close_handle_fds(&mut self.transaction.handle),
             TeardownStep::Network => self.teardown_network(),
@@ -363,10 +404,6 @@ impl ManagerTeardownExecutor<'_> {
         if !self.transaction.holder_terminal {
             return Err("deferred until the namespace holder is reaped".to_owned());
         }
-        // Overlay mounts live only in the holder namespace. Waiting the sole
-        // holder and closing every namespace fd releases that namespace and
-        // therefore its mounts; no host-wide name lookup or broad unmount is
-        // permitted here.
         if !self.transaction.handle.ns_fds.is_empty()
             || self.transaction.handle.readiness_fd >= 0
             || self.transaction.handle.control_fd >= 0

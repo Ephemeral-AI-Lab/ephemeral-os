@@ -46,9 +46,8 @@ impl WorkspaceSessionService {
                         }
                         Err(error) => {
                             let publish_reject_class = publish_reject_class(&error);
-                            let _ = finalize_outcome.set(FinalizeOutcome {
-                                publish_reject_class,
-                            });
+                            let _ = finalize_outcome
+                                .set(FinalizeOutcome::publish_rejected(publish_reject_class));
                             span.status(SpanStatus::Error)
                                 .attr("publish_reject_class", publish_reject_class);
                             self.obs().event(
@@ -108,7 +107,8 @@ impl WorkspaceSessionService {
     }
 
     fn destroy_finalized_session(&self, handler: &WorkspaceSessionHandler) {
-        let destroyed = self.destroy_session(handler.clone(), DestroyWorkspaceRequest::default());
+        let destroyed =
+            self.destroy_session_under_gate(handler.clone(), DestroyWorkspaceRequest::default());
         if let Err(error) = destroyed {
             let failure = WorkspaceSessionError::FinalizationFailed {
                 workspace_session_id: handler.workspace_session_id.clone(),

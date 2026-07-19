@@ -12,6 +12,7 @@ impl WorkspaceRuntimeService {
         handle: &WorkspaceHandle,
         request: CaptureChangesRequest,
     ) -> Result<CapturedWorkspaceChanges, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if let Some(hooks) = self.hooks() {
             return (hooks.capture_changes)(handle, request);
         }
@@ -23,6 +24,9 @@ impl WorkspaceRuntimeService {
                 .handles
                 .get(&handle.id)
                 .ok_or(WorkspaceError::NotOpen)?;
+            if !handle.matches_mounted_workspace(session) || !handle.holder_is_live() {
+                return Err(WorkspaceError::NotOpen);
+            }
             session.dirs.upperdir.clone()
         };
         let captured = crate::overlay::capture::capture_upperdir(&upperdir).map_err(|error| {

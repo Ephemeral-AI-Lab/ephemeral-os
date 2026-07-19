@@ -200,6 +200,24 @@ fn startup_rechecks_an_existing_above_threshold_manifest() {
 }
 
 #[test]
+fn autosquash_worker_retires_at_idle_and_restarts_for_a_commit() {
+    let log = TempTraceLog::new("worker-lifecycle");
+    let observer = observed(&log);
+    let (operations, _root) = operations(Some(10), observer);
+
+    wait_for_evaluation(&log, 1);
+    wait_for(Duration::from_secs(2), || {
+        operations.autosquash_worker_threads() == 0
+    });
+
+    amend(&operations.layerstack, "restart.txt", b"restart");
+    wait_for_evaluation(&log, 2);
+    wait_for(Duration::from_secs(2), || {
+        operations.autosquash_worker_threads() == 0
+    });
+}
+
+#[test]
 fn no_op_amend_creates_neither_layer_nor_notification() {
     let log = TempTraceLog::new("noop");
     let observer = observed(&log);
@@ -332,6 +350,17 @@ fn startup_manifest_failure_emits_one_failed_terminal_record() {
         }
         _ => None,
     });
+    // The failure event is emitted inside the evaluation span, while the span
+    // itself is appended when its guard drops. Wait for that terminal write
+    // before taking a trace snapshot so this assertion cannot race the worker.
+    let evaluate = wait_for_record(&log, |record| match record {
+        Record::Span(span)
+            if span.trace == failed.0 && span.name == names::LAYERSTACK_AUTOSQUASH_EVALUATE =>
+        {
+            Some(span.clone())
+        }
+        _ => None,
+    });
     let trace = records(&log)
         .into_iter()
         .filter(|record| match record {
@@ -340,13 +369,6 @@ fn startup_manifest_failure_emits_one_failed_terminal_record() {
             Record::Sample(_) => false,
         })
         .collect::<Vec<_>>();
-    let evaluate = trace
-        .iter()
-        .find_map(|record| match record {
-            Record::Span(span) if span.name == names::LAYERSTACK_AUTOSQUASH_EVALUATE => Some(span),
-            _ => None,
-        })
-        .expect("failed evaluation span");
 
     assert_eq!(evaluate.status, SpanStatus::Error);
     assert_eq!(evaluate.attrs["trigger_reason"], "startup");

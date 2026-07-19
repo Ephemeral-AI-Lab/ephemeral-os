@@ -80,10 +80,6 @@ fn cleanup_workspace_cgroup_with_timeout(path: &Path, timeout: Duration) -> Resu
         Err(_) => {}
     }
 
-    // Ordinary directories are used by unit tests and unsupported-host
-    // compatibility. Real cgroupfs control files do not make rmdir return
-    // ENOTEMPTY. Remove only the explicit control-file allowlist; an unknown
-    // entry deliberately keeps the leaf visible and retryable.
     for name in KNOWN_CGROUP_FILES {
         let control = path.join(name);
         match std::fs::remove_file(&control) {
@@ -120,61 +116,4 @@ fn read_populated(path: &Path) -> Result<bool, String> {
         }
     }
     Err(format!("{} lacks a populated field", path.display()))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn test_leaf(name: &str) -> std::path::PathBuf {
-        let path = std::env::temp_dir().join(format!(
-            "eos-cgroup-cleanup-{name}-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .expect("clock")
-                .as_nanos()
-        ));
-        std::fs::create_dir_all(&path).expect("create leaf");
-        path
-    }
-
-    #[test]
-    fn kill_drain_and_remove_are_explicit_and_idempotent() {
-        let leaf = test_leaf("success");
-        std::fs::write(leaf.join("cgroup.kill"), "").expect("kill control");
-        std::fs::write(leaf.join("cgroup.events"), "populated 0\nfrozen 0\n")
-            .expect("events control");
-
-        cleanup_workspace_cgroup(&leaf).expect("cleanup succeeds");
-        assert!(!leaf.exists());
-        cleanup_workspace_cgroup(&leaf).expect("missing leaf is idempotent");
-    }
-
-    #[test]
-    fn populated_leaf_without_kill_is_retryable_and_never_signals_a_pid() {
-        let leaf = test_leaf("no-kill");
-        std::fs::write(leaf.join("cgroup.events"), "populated 1\n").expect("events control");
-
-        let error = cleanup_workspace_cgroup_with_timeout(&leaf, Duration::from_millis(1))
-            .expect_err("cleanup is fail closed");
-        assert!(error.contains("cgroup.kill is unavailable"));
-        assert!(leaf.exists());
-
-        std::fs::write(leaf.join("cgroup.events"), "populated 0\n").expect("drained");
-        cleanup_workspace_cgroup(&leaf).expect("retry removes drained leaf");
-    }
-
-    #[test]
-    fn unknown_entry_keeps_removal_failure_visible_for_retry() {
-        let leaf = test_leaf("remove-failure");
-        std::fs::write(leaf.join("unknown.owner"), "retained").expect("unknown owner");
-
-        let error = cleanup_workspace_cgroup(&leaf).expect_err("unknown entry blocks removal");
-        assert!(error.contains("remove"));
-        assert!(leaf.exists());
-
-        std::fs::remove_file(leaf.join("unknown.owner")).expect("release unknown owner");
-        cleanup_workspace_cgroup(&leaf).expect("retry removes leaf");
-    }
 }

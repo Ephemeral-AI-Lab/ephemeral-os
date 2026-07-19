@@ -4,7 +4,7 @@
 //! modules own network-mode-specific setup, shared holder, overlay, teardown,
 //! and persistence behavior.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -13,13 +13,28 @@ use serde::Deserialize;
 
 use crate::isolated_network_setup::IsolatedNetwork;
 use crate::lifecycle::destroy::TeardownTransaction;
-use crate::model::{WorkspaceOwnershipSnapshot, WorkspaceSessionId};
+use crate::model::{WorkspaceHandle, WorkspaceOwnershipSnapshot, WorkspaceSessionId};
+use crate::namespace::holder::HolderRegistration;
 use crate::namespace::NamespaceRuntime;
 pub use crate::session::{HolderNsFds, MountedWorkspace};
 
 pub use crate::lifecycle::ExitOutcome;
 
 pub(crate) const PERSISTED_HANDLES_SCHEMA_VERSION: u32 = 1;
+const COMPLETED_TEARDOWN_CAPACITY: usize = 128;
+
+#[derive(Clone)]
+pub(crate) struct CompletedTeardown {
+    workspace_session_id: WorkspaceSessionId,
+    holder_registration: HolderRegistration,
+    outcome: ExitOutcome,
+}
+
+impl CompletedTeardown {
+    fn matches(&self, handle: &WorkspaceHandle) -> bool {
+        handle.matches_holder_generation(&self.workspace_session_id, &self.holder_registration)
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -75,6 +90,27 @@ pub enum WorkspaceManagerError {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceShutdownFailure {
+    pub workspace_session_id: WorkspaceSessionId,
+    pub failures: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WorkspaceManagerShutdownReport {
+    pub attempted_workspace_ids: Vec<WorkspaceSessionId>,
+    pub closed_workspace_ids: Vec<WorkspaceSessionId>,
+    pub retryable_failures: Vec<WorkspaceShutdownFailure>,
+    pub remaining_workspace_ids: Vec<WorkspaceSessionId>,
+}
+
+impl WorkspaceManagerShutdownReport {
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.retryable_failures.is_empty() && self.remaining_workspace_ids.is_empty()
+    }
+}
+
 pub struct WorkspaceManager {
     pub(crate) workspace_root: String,
     pub(crate) caps: ResourceCaps,
@@ -88,6 +124,7 @@ pub struct WorkspaceManager {
     pub(crate) layer_stack_root: Option<PathBuf>,
     pub(crate) handles: HashMap<WorkspaceSessionId, MountedWorkspace>,
     pub(crate) teardowns: HashMap<WorkspaceSessionId, TeardownTransaction>,
+    pub(crate) completed_teardowns: VecDeque<CompletedTeardown>,
 }
 
 impl WorkspaceManager {
@@ -118,6 +155,7 @@ impl WorkspaceManager {
             layer_stack_root: None,
             handles: HashMap::new(),
             teardowns: HashMap::new(),
+            completed_teardowns: VecDeque::with_capacity(COMPLETED_TEARDOWN_CAPACITY),
         }
     }
 
@@ -133,6 +171,56 @@ impl WorkspaceManager {
 
     pub(crate) fn handle(&self, workspace_id: &WorkspaceSessionId) -> Option<&MountedWorkspace> {
         self.handles.get(workspace_id)
+    }
+
+    pub(crate) fn owns_handle_generation(&self, handle: &WorkspaceHandle) -> bool {
+        self.handles
+            .get(&handle.id)
+            .or_else(|| {
+                self.teardowns
+                    .get(&handle.id)
+                    .map(TeardownTransaction::owned_handle)
+            })
+            .is_some_and(|mounted| handle.matches_mounted_workspace(mounted))
+            || self
+                .completed_teardowns
+                .iter()
+                .any(|completed| completed.matches(handle))
+    }
+
+    pub(crate) fn completed_teardown_outcome(
+        &self,
+        handle: &WorkspaceHandle,
+    ) -> Option<ExitOutcome> {
+        self.completed_teardowns
+            .iter()
+            .find(|completed| completed.matches(handle))
+            .map(|completed| completed.outcome.clone())
+    }
+
+    pub(crate) fn record_completed_teardown(
+        &mut self,
+        workspace_session_id: WorkspaceSessionId,
+        holder_registration: HolderRegistration,
+        outcome: ExitOutcome,
+    ) {
+        self.completed_teardowns.retain(|completed| {
+            completed.workspace_session_id != workspace_session_id
+                || completed.holder_registration != holder_registration
+        });
+        if self.completed_teardowns.len() == COMPLETED_TEARDOWN_CAPACITY {
+            self.completed_teardowns.pop_front();
+        }
+        self.completed_teardowns.push_back(CompletedTeardown {
+            workspace_session_id,
+            holder_registration,
+            outcome,
+        });
+    }
+
+    pub(crate) fn forget_completed_teardowns(&mut self, workspace_session_id: &WorkspaceSessionId) {
+        self.completed_teardowns
+            .retain(|completed| completed.workspace_session_id != *workspace_session_id);
     }
 
     pub(crate) fn ensure_workspace_available(
@@ -196,6 +284,13 @@ impl WorkspaceManager {
             .get(workspace_id)
             .and_then(|workspace| workspace.veth.as_ref())
             .map(|veth| veth.ns_ip)
+    }
+}
+
+impl Drop for WorkspaceManager {
+    fn drop(&mut self) {
+        let _ = self.shutdown_all();
+        let _ = self.runtime.shutdown();
     }
 }
 

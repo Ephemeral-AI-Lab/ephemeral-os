@@ -15,13 +15,11 @@ use sandbox_runtime::workspace_session::{
     CreateSessionRequest, FinalizePolicy, WorkspaceSessionService,
 };
 use sandbox_runtime::{LayerstackRuntimeConfig, SandboxRuntimeOperations};
-use sandbox_runtime_layerstack::{
-    manifest_root_hash, LayerChange, LayerPath, LayerStack,
-};
+use sandbox_runtime_layerstack::{manifest_root_hash, LayerChange, LayerPath, LayerStack};
 use sandbox_runtime_workspace::{
     run_result_ok, CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest,
-    FileRunnerDirEntry, FileRunnerDirEntryKind, FileRunnerResult, LayerStackSnapshotRef, LeaseId,
-    NetworkProfile, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
+    FileRunnerDirEntry, FileRunnerDirEntryKind, FileRunnerResult, HolderProbe,
+    LayerStackSnapshotRef, LeaseId, NetworkProfile, WorkspaceError, WorkspaceHandle, WorkspaceRuntimeHooks,
     WorkspaceRuntimeService, WorkspaceSessionId,
 };
 use serde_json::{json, Value};
@@ -30,8 +28,9 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 use tokio::time::{timeout, Duration};
 use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
 
-use crate::rpc::ServerConfig;
+use crate::rpc::{ConnectionAdmission, ServerConfig};
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -41,6 +40,8 @@ struct HttpTestServer {
     task: JoinHandle<()>,
     root: PathBuf,
     operations: Arc<SandboxRuntimeOperations>,
+    connection_admission: ConnectionAdmission,
+    async_tasks: TaskTracker,
 }
 
 impl HttpTestServer {
@@ -57,14 +58,16 @@ impl HttpTestServer {
         let listener = TcpListener::bind("127.0.0.1:0").await?;
         let addr = listener.local_addr()?;
         let shutdown = CancellationToken::new();
+        let connection_admission = ConnectionAdmission::new(max_concurrent_connections);
+        let async_tasks = TaskTracker::new();
         let task = crate::http::spawn(
             listener,
             server_config(&root),
             Arc::clone(&operations),
             Observer::disabled(),
             crate::rpc::BlockingAdmission::new(max_blocking_requests),
-            crate::rpc::ConnectionAdmission::new(max_concurrent_connections),
-            tokio_util::task::TaskTracker::new(),
+            connection_admission.clone(),
+            async_tasks.clone(),
             shutdown.clone(),
         );
         Ok(Self {
@@ -73,12 +76,18 @@ impl HttpTestServer {
             task,
             root,
             operations,
+            connection_admission,
+            async_tasks,
         })
     }
 
     async fn stop(self) -> TestResult {
         self.shutdown.cancel();
         self.task.await?;
+        self.async_tasks.close();
+        timeout(Duration::from_secs(1), self.async_tasks.wait())
+            .await
+            .expect("HTTP tasks drained");
         std::fs::remove_dir_all(self.root)?;
         Ok(())
     }
@@ -129,12 +138,10 @@ async fn health_and_router_are_an_exact_allowlist() -> TestResult {
             },
         })
     );
-    assert!(
-        health
-            .head
-            .to_ascii_lowercase()
-            .contains("content-type: application/json")
-    );
+    assert!(health
+        .head
+        .to_ascii_lowercase()
+        .contains("content-type: application/json"));
 
     for (method, path) in [
         ("POST", "/health"),
@@ -163,14 +170,7 @@ async fn health_and_router_are_an_exact_allowlist() -> TestResult {
 #[tokio::test]
 async fn http_connection_and_blocking_overloads_are_bounded_and_structured() -> TestResult {
     let connection_limited = HttpTestServer::start_with_admission(8, 0).await?;
-    let response = send_request(
-        connection_limited.addr,
-        "POST",
-        "/files/list",
-        &[],
-        b"{}",
-    )
-    .await?;
+    let response = send_request(connection_limited.addr, "POST", "/files/list", &[], b"{}").await?;
     assert_eq!(response.status, 503);
     let body: Value = serde_json::from_slice(&response.body)?;
     assert_eq!(body["error"]["kind"], "server_busy");
@@ -181,14 +181,7 @@ async fn http_connection_and_blocking_overloads_are_bounded_and_structured() -> 
     connection_limited.stop().await?;
 
     let blocking_limited = HttpTestServer::start_with_admission(0, 1).await?;
-    let response = send_request(
-        blocking_limited.addr,
-        "POST",
-        "/files/list",
-        &[],
-        b"{}",
-    )
-    .await?;
+    let response = send_request(blocking_limited.addr, "POST", "/files/list", &[], b"{}").await?;
     assert_eq!(response.status, 429);
     let body: Value = serde_json::from_slice(&response.body)?;
     assert_eq!(body["error"]["kind"], "server_busy");
@@ -223,7 +216,10 @@ async fn file_list_preserves_root_published_live_and_transport_contracts() -> Te
     .await?;
     assert_eq!(bounded.status, 200);
     let bounded: Value = serde_json::from_slice(&bounded.body)?;
-    assert_eq!(bounded["entries"].as_array().expect("entries array").len(), 1);
+    assert_eq!(
+        bounded["entries"].as_array().expect("entries array").len(),
+        1
+    );
     assert_eq!(bounded["truncated"], true);
 
     let zero_limit = send_request(
@@ -503,16 +499,106 @@ async fn forward_upgrade_tunnels_bytes() -> TestResult {
     server.stop().await
 }
 
+#[tokio::test]
+async fn forward_upgrade_remains_admitted_and_shutdown_drains_tasks() -> TestResult {
+    let server = HttpTestServer::start_with_admission(8, 1).await?;
+    let upstream = TcpListener::bind("127.0.0.1:0").await?;
+    let upstream_port = upstream.local_addr()?.port();
+    let upstream_task = tokio::spawn(async move {
+        let (mut stream, _) = upstream.accept().await?;
+        read_http_head(&mut stream).await?;
+        stream
+            .write_all(
+                b"HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: eos-test\r\n\r\n",
+            )
+            .await?;
+        let mut bytes = Vec::new();
+        stream.read_to_end(&mut bytes).await?;
+        TestResult::Ok(())
+    });
+
+    let mut client = TcpStream::connect(server.addr).await?;
+    client
+        .write_all(
+            format!(
+                "GET /forward/shared/{upstream_port}/socket HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: Upgrade\r\nUpgrade: eos-test\r\n\r\n"
+            )
+            .as_bytes(),
+        )
+        .await?;
+    let head = timeout(Duration::from_secs(1), read_http_head(&mut client)).await??;
+    assert!(String::from_utf8(head)?.starts_with("HTTP/1.1 101 Switching Protocols\r\n"));
+    tokio::time::sleep(Duration::from_millis(25)).await;
+
+    assert_eq!(server.connection_admission.in_use(), 1);
+    assert!(server.async_tasks.len() >= 2);
+    let overloaded = send_request(server.addr, "GET", "/health", &[], b"").await?;
+    assert_eq!(overloaded.status, 503);
+
+    server.stop().await?;
+    timeout(Duration::from_secs(1), upstream_task).await???;
+    drop(client);
+    Ok(())
+}
+
+#[tokio::test]
+async fn daemon_shutdown_runs_runtime_teardown_and_removes_published_artifacts() -> TestResult {
+    // Keep the Unix-domain socket below the platform path-length limit; the
+    // general HTTP fixture root is intentionally more descriptive and longer.
+    let root = PathBuf::from(format!("/tmp/eos-daemon-life-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root)?;
+    let operations = test_operations(&root)?;
+    let config = server_config(&root);
+    let socket_path = config.socket_path.clone();
+    let pid_path = config.pid_path.clone();
+    let shutdown = CancellationToken::new();
+    let server = crate::rpc::SandboxDaemonServer {
+        blocking_admission: crate::rpc::BlockingAdmission::new(config.max_blocking_requests),
+        connection_admission: ConnectionAdmission::new(config.max_concurrent_connections),
+        async_tasks: TaskTracker::new(),
+        config,
+        operations: Arc::clone(&operations),
+        observability: None,
+        shutdown: shutdown.clone(),
+    };
+
+    let serve = tokio::spawn(server.serve());
+    timeout(Duration::from_secs(1), async {
+        while !(socket_path.exists() && pid_path.exists()) {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("daemon publishes socket and pid");
+
+    shutdown.cancel();
+    let result = timeout(Duration::from_secs(3), serve)
+        .await
+        .expect("daemon shutdown is bounded")
+        .expect("serve task joins");
+    let error = result.expect_err("incomplete runtime teardown is reported");
+    assert!(error.to_string().contains("runtime shutdown incomplete"));
+    assert!(
+        !socket_path.exists(),
+        "socket artifact must always be removed"
+    );
+    assert!(!pid_path.exists(), "pid artifact must always be removed");
+
+    let report = operations.shutdown();
+    assert!(!report.is_complete());
+    assert_eq!(report.sessions_observed, 2);
+    assert_eq!(report.failures.len(), 2);
+    std::fs::remove_dir_all(root)?;
+    Ok(())
+}
+
 fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
     let workspace_root = root.join("workspace");
     let layer_stack_root = root.join("layer-stack");
     std::fs::create_dir_all(&workspace_root)?;
     std::fs::write(workspace_root.join("base.txt"), b"base")?;
-    sandbox_runtime_layerstack::build_workspace_base(
-        &layer_stack_root,
-        &workspace_root,
-        false,
-    )?;
+    sandbox_runtime_layerstack::build_workspace_base(&layer_stack_root, &workspace_root, false)?;
     let mut stack = LayerStack::open(layer_stack_root.clone())?;
     stack.publish_layer(&[LayerChange::Write {
         path: LayerPath::parse("published.txt")?,
@@ -538,6 +624,15 @@ fn test_operations(root: &Path) -> TestResult<Arc<SandboxRuntimeOperations>> {
             isolated_ip: Box::new(|workspace_id| {
                 Ok((workspace_id.0 == "live-1").then_some(std::net::Ipv4Addr::LOCALHOST))
             }),
+            holder_is_live: Box::new(WorkspaceHandle::holder_is_live),
+            holder_probe: Box::new(|handle| {
+                if handle.holder_is_live() {
+                    HolderProbe::Running
+                } else {
+                    HolderProbe::Exited
+                }
+            }),
+            holder_exit_reason: Box::new(WorkspaceHandle::holder_exit_reason),
             allocate_workspace_session_id: Box::new(|network| {
                 Ok(WorkspaceSessionId(
                     match network {
@@ -753,5 +848,8 @@ fn split_http_message(bytes: &[u8]) -> TestResult<(&str, &[u8])> {
         .windows(4)
         .position(|window| window == b"\r\n\r\n")
         .ok_or("missing HTTP head terminator")?;
-    Ok((std::str::from_utf8(&bytes[..split + 4])?, &bytes[split + 4..]))
+    Ok((
+        std::str::from_utf8(&bytes[..split + 4])?,
+        &bytes[split + 4..],
+    ))
 }

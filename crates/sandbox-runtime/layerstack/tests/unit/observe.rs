@@ -82,3 +82,26 @@ fn observe_reports_leased_and_booked_layers_over_l0_to_l4(
 
     Ok(())
 }
+
+#[test]
+fn active_lease_counter_never_reads_the_manifest(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let _state_guard = process_state_test_lock();
+    reset_process_state_for_tests();
+    let fixture = Fixture::new("active_lease_counter_manifest_independence")?;
+    let stack = LayerStack::open(fixture.root.clone())?;
+    let _lease = stack.acquire_snapshot("workspace-with-lease")?;
+    let counter = stack.active_lease_counter();
+
+    std::fs::write(
+        fixture.root.join(crate::ACTIVE_MANIFEST_FILE),
+        vec![b'x'; 8 * 1024 * 1024],
+    )?;
+
+    assert_eq!(counter.active_lease_count(), 1);
+    assert!(
+        stack.observe().is_err(),
+        "rich observation still reads manifest"
+    );
+    Ok(())
+}

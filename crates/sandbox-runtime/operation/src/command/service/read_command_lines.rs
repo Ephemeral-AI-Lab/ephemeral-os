@@ -48,10 +48,10 @@ fn read_command_window(
         command_total_time_seconds,
     );
     output.workspace_session_id = Some(command.workspace_session_id.clone());
-    output.publish_rejected = command
-        .finalize_outcome
-        .get()
-        .map(|outcome| outcome.publish_reject_class);
+    if let Some(outcome) = command.finalize_outcome.get() {
+        output.publish_rejected = outcome.publish_reject_class;
+        output.finalization_failed = outcome.finalization_failure_class;
+    }
     output
 }
 

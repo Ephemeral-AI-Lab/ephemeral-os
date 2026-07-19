@@ -24,6 +24,12 @@ Resources
   resources
     Read manager-owned sandbox resource metrics.
 
+Daemon
+  Inspect daemon self-metrics.
+
+  daemon
+    Read one sandbox daemon's bounded self-metrics.
+
 Topology
   Inspect workspace process topology.
 

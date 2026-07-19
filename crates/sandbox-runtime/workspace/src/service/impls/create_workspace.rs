@@ -14,6 +14,7 @@ impl WorkspaceRuntimeService {
         &self,
         network: NetworkProfile,
     ) -> Result<WorkspaceSessionId, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if let Some(hooks) = self.hooks() {
             return (hooks.allocate_workspace_session_id)(network);
         }
@@ -24,13 +25,11 @@ impl WorkspaceRuntimeService {
         &self,
         request: CreateWorkspaceRequest,
     ) -> Result<WorkspaceHandle, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if let Some(hooks) = self.hooks() {
             return (hooks.create_workspace)(request);
         }
 
-        // Event-driven reconciliation remains the primary path; admission is
-        // also a bounded repair opportunity after the underlying fault is
-        // fixed. Peer creation is never blocked by an unrelated retry.
         let _ = self.reconcile_pending_teardowns();
         let mut state = self.lock_state()?;
         let layer_stack_root = state.layer_stack_root.clone();
@@ -56,6 +55,9 @@ impl WorkspaceRuntimeService {
                 Ok(handle) => handle,
                 Err(error) => return Err(workspace_error_from_manager_error(error)),
             };
+        state
+            .manager
+            .forget_completed_teardowns(&session.workspace_id);
         Ok(WorkspaceHandle::from(&session))
     }
 }

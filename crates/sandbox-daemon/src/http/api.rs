@@ -11,6 +11,7 @@ use serde_json::{json, Map, Value};
 
 use super::response::{self, BoxBody};
 use super::server::HttpState;
+use crate::rpc::AdmissionError;
 
 pub(crate) async fn handle(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> Response<BoxBody> {
     if req.method() != Method::POST {
@@ -25,15 +26,25 @@ async fn handle_file_list(state: Arc<HttpState>, req: HttpRequest<Incoming>) -> 
         Err(response) => return response,
     };
     let request = protocol_request(&state, Value::Object(args));
-    let Some(_blocking_permit) = state.blocking_admission.try_acquire() else {
-        return transport_error_with_details(
-            StatusCode::TOO_MANY_REQUESTS,
-            "server_busy",
-            "daemon blocking dispatch capacity is exhausted",
-            json!({
-                "fields": { "max_blocking_requests": state.blocking_admission.limit() }
-            }),
-        );
+    let _blocking_permit = match state.blocking_admission.try_acquire() {
+        Ok(permit) => permit,
+        Err(AdmissionError::Capacity) => {
+            return transport_error_with_details(
+                StatusCode::TOO_MANY_REQUESTS,
+                "server_busy",
+                "daemon blocking dispatch capacity is exhausted",
+                json!({
+                    "fields": { "max_blocking_requests": state.blocking_admission.limit() }
+                }),
+            )
+        }
+        Err(AdmissionError::Closed) => {
+            return transport_error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "server_shutting_down",
+                "daemon is shutting down",
+            )
+        }
     };
     let operations = Arc::clone(&state.operations);
     let observer = state.observer.clone();

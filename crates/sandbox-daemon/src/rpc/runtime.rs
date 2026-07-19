@@ -9,8 +9,9 @@ use sandbox_operation_contract::OperationResponse;
 use sandbox_protocol::ProtocolLimits;
 use sandbox_runtime::{SandboxRuntimeConfig, SandboxRuntimeOperations};
 use serde_json::{json, Value};
-use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tokio::sync::{OwnedSemaphorePermit, Semaphore, TryAcquireError};
 use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
 
 /// Where the daemon binds + writes its pid, plus the optional TCP listener.
 #[derive(Debug, Clone)]
@@ -75,12 +76,19 @@ pub struct SandboxDaemonServer {
     pub(crate) shutdown: CancellationToken,
     pub(crate) blocking_admission: BlockingAdmission,
     pub(crate) connection_admission: ConnectionAdmission,
+    pub(crate) async_tasks: TaskTracker,
 }
 
 #[derive(Clone)]
 pub(crate) struct BlockingAdmission {
     permits: Arc<Semaphore>,
     limit: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AdmissionError {
+    Capacity,
+    Closed,
 }
 
 impl BlockingAdmission {
@@ -91,8 +99,20 @@ impl BlockingAdmission {
         }
     }
 
-    pub(crate) fn try_acquire(&self) -> Option<OwnedSemaphorePermit> {
-        Arc::clone(&self.permits).try_acquire_owned().ok()
+    pub(crate) fn try_acquire(&self) -> Result<OwnedSemaphorePermit, AdmissionError> {
+        match Arc::clone(&self.permits).try_acquire_owned() {
+            Ok(permit) => Ok(permit),
+            Err(TryAcquireError::NoPermits) => Err(AdmissionError::Capacity),
+            Err(TryAcquireError::Closed) => Err(AdmissionError::Closed),
+        }
+    }
+
+    pub(crate) fn close(&self) {
+        self.permits.close();
+    }
+
+    pub(crate) fn is_closed(&self) -> bool {
+        self.permits.is_closed()
     }
 
     pub(crate) fn limit(&self) -> usize {
@@ -118,8 +138,16 @@ impl ConnectionAdmission {
         }
     }
 
-    pub(crate) fn try_acquire(&self) -> Option<OwnedSemaphorePermit> {
-        Arc::clone(&self.permits).try_acquire_owned().ok()
+    pub(crate) fn try_acquire(&self) -> Result<OwnedSemaphorePermit, AdmissionError> {
+        match Arc::clone(&self.permits).try_acquire_owned() {
+            Ok(permit) => Ok(permit),
+            Err(TryAcquireError::NoPermits) => Err(AdmissionError::Capacity),
+            Err(TryAcquireError::Closed) => Err(AdmissionError::Closed),
+        }
+    }
+
+    pub(crate) fn close(&self) {
+        self.permits.close();
     }
 
     pub(crate) fn in_use(&self) -> usize {
@@ -146,6 +174,7 @@ impl SandboxDaemonServer {
         Self {
             blocking_admission: BlockingAdmission::new(config.max_blocking_requests),
             connection_admission: ConnectionAdmission::new(config.max_concurrent_connections),
+            async_tasks: TaskTracker::new(),
             config,
             operations,
             observability,

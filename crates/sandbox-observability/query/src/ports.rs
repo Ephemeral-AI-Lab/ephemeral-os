@@ -1,4 +1,6 @@
-use sandbox_observability_telemetry::collect::process_topology::WorkspaceProcessTopology;
+use sandbox_observability_telemetry::collect::process_topology::{
+    DaemonProcessMetrics, WorkspaceProcessTopology,
+};
 use sandbox_observability_telemetry::{LayerStackBytes, Reader, SinkStats};
 use sandbox_runtime_layerstack::service::StackObservation;
 use sandbox_runtime_layerstack::LayerDeltaDescription;
@@ -16,6 +18,13 @@ pub struct QueryLimits {
     pub resource_window_ms: u64,
     pub layer_delta_default_limit: usize,
     pub layer_delta_max_limit: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DaemonMetricsRequestClass {
+    LegacyCgroup,
+    Topology,
+    DaemonSelf,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -50,7 +59,10 @@ pub trait ObservabilityInput {
 
     fn query_limits(&self) -> QueryLimits;
 
-    fn cgroup_topology(&self) -> WorkspaceProcessTopology;
+    fn cgroup_topology(&self, request_class: DaemonMetricsRequestClass)
+        -> WorkspaceProcessTopology;
+
+    fn daemon_metrics(&self, request_class: DaemonMetricsRequestClass) -> DaemonProcessMetrics;
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot;
 

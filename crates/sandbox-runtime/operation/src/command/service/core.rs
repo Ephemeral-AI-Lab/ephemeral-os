@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use sandbox_observability_telemetry::{Observer, SpanRegistry};
 use sandbox_runtime_namespace_execution::{
@@ -10,6 +9,8 @@ use crate::command::{CommandConfig, CommandExecValue};
 use crate::namespace_execution::{RuntimeNamespaceExecutionSnapshot, WorkspaceCommandTeardown};
 use crate::workspace_crate::WorkspaceSessionId;
 use crate::workspace_session::WorkspaceSessionService;
+
+use super::teardown::{cancel_and_join_commands, CommandTeardownTarget, COMMAND_JOIN_TIMEOUT};
 
 pub struct CommandOperationService {
     workspace: Arc<WorkspaceSessionService>,
@@ -86,6 +87,11 @@ impl CommandOperationService {
     }
 
     #[must_use]
+    pub fn active_namespace_execution_count(&self) -> usize {
+        self.engine.active_count()
+    }
+
+    #[must_use]
     pub fn config(&self) -> &CommandConfig {
         &self.config
     }
@@ -109,6 +115,13 @@ impl CommandOperationService {
     pub(super) fn workspace_handle(&self) -> &Arc<WorkspaceSessionService> {
         &self.workspace
     }
+
+    /// Stop admitting namespace commands and join the shared completion reaper.
+    pub fn shutdown_and_join(&self) -> Result<(), String> {
+        self.engine
+            .shutdown_and_join()
+            .map_err(|error| error.to_string())
+    }
 }
 
 impl WorkspaceCommandTeardown for NamespaceExecutionEngine<CommandExecValue> {
@@ -117,36 +130,18 @@ impl WorkspaceCommandTeardown for NamespaceExecutionEngine<CommandExecValue> {
         workspace_session_id: &WorkspaceSessionId,
         command_ids: &[NamespaceExecutionId],
     ) -> Result<(), String> {
-        let deadline = Instant::now() + Duration::from_secs(1);
-        for command_id in command_ids {
-            let command = self.with_value(command_id, |command| {
-                (
-                    command.workspace_session_id.clone(),
-                    command.exec.cancel_handle(),
-                    command.exec.completion(),
-                )
-            });
-            let Some((owner, cancel, completion)) = command else {
-                return Err(format!(
-                    "command {} is still admitted but has no execution handle",
-                    command_id.0
-                ));
-            };
-            if owner != *workspace_session_id {
-                return Err(format!(
-                    "command {} belongs to workspace {}, not {}",
-                    command_id.0, owner.0, workspace_session_id.0
-                ));
-            }
-            cancel();
-            let remaining = deadline.saturating_duration_since(Instant::now());
-            if remaining.is_zero() || !completion.wait_timeout(remaining) {
-                return Err(format!(
-                    "timed out joining command {} after cancellation",
-                    command_id.0
-                ));
-            }
-        }
-        Ok(())
+        cancel_and_join_commands(
+            workspace_session_id,
+            command_ids,
+            COMMAND_JOIN_TIMEOUT,
+            |command_id| {
+                self.with_value(command_id, |command| CommandTeardownTarget {
+                    owner: command.workspace_session_id.clone(),
+                    cancel: command.exec.cancel_handle(),
+                    completion: command.exec.completion(),
+                })
+            },
+        )
+        .map_err(|error| error.to_string())
     }
 }

@@ -10,6 +10,9 @@ use sandbox_runtime::command::{
     CommandServiceError, CommandStatus, ExecCommandInput, ReadCommandLinesInput,
     WriteCommandStdinInput,
 };
+use sandbox_runtime::workspace_session::{
+    FinalizationState, HolderExitDisposition, WorkspaceSessionError,
+};
 use sandbox_runtime::{
     LayerStackService, NamespaceExecutionId, SandboxRuntimeOperations, WorkloadCgroupLimits,
 };
@@ -17,7 +20,10 @@ use sandbox_runtime_namespace_execution::{
     NamespaceExecutionError, NsRunnerLauncher, PtyMaster, RunnerChild, RunnerPlacement,
 };
 use sandbox_runtime_namespace_process::runner::protocol::{Fd, NamespaceRunnerRequest};
-use sandbox_runtime_workspace::{NetworkProfile, WorkspaceSessionId};
+use sandbox_runtime_workspace::{
+    CapturedWorkspaceChanges, HolderProbe, HolderProbeUnknownClass, NetworkProfile,
+    WorkspaceHandle, WorkspaceSessionId,
+};
 use serde_json::json;
 
 use support::{
@@ -82,6 +88,20 @@ fn create_session(
         .create_workspace_session(create_request())
         .expect("session create succeeds")
         .workspace_session_id
+}
+
+fn empty_capture(handle: &WorkspaceHandle) -> CapturedWorkspaceChanges {
+    CapturedWorkspaceChanges {
+        workspace_session_id: handle.id.clone(),
+        base_revision: handle.base_revision(),
+        base_manifest: handle.snapshot.manifest.clone(),
+        changed_path_kinds: Default::default(),
+        protected_drops: Vec::new(),
+        stats: None,
+        metadata_path_count: 0,
+        changed_paths: Vec::new(),
+        changes: Vec::new(),
+    }
 }
 
 #[test]
@@ -180,6 +200,91 @@ fn command_admission_overload_is_a_structured_server_busy_fault(
 }
 
 #[test]
+fn duplicate_command_id_is_a_structured_conflict_fault(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver
+        .launcher()
+        .push_script(FakeRunnerScript::spawn_error(
+            NamespaceExecutionError::Duplicate {
+                execution_id: "namespace_execution_1".to_owned(),
+            },
+        ));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+    let workspace_session_id = create_session(
+        &fake,
+        &env,
+        "workspace-session",
+        PathBuf::from("/workspace/session"),
+        NetworkProfile::Shared,
+    );
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&env.command),
+        Arc::clone(&env.workspace),
+        layerstack_service()?,
+        support::test_file_service(),
+    );
+    let request = OperationRequest::new(
+        "exec_command",
+        "req-command-duplicate",
+        OperationScope::sandbox("sbox-test"),
+        json!({
+            "workspace_session_id": workspace_session_id.0,
+            "cmd": "printf ok",
+            "yield_time_ms": 0
+        }),
+    );
+
+    let response = sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
+
+    assert_eq!(response["error"]["kind"], "operation_conflict");
+    assert_eq!(
+        response["error"]["details"]["command_session_id"],
+        "namespace_execution_1"
+    );
+    assert_eq!(
+        response["error"]["details"]["conflict"],
+        "duplicate_command_session_id"
+    );
+    Ok(())
+}
+
+#[test]
+fn closed_workspace_command_error_keeps_the_structured_session_id(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let env = build_services(Arc::clone(&fake));
+    let operations = SandboxRuntimeOperations::new(
+        Arc::clone(&env.command),
+        Arc::clone(&env.workspace),
+        layerstack_service()?,
+        support::test_file_service(),
+    );
+    let request = OperationRequest::new(
+        "exec_command",
+        "req-closed-workspace",
+        OperationScope::sandbox("sbox-test"),
+        json!({
+            "workspace_session_id": "ws-closed",
+            "cmd": "printf ok",
+            "yield_time_ms": 0
+        }),
+    );
+
+    let response = sandbox_runtime::dispatch_operation(&operations, &request).into_json_value();
+
+    assert_eq!(response["error"]["kind"], "operation_failed");
+    assert_eq!(
+        response["error"]["details"]["workspace_session_id"],
+        "ws-closed"
+    );
+    assert!(fake.create_requests().is_empty());
+    assert!(fake.destroy_calls().is_empty());
+    Ok(())
+}
+
+#[test]
 fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session_on_completion() {
     let fake = Arc::new(FakeWorkspaceService::new());
     fake.push_create_result(Ok(workspace_handle(
@@ -209,6 +314,7 @@ fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session
         "the response names the implicit session even though it is already finalized"
     );
     assert_eq!(output.publish_rejected, None);
+    assert_eq!(output.finalization_failed, None);
     assert_eq!(
         fake.create_requests(),
         vec![support::raw_create_request("implicit-session")]
@@ -217,6 +323,139 @@ fn exec_command_without_workspace_session_creates_and_finalizes_implicit_session
         fake.destroy_calls(),
         vec![WorkspaceSessionId("implicit-session".to_owned())]
     );
+}
+
+#[test]
+fn transient_unknown_holder_probe_retries_before_implicit_finalize() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = workspace_handle(
+        "implicit-probe-retry",
+        "lease-probe-retry",
+        PathBuf::from("/workspace/implicit-probe-retry"),
+        NetworkProfile::Shared,
+    );
+    fake.push_create_result(Ok(handle.clone()));
+    fake.push_capture_result(Ok(empty_capture(&handle)));
+    fake.push_holder_probe_result(HolderProbe::Unknown {
+        class: HolderProbeUnknownClass::TimedOut,
+    });
+    fake.push_holder_probe_result(HolderProbe::Running);
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let output = env
+        .command
+        .exec_command(implicit_exec_input_await_completion())
+        .expect("bounded probe retry lets ordinary finalization finish");
+
+    assert_eq!(fake.holder_probe_calls(), 2);
+    assert_eq!(output.status, CommandStatus::Ok);
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.output, "done");
+    assert_eq!(output.publish_rejected, None);
+    assert_eq!(output.finalization_failed, None);
+    assert_eq!(
+        fake.capture_calls(),
+        vec![WorkspaceSessionId("implicit-probe-retry".to_owned())]
+    );
+    assert_eq!(
+        fake.destroy_calls(),
+        vec![WorkspaceSessionId("implicit-probe-retry".to_owned())]
+    );
+    assert!(matches!(
+        env.workspace
+            .resolve_session(WorkspaceSessionId("implicit-probe-retry".to_owned())),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+}
+
+#[test]
+fn persistent_unknown_holder_probe_is_visible_and_never_strands_an_active_session() {
+    let fake = Arc::new(FakeWorkspaceService::new());
+    let handle = workspace_handle(
+        "implicit-probe-failed",
+        "lease-probe-failed",
+        PathBuf::from("/workspace/implicit-probe-failed"),
+        NetworkProfile::Shared,
+    );
+    let upperdir = handle
+        .entry()
+        .expect("holder exposes a recovery source")
+        .upperdir;
+    std::fs::create_dir_all(&upperdir).expect("create recovery source");
+    std::fs::write(upperdir.join("unfinished.txt"), b"preserve me\n")
+        .expect("seed recovery source");
+    fake.push_create_result(Ok(handle.clone()));
+    for _ in 0..3 {
+        fake.push_holder_probe_result(HolderProbe::Unknown {
+            class: HolderProbeUnknownClass::Overloaded,
+        });
+    }
+    let launch_driver = Arc::new(FakeLaunchDriver::new());
+    launch_driver.push_outcome(ScriptedCommandYield::Completed(success_exit("done\n")));
+    let env = build_services_with_launch_driver(Arc::clone(&fake), launch_driver);
+
+    let output = env
+        .command
+        .exec_command(implicit_exec_input_await_completion())
+        .expect("command result remains readable when finalization probe fails");
+    let workspace_session_id = WorkspaceSessionId("implicit-probe-failed".to_owned());
+
+    assert_eq!(fake.holder_probe_calls(), 3);
+    assert_eq!(output.status, CommandStatus::Ok);
+    assert_eq!(output.exit_code, Some(0));
+    assert_eq!(output.output, "done");
+    assert_eq!(output.publish_rejected, None);
+    assert_eq!(
+        output.finalization_failed.as_deref(),
+        Some("holder_probe_overloaded")
+    );
+    assert!(fake.capture_calls().is_empty());
+    assert!(fake.destroy_calls().is_empty());
+    assert!(matches!(
+        env.workspace
+            .with_gated_session(&workspace_session_id, |_| ()),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+
+    fake.mark_holder_exited(&handle, "signal:9");
+    assert!(matches!(
+        env.workspace.resolve_session(workspace_session_id.clone()),
+        Err(WorkspaceSessionError::HolderExited {
+            workspace_session_id: failed_id,
+            reason,
+            cleanup_state: FinalizationState::FinalizeFailed,
+        }) if failed_id == workspace_session_id && reason == "signal:9"
+    ));
+
+    let outcomes = env.workspace.reconcile_holder_exits();
+    let artifact = match outcomes.as_slice() {
+        [outcome] => match &outcome.disposition {
+            HolderExitDisposition::RecoveryRequired { artifact } => artifact,
+            disposition => panic!("unexpected holder-exit disposition: {disposition:?}"),
+        },
+        outcomes => panic!("unexpected holder-exit outcomes: {outcomes:?}"),
+    };
+    assert!(artifact.is_dir());
+    assert_eq!(
+        std::fs::read(artifact.join("files/unfinished.txt"))
+            .expect("recovery artifact preserves the unfinished file"),
+        b"preserve me\n"
+    );
+    let manifest: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(artifact.join("manifest.json")).expect("recovery manifest is durable"),
+    )
+    .expect("recovery manifest is valid json");
+    assert_eq!(manifest["workspace_session_id"], "implicit-probe-failed");
+    assert_eq!(manifest["finalization_state"], "finalization_failed");
+    assert!(fake.capture_calls().is_empty());
+    assert_eq!(fake.destroy_calls(), vec![workspace_session_id.clone()]);
+    assert!(matches!(
+        env.workspace.resolve_session(workspace_session_id),
+        Err(WorkspaceSessionError::NotFound { .. })
+    ));
+    assert!(env.workspace.reconcile_holder_exits().is_empty());
 }
 
 #[test]

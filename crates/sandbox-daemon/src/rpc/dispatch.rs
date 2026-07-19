@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::SandboxDaemonServer;
+use super::{AdmissionError, SandboxDaemonServer};
 use crate::rpc::error::SandboxDaemonError;
 use sandbox_observability_telemetry::record::names;
 use sandbox_observability_telemetry::{SpanStatus, TraceContext};
@@ -14,6 +14,9 @@ const DAEMON_NAME: &str = "sandbox-daemon";
 
 impl SandboxDaemonServer {
     pub(crate) async fn dispatch_bytes(&self, bytes: Vec<u8>, is_tcp: bool) -> OperationResponse {
+        if self.shutdown.is_cancelled() || self.blocking_admission.is_closed() {
+            return server_shutting_down_response();
+        }
         let value = match serde_json::from_slice::<serde_json::Value>(&bytes) {
             Ok(value) => value,
             Err(err) => {
@@ -54,8 +57,12 @@ impl SandboxDaemonServer {
         if has_observability_handler(&request) {
             return self.dispatch_observability(request).await;
         }
-        let Some(_blocking_permit) = self.blocking_admission.try_acquire() else {
-            return blocking_overload_response(self.blocking_admission.limit());
+        let _blocking_permit = match self.blocking_admission.try_acquire() {
+            Ok(permit) => permit,
+            Err(AdmissionError::Capacity) => {
+                return blocking_overload_response(self.blocking_admission.limit())
+            }
+            Err(AdmissionError::Closed) => return server_shutting_down_response(),
         };
         let operations = Arc::clone(&self.operations);
         let observer = self.observer();
@@ -90,19 +97,25 @@ impl SandboxDaemonServer {
     }
 
     async fn dispatch_observability(&self, request: OperationRequest) -> OperationResponse {
-        let Some(_blocking_permit) = self.blocking_admission.try_acquire() else {
-            return blocking_overload_response(self.blocking_admission.limit());
+        let _blocking_permit = match self.blocking_admission.try_acquire() {
+            Ok(permit) => permit,
+            Err(AdmissionError::Capacity) => {
+                return blocking_overload_response(self.blocking_admission.limit())
+            }
+            Err(AdmissionError::Closed) => return server_shutting_down_response(),
         };
         let operations = Arc::clone(&self.operations);
         let observability = self.observability.clone();
         let blocking_admission = self.blocking_admission.clone();
         let connection_admission = self.connection_admission.clone();
+        let async_tasks = self.async_tasks.clone();
         let task = tokio::task::spawn_blocking(move || {
             let input = crate::observability::adapter::DaemonObservabilityAdapter::new(
                 &operations,
                 observability.as_deref(),
                 &blocking_admission,
                 &connection_admission,
+                &async_tasks,
             );
             sandbox_observability_query::dispatch_operation(&input, &request)
         });
@@ -127,6 +140,14 @@ pub(crate) fn blocking_overload_response(max_blocking_requests: usize) -> Operat
         "server_busy",
         "daemon blocking dispatch capacity is exhausted",
         serde_json::json!({"max_blocking_requests": max_blocking_requests}),
+    )
+}
+
+pub(crate) fn server_shutting_down_response() -> OperationResponse {
+    super::error_response(
+        "server_shutting_down",
+        "daemon is shutting down",
+        serde_json::json!({}),
     )
 }
 

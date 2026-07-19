@@ -14,6 +14,15 @@ pub struct RuntimeObservabilitySnapshot {
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RuntimeOwnershipTopologySnapshot {
+    pub workspaces: Vec<RuntimeTopologyWorkspaceSnapshot>,
+    pub active_command_count: usize,
+    pub active_layer_lease_count: usize,
+    pub ownership: RuntimeOwnershipSnapshot,
+    pub partial_errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct RuntimeOwnershipSnapshot {
     pub namespace_fd_count: Option<usize>,
     pub control_fd_count: Option<usize>,
@@ -39,6 +48,17 @@ pub struct RuntimeWorkspaceSnapshot {
     /// Mounted layer ids, base → newest. The per-session layerstack view joins
     /// these across workspaces to derive layer sharing.
     pub layer_ids: Vec<String>,
+    pub cgroup_path: Option<PathBuf>,
+    pub applied_cgroup_limits: Option<WorkloadCgroupLimits>,
+    pub workload_cgroup_state: String,
+    pub workload_cgroup_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RuntimeTopologyWorkspaceSnapshot {
+    pub workspace_id: WorkspaceSessionId,
+    pub holder_pid: i32,
+    pub holder_live: bool,
     pub cgroup_path: Option<PathBuf>,
     pub applied_cgroup_limits: Option<WorkloadCgroupLimits>,
     pub workload_cgroup_state: String,

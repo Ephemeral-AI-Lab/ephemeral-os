@@ -1,9 +1,9 @@
 //! Daemon observability query metadata and event access.
 
 use std::path::Path;
-use std::sync::{Mutex, PoisonError};
 
 use sandbox_config::configs::observability::ViewsConfig;
+use sandbox_observability_query::ports::DaemonMetricsRequestClass;
 use sandbox_observability_telemetry::collect::process_topology::{
     DaemonDiagnosticState, DaemonDiagnosticWorkspaceHolder, DaemonOwnershipMetrics,
     DaemonProcessMetrics, DaemonRuntimeConfigMetrics, DaemonRuntimeUsage,
@@ -24,7 +24,7 @@ pub struct DaemonObservability {
     paths: ObservabilityPaths,
     observer: Observer,
     runtime_config: DaemonRuntimeConfigMetrics,
-    diagnostics: Mutex<DiagnosticTracker>,
+    diagnostics: DiagnosticTracker,
     pub(crate) sampling: WalkBudget,
     pub(crate) views: ViewsConfig,
 }
@@ -65,13 +65,11 @@ impl DaemonObservability {
                 blocking_thread_keep_alive_s: Some(config.blocking_thread_keep_alive_s),
                 max_concurrent_connections: Some(config.max_concurrent_connections),
                 max_active_commands: Some(runtime.command.max_active),
-                // Admission is intentionally fail-fast: neither blocking work
-                // nor command starts wait in an in-process queue.
                 max_blocking_queue_depth: Some(0),
                 max_command_queue_depth: Some(0),
                 infrastructure_thread_allowance: Some(INFRASTRUCTURE_THREAD_ALLOWANCE),
             },
-            diagnostics: Mutex::new(diagnostics),
+            diagnostics,
             sampling: WalkBudget {
                 max_nodes: config.observability.sampling.max_walk_nodes,
                 max_depth: config.observability.sampling.max_walk_depth,
@@ -110,14 +108,18 @@ impl DaemonObservability {
 
     pub(super) fn observe_diagnostics(
         &self,
+        request_class: DaemonMetricsRequestClass,
         process: &DaemonProcessMetrics,
         runtime_usage: &DaemonRuntimeUsage,
         ownership: &DaemonOwnershipMetrics,
         workspace_holders: &[DaemonDiagnosticWorkspaceHolder],
     ) -> DaemonDiagnosticState {
-        self.diagnostics
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .observe(process, runtime_usage, ownership, workspace_holders)
+        self.diagnostics.observe(
+            request_class,
+            process,
+            runtime_usage,
+            ownership,
+            workspace_holders,
+        )
     }
 }

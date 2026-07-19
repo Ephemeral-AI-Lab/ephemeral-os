@@ -28,5 +28,10 @@ sandbox-runtime-namespace-process.workspace = true
 rustix.workspace = true
 serde_json.workspace = true
 
+[[test]]
+name = "holder_lifecycle"
+path = "tests/holder_lifecycle.rs"
+harness = false
+
 [lints]
 workspace = true

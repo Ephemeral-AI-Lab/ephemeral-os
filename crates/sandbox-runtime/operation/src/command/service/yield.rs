@@ -81,19 +81,28 @@ impl CommandOperationService {
             let window = command.transcript_window(start, usize::MAX);
             let elapsed = command.elapsed_seconds();
             let workspace_session_id = command.workspace_session_id.clone();
-            let publish_rejected = command
-                .finalize_outcome
-                .get()
-                .map(|outcome| outcome.publish_reject_class);
+            let outcome = command.finalize_outcome.get();
+            let publish_rejected = outcome.and_then(|outcome| outcome.publish_reject_class);
+            let finalization_failed =
+                outcome.and_then(|outcome| outcome.finalization_failure_class);
             (
                 result,
                 window,
                 elapsed,
                 workspace_session_id,
                 publish_rejected,
+                finalization_failed,
             )
         });
-        let Some((result, window, elapsed, workspace_session_id, publish_rejected)) = read else {
+        let Some((
+            result,
+            window,
+            elapsed,
+            workspace_session_id,
+            publish_rejected,
+            finalization_failed,
+        )) = read
+        else {
             return command_not_found(command_session_id);
         };
         let result = match result {
@@ -116,6 +125,7 @@ impl CommandOperationService {
         );
         output.workspace_session_id = Some(workspace_session_id);
         output.publish_rejected = publish_rejected;
+        output.finalization_failed = finalization_failed;
         Ok(output)
     }
 }

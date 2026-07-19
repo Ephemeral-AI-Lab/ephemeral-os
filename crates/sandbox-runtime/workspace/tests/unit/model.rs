@@ -48,7 +48,7 @@ fn workspace_profile_handle() -> MountedWorkspace {
             net: Some(13),
         },
         holder_pid: 1234,
-        holder_registration: HolderRegistration::detached_for_test(
+        holder_registration: HolderRegistration::unmanaged(
             WorkspaceSessionId("namespace-handle".to_owned()),
             1234,
         ),

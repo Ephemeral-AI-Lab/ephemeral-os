@@ -1,10 +1,10 @@
 use std::cell::{Cell, RefCell};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use sandbox_observability_query::ports::{
-    NamespaceExecutionSnapshot, ObservabilityInput, ObservabilitySnapshot, QueryContext,
-    QueryLimits, WorkspaceSnapshot,
+    DaemonMetricsRequestClass, NamespaceExecutionSnapshot, ObservabilityInput,
+    ObservabilitySnapshot, QueryContext, QueryLimits, WorkspaceSnapshot,
 };
 use sandbox_observability_query::{dispatch_operation, observability_handler_keys};
 use sandbox_observability_telemetry::collect::process_topology::{
@@ -30,8 +30,10 @@ struct FakeInput {
     bytes: LayerStackBytes,
     delta: Result<LayerDeltaDescription, String>,
     limits: QueryLimits,
+    daemon: DaemonProcessMetrics,
     topology: WorkspaceProcessTopology,
     sink_stats: SinkStats,
+    daemon_metric_requests: RefCell<Vec<DaemonMetricsRequestClass>>,
     described_path: RefCell<Option<String>>,
     described_limit: Cell<Option<usize>>,
 }
@@ -57,8 +59,10 @@ impl Default for FakeInput {
                 layer_delta_default_limit: 500,
                 layer_delta_max_limit: 5_000,
             },
+            daemon: DaemonProcessMetrics::collect(Path::new("/missing-proc"), 0),
             topology: WorkspaceProcessTopology::unavailable("procfs unavailable"),
             sink_stats: SinkStats::default(),
+            daemon_metric_requests: RefCell::new(Vec::new()),
             described_path: RefCell::new(None),
             described_limit: Cell::new(None),
         }
@@ -81,8 +85,17 @@ impl ObservabilityInput for FakeInput {
         self.limits
     }
 
-    fn cgroup_topology(&self) -> WorkspaceProcessTopology {
+    fn cgroup_topology(
+        &self,
+        request_class: DaemonMetricsRequestClass,
+    ) -> WorkspaceProcessTopology {
+        self.daemon_metric_requests.borrow_mut().push(request_class);
         self.topology.clone()
+    }
+
+    fn daemon_metrics(&self, request_class: DaemonMetricsRequestClass) -> DaemonProcessMetrics {
+        self.daemon_metric_requests.borrow_mut().push(request_class);
+        self.daemon.clone()
     }
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot {
@@ -512,6 +525,44 @@ fn cgroup_query_serializes_schema_v2_workspace_process_topology() {
         28_000_000
     );
     assert_eq!(response["topology"]["daemon"]["file_descriptor_count"], 15);
+}
+
+#[test]
+fn daemon_query_serializes_only_the_bounded_self_payload() {
+    let mut input = FakeInput::default();
+    input.daemon.available = true;
+    input.daemon.pid = 42;
+    input.daemon.thread_count = Some(8);
+
+    let response = dispatch_operation(&input, &request("daemon", json!({}))).into_json_value();
+
+    assert_eq!(response["view"], "daemon");
+    assert_eq!(response["scope"], "sandbox");
+    assert_eq!(response["daemon"]["pid"], 42);
+    assert_eq!(response["daemon"]["thread_count"], 8);
+    assert!(response.get("topology").is_none());
+}
+
+#[test]
+fn daemon_metric_routes_pass_distinct_allowlisted_request_classes() {
+    let input = FakeInput {
+        log_path: Some(log_path("daemon-metric-request-classes")),
+        ..FakeInput::default()
+    };
+
+    for operation in ["topology", "daemon", "cgroup"] {
+        let response = dispatch_operation(&input, &request(operation, json!({})));
+        assert!(response.as_json_value().get("error").is_none());
+    }
+
+    assert_eq!(
+        *input.daemon_metric_requests.borrow(),
+        [
+            DaemonMetricsRequestClass::Topology,
+            DaemonMetricsRequestClass::DaemonSelf,
+            DaemonMetricsRequestClass::LegacyCgroup,
+        ]
+    );
 }
 
 #[test]

@@ -1000,7 +1000,7 @@ fn holder_reconciliation_cannot_retry_post_publish_cleanup_failure(
     // failed. Public snapshots and session enumeration must not turn that fact
     // into an implicit second destroy; only the guarded recovery operation may
     // retry a post-publish cleanup failure.
-    handle.mark_holder_exited_for_test("exit-status:0");
+    fake.mark_holder_exited(&handle, "exit-status:0");
     for _ in 0..2 {
         let snapshot = operations.observability_snapshot();
         assert_eq!(snapshot.workspaces.len(), 1);

@@ -99,10 +99,15 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
     }
 
     #[must_use]
+    pub fn active_count(&self) -> usize {
+        self.registry.active_count()
+    }
+
+    #[must_use]
     pub fn background_worker_snapshot(&self) -> BackgroundWorkerSnapshot {
         let pty = crate::pty::output_reactor_snapshot();
         BackgroundWorkerSnapshot {
-            completion_supervisor_threads: 1,
+            completion_supervisor_threads: self.supervisor.worker_threads(),
             pty_reactor_threads: pty.worker_threads,
             active_completions: self.supervisor.active(),
             active_pty_readers: pty.active_readers,
@@ -148,7 +153,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
                 on_complete(&result);
                 result
             },
-        );
+        )?;
         Ok(InteractiveExecution::new(
             ExecutionHandle::new(id, promise),
             pty,
@@ -176,7 +181,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             Arc::new(AtomicBool::new(false)),
             Some(MOUNT_OVERLAY_MODE_FLAG),
             |_| Ok(()),
-        );
+        )?;
         Ok(ExecutionHandle::new(id, promise))
     }
 
@@ -205,7 +210,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             Arc::new(AtomicBool::new(false)),
             None,
             |outcome| Ok(outcome.into_result()),
-        );
+        )?;
         Ok(ExecutionHandle::new(id, promise))
     }
 
@@ -236,7 +241,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             Arc::new(AtomicBool::new(false)),
             None,
             |outcome| Ok(outcome.into_result()),
-        );
+        )?;
         Ok(ExecutionHandle::new(id, promise))
     }
 
@@ -245,6 +250,7 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         id: &NamespaceExecutionId,
         spawn: impl FnOnce() -> Result<R, NamespaceExecutionError>,
     ) -> Result<R, NamespaceExecutionError> {
+        self.supervisor.ensure_accepting()?;
         self.registry.try_reserve(id)?;
         match spawn() {
             Ok(spawned) => Ok(spawned),
@@ -263,10 +269,11 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
         cancelled: Arc<AtomicBool>,
         mount_error_mode: Option<&'static str>,
         finalize: impl FnOnce(RunnerOutcome) -> Result<O, NamespaceExecutionError> + Send + 'static,
-    ) {
+    ) -> Result<(), NamespaceExecutionError> {
         let registry = Arc::clone(&self.registry);
         let terminal_hook = Arc::clone(&self.terminal_hook);
-        self.supervisor.submit(child, move |wait_result| {
+        let abort_id = id.clone();
+        let submitted = self.supervisor.submit(child, move |wait_result| {
             let (result, status, exit_code) = match wait_result {
                 Ok(run_result) => {
                     let outcome = RunnerOutcome::new(run_result)
@@ -291,6 +298,15 @@ impl<V: Send + 'static> NamespaceExecutionEngine<V> {
             registry.complete(&id, status, exit_code);
             promise.resolve(result);
         });
+        if let Err(error) = submitted {
+            self.registry.abort(&abort_id);
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    pub fn shutdown_and_join(&self) -> Result<(), NamespaceExecutionError> {
+        self.supervisor.shutdown_and_join()
     }
 }
 

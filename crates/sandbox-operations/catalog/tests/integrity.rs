@@ -37,8 +37,8 @@ fn public_catalogs_are_route_complete() {
         );
     }
 
-    assert_eq!(operation_count, 25);
-    assert_eq!(routes::public_routes().count(), 27);
+    assert_eq!(operation_count, 26);
+    assert_eq!(routes::public_routes().count(), 28);
 }
 
 #[test]
@@ -233,6 +233,13 @@ fn public_route_manifest_is_exact_and_policy_consistent() {
                 OperationScopePolicy::SystemOrSandbox,
                 OperationScopeKind::Sandbox,
                 OperationExecutionOwner::Manager,
+                OperationVisibility::Public
+            ),
+            (
+                "daemon",
+                OperationScopePolicy::SandboxRequired,
+                OperationScopeKind::Sandbox,
+                OperationExecutionOwner::Observability,
                 OperationVisibility::Public
             ),
             (

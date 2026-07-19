@@ -9,6 +9,7 @@ mod snapshot;
 pub use core::WorkspaceSessionService;
 #[doc(hidden)]
 pub use dispatcher::HolderExitDispatcher;
+pub(crate) use impls::WorkspaceSessionShutdownOutcome;
 pub use impls::{
     AdmittedCommand, SessionExecutionToken, SweptDisposition, SweptSession, TokenSlot,
 };

@@ -24,6 +24,7 @@ impl WorkspaceRuntimeService {
         cgroup_procs_path: Option<PathBuf>,
         op: FileRunnerOp,
     ) -> Result<RunResult, WorkspaceError> {
+        let _admission = self.admit_work()?;
         if let Some(hooks) = self.hooks() {
             return (hooks.run_file_op)(handle, op);
         }
@@ -36,6 +37,9 @@ impl WorkspaceRuntimeService {
             .handles
             .get(&handle.id)
             .ok_or(WorkspaceError::NotOpen)?;
+        if !handle.matches_mounted_workspace(session) || !handle.holder_is_live() {
+            return Err(WorkspaceError::NotOpen);
+        }
         state
             .manager
             .runtime

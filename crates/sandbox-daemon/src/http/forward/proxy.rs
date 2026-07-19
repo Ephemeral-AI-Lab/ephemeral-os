@@ -15,6 +15,8 @@ use hyper_util::rt::TokioIo;
 use sandbox_config::configs::daemon::DaemonHttpForwardConfig;
 use tokio::net::TcpStream;
 use tokio::time::timeout;
+use tokio_util::sync::CancellationToken;
+use tokio_util::task::TaskTracker;
 
 use super::route::ForwardRoute;
 use super::{ForwardError, ForwardTarget};
@@ -38,6 +40,9 @@ pub(crate) async fn run(
     route: &ForwardRoute,
     req: Request<Incoming>,
     deadlines: DaemonHttpForwardConfig,
+    async_tasks: &TaskTracker,
+    child_tasks: &TaskTracker,
+    shutdown: &CancellationToken,
 ) -> Result<Response<BoxBody>, ForwardError> {
     let response_timeout = Duration::from_secs_f64(deadlines.response_timeout_s);
     let stream = match timeout(
@@ -55,12 +60,25 @@ pub(crate) async fn run(
             Ok(pair) => pair,
             Err(_) => return Err(ForwardError::Connect),
         };
-    tokio::spawn(async move {
-        let _ = conn.with_upgrades().await;
-    });
+    let task_shutdown = shutdown.clone();
+    async_tasks.spawn(child_tasks.track_future(async move {
+        tokio::select! {
+            () = task_shutdown.cancelled() => {}
+            _ = conn.with_upgrades() => {}
+        }
+    }));
 
     if is_upgrade(req.headers()) {
-        tunnel(&mut sender, route, req, response_timeout).await
+        tunnel(
+            &mut sender,
+            route,
+            req,
+            response_timeout,
+            async_tasks,
+            child_tasks,
+            shutdown,
+        )
+        .await
     } else {
         forward_plain(&mut sender, route, req, response_timeout).await
     }
@@ -83,6 +101,9 @@ async fn tunnel(
     route: &ForwardRoute,
     mut req: Request<Incoming>,
     response_timeout: Duration,
+    async_tasks: &TaskTracker,
+    child_tasks: &TaskTracker,
+    shutdown: &CancellationToken,
 ) -> Result<Response<BoxBody>, ForwardError> {
     let outbound = build_request(req.method(), route, req.headers(), response::empty(), true);
     let mut upstream = send(sender, outbound, response_timeout).await?;
@@ -91,13 +112,19 @@ async fn tunnel(
     }
     let upstream_upgrade = hyper::upgrade::on(&mut upstream);
     let client_upgrade = hyper::upgrade::on(&mut req);
-    tokio::spawn(async move {
-        if let (Ok(client), Ok(server)) = tokio::join!(client_upgrade, upstream_upgrade) {
-            let mut client = TokioIo::new(client);
-            let mut server = TokioIo::new(server);
-            let _ = tokio::io::copy_bidirectional(&mut client, &mut server).await;
+    let task_shutdown = shutdown.clone();
+    async_tasks.spawn(child_tasks.track_future(async move {
+        tokio::select! {
+            () = task_shutdown.cancelled() => {}
+            () = async {
+                if let (Ok(client), Ok(server)) = tokio::join!(client_upgrade, upstream_upgrade) {
+                    let mut client = TokioIo::new(client);
+                    let mut server = TokioIo::new(server);
+                    let _ = tokio::io::copy_bidirectional(&mut client, &mut server).await;
+                }
+            } => {}
         }
-    });
+    }));
     let (parts, _body) = upstream.into_parts();
     Ok(Response::from_parts(parts, response::empty()))
 }

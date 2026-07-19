@@ -62,6 +62,18 @@ pub struct LayerStack {
     pub(in crate::stack) view: MergedView,
 }
 
+#[derive(Clone)]
+pub struct ActiveLeaseCounter {
+    leases: Arc<Mutex<LeaseRegistry>>,
+}
+
+impl ActiveLeaseCounter {
+    #[must_use]
+    pub fn active_lease_count(&self) -> usize {
+        lock_shared_registry_recover(&self.leases).active_count()
+    }
+}
+
 impl LayerStack {
     pub fn open(storage_root: PathBuf) -> Result<Self, LayerStackError> {
         std::fs::create_dir_all(storage_root.join(LAYERS_DIR))?;
@@ -127,6 +139,13 @@ impl LayerStack {
 
     #[must_use]
     pub fn active_lease_count(&self) -> usize {
-        lock_shared_registry_recover(&self.leases).active_count()
+        self.active_lease_counter().active_lease_count()
+    }
+
+    #[must_use]
+    pub fn active_lease_counter(&self) -> ActiveLeaseCounter {
+        ActiveLeaseCounter {
+            leases: Arc::clone(&self.leases),
+        }
     }
 }

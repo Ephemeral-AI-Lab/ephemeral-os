@@ -53,7 +53,9 @@ impl CommandStatus {
 /// `workspace_session_id` is an identifier, not a liveness promise — the
 /// session may already be finalized when the caller reads it (§2.6).
 /// `publish_rejected` carries the reject class when this command's completion
-/// ran a finalize whose publish was rejected; terminal responses only.
+/// ran a finalize whose publish was rejected. `finalization_failed` carries a
+/// non-publish failure class (for example an unavailable holder supervisor).
+/// Both are terminal-response-only and mutually exclusive.
 #[derive(Debug, Clone, PartialEq)]
 pub struct CommandOutput {
     pub command_session_id: Option<NamespaceExecutionId>,
@@ -68,4 +70,5 @@ pub struct CommandOutput {
     pub original_token_count: u64,
     pub output: String,
     pub publish_rejected: Option<&'static str>,
+    pub finalization_failed: Option<&'static str>,
 }

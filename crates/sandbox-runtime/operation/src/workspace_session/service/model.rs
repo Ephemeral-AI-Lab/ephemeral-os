@@ -41,7 +41,24 @@ pub struct CreateSessionRequest {
 /// terminal response through a once-set slot stored at attach (§2.5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FinalizeOutcome {
-    pub publish_reject_class: &'static str,
+    pub publish_reject_class: Option<&'static str>,
+    pub finalization_failure_class: Option<&'static str>,
+}
+
+impl FinalizeOutcome {
+    pub(crate) const fn publish_rejected(class: &'static str) -> Self {
+        Self {
+            publish_reject_class: Some(class),
+            finalization_failure_class: None,
+        }
+    }
+
+    pub(crate) const fn finalization_failed(class: &'static str) -> Self {
+        Self {
+            publish_reject_class: None,
+            finalization_failure_class: Some(class),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -151,6 +168,11 @@ pub(crate) struct WorkspaceSession {
     pub finalize_policy: FinalizePolicy,
     pub active_commands: BTreeSet<NamespaceExecutionId>,
     pub finalization_state: FinalizationState,
+    /// The sole holder supervisor observed this exact generation alive,
+    /// claimed planned finalization, and reaped it before capture/publish.
+    /// While the normal transaction is still running, the resulting expected
+    /// exit must not be mistaken for an unexpected-exit recovery trigger.
+    pub holder_quiesced_for_finalization: bool,
     pub holder_exit_recorded: bool,
     pub holder_cleanup_terminal: bool,
     pub holder_cleanup_attempts: u8,
@@ -175,6 +197,7 @@ impl WorkspaceSession {
             finalize_policy,
             active_commands: BTreeSet::new(),
             finalization_state: FinalizationState::Active,
+            holder_quiesced_for_finalization: false,
             holder_exit_recorded: false,
             holder_cleanup_terminal: false,
             holder_cleanup_attempts: 0,

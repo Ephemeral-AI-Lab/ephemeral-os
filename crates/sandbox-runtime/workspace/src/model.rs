@@ -32,6 +32,20 @@ pub struct WorkspaceOwnershipSnapshot {
     pub exited_unreaped_holders: usize,
 }
 
+/// Immutable process identity assigned to one holder generation.
+///
+/// PID alone is not an identity because the kernel may reuse it. Callers that
+/// persist generation-scoped state must bind it to this complete snapshot.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WorkspaceHolderIdentity {
+    pub pid: i32,
+    pub parent_pid: i32,
+    pub start_time_ticks: u64,
+    pub executable: PathBuf,
+    pub generation: u64,
+    pub pidfd_available: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BaseRevision {
     pub version: i64,
@@ -179,6 +193,10 @@ impl WorkspaceHandle {
         self.holder_registration.is_live()
     }
 
+    pub(crate) const fn holder_registration(&self) -> &HolderRegistration {
+        &self.holder_registration
+    }
+
     /// A stable, bounded holder-exit summary suitable for structured errors.
     #[must_use]
     pub fn holder_exit_reason(&self) -> Option<String> {
@@ -195,9 +213,22 @@ impl WorkspaceHandle {
         })
     }
 
-    #[doc(hidden)]
-    pub fn mark_holder_exited_for_test(&self, detail: &str) {
-        self.holder_registration.mark_exited_for_test(detail);
+    /// Returns the immutable identity of this handle's holder generation.
+    #[must_use]
+    pub fn holder_identity(&self) -> WorkspaceHolderIdentity {
+        self.holder_registration.identity_snapshot()
+    }
+
+    pub(crate) fn matches_mounted_workspace(&self, mounted: &MountedWorkspace) -> bool {
+        self.id == mounted.workspace_id && self.holder_registration == mounted.holder_registration
+    }
+
+    pub(crate) fn matches_holder_generation(
+        &self,
+        workspace_session_id: &WorkspaceSessionId,
+        holder_registration: &HolderRegistration,
+    ) -> bool {
+        self.id == *workspace_session_id && self.holder_registration == *holder_registration
     }
 
     #[must_use]
@@ -284,7 +315,7 @@ impl WorkspaceHandle {
             .and_then(|context| context.holder_fds)
             .map_or(0, |_| i32::try_from(std::process::id()).unwrap_or(i32::MAX));
         Self {
-            holder_registration: HolderRegistration::detached_live(id.clone(), holder_pid),
+            holder_registration: HolderRegistration::unmanaged(id.clone(), holder_pid),
             id,
             workspace_root,
             network,

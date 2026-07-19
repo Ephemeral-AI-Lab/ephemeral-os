@@ -17,7 +17,7 @@ use tokio::time::{timeout, Duration};
 use tokio_util::sync::CancellationToken;
 use tokio_util::task::TaskTracker;
 
-use crate::rpc::{BlockingAdmission, ConnectionAdmission, ServerConfig};
+use crate::rpc::{AdmissionError, BlockingAdmission, ConnectionAdmission, ServerConfig};
 
 use super::response::BoxBody;
 use super::router;
@@ -29,6 +29,8 @@ pub(crate) struct HttpState {
     pub(crate) operations: Arc<SandboxRuntimeOperations>,
     pub(crate) observer: Observer,
     pub(crate) blocking_admission: BlockingAdmission,
+    pub(crate) async_tasks: TaskTracker,
+    pub(crate) shutdown: CancellationToken,
 }
 
 impl HttpState {
@@ -39,6 +41,10 @@ impl HttpState {
 
 /// Spawn the accept loop on the daemon runtime; it returns when `shutdown`
 /// fires.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the accept-loop dependencies have distinct ownership and lifetimes"
+)]
 pub(crate) fn spawn(
     listener: TcpListener,
     config: ServerConfig,
@@ -54,6 +60,8 @@ pub(crate) fn spawn(
         operations,
         observer,
         blocking_admission,
+        async_tasks: connection_tasks.clone(),
+        shutdown: shutdown.clone(),
     });
     tokio::spawn(accept_loop(
         listener,
@@ -76,13 +84,17 @@ async fn accept_loop(
             () = shutdown.cancelled() => break,
             accepted = listener.accept() => {
                 let Ok((stream, _peer)) = accepted else { continue };
-                let Some(permit) = connection_admission.try_acquire() else {
-                    reject_overloaded_connection(
-                        stream,
-                        connection_admission.limit(),
-                        state.config.limits.max_request_bytes,
-                    ).await;
-                    continue;
+                let permit = match connection_admission.try_acquire() {
+                    Ok(permit) => permit,
+                    Err(reason) => {
+                        reject_connection(
+                            stream,
+                            reason,
+                            connection_admission.limit(),
+                            state.config.limits.max_request_bytes,
+                        ).await;
+                        continue;
+                    }
                 };
                 let state = Arc::clone(&state);
                 connection_tasks.spawn(async move {
@@ -94,19 +106,30 @@ async fn accept_loop(
     }
 }
 
-async fn reject_overloaded_connection(
+async fn reject_connection(
     mut stream: TcpStream,
+    reason: AdmissionError,
     max_concurrent_connections: usize,
     max_request_bytes: usize,
 ) {
     use tokio::io::AsyncWriteExt as _;
 
+    let (kind, message, details) = match reason {
+        AdmissionError::Capacity => (
+            "server_busy",
+            "daemon is at connection capacity",
+            serde_json::json!({
+                "fields": { "max_concurrent_connections": max_concurrent_connections }
+            }),
+        ),
+        AdmissionError::Closed => (
+            "server_shutting_down",
+            "daemon is shutting down",
+            serde_json::json!({}),
+        ),
+    };
     let body = serde_json::to_vec(&sandbox_operation_contract::error_response_with_details(
-        "server_busy",
-        "daemon is at connection capacity",
-        serde_json::json!({
-            "fields": { "max_concurrent_connections": max_concurrent_connections }
-        }),
+        kind, message, details,
     ))
     .unwrap_or_default();
     let head = format!(
@@ -117,11 +140,6 @@ async fn reject_overloaded_connection(
     let _ = stream.write_all(&body).await;
     let _ = stream.flush().await;
 
-    // A TCP close with unread request bytes is emitted as RST on some kernels,
-    // which can discard the structured 503 already written above. Drain at
-    // most one bounded request before closing; the deadline keeps overload
-    // rejection out of the normal work queue and prevents slow clients from
-    // stalling the accept loop.
     let _ = timeout(
         Duration::from_millis(100),
         drain_one_request(&mut stream, max_request_bytes),
@@ -177,12 +195,21 @@ async fn drain_one_request(stream: &mut TcpStream, max_request_bytes: usize) {
 }
 
 async fn serve_connection(stream: TcpStream, state: Arc<HttpState>) {
+    let child_tasks = TaskTracker::new();
+    let service_tasks = child_tasks.clone();
+    let shutdown = state.shutdown.clone();
     let service = service_fn(move |req: Request<Incoming>| {
         let state = Arc::clone(&state);
-        async move { Ok::<Response<BoxBody>, Infallible>(router::route(state, req).await) }
+        let child_tasks = service_tasks.clone();
+        async move { Ok::<Response<BoxBody>, Infallible>(router::route(state, child_tasks, req).await) }
     });
-    let _ = hyper::server::conn::http1::Builder::new()
+    let connection = hyper::server::conn::http1::Builder::new()
         .serve_connection(TokioIo::new(stream), service)
-        .with_upgrades()
-        .await;
+        .with_upgrades();
+    tokio::select! {
+        () = shutdown.cancelled() => {}
+        _ = connection => {}
+    }
+    child_tasks.close();
+    child_tasks.wait().await;
 }

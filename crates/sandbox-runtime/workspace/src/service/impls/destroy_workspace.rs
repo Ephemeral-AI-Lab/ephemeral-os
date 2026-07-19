@@ -16,10 +16,17 @@ impl WorkspaceRuntimeService {
 
         let outcome = {
             let mut state = self.lock_state()?;
-            match state.manager.close(&handle.id, request.grace_s) {
-                Ok(outcome) => outcome,
-                Err(error) => {
-                    return Err(workspace_error_from_manager_error(error));
+            if !state.manager.owns_handle_generation(&handle) {
+                return Err(WorkspaceError::NotOpen);
+            }
+            if let Some(outcome) = state.manager.completed_teardown_outcome(&handle) {
+                outcome
+            } else {
+                match state.manager.close(&handle.id, request.grace_s) {
+                    Ok(outcome) => outcome,
+                    Err(error) => {
+                        return Err(workspace_error_from_manager_error(error));
+                    }
                 }
             }
         };

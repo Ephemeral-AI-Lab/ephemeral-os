@@ -3,8 +3,10 @@ use std::fs::OpenOptions;
 use std::io::{self, Write as _};
 use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
 
 use sandbox_config::configs::observability::{DiagnosticsConfig, MAX_DIAGNOSTIC_ARTIFACT_BYTES};
+use sandbox_observability_query::ports::DaemonMetricsRequestClass;
 use sandbox_observability_telemetry::collect::process_topology::{
     DaemonDiagnosticCooldown, DaemonDiagnosticCpuInterval, DaemonDiagnosticMemory,
     DaemonDiagnosticRedaction, DaemonDiagnosticState, DaemonDiagnosticSummary,
@@ -21,11 +23,17 @@ const MAX_ERROR_BYTES: usize = 512;
 pub(crate) struct DiagnosticTracker {
     config: DiagnosticsConfig,
     artifact_path: PathBuf,
+    state: Mutex<DiagnosticTrackerState>,
+}
+
+struct DiagnosticTrackerState {
     previous: Option<ProcessPoint>,
     cpu_window: Option<SustainedWindow>,
     memory_window: Option<SustainedWindow>,
     trigger_count: u64,
     cooldown_until_unix_ms: Option<u64>,
+    capture_in_flight: Option<u64>,
+    next_capture_sequence: u64,
     latest: Option<DaemonDiagnosticSummary>,
     last_error: Option<String>,
 }
@@ -34,12 +42,28 @@ pub(crate) struct DiagnosticTracker {
 struct ProcessPoint {
     sampled_at_unix_ms: u64,
     cpu_time_us: Option<u64>,
+    activity_classes: ActivityClasses,
 }
 
 #[derive(Clone, Copy)]
 struct SustainedWindow {
     started_at_unix_ms: u64,
     cpu_time_us: Option<u64>,
+    activity: ActivityEvidence,
+}
+
+#[derive(Clone, Copy, Default)]
+struct ActivityClasses(u8);
+
+#[derive(Clone, Copy)]
+struct ActivityEvidence {
+    union: ActivityClasses,
+    intersection: ActivityClasses,
+}
+
+struct PendingCapture {
+    sequence: u64,
+    payload: DiagnosticPayload,
 }
 
 #[derive(Clone, Serialize)]
@@ -74,121 +98,57 @@ impl DiagnosticTracker {
         Self {
             config,
             artifact_path,
-            previous: None,
-            cpu_window: None,
-            memory_window: None,
-            trigger_count: 0,
-            cooldown_until_unix_ms: None,
-            latest: None,
-            last_error: None,
+            state: Mutex::new(DiagnosticTrackerState {
+                previous: None,
+                cpu_window: None,
+                memory_window: None,
+                trigger_count: 0,
+                cooldown_until_unix_ms: None,
+                capture_in_flight: None,
+                next_capture_sequence: 1,
+                latest: None,
+                last_error: None,
+            }),
         }
     }
 
     pub(crate) fn observe(
-        &mut self,
+        &self,
+        request_class: DaemonMetricsRequestClass,
         process: &DaemonProcessMetrics,
         runtime_usage: &DaemonRuntimeUsage,
         ownership: &DaemonOwnershipMetrics,
         workspace_holders: &[DaemonDiagnosticWorkspaceHolder],
     ) -> DaemonDiagnosticState {
         let now = process.sampled_at_unix_ms;
-        if !self.config.enabled {
-            self.previous = Some(ProcessPoint::from(process));
-            return self.state(now);
-        }
-
-        let current_interval = self
-            .previous
-            .and_then(|previous| cpu_interval(previous, ProcessPoint::from(process)));
-        let cpu_high = current_interval
-            .as_ref()
-            .and_then(|interval| interval.percent_of_one_core)
-            .is_some_and(|percent| percent > self.config.cpu_threshold_percent);
-        update_window(&mut self.cpu_window, cpu_high, now, process.cpu_time_us);
-        let memory_high = process
-            .anonymous_memory_bytes
-            .is_some_and(|bytes| bytes > self.config.anonymous_memory_threshold_bytes);
-        update_window(
-            &mut self.memory_window,
-            memory_high,
-            now,
-            process.cpu_time_us,
-        );
-
-        let trigger = self.ready_trigger(now, ownership);
-        let in_cooldown = self.cooldown_until_unix_ms.is_some_and(|until| now < until);
-        if let Some((trigger, window)) = trigger.filter(|_| !in_cooldown) {
-            let interval = match trigger {
-                DaemonDiagnosticTrigger::Cpu | DaemonDiagnosticTrigger::AnonymousMemory => {
-                    window_cpu_interval(window, ProcessPoint::from(process))
-                }
-                DaemonDiagnosticTrigger::ExitedUnreapedHolder => {
-                    current_interval.unwrap_or_else(DaemonDiagnosticCpuInterval::default)
-                }
-            };
-            match capture(
-                &self.artifact_path,
-                self.config.max_artifact_bytes,
-                trigger,
+        let point = ProcessPoint::new(process, request_class);
+        let pending = {
+            let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+            let Some(pending) = state.prepare_capture(
+                &self.config,
+                point,
                 process,
-                interval,
                 runtime_usage,
                 ownership,
                 workspace_holders,
-            ) {
-                Ok(summary) => {
-                    self.trigger_count = self.trigger_count.saturating_add(1);
-                    self.latest = Some(summary);
-                    self.last_error = None;
-                    self.cooldown_until_unix_ms = Some(now.saturating_add(self.config.cooldown_ms));
-                    self.cpu_window = None;
-                    self.memory_window = None;
-                }
-                Err(error) => {
-                    self.last_error = Some(truncate_utf8(&error.to_string(), MAX_ERROR_BYTES));
-                    self.cooldown_until_unix_ms = Some(now.saturating_add(self.config.cooldown_ms));
-                    self.cpu_window = None;
-                    self.memory_window = None;
-                }
-            }
-        }
-        self.previous = Some(ProcessPoint::from(process));
-        self.state(now)
+            ) else {
+                return self.public_state(&state, state.effective_now(now));
+            };
+            pending
+        };
+
+        let result = capture(
+            &self.artifact_path,
+            self.config.max_artifact_bytes,
+            pending.payload,
+        );
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state.finish_capture(pending.sequence, result);
+        self.public_state(&state, state.effective_now(now))
     }
 
-    fn ready_trigger(
-        &self,
-        now: u64,
-        ownership: &DaemonOwnershipMetrics,
-    ) -> Option<(DaemonDiagnosticTrigger, SustainedWindow)> {
-        if ownership.exited_unreaped_holders.unwrap_or(0) > 0 {
-            return Some((
-                DaemonDiagnosticTrigger::ExitedUnreapedHolder,
-                SustainedWindow {
-                    started_at_unix_ms: now,
-                    cpu_time_us: None,
-                },
-            ));
-        }
-        let window_ms = self.config.sustained_window_ms;
-        let cpu = self
-            .cpu_window
-            .filter(|window| now.saturating_sub(window.started_at_unix_ms) >= window_ms);
-        let memory = self
-            .memory_window
-            .filter(|window| now.saturating_sub(window.started_at_unix_ms) >= window_ms);
-        match (cpu, memory) {
-            (Some(cpu), Some(memory)) if memory.started_at_unix_ms < cpu.started_at_unix_ms => {
-                Some((DaemonDiagnosticTrigger::AnonymousMemory, memory))
-            }
-            (Some(cpu), _) => Some((DaemonDiagnosticTrigger::Cpu, cpu)),
-            (None, Some(memory)) => Some((DaemonDiagnosticTrigger::AnonymousMemory, memory)),
-            (None, None) => None,
-        }
-    }
-
-    fn state(&self, now: u64) -> DaemonDiagnosticState {
-        let active = match (self.cpu_window, self.memory_window) {
+    fn public_state(&self, state: &DiagnosticTrackerState, now: u64) -> DaemonDiagnosticState {
+        let active = match (state.cpu_window, state.memory_window) {
             (Some(cpu), Some(memory)) if memory.started_at_unix_ms < cpu.started_at_unix_ms => {
                 Some((DaemonDiagnosticTrigger::AnonymousMemory, memory))
             }
@@ -205,7 +165,8 @@ impl DiagnosticTracker {
                 }
             });
         let cooldown =
-            self.cooldown_until_unix_ms
+            state
+                .cooldown_until_unix_ms
                 .map_or_else(DaemonDiagnosticCooldown::default, |until| {
                     DaemonDiagnosticCooldown {
                         active: now < until,
@@ -219,21 +180,254 @@ impl DiagnosticTracker {
                 .config
                 .max_artifact_bytes
                 .min(MAX_DIAGNOSTIC_ARTIFACT_BYTES),
-            trigger_count: self.trigger_count,
+            trigger_count: state.trigger_count,
             active_window,
             cooldown,
-            latest: self.latest.clone(),
-            last_error: self.last_error.clone(),
+            latest: state.latest.clone(),
+            last_error: state.last_error.clone(),
         }
     }
 }
 
-impl From<&DaemonProcessMetrics> for ProcessPoint {
-    fn from(value: &DaemonProcessMetrics) -> Self {
+impl DiagnosticTrackerState {
+    fn prepare_capture(
+        &mut self,
+        config: &DiagnosticsConfig,
+        point: ProcessPoint,
+        process: &DaemonProcessMetrics,
+        runtime_usage: &DaemonRuntimeUsage,
+        ownership: &DaemonOwnershipMetrics,
+        workspace_holders: &[DaemonDiagnosticWorkspaceHolder],
+    ) -> Option<PendingCapture> {
+        let now = point.sampled_at_unix_ms;
+        if let Some(previous) = self.previous.as_mut() {
+            if now < previous.sampled_at_unix_ms {
+                return None;
+            }
+            if now == previous.sampled_at_unix_ms {
+                previous.activity_classes.extend(point.activity_classes);
+                previous.cpu_time_us = max_optional(previous.cpu_time_us, point.cpu_time_us);
+                if let Some(window) = self.cpu_window.as_mut() {
+                    window.activity.include_equal(point.activity_classes);
+                }
+                if let Some(window) = self.memory_window.as_mut() {
+                    window.activity.include_equal(point.activity_classes);
+                }
+                return None;
+            }
+        }
+
+        if !config.enabled {
+            self.previous = Some(point);
+            return None;
+        }
+
+        let current_interval = self
+            .previous
+            .and_then(|previous| cpu_interval(previous, point));
+        let interval_activity = self.previous.map_or(point.activity_classes, |previous| {
+            previous.activity_classes.union(point.activity_classes)
+        });
+        let cpu_high = current_interval
+            .as_ref()
+            .and_then(|interval| interval.percent_of_one_core)
+            .is_some_and(|percent| percent > config.cpu_threshold_percent);
+        update_window(
+            &mut self.cpu_window,
+            cpu_high,
+            now,
+            process.cpu_time_us,
+            interval_activity,
+        );
+        let memory_high = process
+            .anonymous_memory_bytes
+            .is_some_and(|bytes| bytes > config.anonymous_memory_threshold_bytes);
+        update_window(
+            &mut self.memory_window,
+            memory_high,
+            now,
+            process.cpu_time_us,
+            point.activity_classes,
+        );
+
+        let trigger = self.ready_trigger(config, now, ownership, point.activity_classes);
+        let in_cooldown = self.cooldown_until_unix_ms.is_some_and(|until| now < until);
+        let can_capture = self.capture_in_flight.is_none() && !in_cooldown;
+        let pending = trigger.filter(|_| can_capture).map(|(trigger, window)| {
+            let interval = match trigger {
+                DaemonDiagnosticTrigger::Cpu | DaemonDiagnosticTrigger::AnonymousMemory => {
+                    window_cpu_interval(window, point)
+                }
+                DaemonDiagnosticTrigger::ExitedUnreapedHolder => {
+                    current_interval.unwrap_or_default()
+                }
+            };
+            let sequence = self.next_capture_sequence;
+            self.next_capture_sequence = self.next_capture_sequence.saturating_add(1);
+            self.capture_in_flight = Some(sequence);
+            self.cooldown_until_unix_ms = Some(now.saturating_add(config.cooldown_ms));
+            self.cpu_window = None;
+            self.memory_window = None;
+            PendingCapture {
+                sequence,
+                payload: diagnostic_payload(
+                    trigger,
+                    window.activity.resolved(),
+                    process,
+                    interval,
+                    runtime_usage,
+                    ownership,
+                    workspace_holders,
+                ),
+            }
+        });
+        self.previous = Some(point);
+        pending
+    }
+
+    fn ready_trigger(
+        &self,
+        config: &DiagnosticsConfig,
+        now: u64,
+        ownership: &DaemonOwnershipMetrics,
+        activity_classes: ActivityClasses,
+    ) -> Option<(DaemonDiagnosticTrigger, SustainedWindow)> {
+        if ownership.exited_unreaped_holders.unwrap_or(0) > 0 {
+            return Some((
+                DaemonDiagnosticTrigger::ExitedUnreapedHolder,
+                SustainedWindow {
+                    started_at_unix_ms: now,
+                    cpu_time_us: None,
+                    activity: ActivityEvidence::new(activity_classes),
+                },
+            ));
+        }
+        let window_ms = config.sustained_window_ms;
+        let cpu = self
+            .cpu_window
+            .filter(|window| now.saturating_sub(window.started_at_unix_ms) >= window_ms);
+        let memory = self
+            .memory_window
+            .filter(|window| now.saturating_sub(window.started_at_unix_ms) >= window_ms);
+        match (cpu, memory) {
+            (Some(cpu), Some(memory)) if memory.started_at_unix_ms < cpu.started_at_unix_ms => {
+                Some((DaemonDiagnosticTrigger::AnonymousMemory, memory))
+            }
+            (Some(cpu), _) => Some((DaemonDiagnosticTrigger::Cpu, cpu)),
+            (None, Some(memory)) => Some((DaemonDiagnosticTrigger::AnonymousMemory, memory)),
+            (None, None) => None,
+        }
+    }
+
+    fn finish_capture(&mut self, sequence: u64, result: io::Result<DaemonDiagnosticSummary>) {
+        if self.capture_in_flight != Some(sequence) {
+            return;
+        }
+        self.capture_in_flight = None;
+        match result {
+            Ok(summary) => {
+                self.trigger_count = self.trigger_count.saturating_add(1);
+                self.latest = Some(summary);
+                self.last_error = None;
+            }
+            Err(error) => {
+                self.last_error = Some(truncate_utf8(&error.to_string(), MAX_ERROR_BYTES));
+            }
+        }
+    }
+
+    fn effective_now(&self, now: u64) -> u64 {
+        self.previous
+            .map_or(now, |previous| now.max(previous.sampled_at_unix_ms))
+    }
+}
+
+impl ProcessPoint {
+    fn new(value: &DaemonProcessMetrics, request_class: DaemonMetricsRequestClass) -> Self {
         Self {
             sampled_at_unix_ms: value.sampled_at_unix_ms,
             cpu_time_us: value.cpu_time_us,
+            activity_classes: ActivityClasses::from_request(request_class),
         }
+    }
+}
+
+impl ActivityClasses {
+    const LEGACY_CGROUP: u8 = 1 << 0;
+    const TOPOLOGY: u8 = 1 << 1;
+    const DAEMON_SELF: u8 = 1 << 2;
+
+    fn from_request(request_class: DaemonMetricsRequestClass) -> Self {
+        Self(match request_class {
+            DaemonMetricsRequestClass::LegacyCgroup => Self::LEGACY_CGROUP,
+            DaemonMetricsRequestClass::Topology => Self::TOPOLOGY,
+            DaemonMetricsRequestClass::DaemonSelf => Self::DAEMON_SELF,
+        })
+    }
+
+    fn extend(&mut self, other: Self) {
+        self.0 |= other.0;
+    }
+
+    fn union(self, other: Self) -> Self {
+        Self(self.0 | other.0)
+    }
+
+    fn intersection(self, other: Self) -> Self {
+        Self(self.0 & other.0)
+    }
+
+    fn is_empty(self) -> bool {
+        self.0 == 0
+    }
+
+    fn into_vec(self) -> Vec<String> {
+        let mut activity = vec!["rpc.observability".to_owned()];
+        for (bit, name) in [
+            (Self::LEGACY_CGROUP, "observability.cgroup"),
+            (Self::TOPOLOGY, "observability.topology"),
+            (Self::DAEMON_SELF, "observability.daemon"),
+        ] {
+            if self.0 & bit != 0 {
+                activity.push(name.to_owned());
+            }
+        }
+        activity
+    }
+}
+
+impl ActivityEvidence {
+    fn new(activity_classes: ActivityClasses) -> Self {
+        Self {
+            union: activity_classes,
+            intersection: activity_classes,
+        }
+    }
+
+    fn observe(&mut self, activity_classes: ActivityClasses) {
+        self.union.extend(activity_classes);
+        self.intersection = self.intersection.intersection(activity_classes);
+    }
+
+    fn include_equal(&mut self, activity_classes: ActivityClasses) {
+        self.union.extend(activity_classes);
+        self.intersection.extend(activity_classes);
+    }
+
+    fn resolved(self) -> ActivityClasses {
+        if self.intersection.is_empty() {
+            self.union
+        } else {
+            self.intersection
+        }
+    }
+}
+
+fn max_optional(left: Option<u64>, right: Option<u64>) -> Option<u64> {
+    match (left, right) {
+        (Some(left), Some(right)) => Some(left.max(right)),
+        (Some(value), None) | (None, Some(value)) => Some(value),
+        (None, None) => None,
     }
 }
 
@@ -242,12 +436,19 @@ fn update_window(
     above: bool,
     now: u64,
     cpu_time_us: Option<u64>,
+    activity_classes: ActivityClasses,
 ) {
     if above {
-        window.get_or_insert(SustainedWindow {
-            started_at_unix_ms: now,
-            cpu_time_us,
-        });
+        match window {
+            Some(window) => window.activity.observe(activity_classes),
+            None => {
+                *window = Some(SustainedWindow {
+                    started_at_unix_ms: now,
+                    cpu_time_us,
+                    activity: ActivityEvidence::new(activity_classes),
+                });
+            }
+        }
     } else {
         *window = None;
     }
@@ -286,37 +487,33 @@ fn window_cpu_interval(
         ProcessPoint {
             sampled_at_unix_ms: window.started_at_unix_ms,
             cpu_time_us: window.cpu_time_us,
+            activity_classes: window.activity.resolved(),
         },
         current,
     )
     .unwrap_or_default()
 }
 
-fn capture(
-    artifact_path: &Path,
-    max_artifact_bytes: usize,
+fn diagnostic_payload(
     trigger: DaemonDiagnosticTrigger,
+    activity_classes: ActivityClasses,
     process: &DaemonProcessMetrics,
     cpu_interval: DaemonDiagnosticCpuInterval,
     runtime_usage: &DaemonRuntimeUsage,
     ownership: &DaemonOwnershipMetrics,
     workspace_holders: &[DaemonDiagnosticWorkspaceHolder],
-) -> io::Result<DaemonDiagnosticSummary> {
-    let cap = max_artifact_bytes.min(MAX_DIAGNOSTIC_ARTIFACT_BYTES);
-    let (normalized_holders, mut omitted_workspace_id_count) =
+) -> DiagnosticPayload {
+    let (normalized_holders, omitted_workspace_id_count) =
         normalize_workspace_holders(workspace_holders);
     let normalized_ids = normalized_holders
         .iter()
         .map(|holder| holder.workspace_id.clone())
         .collect();
-    let mut payload = DiagnosticPayload {
+    DiagnosticPayload {
         schema_version: 1,
         captured_at_unix_ms: process.sampled_at_unix_ms,
         trigger,
-        activity_classes: vec![
-            "rpc.observability".to_owned(),
-            "observability.topology".to_owned(),
-        ],
+        activity_classes: activity_classes.into_vec(),
         cpu_interval,
         memory: DaemonDiagnosticMemory {
             resident_memory_bytes: process.resident_memory_bytes,
@@ -334,8 +531,16 @@ fn capture(
         workspace_ids_truncated: omitted_workspace_id_count > 0,
         omitted_workspace_id_count,
         redaction: DaemonDiagnosticRedaction::default(),
-    };
+    }
+}
 
+fn capture(
+    artifact_path: &Path,
+    max_artifact_bytes: usize,
+    mut payload: DiagnosticPayload,
+) -> io::Result<DaemonDiagnosticSummary> {
+    let cap = max_artifact_bytes.min(MAX_DIAGNOSTIC_ARTIFACT_BYTES);
+    let mut omitted_workspace_id_count = payload.omitted_workspace_id_count;
     loop {
         let payload_bytes = serde_json::to_vec(&payload).map_err(io::Error::other)?;
         let fingerprint = hex_digest(Sha256::digest(&payload_bytes));

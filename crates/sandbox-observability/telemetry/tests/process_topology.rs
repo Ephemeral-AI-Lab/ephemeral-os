@@ -298,6 +298,28 @@ fn process_exit_races_and_missing_cgroup_membership_are_nonfatal() {
 }
 
 #[test]
+fn oversized_process_status_is_bounded_and_reported_as_partial() {
+    let root = fixture("oversized-status");
+    let mut namespaces = FakeNamespaceReader::default();
+    namespaces.holder(&root, 57, 157, 257);
+    namespaces.process(&root, 571, 157, 257);
+    write_process(&root, 571, 1, 57, "ns-init", 'S', Some("0::/\n"));
+    std::fs::write(root.join("571/status"), vec![b'x'; 64 * 1024 + 1])
+        .expect("oversized status fixture");
+
+    let topology = collect(&root, vec![workspace("workspace-a", 57)], &namespaces);
+
+    assert!(topology.available);
+    assert_eq!(topology.workspaces[0].state, WorkspaceProcessState::Partial);
+    assert!(topology.workspaces[0].processes.is_empty());
+    assert!(topology
+        .warnings
+        .iter()
+        .any(|warning| warning.contains("status exceeded the read limit")));
+    assert!(topology.warnings.len() <= 16);
+}
+
+#[test]
 fn process_resource_estimates_include_rss_cpu_and_start_identity() {
     let root = fixture("resource-estimates");
     let mut namespaces = FakeNamespaceReader::default();

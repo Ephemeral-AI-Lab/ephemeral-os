@@ -5,12 +5,24 @@ use sandbox_observability_telemetry::record::names;
 use sandbox_runtime_namespace_execution::NamespaceExecutionId;
 use serde_json::json;
 
-use crate::workspace_crate::WorkspaceSessionId;
+use crate::workspace_crate::{DestroyWorkspaceRequest, HolderProbe, WorkspaceSessionId};
 use crate::workspace_session::{WorkspaceSessionError, WorkspaceSessionService};
 
+use super::super::core::DestroyFlight;
 use super::super::model::{
     FinalizationState, FinalizeOutcome, FinalizePolicy, WorkspaceSessionHandler,
 };
+
+const HOLDER_PROBE_MAX_ATTEMPTS: usize = 3;
+
+enum PostGateCompletion {
+    None,
+    /// Only a newly claimed flight whose immutable plan has an empty command
+    /// ledger may run from command completion. An existing owner may be
+    /// waiting for this very completion callback and must never be joined
+    /// here.
+    HolderDestroyLeader(Arc<DestroyFlight>),
+}
 
 /// Take-once slot shared between `exec_command`'s failure path and the engine
 /// `on_complete` closure; exactly one side takes the token and completes it
@@ -89,12 +101,12 @@ impl WorkspaceSessionService {
                 self.discard_resurrected_gate(workspace_session_id, gate);
                 return Err(WorkspaceSessionError::not_found(workspace_session_id));
             };
-            if !session.handle.holder_is_live() {
+            if !self.workspace().holder_is_live(&session.handle) {
                 return Err(WorkspaceSessionError::HolderExited {
                     workspace_session_id: workspace_session_id.clone(),
-                    reason: session
-                        .handle
-                        .holder_exit_reason()
+                    reason: self
+                        .workspace()
+                        .holder_exit_reason(&session.handle)
                         .unwrap_or_else(|| "exit-status:unknown".to_owned()),
                     cleanup_state: session.finalization_state,
                 });
@@ -139,12 +151,12 @@ impl WorkspaceSessionService {
         let handler = {
             let sessions = self.lock_sessions()?;
             match sessions.get(workspace_session_id) {
-                Some(session) if !session.handle.holder_is_live() => {
+                Some(session) if !self.workspace().holder_is_live(&session.handle) => {
                     return Err(WorkspaceSessionError::HolderExited {
                         workspace_session_id: workspace_session_id.clone(),
-                        reason: session
-                            .handle
-                            .holder_exit_reason()
+                        reason: self
+                            .workspace()
+                            .holder_exit_reason(&session.handle)
                             .unwrap_or_else(|| "exit-status:unknown".to_owned()),
                         cleanup_state: session.finalization_state,
                     });
@@ -173,13 +185,15 @@ impl WorkspaceSessionService {
         finalize_outcome: &Arc<OnceLock<FinalizeOutcome>>,
     ) {
         let gate = self.session_gate(workspace_session_id);
-        let _admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
-        self.complete_under_gate(
+        let admission = gate.lock().unwrap_or_else(PoisonError::into_inner);
+        let post_gate = self.complete_under_gate(
             workspace_session_id,
             command_session_id,
             finalize_outcome,
             Some(&gate),
         );
+        drop(admission);
+        self.complete_after_gate(post_gate);
     }
 
     /// Completion for failure paths that already hold the admission guard
@@ -188,20 +202,21 @@ impl WorkspaceSessionService {
     pub(crate) fn complete_admitted_locked(
         &self,
         mut token: SessionExecutionToken,
-        admission: &MutexGuard<'_, ()>,
+        admission: MutexGuard<'_, ()>,
     ) {
-        let _ = admission;
         token.completed = true;
         let workspace_session_id = token.workspace_session_id.clone();
         let command_session_id = token.command_session_id.clone();
         let finalize_outcome = Arc::clone(&token.finalize_outcome);
         drop(token);
-        self.complete_under_gate(
+        let post_gate = self.complete_under_gate(
             &workspace_session_id,
             &command_session_id,
             &finalize_outcome,
             None,
         );
+        drop(admission);
+        self.complete_after_gate(post_gate);
     }
 
     fn complete_under_gate(
@@ -210,8 +225,8 @@ impl WorkspaceSessionService {
         command_session_id: &NamespaceExecutionId,
         finalize_outcome: &Arc<OnceLock<FinalizeOutcome>>,
         resurrected_gate: Option<&Arc<Mutex<()>>>,
-    ) {
-        let snapshot = {
+    ) -> PostGateCompletion {
+        let candidate = {
             let Ok(mut sessions) = self.lock_sessions() else {
                 self.obs().event(
                     names::WORKSPACE_SESSION_FINALIZE_FAILED,
@@ -221,27 +236,109 @@ impl WorkspaceSessionService {
                         "error": "sessions lock poisoned during completion",
                     }),
                 );
-                return;
+                return PostGateCompletion::None;
             };
             let Some(session) = sessions.get_mut(workspace_session_id) else {
                 drop(sessions);
                 if let Some(gate) = resurrected_gate {
                     self.discard_resurrected_gate(workspace_session_id, gate);
                 }
-                return;
+                return PostGateCompletion::None;
             };
             if !session.active_commands.remove(command_session_id) {
-                return;
+                return PostGateCompletion::None;
             }
             if !session.active_commands.is_empty()
                 || session.finalize_policy != FinalizePolicy::PublishThenDestroy
                 || session.finalization_state != FinalizationState::Active
             {
-                return;
+                return PostGateCompletion::None;
             }
+            // Claim normal finalization before releasing the sessions lock.
+            // A holder exit after this point cannot leave an empty Active
+            // session or let another path steal the teardown boundary.
             session.finalization_state = FinalizationState::Finalizing;
             session.handler()
         };
-        self.finalize_session_snapshot(snapshot, finalize_outcome);
+
+        let mut last_unknown = None;
+        for _ in 0..HOLDER_PROBE_MAX_ATTEMPTS {
+            match self.workspace().probe_holder(&candidate.handle) {
+                HolderProbe::Running => {
+                    self.finalize_session_snapshot(candidate, finalize_outcome);
+                    return PostGateCompletion::None;
+                }
+                HolderProbe::Exited => {
+                    return match self.claim_holder_destroy_flight(&candidate) {
+                        Ok((flight, true)) => {
+                            debug_assert!(
+                                flight
+                                    .holder_plan
+                                    .as_ref()
+                                    .is_some_and(|plan| plan.command_ids.is_empty()),
+                                "last-command completion may lead only an empty-ledger holder flight"
+                            );
+                            PostGateCompletion::HolderDestroyLeader(flight)
+                        }
+                        // A pre-existing teardown may be joining the command
+                        // whose callback is executing now. Hand off without
+                        // waiting so that owner can make progress.
+                        Ok((_flight, false)) => PostGateCompletion::None,
+                        Err(error) => {
+                            self.fail_completion_probe(
+                                &candidate,
+                                command_session_id,
+                                finalize_outcome,
+                                "holder_probe_cleanup_claim_failed",
+                                &error.to_string(),
+                            );
+                            PostGateCompletion::None
+                        }
+                    };
+                }
+                HolderProbe::Unknown { class } => last_unknown = Some(class),
+            }
+        }
+
+        let class = last_unknown
+            .expect("a completed bounded probe loop always retains its unknown classification")
+            .as_str();
+        self.fail_completion_probe(
+            &candidate,
+            command_session_id,
+            finalize_outcome,
+            class,
+            "holder supervisor could not establish exact-generation liveness",
+        );
+        PostGateCompletion::None
+    }
+
+    fn complete_after_gate(&self, completion: PostGateCompletion) {
+        if let PostGateCompletion::HolderDestroyLeader(flight) = completion {
+            let _ = self.run_holder_destroy(flight, DestroyWorkspaceRequest::default());
+        }
+    }
+
+    fn fail_completion_probe(
+        &self,
+        handler: &WorkspaceSessionHandler,
+        command_session_id: &NamespaceExecutionId,
+        finalize_outcome: &Arc<OnceLock<FinalizeOutcome>>,
+        class: &'static str,
+        detail: &str,
+    ) {
+        self.mark_destroy_failed(handler);
+        let _ = finalize_outcome.set(FinalizeOutcome::finalization_failed(class));
+        self.obs().event(
+            names::WORKSPACE_SESSION_FINALIZE_FAILED,
+            json!({
+                "workspace_session_id": handler.workspace_session_id.0,
+                "command_session_id": command_session_id.0,
+                "stage": "holder_probe",
+                "class": class,
+                "attempts": HOLDER_PROBE_MAX_ATTEMPTS,
+                "detail": detail,
+            }),
+        );
     }
 }

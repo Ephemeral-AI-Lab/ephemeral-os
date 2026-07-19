@@ -126,7 +126,7 @@ impl WorkspaceManager {
             dirs,
             ns_fds: Default::default(),
             holder_pid: 0,
-            holder_registration: crate::namespace::holder::HolderRegistration::detached_live(
+            holder_registration: crate::namespace::holder::HolderRegistration::unmanaged(
                 workspace_id.clone(),
                 0,
             ),

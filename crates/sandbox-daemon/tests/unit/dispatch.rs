@@ -6,9 +6,22 @@ fn blocking_admission_rejects_immediately_and_recovers_after_release() {
     let first = admission.try_acquire().expect("first permit");
     let _second = admission.try_acquire().expect("second permit");
 
-    assert!(admission.try_acquire().is_none());
+    assert_eq!(admission.try_acquire().unwrap_err(), AdmissionError::Capacity);
     drop(first);
-    assert!(admission.try_acquire().is_some());
+    assert!(admission.try_acquire().is_ok());
+}
+
+#[test]
+fn blocking_admission_closes_permanently_and_distinguishes_shutdown() {
+    let admission = BlockingAdmission::new(1);
+    let held = admission.try_acquire().expect("initial permit");
+
+    admission.close();
+
+    assert_eq!(admission.try_acquire().unwrap_err(), AdmissionError::Closed);
+    drop(held);
+    assert_eq!(admission.try_acquire().unwrap_err(), AdmissionError::Closed);
+    assert!(admission.is_closed());
 }
 
 #[test]
@@ -20,6 +33,14 @@ fn blocking_overload_is_structured_and_reports_the_active_limit() {
         response["error"]["details"]["fields"]["max_blocking_requests"],
         8
     );
+}
+
+#[test]
+fn shutdown_rejection_is_structured_and_not_reported_as_capacity() {
+    let response = server_shutting_down_response().into_json_value();
+
+    assert_eq!(response["error"]["kind"], "server_shutting_down");
+    assert_eq!(response["error"]["details"], json!({}));
 }
 
 #[test]

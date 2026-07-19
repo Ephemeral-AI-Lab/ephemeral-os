@@ -1,7 +1,7 @@
 use sandbox_config::configs::observability::ViewsConfig;
 use sandbox_observability_query::ports::{
-    NamespaceExecutionSnapshot, ObservabilityInput, ObservabilitySnapshot, QueryContext,
-    QueryLimits, WorkspaceSnapshot,
+    DaemonMetricsRequestClass, NamespaceExecutionSnapshot, ObservabilityInput,
+    ObservabilitySnapshot, QueryContext, QueryLimits, WorkspaceSnapshot,
 };
 use sandbox_observability_telemetry::collect::process_topology::{
     AppliedCgroupLimits, DaemonDiagnosticWorkspaceHolder, DaemonLifecycleMetrics,
@@ -11,9 +11,11 @@ use sandbox_observability_telemetry::collect::process_topology::{
 use sandbox_observability_telemetry::{sample_layerstack, LayerStackBytes, WalkBudget};
 use sandbox_runtime::{
     workspace_session::HolderLifecycleEventKind, LayerDeltaDescription,
-    RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot, RuntimeWorkspaceSnapshot,
-    SandboxRuntimeOperations, StackObservation,
+    RuntimeNamespaceExecutionSnapshot, RuntimeObservabilitySnapshot,
+    RuntimeOwnershipTopologySnapshot, RuntimeWorkspaceSnapshot, SandboxRuntimeOperations,
+    StackObservation,
 };
+use tokio_util::task::TaskTracker;
 
 use super::DaemonObservability;
 use crate::rpc::{BlockingAdmission, ConnectionAdmission};
@@ -24,6 +26,7 @@ pub(crate) struct DaemonObservabilityAdapter<'a> {
         Option<&'a DaemonObservability>,
         &'a BlockingAdmission,
         &'a ConnectionAdmission,
+        &'a TaskTracker,
     ),
 }
 
@@ -33,6 +36,7 @@ impl<'a> DaemonObservabilityAdapter<'a> {
         observability: Option<&'a DaemonObservability>,
         blocking_admission: &'a BlockingAdmission,
         connection_admission: &'a ConnectionAdmission,
+        async_tasks: &'a TaskTracker,
     ) -> Self {
         Self {
             state: (
@@ -40,6 +44,7 @@ impl<'a> DaemonObservabilityAdapter<'a> {
                 observability,
                 blocking_admission,
                 connection_admission,
+                async_tasks,
             ),
         }
     }
@@ -58,6 +63,82 @@ impl<'a> DaemonObservabilityAdapter<'a> {
 
     fn connection_admission(&self) -> &ConnectionAdmission {
         self.state.3
+    }
+
+    fn async_tasks(&self) -> &TaskTracker {
+        self.state.4
+    }
+
+    fn collect_daemon_metrics(
+        &self,
+        snapshot: &RuntimeOwnershipTopologySnapshot,
+        request_class: DaemonMetricsRequestClass,
+    ) -> DaemonProcessMetrics {
+        let mut daemon =
+            DaemonProcessMetrics::collect(std::path::Path::new("/proc"), std::process::id());
+        let workspace_holders = snapshot
+            .workspaces
+            .iter()
+            .map(|workspace| DaemonDiagnosticWorkspaceHolder {
+                workspace_id: workspace.workspace_id.0.clone(),
+                holder_pid: workspace.holder_pid,
+            })
+            .collect::<Vec<_>>();
+        let blocking_admission_in_use = self.blocking_admission().in_use();
+        let connection_admission_in_use = self.connection_admission().in_use();
+        let runtime_usage = DaemonRuntimeUsage {
+            active_async_tasks: Some(self.async_tasks().len()),
+            active_blocking_tasks: Some(blocking_admission_in_use),
+            blocking_queue_depth: Some(0),
+            blocking_admission_in_use: Some(blocking_admission_in_use),
+            connection_admission_in_use: Some(connection_admission_in_use),
+            active_commands: Some(snapshot.active_command_count),
+            command_queue_depth: Some(0),
+        };
+        let namespace_control_fd_count = snapshot
+            .ownership
+            .namespace_fd_count
+            .zip(snapshot.ownership.control_fd_count)
+            .and_then(|(namespace, control)| namespace.checked_add(control));
+        let ownership = DaemonOwnershipMetrics {
+            open_workspaces: snapshot.workspaces.len(),
+            live_holders: snapshot
+                .workspaces
+                .iter()
+                .filter(|workspace| workspace.holder_live)
+                .count(),
+            exited_unreaped_holders: snapshot.ownership.exited_unreaped_holders,
+            namespace_fd_count: snapshot.ownership.namespace_fd_count,
+            control_fd_count: snapshot.ownership.control_fd_count,
+            namespace_control_fd_count,
+            active_scratch_directories: snapshot.ownership.active_scratch_directories,
+            persisted_workspace_handles: snapshot.ownership.persisted_workspace_handles,
+            active_layer_leases: Some(snapshot.active_layer_lease_count),
+        };
+        let lifecycle = map_lifecycle(
+            self.operations()
+                .workspace_session
+                .holder_lifecycle_snapshot(),
+        );
+        daemon.runtime_config = self
+            .observability()
+            .map_or_else(DaemonRuntimeConfigMetrics::default, |observability| {
+                observability.runtime_config()
+            });
+        daemon.runtime_usage = runtime_usage;
+        daemon.ownership = ownership;
+        daemon.lifecycle = lifecycle;
+        daemon.allocator = super::allocator::collect_current();
+        if let Some(observability) = self.observability() {
+            daemon.diagnostics = observability.observe_diagnostics(
+                request_class,
+                &daemon,
+                &daemon.runtime_usage,
+                &daemon.ownership,
+                &workspace_holders,
+            );
+        }
+        daemon
     }
 }
 
@@ -84,74 +165,12 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
         }
     }
 
-    fn cgroup_topology(&self) -> WorkspaceProcessTopology {
-        let mut daemon =
-            DaemonProcessMetrics::collect(std::path::Path::new("/proc"), std::process::id());
-        let snapshot = self.operations().observability_snapshot();
-        let workspace_holders = snapshot
-            .workspaces
-            .iter()
-            .map(|workspace| DaemonDiagnosticWorkspaceHolder {
-                workspace_id: workspace.workspace_id.0.clone(),
-                holder_pid: workspace.holder_pid,
-            })
-            .collect::<Vec<_>>();
-        let blocking_admission_in_use = self.blocking_admission().in_use();
-        let connection_admission_in_use = self.connection_admission().in_use();
-        let runtime_usage = DaemonRuntimeUsage {
-            active_async_tasks: Some(connection_admission_in_use),
-            active_blocking_tasks: Some(blocking_admission_in_use),
-            blocking_queue_depth: Some(0),
-            blocking_admission_in_use: Some(blocking_admission_in_use),
-            connection_admission_in_use: Some(connection_admission_in_use),
-            active_commands: Some(snapshot.active_namespace_executions.len()),
-            command_queue_depth: Some(0),
-        };
-        let namespace_control_fd_count = snapshot
-            .ownership
-            .namespace_fd_count
-            .zip(snapshot.ownership.control_fd_count)
-            .and_then(|(namespace, control)| namespace.checked_add(control));
-        let ownership = DaemonOwnershipMetrics {
-            open_workspaces: snapshot.workspaces.len(),
-            live_holders: snapshot
-                .workspaces
-                .iter()
-                .filter(|workspace| workspace.holder_live)
-                .count(),
-            exited_unreaped_holders: snapshot.ownership.exited_unreaped_holders,
-            namespace_fd_count: snapshot.ownership.namespace_fd_count,
-            control_fd_count: snapshot.ownership.control_fd_count,
-            namespace_control_fd_count,
-            active_scratch_directories: snapshot.ownership.active_scratch_directories,
-            persisted_workspace_handles: snapshot.ownership.persisted_workspace_handles,
-            active_layer_leases: self
-                .operations()
-                .observe_layerstack()
-                .ok()
-                .map(|observation| observation.active_lease_count),
-        };
-        let lifecycle = map_lifecycle(
-            self.operations()
-                .workspace_session
-                .holder_lifecycle_snapshot(),
-        );
-        daemon.runtime_config = self
-            .observability()
-            .map_or_else(DaemonRuntimeConfigMetrics::default, |observability| {
-                observability.runtime_config()
-            });
-        daemon.runtime_usage = runtime_usage;
-        daemon.ownership = ownership;
-        daemon.lifecycle = lifecycle;
-        if let Some(observability) = self.observability() {
-            daemon.diagnostics = observability.observe_diagnostics(
-                &daemon,
-                &daemon.runtime_usage,
-                &daemon.ownership,
-                &workspace_holders,
-            );
-        }
+    fn cgroup_topology(
+        &self,
+        request_class: DaemonMetricsRequestClass,
+    ) -> WorkspaceProcessTopology {
+        let snapshot = self.operations().ownership_topology_snapshot();
+        let daemon = self.collect_daemon_metrics(&snapshot, request_class);
         if snapshot.workspaces.is_empty() && !snapshot.partial_errors.is_empty() {
             let mut topology = WorkspaceProcessTopology::unavailable(format!(
                 "runtime workspace snapshot failed: {}",
@@ -183,6 +202,11 @@ impl ObservabilityInput for DaemonObservabilityAdapter<'_> {
             WorkspaceProcessTopology::collect(std::path::Path::new("/proc"), workspaces);
         topology.daemon = Some(daemon);
         topology
+    }
+
+    fn daemon_metrics(&self, request_class: DaemonMetricsRequestClass) -> DaemonProcessMetrics {
+        let snapshot = self.operations().ownership_topology_snapshot();
+        self.collect_daemon_metrics(&snapshot, request_class)
     }
 
     fn observability_snapshot(&self) -> ObservabilitySnapshot {

@@ -13,7 +13,7 @@ use sandbox_manager::{
 use sandbox_operation_catalog::{
     internal,
     manager::EXPORT_CHANGES_SPEC,
-    observability::{CGROUP_SPEC, SNAPSHOT_SPEC},
+    observability::{CGROUP_SPEC, DAEMON_SPEC, SNAPSHOT_SPEC},
     routes,
     runtime::{
         CREATE_WORKSPACE_SESSION_SPEC, DESTROY_WORKSPACE_SESSION_SPEC, EXEC_COMMAND_SPEC,
@@ -185,6 +185,16 @@ impl SandboxDaemonClient for RecordingDaemonClient {
                         "mount_namespace": "mnt:[200]",
                         "processes": [],
                     }],
+                },
+            }),
+            "daemon" => json!({
+                "forwarded": true,
+                "view": "daemon",
+                "scope": "sandbox",
+                "daemon": {
+                    "available": true,
+                    "pid": 42,
+                    "thread_count": 8,
                 },
             }),
             _ => json!({"forwarded": true}),
@@ -535,6 +545,39 @@ async fn manager_single_and_fleet_resource_reads_are_daemon_quiescent_for_ten_th
             .remove(&sandbox_id(id))
             .expect("clean resource ring");
     }
+}
+
+#[tokio::test]
+async fn manager_forwards_one_daemon_self_read_without_topology() {
+    let (services, store, daemon_client) = services();
+    store
+        .insert(ready_record(
+            "sbox-daemon-self",
+            Some(SandboxDaemonEndpoint::new(
+                "127.0.0.1",
+                7000,
+                "token-sbox-daemon-self",
+            )),
+        ))
+        .expect("insert sandbox");
+
+    let response = router(Arc::clone(&services))
+        .dispatch_request(request(
+            DAEMON_SPEC.name,
+            OperationScope::sandbox("sbox-daemon-self"),
+            json!({}),
+        ))
+        .await
+        .into_json_value();
+
+    assert_eq!(response["view"], "daemon");
+    assert_eq!(response["daemon"]["pid"], 42);
+    let invocations = daemon_client.invocations.lock().expect("invocations lock");
+    assert_eq!(invocations.len(), 1);
+    assert_eq!(invocations[0].1, DAEMON_SPEC.name);
+    assert!(invocations
+        .iter()
+        .all(|(_, operation, _)| operation != TOPOLOGY_OPERATION));
 }
 
 #[tokio::test]

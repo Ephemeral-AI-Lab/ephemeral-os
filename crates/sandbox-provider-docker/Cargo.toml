@@ -19,5 +19,10 @@ thiserror.workspace = true
 serde_json.workspace = true
 futures-util.workspace = true
 
+[dev-dependencies]
+http-body-util.workspace = true
+hyper.workspace = true
+hyper-util.workspace = true
+
 [lints]
 workspace = true

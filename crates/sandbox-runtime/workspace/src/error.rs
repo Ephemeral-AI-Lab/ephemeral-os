@@ -1,5 +1,7 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorkspaceError {
+    Closing,
+
     InvalidRequest {
         field: &'static str,
         message: String,
@@ -44,6 +46,7 @@ pub enum WorkspaceError {
 impl std::fmt::Display for WorkspaceError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Closing => write!(formatter, "workspace runtime is closing"),
             Self::InvalidRequest { field, message } => {
                 write!(formatter, "invalid request for {field}: {message}")
             }
@@ -80,6 +83,7 @@ impl WorkspaceError {
     #[must_use]
     pub const fn kind(&self) -> &'static str {
         match self {
+            Self::Closing => "closing",
             Self::InvalidRequest { .. } => "invalid_request",
             Self::NotOpen => "not_open",
             Self::ActiveCommands { .. } => "active_commands",

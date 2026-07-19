@@ -3,7 +3,7 @@ use sandbox_operation_contract::{error, OperationRequest, OperationResponse};
 use sandbox_runtime_layerstack::LayerRef;
 use serde_json::{json, Value};
 
-use crate::ports::{ObservabilityInput, QueryLimits};
+use crate::ports::{DaemonMetricsRequestClass, ObservabilityInput, QueryLimits};
 use crate::response;
 
 pub(crate) fn snapshot(
@@ -43,7 +43,7 @@ pub(crate) fn cgroup(
         "view": "cgroup",
         "scope": scope,
         "series": response::cgroup_series(&context.reader, &scope, window_ms),
-        "topology": input.cgroup_topology(),
+        "topology": input.cgroup_topology(DaemonMetricsRequestClass::LegacyCgroup),
     }))
 }
 
@@ -54,7 +54,18 @@ pub(crate) fn topology(
     OperationResponse::ok(json!({
         "view": "topology",
         "scope": "sandbox",
-        "topology": input.cgroup_topology(),
+        "topology": input.cgroup_topology(DaemonMetricsRequestClass::Topology),
+    }))
+}
+
+pub(crate) fn daemon(
+    input: &dyn ObservabilityInput,
+    _request: &OperationRequest,
+) -> OperationResponse {
+    OperationResponse::ok(json!({
+        "view": "daemon",
+        "scope": "sandbox",
+        "daemon": input.daemon_metrics(DaemonMetricsRequestClass::DaemonSelf),
     }))
 }
 

@@ -4,9 +4,11 @@ use std::fmt;
 pub enum NamespaceExecutionError {
     Spawn(String),
     Completion(String),
+    Shutdown,
     Timeout { mode_flag: &'static str },
     Finalize(String),
     Admission { max_active: usize },
+    Duplicate { execution_id: String },
 }
 
 impl fmt::Display for NamespaceExecutionError {
@@ -16,6 +18,7 @@ impl fmt::Display for NamespaceExecutionError {
             Self::Completion(detail) => {
                 write!(f, "namespace runner completion failed: {detail}")
             }
+            Self::Shutdown => write!(f, "namespace execution engine is shut down"),
             Self::Timeout { mode_flag } => write!(f, "ns-runner {mode_flag} timed out"),
             Self::Finalize(detail) => {
                 write!(f, "failed to finalize namespace execution: {detail}")
@@ -24,6 +27,9 @@ impl fmt::Display for NamespaceExecutionError {
                 f,
                 "namespace execution admission refused: {max_active} active executions in flight"
             ),
+            Self::Duplicate { execution_id } => {
+                write!(f, "namespace execution already exists: {execution_id:?}")
+            }
         }
     }
 }

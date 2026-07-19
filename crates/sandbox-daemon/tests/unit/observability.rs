@@ -3,21 +3,27 @@
 
 use std::error::Error;
 use std::fs;
+use std::io::Read as _;
 use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{mpsc, Arc};
+use std::thread;
+use std::time::Duration;
 
 use crate::observability::diagnostics::DiagnosticTracker;
 use crate::observability::DaemonObservability;
 use crate::rpc::{SandboxDaemonServer, ServerConfig};
 use sandbox_config::configs::observability::{DiagnosticsConfig, ObservabilityConfig};
+use sandbox_observability_query::ports::DaemonMetricsRequestClass;
 use sandbox_observability_telemetry::collect::process_topology::{
     DaemonDiagnosticTrigger, DaemonDiagnosticWorkspaceHolder, DaemonOwnershipMetrics,
     DaemonProcessMetrics, DaemonRuntimeConfigMetrics, DaemonRuntimeUsage,
 };
 use sandbox_observability_telemetry::ObservabilityPaths;
 use sandbox_operation_catalog::observability::{
-    CGROUP_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TOPOLOGY_SPEC, TRACE_SPEC,
+    CGROUP_SPEC, DAEMON_SPEC, EVENTS_SPEC, LAYERSTACK_SPEC, SNAPSHOT_SPEC, TOPOLOGY_SPEC,
+    TRACE_SPEC,
 };
 use sandbox_runtime::workspace_session::{FinalizationState, FinalizePolicy};
 use sandbox_runtime::workspace_session::{
@@ -31,6 +37,7 @@ use serde_json::{json, Value};
 use sha2::{Digest as _, Sha256};
 
 type TestResult<T = ()> = Result<T, Box<dyn Error + Send + Sync>>;
+const TOPOLOGY_REQUEST: DaemonMetricsRequestClass = DaemonMetricsRequestClass::Topology;
 
 #[test]
 fn adapter_maps_concrete_runtime_snapshot_into_neutral_input() {
@@ -82,6 +89,17 @@ fn adapter_maps_concrete_runtime_snapshot_into_neutral_input() {
 }
 
 #[test]
+fn selected_allocator_without_native_process_totals_is_explicitly_unsupported() {
+    let metrics = crate::observability::allocator::collect_current();
+
+    assert!(!metrics.supported);
+    assert_eq!(metrics.allocated_bytes, None);
+    assert_eq!(metrics.active_bytes, None);
+    assert_eq!(metrics.mapped_bytes, None);
+    assert_eq!(metrics.resident_bytes, None);
+}
+
+#[test]
 fn from_config_disabled_when_sandbox_id_is_missing() {
     let root = test_root("missing-sandbox-id");
     let config = server_config(&root, None);
@@ -93,7 +111,7 @@ fn from_config_disabled_when_sandbox_id_is_missing() {
 fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResult {
     let root = test_root("diagnostic-window");
     let artifact = root.join("diagnostic.json");
-    let mut tracker = DiagnosticTracker::new(diagnostic_config(30, 100, 4096), artifact.clone());
+    let tracker = DiagnosticTracker::new(diagnostic_config(30, 100, 4096), artifact.clone());
     let usage = diagnostic_runtime_usage();
     let ownership = diagnostic_ownership();
 
@@ -101,6 +119,7 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
     assert_eq!(
         tracker
             .observe(
+                TOPOLOGY_REQUEST,
                 &diagnostic_process_metrics(1_000, 0, 128),
                 &usage,
                 &ownership,
@@ -110,6 +129,7 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
         0
     );
     let first_high = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_010, 1_000, 128),
         &usage,
         &ownership,
@@ -122,6 +142,7 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
     assert_eq!(first_high.active_window.started_at_unix_ms, Some(1_010));
 
     let reset = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_020, 1_000, 128),
         &usage,
         &ownership,
@@ -130,6 +151,7 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
     assert_eq!(reset.active_window.trigger, None);
 
     tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_030, 2_000, 128),
         &usage,
         &ownership,
@@ -138,6 +160,7 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
     assert_eq!(
         tracker
             .observe(
+                TOPOLOGY_REQUEST,
                 &diagnostic_process_metrics(1_059, 4_900, 128),
                 &usage,
                 &ownership,
@@ -147,6 +170,7 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
         0
     );
     let fired = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_060, 5_000, 128),
         &usage,
         &ownership,
@@ -169,9 +193,56 @@ fn diagnostic_threshold_window_resets_and_fires_at_exact_boundary() -> TestResul
 }
 
 #[test]
-fn diagnostic_cooldown_suppresses_repeated_capture_until_expiry() -> TestResult {
-    let root = test_root("diagnostic-cooldown");
-    let mut tracker = DiagnosticTracker::new(
+fn diagnostic_capture_maps_request_classes_to_distinct_bounded_activity_classes() -> TestResult {
+    let root = test_root("diagnostic-request-classes");
+    let usage = diagnostic_runtime_usage();
+    let ownership = diagnostic_ownership();
+    let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
+    let cases = [
+        (
+            DaemonMetricsRequestClass::Topology,
+            "observability.topology",
+        ),
+        (
+            DaemonMetricsRequestClass::DaemonSelf,
+            "observability.daemon",
+        ),
+        (
+            DaemonMetricsRequestClass::LegacyCgroup,
+            "observability.cgroup",
+        ),
+    ];
+
+    for (request_class, expected_activity) in cases {
+        let tracker = DiagnosticTracker::new(
+            diagnostic_config(0, 100, 4096),
+            root.join(format!("{expected_activity}.json")),
+        );
+        let state = tracker.observe(
+            request_class,
+            &diagnostic_process_metrics(1_000, 0, 2_048),
+            &usage,
+            &ownership,
+            &workspace_holders,
+        );
+        let latest = state.latest.expect("request-attributed diagnostic");
+        assert_eq!(
+            latest.activity_classes,
+            ["rpc.observability", expected_activity]
+        );
+        assert!(latest
+            .activity_classes
+            .iter()
+            .all(|activity| activity.len() <= 64));
+    }
+    Ok(())
+}
+
+#[test]
+fn diagnostic_out_of_order_mixed_route_sample_does_not_regress_window_or_attribution() -> TestResult
+{
+    let root = test_root("diagnostic-out-of-order");
+    let tracker = DiagnosticTracker::new(
         diagnostic_config(10, 100, 4096),
         root.join("diagnostic.json"),
     );
@@ -180,18 +251,280 @@ fn diagnostic_cooldown_suppresses_repeated_capture_until_expiry() -> TestResult 
     let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
 
     tracker.observe(
+        DaemonMetricsRequestClass::Topology,
         &diagnostic_process_metrics(1_000, 0, 128),
         &usage,
         &ownership,
         &workspace_holders,
     );
     tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_010, 1_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    let stale = tracker.observe(
+        DaemonMetricsRequestClass::DaemonSelf,
+        &diagnostic_process_metrics(1_005, 500, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    assert_eq!(stale.active_window.started_at_unix_ms, Some(1_010));
+
+    let fired = tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_020, 2_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    assert_eq!(fired.trigger_count, 1);
+    assert_eq!(
+        fired
+            .latest
+            .expect("non-regressed diagnostic")
+            .activity_classes,
+        ["rpc.observability", "observability.topology"]
+    );
+    Ok(())
+}
+
+#[test]
+fn diagnostic_equal_timestamp_samples_union_route_attribution_without_resetting_state() -> TestResult
+{
+    let root = test_root("diagnostic-equal-timestamp");
+    let tracker = DiagnosticTracker::new(
+        diagnostic_config(0, 100, 4096),
+        root.join("diagnostic.json"),
+    );
+    let usage = diagnostic_runtime_usage();
+    let ownership = diagnostic_ownership();
+    let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
+
+    tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_000, 0, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    tracker.observe(
+        DaemonMetricsRequestClass::DaemonSelf,
+        &diagnostic_process_metrics(1_000, 0, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    let fired = tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_010, 1_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+
+    assert_eq!(fired.trigger_count, 1);
+    assert_eq!(
+        fired
+            .latest
+            .expect("equal-time attributed diagnostic")
+            .activity_classes,
+        [
+            "rpc.observability",
+            "observability.topology",
+            "observability.daemon"
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn diagnostic_cpu_window_attributes_the_routes_observed_across_the_interval() -> TestResult {
+    let root = test_root("diagnostic-causal-activity");
+    let tracker = DiagnosticTracker::new(
+        diagnostic_config(10, 100, 4096),
+        root.join("diagnostic.json"),
+    );
+    let usage = diagnostic_runtime_usage();
+    let ownership = diagnostic_ownership();
+    let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
+
+    tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_000, 0, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    tracker.observe(
+        DaemonMetricsRequestClass::DaemonSelf,
+        &diagnostic_process_metrics(1_010, 1_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    let fired = tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_020, 2_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+
+    assert_eq!(fired.trigger_count, 1);
+    assert_eq!(
+        fired
+            .latest
+            .expect("causally attributed diagnostic")
+            .activity_classes,
+        [
+            "rpc.observability",
+            "observability.topology",
+            "observability.daemon"
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn diagnostic_sustained_topology_window_ages_out_the_initial_daemon_sample() -> TestResult {
+    let root = test_root("diagnostic-topology-after-daemon-self");
+    let tracker = DiagnosticTracker::new(
+        diagnostic_config(10, 100, 4096),
+        root.join("diagnostic.json"),
+    );
+    let usage = diagnostic_runtime_usage();
+    let ownership = diagnostic_ownership();
+    let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
+
+    tracker.observe(
+        DaemonMetricsRequestClass::DaemonSelf,
+        &diagnostic_process_metrics(1_000, 0, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_010, 1_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    let fired = tracker.observe(
+        DaemonMetricsRequestClass::Topology,
+        &diagnostic_process_metrics(1_020, 2_000, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+
+    assert_eq!(fired.trigger_count, 1);
+    assert_eq!(
+        fired
+            .latest
+            .expect("topology-only sustained diagnostic")
+            .activity_classes,
+        ["rpc.observability", "observability.topology"]
+    );
+    Ok(())
+}
+
+#[test]
+fn diagnostic_artifact_io_does_not_hold_the_threshold_state_mutex() -> TestResult {
+    let root = test_root("diagnostic-io-lock");
+    fs::create_dir_all(&root)?;
+    let artifact = root.join("diagnostic.json");
+    let temporary = artifact.with_extension("tmp");
+    let status = std::process::Command::new("mkfifo")
+        .arg(&temporary)
+        .status()?;
+    assert!(status.success(), "mkfifo failed with status {status}");
+
+    let tracker = Arc::new(DiagnosticTracker::new(
+        diagnostic_config(0, 100, 4096),
+        artifact,
+    ));
+    let usage = diagnostic_runtime_usage();
+    let ownership = diagnostic_ownership();
+    let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
+
+    let first_tracker = Arc::clone(&tracker);
+    let first_usage = usage.clone();
+    let first_ownership = ownership.clone();
+    let first_holders = workspace_holders.clone();
+    let first = thread::spawn(move || {
+        first_tracker.observe(
+            DaemonMetricsRequestClass::Topology,
+            &diagnostic_process_metrics(1_000, 0, 2_048),
+            &first_usage,
+            &first_ownership,
+            &first_holders,
+        )
+    });
+    thread::sleep(Duration::from_millis(50));
+
+    let second_tracker = Arc::clone(&tracker);
+    let (completed_tx, completed_rx) = mpsc::channel();
+    let second = thread::spawn(move || {
+        let state = second_tracker.observe(
+            DaemonMetricsRequestClass::DaemonSelf,
+            &diagnostic_process_metrics(1_001, 0, 128),
+            &usage,
+            &ownership,
+            &workspace_holders,
+        );
+        let _ = completed_tx.send(state);
+    });
+    let state_completed_while_io_blocked = completed_rx
+        .recv_timeout(Duration::from_millis(200))
+        .is_ok();
+
+    let mut fifo = fs::File::open(&temporary)?;
+    let mut bytes = Vec::new();
+    fifo.read_to_end(&mut bytes)?;
+    let _ = first
+        .join()
+        .map_err(|_| "first diagnostic thread panicked")?;
+    second
+        .join()
+        .map_err(|_| "second diagnostic thread panicked")?;
+    assert!(
+        state_completed_while_io_blocked,
+        "artifact I/O serialized threshold state observations"
+    );
+    Ok(())
+}
+
+#[test]
+fn diagnostic_cooldown_suppresses_repeated_capture_until_expiry() -> TestResult {
+    let root = test_root("diagnostic-cooldown");
+    let tracker = DiagnosticTracker::new(
+        diagnostic_config(10, 100, 4096),
+        root.join("diagnostic.json"),
+    );
+    let usage = diagnostic_runtime_usage();
+    let ownership = diagnostic_ownership();
+    let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
+
+    tracker.observe(
+        TOPOLOGY_REQUEST,
+        &diagnostic_process_metrics(1_000, 0, 128),
+        &usage,
+        &ownership,
+        &workspace_holders,
+    );
+    tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_010, 1_000, 128),
         &usage,
         &ownership,
         &workspace_holders,
     );
     let first = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_020, 2_000, 128),
         &usage,
         &ownership,
@@ -201,12 +534,14 @@ fn diagnostic_cooldown_suppresses_repeated_capture_until_expiry() -> TestResult 
     let first_id = first.latest.expect("first diagnostic").id;
 
     tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_030, 3_000, 128),
         &usage,
         &ownership,
         &workspace_holders,
     );
     let suppressed = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_119, 11_900, 128),
         &usage,
         &ownership,
@@ -220,6 +555,7 @@ fn diagnostic_cooldown_suppresses_repeated_capture_until_expiry() -> TestResult 
     );
 
     let second = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_120, 12_000, 128),
         &usage,
         &ownership,
@@ -239,24 +575,27 @@ fn failed_diagnostic_capture_enters_cooldown_before_retrying_io() -> TestResult 
     let blocking_parent = root.join("not-a-directory");
     fs::write(&blocking_parent, b"block diagnostic directory creation")?;
     let artifact = blocking_parent.join("diagnostic.json");
-    let mut tracker = DiagnosticTracker::new(diagnostic_config(1, 100, 4096), artifact.clone());
+    let tracker = DiagnosticTracker::new(diagnostic_config(1, 100, 4096), artifact.clone());
     let usage = diagnostic_runtime_usage();
     let ownership = diagnostic_ownership();
     let workspaces = [diagnostic_workspace("workspace-a", 4_242)];
 
     tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_000, 0, 128),
         &usage,
         &ownership,
         &workspaces,
     );
     tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_001, 100, 128),
         &usage,
         &ownership,
         &workspaces,
     );
     let failed = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_002, 200, 128),
         &usage,
         &ownership,
@@ -271,12 +610,14 @@ fn failed_diagnostic_capture_enters_cooldown_before_retrying_io() -> TestResult 
     fs::remove_file(&blocking_parent)?;
     fs::create_dir(&blocking_parent)?;
     tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_003, 300, 128),
         &usage,
         &ownership,
         &workspaces,
     );
     let suppressed = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_101, 10_100, 128),
         &usage,
         &ownership,
@@ -290,6 +631,7 @@ fn failed_diagnostic_capture_enters_cooldown_before_retrying_io() -> TestResult 
     );
 
     let recovered = tracker.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_102, 10_200, 128),
         &usage,
         &ownership,
@@ -311,8 +653,8 @@ fn diagnostic_artifact_is_stable_bounded_and_explicitly_redacted() -> TestResult
     fs::write(&stale_temporary, b"stale diagnostic content")?;
     fs::set_permissions(&stale_temporary, fs::Permissions::from_mode(0o666))?;
     let config = diagnostic_config(1, 100, 4096);
-    let mut first = DiagnosticTracker::new(config, artifact_a.clone());
-    let mut second = DiagnosticTracker::new(config, artifact_b.clone());
+    let first = DiagnosticTracker::new(config, artifact_a.clone());
+    let second = DiagnosticTracker::new(config, artifact_b.clone());
     let usage = diagnostic_runtime_usage();
     let ownership = diagnostic_ownership();
     let workspace_holders = (0..300)
@@ -322,14 +664,16 @@ fn diagnostic_artifact_is_stable_bounded_and_explicitly_redacted() -> TestResult
         })
         .collect::<Vec<_>>();
 
-    for tracker in [&mut first, &mut second] {
+    for tracker in [&first, &second] {
         tracker.observe(
+            TOPOLOGY_REQUEST,
             &diagnostic_process_metrics(1_000, 0, 128),
             &usage,
             &ownership,
             &workspace_holders,
         );
         tracker.observe(
+            TOPOLOGY_REQUEST,
             &diagnostic_process_metrics(1_001, 100, 128),
             &usage,
             &ownership,
@@ -338,6 +682,7 @@ fn diagnostic_artifact_is_stable_bounded_and_explicitly_redacted() -> TestResult
     }
     let summary_a = first
         .observe(
+            TOPOLOGY_REQUEST,
             &diagnostic_process_metrics(1_002, 200, 128),
             &usage,
             &ownership,
@@ -347,6 +692,7 @@ fn diagnostic_artifact_is_stable_bounded_and_explicitly_redacted() -> TestResult
         .expect("first diagnostic");
     let summary_b = second
         .observe(
+            TOPOLOGY_REQUEST,
             &diagnostic_process_metrics(1_002, 200, 128),
             &usage,
             &ownership,
@@ -423,11 +769,12 @@ fn diagnostic_memory_window_and_unreaped_holder_triggers_are_distinct() -> TestR
     let usage = diagnostic_runtime_usage();
     let ownership = diagnostic_ownership();
     let workspace_holders = [diagnostic_workspace("workspace-a", 4_242)];
-    let mut memory = DiagnosticTracker::new(config, root.join("memory.json"));
+    let memory = DiagnosticTracker::new(config, root.join("memory.json"));
 
     assert_eq!(
         memory
             .observe(
+                TOPOLOGY_REQUEST,
                 &diagnostic_process_metrics(1_000, 0, 2_048),
                 &usage,
                 &ownership,
@@ -440,6 +787,7 @@ fn diagnostic_memory_window_and_unreaped_holder_triggers_are_distinct() -> TestR
     assert_eq!(
         memory
             .observe(
+                TOPOLOGY_REQUEST,
                 &diagnostic_process_metrics(1_029, 0, 2_048),
                 &usage,
                 &ownership,
@@ -449,6 +797,7 @@ fn diagnostic_memory_window_and_unreaped_holder_triggers_are_distinct() -> TestR
         0
     );
     let memory_capture = memory.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(1_030, 0, 2_048),
         &usage,
         &ownership,
@@ -460,10 +809,11 @@ fn diagnostic_memory_window_and_unreaped_holder_triggers_are_distinct() -> TestR
         DaemonDiagnosticTrigger::AnonymousMemory
     );
 
-    let mut holder = DiagnosticTracker::new(config, root.join("holder.json"));
+    let holder = DiagnosticTracker::new(config, root.join("holder.json"));
     let mut unreaped = ownership;
     unreaped.exited_unreaped_holders = Some(1);
     let holder_capture = holder.observe(
+        TOPOLOGY_REQUEST,
         &diagnostic_process_metrics(2_000, 0, 128),
         &usage,
         &unreaped,
@@ -587,6 +937,44 @@ async fn snapshot_and_cgroup_reads_do_not_create_a_store() -> TestResult {
 
     assert!(!paths.log_path().exists());
     assert!(!paths.rotated_log_path().exists());
+    Ok(())
+}
+
+#[tokio::test]
+async fn daemon_metrics_and_topology_do_not_read_an_oversized_corrupt_manifest() -> TestResult {
+    let root = test_root("bounded-ownership-topology");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    fs::write(
+        root.join("layer-stack")
+            .join(sandbox_runtime_layerstack::ACTIVE_MANIFEST_FILE),
+        vec![b'x'; 8 * 1024 * 1024],
+    )?;
+
+    for (operation, args) in [
+        (DAEMON_SPEC.name, json!({})),
+        (TOPOLOGY_SPEC.name, json!({})),
+        (CGROUP_SPEC.name, json!({ "scope": "sandbox" })),
+    ] {
+        let response = server
+            .dispatch_bytes(request_bytes(operation, "bounded-read", args)?, false)
+            .await;
+        let response = response.as_json_value();
+        assert!(response.get("error").is_none(), "{response}");
+        let daemon = response
+            .get("daemon")
+            .or_else(|| response.pointer("/topology/daemon"))
+            .expect("bounded view includes daemon metrics");
+        assert_eq!(daemon["ownership"]["active_layer_leases"], 0);
+    }
+
+    let rich_layerstack = server
+        .dispatch_bytes(
+            request_bytes(LAYERSTACK_SPEC.name, "rich-layerstack", json!({}))?,
+            false,
+        )
+        .await;
+    let rich_layerstack = rich_layerstack.as_json_value();
+    assert_eq!(rich_layerstack["error"]["kind"], "internal_error");
     Ok(())
 }
 
@@ -811,6 +1199,31 @@ async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
     );
     assert!(topology.get("series").is_none());
 
+    let daemon = server
+        .dispatch_bytes(
+            request_bytes(DAEMON_SPEC.name, "req-daemon", json!({}))?,
+            false,
+        )
+        .await;
+    let daemon = daemon.as_json_value();
+    assert_eq!(daemon["view"], "daemon");
+    assert_eq!(daemon["scope"], "sandbox");
+    assert_eq!(daemon["daemon"]["runtime_config"]["worker_threads"], 2);
+    assert_eq!(daemon["daemon"]["runtime_usage"]["active_async_tasks"], 0);
+    assert_eq!(daemon["daemon"]["ownership"]["open_workspaces"], 0);
+    assert_eq!(
+        daemon["daemon"]["allocator"],
+        json!({
+            "supported": false,
+            "allocated_bytes": null,
+            "active_bytes": null,
+            "mapped_bytes": null,
+            "resident_bytes": null,
+        })
+    );
+    assert!(daemon.get("topology").is_none());
+    assert!(daemon.get("series").is_none());
+
     let trace = server
         .dispatch_bytes(
             request_bytes(TRACE_SPEC.name, "req-trace", json!({ "trace_id": "last" }))?,
@@ -846,6 +1259,99 @@ async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
     assert_eq!(layerstack["active_lease_count"], 0);
     assert!(layerstack["total_bytes"].is_u64());
     assert!(layerstack["layers"].is_array());
+    Ok(())
+}
+
+#[tokio::test]
+async fn daemon_async_task_metric_tracks_in_flight_task_and_returns_to_idle() -> TestResult {
+    let root = test_root("daemon-async-task-metric");
+    let server = daemon_server(&root, Some("sandbox-1"))?;
+    assert_eq!(server.async_tasks.len(), 0);
+
+    let (release, pending) = tokio::sync::oneshot::channel::<()>();
+    let task = server.async_tasks.spawn(async move {
+        let _ = pending.await;
+    });
+    tokio::task::yield_now().await;
+    assert_eq!(server.async_tasks.len(), 1);
+
+    let response = server
+        .dispatch_bytes(
+            request_bytes(DAEMON_SPEC.name, "req-daemon-active", json!({}))?,
+            false,
+        )
+        .await;
+    assert_eq!(
+        response.as_json_value()["daemon"]["runtime_usage"]["active_async_tasks"],
+        1
+    );
+
+    release.send(()).expect("release tracked task");
+    task.await.expect("tracked task completed");
+    assert_eq!(server.async_tasks.len(), 0);
+    let response = server
+        .dispatch_bytes(
+            request_bytes(DAEMON_SPEC.name, "req-daemon-idle", json!({}))?,
+            false,
+        )
+        .await;
+    assert_eq!(
+        response.as_json_value()["daemon"]["runtime_usage"]["active_async_tasks"],
+        0
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn daemon_connection_task_tracker_increments_and_returns_to_idle() -> TestResult {
+    let root = test_root("daemon-connection-task-tracker");
+    let mut config = server_config(&root, Some("sandbox-1"));
+    config.socket_path = std::env::temp_dir().join(format!(
+        "sandbox-daemon-async-tasks-{}.sock",
+        std::process::id()
+    ));
+    let server = daemon_server_from(&root, config)?;
+    let socket_path = server.config.socket_path.clone();
+    let shutdown = server.shutdown.clone();
+    let async_tasks = server.async_tasks.clone();
+    let serve = tokio::spawn(server.serve());
+
+    let client = tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        loop {
+            match tokio::net::UnixStream::connect(&socket_path).await {
+                Ok(client) => break client,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    tokio::task::yield_now().await;
+                }
+                Err(error) => panic!("connect daemon socket: {error}"),
+            }
+        }
+    })
+    .await
+    .expect("daemon socket became ready");
+
+    tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        while async_tasks.len() != 1 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("accepted connection entered task tracker");
+    drop(client);
+    tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        while !async_tasks.is_empty() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("completed connection left task tracker");
+
+    shutdown.cancel();
+    tokio::time::timeout(std::time::Duration::from_secs(1), serve)
+        .await
+        .expect("daemon stopped")
+        .expect("serve task joined")?;
+    assert_eq!(async_tasks.len(), 0);
     Ok(())
 }
 

@@ -69,7 +69,7 @@ impl CommandOperationService {
             {
                 Ok(pair) => pair,
                 Err(error) => {
-                    self.complete_admitted(&admitted, &admission_guard);
+                    self.complete_admitted(&admitted, admission_guard);
                     return Err(error);
                 }
             };
@@ -128,13 +128,18 @@ impl CommandOperationService {
                                 max_active_commands: max_active,
                             }
                         }
+                        NamespaceExecutionError::Duplicate { execution_id } => {
+                            CommandServiceError::CommandAlreadyExists {
+                                command_session_id: NamespaceExecutionId(execution_id),
+                            }
+                        }
                         error => CommandServiceError::CommandIo {
                             command_session_id: id.clone(),
                             error: error.to_string(),
                         },
                     };
                     self.cleanup_transcript_dir(&id);
-                    self.complete_admitted(&admitted, &admission_guard);
+                    self.complete_admitted(&admitted, admission_guard);
                     return Err(error);
                 }
             };
@@ -161,7 +166,7 @@ impl CommandOperationService {
     /// Take the token from the slot and complete it under the held admission
     /// guard (§2.3 failure path): the ledger entry is removed and the finalize
     /// policy runs without re-locking the gate.
-    fn complete_admitted(&self, admitted: &AdmittedCommand, admission_guard: &MutexGuard<'_, ()>) {
+    fn complete_admitted(&self, admitted: &AdmittedCommand, admission_guard: MutexGuard<'_, ()>) {
         let token = admitted
             .token_slot
             .lock()

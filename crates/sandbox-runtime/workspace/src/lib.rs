@@ -33,7 +33,11 @@ pub use model::{
     CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, LayerStackSnapshotRef,
     LayerStackSnapshotView, LeaseId, NetworkProfile, ProtectedPathDrop, ProtectedPathDropReason,
     ReadonlySnapshotHandle, WorkspaceEntry, WorkspaceEntryError, WorkspaceEntryFds,
-    WorkspaceHandle, WorkspaceOwnershipSnapshot, WorkspaceSessionId,
+    WorkspaceHandle, WorkspaceHolderIdentity, WorkspaceOwnershipSnapshot, WorkspaceSessionId,
+};
+#[doc(hidden)]
+pub use namespace::holder::{
+    HolderFinalization, HolderFinalizationUnknownClass, HolderProbe, HolderProbeUnknownClass,
 };
 pub use sandbox_runtime_namespace_process::runner::file_op::{
     decode_file_op_payload, run_result_err, run_result_ok, FileRunnerDirEntry,
@@ -41,7 +45,7 @@ pub use sandbox_runtime_namespace_process::runner::file_op::{
 };
 #[doc(hidden)]
 pub use service::{
-    holder_exit_channel_for_test, HolderExitListener, HolderExitNotifier, HolderExitShutdown,
+    holder_exit_channel, HolderExitListener, HolderExitNotifier, HolderExitShutdown,
     HolderExitSubscription, HolderExitWait,
 };
-pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService};
+pub use service::{WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceRuntimeShutdownReport};

@@ -65,7 +65,7 @@ pub use model::{
     aggregate_layer_changes, layer_digest, manifest_root_hash, CasError, LayerChange, LayerPath,
     LayerRef, Manifest, MANIFEST_SCHEMA_VERSION,
 };
-pub use stack::{LayerStack, Lease, MergedView};
+pub use stack::{ActiveLeaseCounter, LayerStack, Lease, MergedView};
 pub use workspace_base::{
     build_shared_workspace_base, build_workspace_base, ensure_workspace_base,
     read_workspace_binding, require_workspace_binding, SharedWorkspaceBase, WorkspaceBinding,

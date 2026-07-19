@@ -1,5 +1,6 @@
 //! Observability operation declarations.
 mod cgroup;
+mod daemon;
 mod events;
 mod layerstack;
 mod resources;
@@ -8,6 +9,7 @@ mod topology;
 mod trace;
 
 pub use cgroup::CGROUP_SPEC;
+pub use daemon::DAEMON_SPEC;
 pub use events::EVENTS_SPEC;
 pub use layerstack::LAYERSTACK_SPEC;
 pub use resources::RESOURCES_SPEC;
@@ -58,6 +60,13 @@ const RESOURCES_FAMILY: OperationFamilySpec = OperationFamilySpec {
         "Read bounded sandbox history or one fleet current-usage map without daemon calls.",
 };
 
+const DAEMON_FAMILY: OperationFamilySpec = OperationFamilySpec {
+    id: "daemon",
+    title: "Daemon",
+    summary: "Inspect daemon self-metrics.",
+    description: "Read one bounded daemon process and ownership sample without collecting workspace process topology.",
+};
+
 const TOPOLOGY_FAMILY: OperationFamilySpec = OperationFamilySpec {
     id: "topology",
     title: "Topology",
@@ -97,6 +106,7 @@ const FAMILIES: &[&OperationFamilySpec] = &[
     &TRACE_FAMILY,
     &EVENTS_FAMILY,
     &RESOURCES_FAMILY,
+    &DAEMON_FAMILY,
     &TOPOLOGY_FAMILY,
     &CGROUP_FAMILY,
     &LAYERSTACK_FAMILY,
@@ -109,6 +119,7 @@ const OPERATIONS: &[&RoutedOperation] = &[
     &trace::TRACE,
     &events::EVENTS,
     &resources::RESOURCES,
+    &daemon::DAEMON,
     &topology::TOPOLOGY,
     &cgroup::CGROUP,
     &layerstack::LAYERSTACK,

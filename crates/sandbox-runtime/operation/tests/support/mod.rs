@@ -19,8 +19,8 @@ use sandbox_runtime::workspace_session::{
 };
 use sandbox_runtime::WorkloadCgroupLimits;
 use sandbox_runtime_workspace::{
-    holder_exit_channel_for_test, CaptureChangesRequest, CapturedWorkspaceChanges,
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp,
+    holder_exit_channel, CaptureChangesRequest, CapturedWorkspaceChanges, CreateWorkspaceRequest,
+    DestroyWorkspaceRequest, DestroyWorkspaceResult, FileRunnerOp, HolderProbe,
     LayerStackSnapshotRef, LeaseId, NetworkProfile, ReadonlySnapshotHandle, WorkspaceError,
     WorkspaceHandle, WorkspaceRuntimeHooks, WorkspaceRuntimeService, WorkspaceSessionId,
 };
@@ -54,6 +54,10 @@ pub(crate) struct FakeWorkspaceService {
     destroy_barrier: Mutex<Option<std::sync::mpsc::Receiver<()>>>,
     destroy_entered: Mutex<Option<std::sync::mpsc::Sender<()>>>,
     holder_exit_notifier: Mutex<Option<sandbox_runtime_workspace::HolderExitNotifier>>,
+    exited_holders: Mutex<Vec<(WorkspaceHandle, String)>>,
+    exit_on_holder_check: Mutex<Option<(WorkspaceHandle, String)>>,
+    holder_probe_results: Mutex<VecDeque<HolderProbe>>,
+    holder_probe_calls: AtomicU64,
 }
 
 /// A scripted command outcome (kept for the suites that script per yield). It is
@@ -231,7 +235,86 @@ impl FakeWorkspaceService {
             .expect("test operation succeeds")
             .as_ref()
             .expect("fake runtime installs holder exit notifier")
-            .notify_for_test();
+            .notify();
+    }
+
+    pub(crate) fn mark_holder_exited(&self, handle: &WorkspaceHandle, reason: &str) {
+        self.exited_holders
+            .lock()
+            .expect("test operation succeeds")
+            .push((handle.clone(), reason.to_owned()));
+    }
+
+    pub(crate) fn exit_holder_on_next_liveness_check(
+        &self,
+        handle: &WorkspaceHandle,
+        reason: &str,
+    ) {
+        *self
+            .exit_on_holder_check
+            .lock()
+            .expect("test operation succeeds") = Some((handle.clone(), reason.to_owned()));
+    }
+
+    pub(crate) fn push_holder_probe_result(&self, result: HolderProbe) {
+        self.holder_probe_results
+            .lock()
+            .expect("test operation succeeds")
+            .push_back(result);
+    }
+
+    pub(crate) fn holder_probe_calls(&self) -> u64 {
+        self.holder_probe_calls.load(Ordering::Relaxed)
+    }
+
+    fn probe_holder(&self, handle: &WorkspaceHandle) -> HolderProbe {
+        self.holder_probe_calls.fetch_add(1, Ordering::Relaxed);
+        if let Some(result) = self
+            .holder_probe_results
+            .lock()
+            .expect("test operation succeeds")
+            .pop_front()
+        {
+            return result;
+        }
+        if self.holder_is_live(handle) {
+            HolderProbe::Running
+        } else {
+            HolderProbe::Exited
+        }
+    }
+
+    fn holder_is_live(&self, handle: &WorkspaceHandle) -> bool {
+        let injected_exit = {
+            let mut exit_on_holder_check = self
+                .exit_on_holder_check
+                .lock()
+                .expect("test operation succeeds");
+            match exit_on_holder_check.as_ref() {
+                Some((expected, _)) if expected == handle => exit_on_holder_check.take(),
+                _ => None,
+            }
+        };
+        if let Some(exited) = injected_exit {
+            self.exited_holders
+                .lock()
+                .expect("test operation succeeds")
+                .push(exited);
+        }
+        !self
+            .exited_holders
+            .lock()
+            .expect("test operation succeeds")
+            .iter()
+            .any(|(exited, _)| exited == handle)
+    }
+
+    fn holder_exit_reason(&self, handle: &WorkspaceHandle) -> Option<String> {
+        self.exited_holders
+            .lock()
+            .expect("test operation succeeds")
+            .iter()
+            .find_map(|(exited, reason)| (exited == handle).then(|| reason.clone()))
     }
 
     fn run_file_op(
@@ -414,7 +497,7 @@ impl FakeWorkspaceService {
 pub(crate) fn fake_workspace_runtime(
     fake: Arc<FakeWorkspaceService>,
 ) -> Arc<WorkspaceRuntimeService> {
-    let (holder_exit_notifier, holder_exit_subscription) = holder_exit_channel_for_test();
+    let (holder_exit_notifier, holder_exit_subscription) = holder_exit_channel();
     *fake
         .holder_exit_notifier
         .lock()
@@ -429,6 +512,18 @@ pub(crate) fn fake_workspace_runtime(
                     .take())
             }),
             isolated_ip: Box::new(|_| Ok(None)),
+            holder_is_live: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle| fake.holder_is_live(handle)
+            }),
+            holder_probe: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle| fake.probe_holder(handle)
+            }),
+            holder_exit_reason: Box::new({
+                let fake = Arc::clone(&fake);
+                move |handle| fake.holder_exit_reason(handle)
+            }),
             allocate_workspace_session_id: Box::new({
                 let fake = Arc::clone(&fake);
                 move |network| fake.allocate_workspace_session_id(network)

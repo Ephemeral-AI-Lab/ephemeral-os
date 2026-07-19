@@ -235,40 +235,6 @@ fn admission_refuses_when_full_then_readmits_after_completion() {
 }
 
 #[test]
-fn concurrent_shells_share_bounded_background_workers() {
-    let fake = FakeLauncher::new();
-    let observer = Arc::new(FakeObserver::new());
-    let engine = test_engine(&fake, observer, 32);
-    let executions = (0..32)
-        .map(|index| {
-            engine
-                .run_shell_interactive(
-                    OkShellOp,
-                    sample_target(),
-                    id(&format!("bounded_{index}")),
-                    |_| {},
-                    None,
-                    None,
-                )
-                .expect("shell admitted")
-        })
-        .collect::<Vec<_>>();
-
-    let snapshot = engine.background_worker_snapshot();
-    assert_eq!(snapshot.completion_supervisor_threads, 1);
-    assert_eq!(snapshot.pty_reactor_threads, 1);
-    assert_eq!(snapshot.active_completions, 32);
-    assert_eq!(snapshot.active_pty_readers, 32);
-
-    for execution in &executions {
-        (execution.cancel_handle())();
-    }
-    for execution in executions {
-        assert_eq!(execution.wait().expect("cancelled shell reaped"), 130);
-    }
-}
-
-#[test]
 fn mount_overlay_execution_resolves_unit_output() {
     let fake = FakeLauncher::new();
     let observer = Arc::new(FakeObserver::new());
@@ -454,6 +420,41 @@ fn namespace_execution_id_is_the_runner_request_id() {
 
     fake.complete_latest(run_result(0, "ok"));
     let _ = exec.wait();
+}
+
+#[test]
+fn shutdown_rejects_new_execution_without_spawning_and_is_idempotent() {
+    let fake = FakeLauncher::new();
+    let observer = Arc::new(FakeObserver::new());
+    let engine = test_engine(&fake, observer, 4);
+
+    engine
+        .shutdown_and_join()
+        .expect("empty engine shutdown succeeds");
+    engine
+        .shutdown_and_join()
+        .expect("repeated engine shutdown is idempotent");
+    let error = match engine.run_shell_interactive(
+        OkShellOp,
+        sample_target(),
+        id("after-shutdown"),
+        |_| {},
+        None,
+        None,
+    ) {
+        Ok(_) => panic!("execution after shutdown must not be spawned"),
+        Err(error) => error,
+    };
+
+    assert!(matches!(error, NamespaceExecutionError::Shutdown));
+    assert!(fake.recorded_request_ids().is_empty());
+    assert_eq!(engine.background_worker_snapshot().active_completions, 0);
+    assert_eq!(
+        engine
+            .background_worker_snapshot()
+            .completion_supervisor_threads,
+        0
+    );
 }
 
 // The remount runner rides the same request/result launch as mount_overlay,

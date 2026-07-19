@@ -1,14 +1,16 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Barrier};
 
 use sandbox_observability_telemetry::Observer;
 use serde_json::json;
 
+use sandbox_runtime_namespace_process::runner::file_op::FileRunnerOp;
 use sandbox_runtime_workspace::model::{
-    CreateWorkspaceRequest, DestroyWorkspaceRequest, NetworkProfile,
+    CaptureChangesRequest, CreateWorkspaceRequest, DestroyWorkspaceRequest, NetworkProfile,
 };
 use sandbox_runtime_workspace::session::{ResourceCaps, WorkspaceManager};
-use sandbox_runtime_workspace::WorkspaceRuntimeService;
+use sandbox_runtime_workspace::{holder_exit_channel, HolderExitWait, WorkspaceRuntimeService};
 
 #[test]
 fn latest_snapshot_returns_readonly_handle_without_lease(
@@ -227,6 +229,177 @@ fn invalid_root_after_snapshot_adoption_releases_the_create_lease(
     Ok(())
 }
 
+#[test]
+#[cfg_attr(
+    target_os = "linux",
+    ignore = "requires real Linux namespace, mount, and network privileges"
+)]
+fn stale_holder_generation_cannot_access_reused_workspace_id(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("stale-holder-generation")?;
+    let service = fixture.service();
+    let workspace_session_id = service.allocate_workspace_session_id(NetworkProfile::Shared)?;
+    let request = CreateWorkspaceRequest {
+        workspace_session_id: workspace_session_id.clone(),
+        network: NetworkProfile::Shared,
+    };
+    let stale = service.create_workspace(request.clone())?;
+    let destroyed = service.destroy_workspace(stale.clone(), DestroyWorkspaceRequest::default())?;
+    assert_eq!(
+        service.destroy_workspace(stale.clone(), DestroyWorkspaceRequest::default()),
+        Ok(destroyed)
+    );
+    let current = service.create_workspace(request)?;
+
+    assert_eq!(
+        service.destroy_workspace(stale.clone(), DestroyWorkspaceRequest::default()),
+        Err(sandbox_runtime_workspace::WorkspaceError::NotOpen)
+    );
+    assert_eq!(
+        service.capture_changes(
+            &stale,
+            CaptureChangesRequest {
+                include_stats: false,
+            },
+        ),
+        Err(sandbox_runtime_workspace::WorkspaceError::NotOpen)
+    );
+    assert_eq!(
+        service.run_file_op(
+            &stale,
+            None,
+            FileRunnerOp::ReadFile {
+                rel: "README.md".to_owned(),
+                max_bytes: 1024,
+            },
+        ),
+        Err(sandbox_runtime_workspace::WorkspaceError::NotOpen)
+    );
+    assert!(current.holder_is_live());
+    assert_eq!(
+        service
+            .current_handle(&workspace_session_id)?
+            .expect("current generation remains open")
+            .holder_identity(),
+        current.holder_identity()
+    );
+
+    service.destroy_workspace(current, DestroyWorkspaceRequest::default())?;
+    assert_eq!(
+        service.ownership_snapshot()?,
+        sandbox_runtime_workspace::WorkspaceOwnershipSnapshot::default()
+    );
+    Ok(())
+}
+
+#[test]
+fn holder_exit_channel_coalesces_a_bounded_wake() {
+    let (notifier, subscription) = holder_exit_channel();
+    let (listener, shutdown) = subscription.into_parts();
+
+    for _ in 0..10_000 {
+        notifier.notify();
+    }
+
+    assert_eq!(
+        listener.wait_for_retry(std::time::Duration::ZERO),
+        HolderExitWait::Wake
+    );
+    assert_eq!(
+        listener.wait_for_retry(std::time::Duration::ZERO),
+        HolderExitWait::RetryDeadline
+    );
+    shutdown.stop();
+}
+
+#[test]
+#[cfg_attr(
+    target_os = "linux",
+    ignore = "requires real Linux namespace, mount, and network privileges"
+)]
+fn concurrent_shutdown_is_joinable_idempotent_and_closes_admission(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("concurrent-shutdown")?;
+    let service = Arc::new(fixture.service());
+    for _ in 0..8 {
+        service.create_workspace(create_request(&service)?)?;
+    }
+    let start = Arc::new(Barrier::new(3));
+    let left_service = Arc::clone(&service);
+    let left_start = Arc::clone(&start);
+    let left = std::thread::spawn(move || {
+        left_start.wait();
+        left_service.shutdown()
+    });
+    let right_service = Arc::clone(&service);
+    let right_start = Arc::clone(&start);
+    let right = std::thread::spawn(move || {
+        right_start.wait();
+        right_service.shutdown()
+    });
+    start.wait();
+
+    let left = left.join().expect("left shutdown joins");
+    let right = right.join().expect("right shutdown joins");
+
+    assert_eq!(left, right);
+    assert!(left.is_complete());
+    assert_eq!(service.shutdown(), left);
+    assert_eq!(
+        service.allocate_workspace_session_id(NetworkProfile::Shared),
+        Err(sandbox_runtime_workspace::WorkspaceError::Closing)
+    );
+    assert_eq!(
+        service.ownership_snapshot()?,
+        sandbox_runtime_workspace::WorkspaceOwnershipSnapshot::default()
+    );
+    Ok(())
+}
+
+#[test]
+#[cfg_attr(
+    target_os = "linux",
+    ignore = "requires real Linux namespace, mount, and network privileges"
+)]
+fn failed_shutdown_stays_retryable_without_stopping_namespace_ownership(
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let fixture = Fixture::new("shutdown-retry")?;
+    let service = fixture.service();
+    let handle = service.create_workspace(create_request(&service)?)?;
+    let saved_layer_stack = fixture.base.join("shutdown-saved-layer-stack");
+    std::fs::rename(&fixture.layer_stack_root, &saved_layer_stack)?;
+    std::fs::write(&fixture.layer_stack_root, "not a directory")?;
+
+    let first = service.shutdown();
+
+    assert!(!first.is_complete());
+    assert!(!first.namespace_stopped);
+    assert_eq!(first.workspaces.retryable_failures.len(), 1);
+    assert_eq!(
+        first.workspaces.retryable_failures[0].workspace_session_id,
+        handle.id
+    );
+    assert_eq!(service.ownership_snapshot()?.control_fd_count, 0);
+    assert_eq!(
+        service.create_workspace(create_request_without_allocation()),
+        Err(sandbox_runtime_workspace::WorkspaceError::Closing)
+    );
+
+    std::fs::remove_file(&fixture.layer_stack_root)?;
+    std::fs::rename(&saved_layer_stack, &fixture.layer_stack_root)?;
+    let retry = service.shutdown();
+
+    assert!(retry.is_complete());
+    assert!(retry.namespace_stopped);
+    assert!(retry.workspaces.retryable_failures.is_empty());
+    assert_eq!(service.shutdown(), retry);
+    assert_eq!(
+        service.ownership_snapshot()?,
+        sandbox_runtime_workspace::WorkspaceOwnershipSnapshot::default()
+    );
+    Ok(())
+}
+
 fn create_request(
     service: &WorkspaceRuntimeService,
 ) -> Result<CreateWorkspaceRequest, sandbox_runtime_workspace::WorkspaceError> {
@@ -234,6 +407,15 @@ fn create_request(
         workspace_session_id: service.allocate_workspace_session_id(NetworkProfile::Shared)?,
         network: NetworkProfile::Shared,
     })
+}
+
+fn create_request_without_allocation() -> CreateWorkspaceRequest {
+    CreateWorkspaceRequest {
+        workspace_session_id: sandbox_runtime_workspace::WorkspaceSessionId(
+            "workspace-after-closing".to_owned(),
+        ),
+        network: NetworkProfile::Shared,
+    }
 }
 
 fn persisted_handle_count(

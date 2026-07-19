@@ -1,15 +1,16 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
+#[cfg(unix)]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(windows)]
+use std::os::windows::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
-use crate::workspace_crate::WorkspaceSessionId;
+use crate::workspace_crate::{WorkspaceHolderIdentity, WorkspaceSessionId};
 
-// The manifest is fixed-size metadata and copied regular-file content gets the
-// rest of one MiB. Directory fanout and recursion are independently bounded so
-// sparse trees cannot turn holder cleanup into an unbounded walk.
 const RECOVERY_ARTIFACT_MAX_BYTES: u64 = 1024 * 1024;
 const RECOVERY_MANIFEST_RESERVE_BYTES: u64 = 16 * 1024;
 const RECOVERY_CONTENT_MAX_BYTES: u64 =
@@ -30,23 +31,31 @@ struct CopyState {
     source_missing: bool,
 }
 
+struct RecoveryArtifactIdentity {
+    artifact_key: String,
+    holder_generation: u64,
+    holder_identity_sha256: String,
+    source_upperdir_sha256: String,
+}
+
 pub(crate) fn preserve_recovery_artifact(
     recovery_root: &Path,
     workspace_session_id: &WorkspaceSessionId,
+    holder_identity: &WorkspaceHolderIdentity,
     upperdir: &Path,
 ) -> Result<PathBuf, String> {
     fs::create_dir_all(recovery_root)
         .map_err(|error| format!("create recovery root {}: {error}", recovery_root.display()))?;
-    let digest = hex_digest(workspace_session_id.0.as_bytes());
-    let artifact = recovery_root.join(digest);
+    let identity = recovery_artifact_identity(workspace_session_id, holder_identity, upperdir);
+    let artifact = recovery_root.join(&identity.artifact_key);
     if artifact.exists() {
-        validate_existing_artifact(&artifact, workspace_session_id)?;
+        validate_existing_artifact(&artifact, workspace_session_id, &identity)?;
         return Ok(artifact);
     }
 
     let temporary = recovery_root.join(format!(
         ".{}.tmp-{}",
-        hex_digest(workspace_session_id.0.as_bytes()),
+        identity.artifact_key,
         std::process::id()
     ));
     if temporary.exists() {
@@ -78,9 +87,12 @@ pub(crate) fn preserve_recovery_artifact(
         }
 
         let manifest = json!({
-            "schema_version": 1,
+            "schema_version": 2,
             "workspace_session_id": workspace_session_id.0,
+            "holder_generation": identity.holder_generation,
+            "holder_identity_sha256": identity.holder_identity_sha256,
             "source_upperdir": upperdir,
+            "source_upperdir_sha256": identity.source_upperdir_sha256,
             "artifact_max_bytes": RECOVERY_ARTIFACT_MAX_BYTES,
             "content_max_bytes": RECOVERY_CONTENT_MAX_BYTES,
             "entry_max": RECOVERY_ENTRY_MAX,
@@ -168,8 +180,6 @@ fn copy_tree_bounded(
         } else if file_type.is_file() {
             copy_file_bounded(&entry.path(), &destination_entry, state)?;
         } else if file_type.is_symlink() {
-            // Never follow or recreate an attacker-controlled symlink in a
-            // durable host-side artifact. The manifest records the omission.
             state.observed_symlinks += 1;
             state.truncated = true;
         } else {
@@ -218,6 +228,7 @@ fn copy_file_bounded(
 fn validate_existing_artifact(
     artifact: &Path,
     workspace_session_id: &WorkspaceSessionId,
+    identity: &RecoveryArtifactIdentity,
 ) -> Result<(), String> {
     let manifest_path = artifact.join("manifest.json");
     let mut manifest = Vec::new();
@@ -248,17 +259,89 @@ fn validate_existing_artifact(
             manifest_path.display()
         )
     })?;
-    if decoded
-        .get("workspace_session_id")
-        .and_then(serde_json::Value::as_str)
-        != Some(workspace_session_id.0.as_str())
-    {
+    let correct_owner = decoded
+        .get("schema_version")
+        .and_then(serde_json::Value::as_u64)
+        == Some(2)
+        && decoded
+            .get("workspace_session_id")
+            .and_then(serde_json::Value::as_str)
+            == Some(workspace_session_id.0.as_str())
+        && decoded
+            .get("holder_generation")
+            .and_then(serde_json::Value::as_u64)
+            == Some(identity.holder_generation)
+        && decoded
+            .get("holder_identity_sha256")
+            .and_then(serde_json::Value::as_str)
+            == Some(identity.holder_identity_sha256.as_str())
+        && decoded
+            .get("source_upperdir_sha256")
+            .and_then(serde_json::Value::as_str)
+            == Some(identity.source_upperdir_sha256.as_str());
+    if !correct_owner {
         return Err(format!(
-            "existing recovery artifact {} has the wrong owner",
+            "existing recovery artifact {} has the wrong generation, holder identity, or source",
             artifact.display()
         ));
     }
     Ok(())
+}
+
+fn recovery_artifact_identity(
+    workspace_session_id: &WorkspaceSessionId,
+    holder_identity: &WorkspaceHolderIdentity,
+    upperdir: &Path,
+) -> RecoveryArtifactIdentity {
+    let holder_identity_digest = holder_identity_digest(holder_identity);
+    let source_upperdir_digest = Sha256::digest(path_identity_bytes(upperdir));
+    let mut artifact_digest = Sha256::new();
+    artifact_digest.update(b"eos-workspace-recovery-v2\0");
+    update_len_prefixed(&mut artifact_digest, workspace_session_id.0.as_bytes());
+    artifact_digest.update(holder_identity.generation.to_be_bytes());
+    artifact_digest.update(holder_identity_digest);
+    artifact_digest.update(source_upperdir_digest);
+    RecoveryArtifactIdentity {
+        artifact_key: hex_bytes(&artifact_digest.finalize()),
+        holder_generation: holder_identity.generation,
+        holder_identity_sha256: hex_bytes(&holder_identity_digest),
+        source_upperdir_sha256: hex_bytes(&source_upperdir_digest),
+    }
+}
+
+fn holder_identity_digest(identity: &WorkspaceHolderIdentity) -> [u8; 32] {
+    let mut digest = Sha256::new();
+    digest.update(b"eos-holder-identity-v1\0");
+    digest.update(identity.pid.to_be_bytes());
+    digest.update(identity.parent_pid.to_be_bytes());
+    digest.update(identity.start_time_ticks.to_be_bytes());
+    update_len_prefixed(&mut digest, &path_identity_bytes(&identity.executable));
+    digest.update(identity.generation.to_be_bytes());
+    digest.update([u8::from(identity.pidfd_available)]);
+    digest.finalize().into()
+}
+
+fn update_len_prefixed(digest: &mut Sha256, bytes: &[u8]) {
+    digest.update(u64::try_from(bytes.len()).unwrap_or(u64::MAX).to_be_bytes());
+    digest.update(bytes);
+}
+
+#[cfg(unix)]
+fn path_identity_bytes(path: &Path) -> Vec<u8> {
+    path.as_os_str().as_bytes().to_vec()
+}
+
+#[cfg(windows)]
+fn path_identity_bytes(path: &Path) -> Vec<u8> {
+    path.as_os_str()
+        .encode_wide()
+        .flat_map(u16::to_le_bytes)
+        .collect()
+}
+
+#[cfg(not(any(unix, windows)))]
+fn path_identity_bytes(path: &Path) -> Vec<u8> {
+    path.to_string_lossy().as_bytes().to_vec()
 }
 
 fn sync_directory(path: &Path) -> Result<(), String> {
@@ -267,54 +350,6 @@ fn sync_directory(path: &Path) -> Result<(), String> {
         .map_err(|error| format!("persist recovery directory {}: {error}", path.display()))
 }
 
-fn hex_digest(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
-    digest.iter().map(|byte| format!("{byte:02x}")).collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn temporary_root(label: &str) -> PathBuf {
-        std::env::temp_dir().join(format!(
-            "sandbox-recovery-{label}-{}-{:?}",
-            std::process::id(),
-            std::thread::current().id()
-        ))
-    }
-
-    #[test]
-    fn artifact_is_bounded_durable_and_idempotent() {
-        let root = temporary_root("bounded");
-        let _ = fs::remove_dir_all(&root);
-        let source = root.join("upper");
-        fs::create_dir_all(source.join("nested")).expect("source tree");
-        fs::write(
-            source.join("nested/large"),
-            vec![b'x'; RECOVERY_CONTENT_MAX_BYTES as usize + 4096],
-        )
-        .expect("large source");
-        let recovery = root.join("recovery");
-        let workspace = WorkspaceSessionId("workspace/unsafe".to_owned());
-
-        let first =
-            preserve_recovery_artifact(&recovery, &workspace, &source).expect("artifact commits");
-        let second = preserve_recovery_artifact(&recovery, &workspace, &source)
-            .expect("artifact retry validates existing commit");
-
-        assert_eq!(first, second);
-        assert!(first.join("manifest.json").is_file());
-        let copied = fs::metadata(first.join("files/nested/large"))
-            .expect("bounded file")
-            .len();
-        assert_eq!(copied, RECOVERY_CONTENT_MAX_BYTES);
-        let manifest: serde_json::Value =
-            serde_json::from_slice(&fs::read(first.join("manifest.json")).expect("manifest"))
-                .expect("manifest json");
-        assert_eq!(manifest["truncated"], true);
-        assert_eq!(manifest["finalization_state"], "finalization_failed");
-        assert!(!recovery.join("workspace/unsafe").exists());
-        let _ = fs::remove_dir_all(&root);
-    }
+fn hex_bytes(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }

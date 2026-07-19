@@ -1,8 +1,5 @@
 mod fds;
 pub(crate) mod holder;
-#[cfg(test)]
-#[path = "holder_tests.rs"]
-mod holder_tests;
 mod setns_runner;
 
 use std::sync::Arc;
@@ -134,5 +131,26 @@ impl NamespaceRuntime {
         &self,
     ) -> Result<crate::service::HolderExitSubscription, String> {
         self.holder_supervisor.take_exit_subscription()
+    }
+
+    pub(crate) fn probe_holder(
+        &self,
+        registration: &holder::HolderRegistration,
+    ) -> holder::HolderProbe {
+        self.holder_supervisor.probe(registration)
+    }
+
+    pub(crate) fn quiesce_holder_for_finalization(
+        &self,
+        registration: &holder::HolderRegistration,
+    ) -> holder::HolderFinalization {
+        self.holder_supervisor
+            .quiesce_for_finalization(registration)
+    }
+
+    pub(crate) fn shutdown(&self) -> Result<(), String> {
+        self.holder_supervisor
+            .shutdown()
+            .map_err(|error| error.to_string())
     }
 }

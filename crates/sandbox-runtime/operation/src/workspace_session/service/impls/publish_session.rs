@@ -37,12 +37,12 @@ impl WorkspaceSessionService {
                     self.discard_resurrected_gate(&workspace_session_id, &gate);
                     return Err(WorkspaceSessionError::not_found(&workspace_session_id));
                 };
-                if !session.handle.holder_is_live() {
+                if !self.workspace().holder_is_live(&session.handle) {
                     return Err(WorkspaceSessionError::HolderExited {
                         workspace_session_id: workspace_session_id.clone(),
-                        reason: session
-                            .handle
-                            .holder_exit_reason()
+                        reason: self
+                            .workspace()
+                            .holder_exit_reason(&session.handle)
                             .unwrap_or_else(|| "exit-status:unknown".to_owned()),
                         cleanup_state: session.finalization_state,
                     });
@@ -113,8 +113,8 @@ impl WorkspaceSessionService {
                 .attr("ignored_count", publish.route_summary.ignored_count)
                 .attr("committed", !publish.no_op);
 
-            let destroyed =
-                self.destroy_session(handler.clone(), DestroyWorkspaceRequest { grace_s });
+            let destroyed = self
+                .destroy_session_under_gate(handler.clone(), DestroyWorkspaceRequest { grace_s });
             if !publish.no_op {
                 self.layerstack().notify_autosquash_layer_committed();
             }

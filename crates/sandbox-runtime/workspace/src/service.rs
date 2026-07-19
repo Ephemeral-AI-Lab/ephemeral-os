@@ -1,11 +1,15 @@
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, SyncSender, TrySendError};
-use std::sync::{Mutex, MutexGuard};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, RwLock, RwLockReadGuard};
 use std::time::Duration;
 
 use crate::error::WorkspaceError;
 use crate::model::WorkspaceOwnershipSnapshot;
-use crate::session::WorkspaceManager;
+use crate::namespace::holder::{
+    HolderFinalization, HolderFinalizationUnknownClass, HolderProbe, HolderProbeUnknownClass,
+};
+use crate::session::{WorkspaceManager, WorkspaceManagerShutdownReport};
 
 mod hooks;
 mod impls;
@@ -62,15 +66,10 @@ pub enum HolderExitWait {
 impl HolderExitNotifier {
     /// Queue one wake without blocking the reap owner. A full queue already
     /// contains a wake, so coalescing cannot lose reconciliation work.
-    pub(crate) fn notify(&self) {
+    pub fn notify(&self) {
         match self.tx.try_send(HolderExitDispatchSignal::Wake) {
             Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
         }
-    }
-
-    #[doc(hidden)]
-    pub fn notify_for_test(&self) {
-        self.notify();
     }
 }
 
@@ -112,7 +111,9 @@ impl HolderExitSubscription {
     }
 }
 
-pub(crate) fn holder_exit_channel() -> (HolderExitNotifier, HolderExitSubscription) {
+#[doc(hidden)]
+#[must_use]
+pub fn holder_exit_channel() -> (HolderExitNotifier, HolderExitSubscription) {
     let (tx, rx) = mpsc::sync_channel(1);
     (
         HolderExitNotifier { tx: tx.clone() },
@@ -123,16 +124,48 @@ pub(crate) fn holder_exit_channel() -> (HolderExitNotifier, HolderExitSubscripti
     )
 }
 
-/// Test-only constructor for hook-backed runtimes. Production subscriptions
-/// are created by the namespace-holder supervisor.
-#[doc(hidden)]
-#[must_use]
-pub fn holder_exit_channel_for_test() -> (HolderExitNotifier, HolderExitSubscription) {
-    holder_exit_channel()
-}
-
 pub struct WorkspaceRuntimeService {
     backend: WorkspaceRuntimeBackend,
+    admission: RwLock<()>,
+    shutdown_control: ShutdownControl,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WorkspaceRuntimeShutdownReport {
+    pub workspaces: WorkspaceManagerShutdownReport,
+    pub namespace_stopped: bool,
+    pub namespace_error: Option<String>,
+}
+
+impl WorkspaceRuntimeShutdownReport {
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.workspaces.is_complete() && self.namespace_stopped && self.namespace_error.is_none()
+    }
+}
+
+#[derive(Default)]
+struct ShutdownControl {
+    state: Mutex<ShutdownState>,
+}
+
+#[derive(Default)]
+struct ShutdownState {
+    closing: bool,
+    in_flight: Option<Arc<ShutdownRun>>,
+    completed: Option<WorkspaceRuntimeShutdownReport>,
+}
+
+#[derive(Default)]
+struct ShutdownRun {
+    report: Mutex<Option<WorkspaceRuntimeShutdownReport>>,
+    completed: Condvar,
+}
+
+enum ShutdownTurn {
+    Complete(WorkspaceRuntimeShutdownReport),
+    Join(Arc<ShutdownRun>),
+    Lead(Arc<ShutdownRun>),
 }
 
 pub(crate) struct WorkspaceRuntimeState {
@@ -156,6 +189,8 @@ impl WorkspaceRuntimeService {
                     layer_stack_root,
                 },
             ))),
+            admission: RwLock::new(()),
+            shutdown_control: ShutdownControl::default(),
         }
     }
 
@@ -164,6 +199,8 @@ impl WorkspaceRuntimeService {
     pub fn from_hooks_for_test(hooks: WorkspaceRuntimeHooks) -> Self {
         Self {
             backend: WorkspaceRuntimeBackend::Hooks(hooks),
+            admission: RwLock::new(()),
+            shutdown_control: ShutdownControl::default(),
         }
     }
 
@@ -183,6 +220,7 @@ impl WorkspaceRuntimeService {
         &self,
         workspace_id: &crate::model::WorkspaceSessionId,
     ) -> Result<Option<std::net::Ipv4Addr>, WorkspaceError> {
+        let _admission = self.admit_work()?;
         match &self.backend {
             WorkspaceRuntimeBackend::Runtime(_) => {
                 Ok(self.lock_state()?.manager.isolated_ip(workspace_id))
@@ -201,9 +239,70 @@ impl WorkspaceRuntimeService {
             WorkspaceRuntimeBackend::Runtime(_) => {
                 Ok(self.lock_state()?.manager.ownership_snapshot())
             }
-            // Hook-backed runtimes are test-only and own no concrete workspace
-            // resources in this service.
             WorkspaceRuntimeBackend::Hooks(_) => Ok(WorkspaceOwnershipSnapshot::default()),
+        }
+    }
+
+    /// Returns whether the exact holder generation associated with `handle`
+    /// remains live.
+    #[must_use]
+    pub fn holder_is_live(&self, handle: &crate::model::WorkspaceHandle) -> bool {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Runtime(_) => handle.holder_is_live(),
+            WorkspaceRuntimeBackend::Hooks(hooks) => (hooks.holder_is_live)(handle),
+        }
+    }
+
+    /// Ask the stable holder supervisor to observe the exact generation at a
+    /// finalization boundary.
+    #[must_use]
+    pub fn probe_holder(&self, handle: &crate::model::WorkspaceHandle) -> HolderProbe {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Runtime(state) => {
+                let runtime = match state.lock() {
+                    Ok(state) => Arc::clone(&state.manager.runtime),
+                    Err(_) => {
+                        return HolderProbe::Unknown {
+                            class: HolderProbeUnknownClass::Unavailable,
+                        }
+                    }
+                };
+                runtime.probe_holder(handle.holder_registration())
+            }
+            WorkspaceRuntimeBackend::Hooks(hooks) => (hooks.holder_probe)(handle),
+        }
+    }
+
+    /// Ask the stable holder supervisor to linearize finalization against the
+    /// exact holder generation and return only after planned teardown reaps it.
+    #[must_use]
+    pub fn quiesce_holder_for_finalization(
+        &self,
+        handle: &crate::model::WorkspaceHandle,
+    ) -> HolderFinalization {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Runtime(state) => {
+                let runtime = match state.lock() {
+                    Ok(state) => Arc::clone(&state.manager.runtime),
+                    Err(_) => {
+                        return HolderFinalization::Unknown {
+                            class: HolderFinalizationUnknownClass::Unavailable,
+                        }
+                    }
+                };
+                runtime.quiesce_holder_for_finalization(handle.holder_registration())
+            }
+            WorkspaceRuntimeBackend::Hooks(hooks) => (hooks.holder_finalization)(handle),
+        }
+    }
+
+    /// Returns the bounded exit reason for the exact holder generation, when
+    /// that generation has exited.
+    #[must_use]
+    pub fn holder_exit_reason(&self, handle: &crate::model::WorkspaceHandle) -> Option<String> {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Runtime(_) => handle.holder_exit_reason(),
+            WorkspaceRuntimeBackend::Hooks(hooks) => (hooks.holder_exit_reason)(handle),
         }
     }
 
@@ -214,6 +313,7 @@ impl WorkspaceRuntimeService {
     pub fn take_holder_exit_subscription(
         &self,
     ) -> Result<Option<HolderExitSubscription>, WorkspaceError> {
+        let _admission = self.admit_work()?;
         match &self.backend {
             WorkspaceRuntimeBackend::Runtime(_) => self
                 .lock_state()?
@@ -238,5 +338,140 @@ impl WorkspaceRuntimeService {
                 step: "workspace runtime hooks do not expose concrete state".to_owned(),
             }),
         }
+    }
+
+    pub(crate) fn admit_work(&self) -> Result<RwLockReadGuard<'_, ()>, WorkspaceError> {
+        let admission = self.admission.read().map_err(|_| WorkspaceError::Setup {
+            step: "workspace admission lock poisoned".to_owned(),
+        })?;
+        if self.shutdown_control.is_closing() {
+            return Err(WorkspaceError::Closing);
+        }
+        Ok(admission)
+    }
+
+    #[must_use]
+    pub fn shutdown(&self) -> WorkspaceRuntimeShutdownReport {
+        match self.shutdown_control.begin() {
+            ShutdownTurn::Complete(report) => report,
+            ShutdownTurn::Join(run) => ShutdownControl::wait(&run),
+            ShutdownTurn::Lead(run) => {
+                let _admission = self
+                    .admission
+                    .write()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner());
+                let report = catch_unwind(AssertUnwindSafe(|| self.perform_shutdown()))
+                    .unwrap_or_else(|_| WorkspaceRuntimeShutdownReport {
+                        workspaces: WorkspaceManagerShutdownReport::default(),
+                        namespace_stopped: false,
+                        namespace_error: Some(
+                            "workspace shutdown panicked before namespace convergence".to_owned(),
+                        ),
+                    });
+                self.shutdown_control.finish(&run, report.clone());
+                report
+            }
+        }
+    }
+
+    fn perform_shutdown(&self) -> WorkspaceRuntimeShutdownReport {
+        match &self.backend {
+            WorkspaceRuntimeBackend::Hooks(_) => WorkspaceRuntimeShutdownReport {
+                workspaces: WorkspaceManagerShutdownReport::default(),
+                namespace_stopped: true,
+                namespace_error: None,
+            },
+            WorkspaceRuntimeBackend::Runtime(state) => {
+                let (workspaces, runtime) = {
+                    let mut state = state
+                        .lock()
+                        .unwrap_or_else(|poisoned| poisoned.into_inner());
+                    let runtime = Arc::clone(&state.manager.runtime);
+                    (state.manager.shutdown_all(), runtime)
+                };
+                if !workspaces.is_complete() {
+                    return WorkspaceRuntimeShutdownReport {
+                        workspaces,
+                        namespace_stopped: false,
+                        namespace_error: None,
+                    };
+                }
+                match runtime.shutdown() {
+                    Ok(()) => WorkspaceRuntimeShutdownReport {
+                        workspaces,
+                        namespace_stopped: true,
+                        namespace_error: None,
+                    },
+                    Err(namespace_error) => WorkspaceRuntimeShutdownReport {
+                        workspaces,
+                        namespace_stopped: false,
+                        namespace_error: Some(namespace_error),
+                    },
+                }
+            }
+        }
+    }
+}
+
+impl ShutdownControl {
+    fn begin(&self) -> ShutdownTurn {
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        state.closing = true;
+        if let Some(report) = &state.completed {
+            return ShutdownTurn::Complete(report.clone());
+        }
+        if let Some(run) = &state.in_flight {
+            return ShutdownTurn::Join(Arc::clone(run));
+        }
+        let run = Arc::new(ShutdownRun::default());
+        state.in_flight = Some(Arc::clone(&run));
+        ShutdownTurn::Lead(run)
+    }
+
+    fn is_closing(&self) -> bool {
+        self.state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .closing
+    }
+
+    fn wait(run: &ShutdownRun) -> WorkspaceRuntimeShutdownReport {
+        let mut report = run
+            .report
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        loop {
+            if let Some(report) = &*report {
+                return report.clone();
+            }
+            report = run
+                .completed
+                .wait(report)
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+        }
+    }
+
+    fn finish(&self, run: &ShutdownRun, report: WorkspaceRuntimeShutdownReport) {
+        *run.report
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(report.clone());
+        run.completed.notify_all();
+        let mut state = self
+            .state
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if report.is_complete() {
+            state.completed = Some(report);
+        }
+        state.in_flight = None;
+    }
+}
+
+impl Drop for WorkspaceRuntimeService {
+    fn drop(&mut self) {
+        let _ = self.shutdown();
     }
 }

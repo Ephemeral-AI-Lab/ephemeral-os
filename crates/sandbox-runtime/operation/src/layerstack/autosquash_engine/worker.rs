@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, PoisonError, Weak};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -13,6 +13,8 @@ use crate::layerstack::LayerStackService;
 use crate::workspace_session::WorkspaceSessionService;
 
 use super::policies::squash_at_n_layers;
+
+const AUTOSQUASH_IDLE_TIMEOUT: Duration = Duration::from_millis(250);
 
 #[derive(Clone, Copy)]
 pub(crate) enum AutosquashTriggerReason {
@@ -40,11 +42,14 @@ struct Notification {
 struct QueueState {
     pending: Option<Notification>,
     shutdown: bool,
+    worker_running: bool,
+    services: Option<(Weak<LayerStackService>, Weak<WorkspaceSessionService>)>,
 }
 
 pub(crate) struct AutosquashQueue {
     state: Mutex<QueueState>,
     ready: Condvar,
+    worker: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl AutosquashQueue {
@@ -52,10 +57,27 @@ impl AutosquashQueue {
         Self {
             state: Mutex::new(QueueState::default()),
             ready: Condvar::new(),
+            worker: Mutex::new(None),
         }
     }
 
-    pub(crate) fn notify(&self, context: TraceContext, trigger_reason: AutosquashTriggerReason) {
+    fn configure(
+        &self,
+        layerstack: &Arc<LayerStackService>,
+        workspace_session: &Arc<WorkspaceSessionService>,
+    ) {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state.services = Some((
+            Arc::downgrade(layerstack),
+            Arc::downgrade(workspace_session),
+        ));
+    }
+
+    pub(crate) fn notify(
+        self: &Arc<Self>,
+        context: TraceContext,
+        trigger_reason: AutosquashTriggerReason,
+    ) {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
         if state.shutdown {
             return;
@@ -69,8 +91,34 @@ impl AutosquashQueue {
                 enqueued_at: Instant::now(),
                 coalesced_notifications: 0,
             });
-            self.ready.notify_one();
         }
+        if !state.worker_running && state.services.is_some() {
+            if let Some(previous) = self
+                .worker
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .take()
+            {
+                if previous.join().is_err() {
+                    eprintln!("autosquash worker panicked before restart");
+                }
+            }
+            state.worker_running = true;
+            let queue = Arc::clone(self);
+            match std::thread::Builder::new()
+                .name("layerstack-autosquash".to_owned())
+                .spawn(move || worker_loop(queue))
+            {
+                Ok(worker) => {
+                    *self.worker.lock().unwrap_or_else(PoisonError::into_inner) = Some(worker);
+                }
+                Err(error) => {
+                    state.worker_running = false;
+                    eprintln!("autosquash worker failed to start: {error}");
+                }
+            }
+        }
+        self.ready.notify_one();
     }
 
     fn receive(&self) -> Option<Notification> {
@@ -80,26 +128,72 @@ impl AutosquashQueue {
                 return Some(notification);
             }
             if state.shutdown {
+                state.worker_running = false;
+                self.ready.notify_all();
                 return None;
             }
-            state = self
+            let (next, timeout) = self
                 .ready
-                .wait(state)
+                .wait_timeout(state, AUTOSQUASH_IDLE_TIMEOUT)
                 .unwrap_or_else(PoisonError::into_inner);
+            state = next;
+            if timeout.timed_out() && state.pending.is_none() && !state.shutdown {
+                state.worker_running = false;
+                self.ready.notify_all();
+                return None;
+            }
         }
     }
 
-    fn shutdown(&self) {
+    fn services(&self) -> Option<(Arc<LayerStackService>, Arc<WorkspaceSessionService>)> {
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        let (layerstack, workspace_session) = state.services.as_ref()?;
+        Some((layerstack.upgrade()?, workspace_session.upgrade()?))
+    }
+
+    fn stop_without_services(&self) {
         let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
-        state.shutdown = true;
-        state.pending = None;
-        self.ready.notify_one();
+        state.worker_running = false;
+        self.ready.notify_all();
+    }
+
+    fn shutdown_and_join(&self) {
+        {
+            let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+            state.shutdown = true;
+            state.pending = None;
+            self.ready.notify_all();
+        }
+        let worker = self
+            .worker
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .take();
+        if let Some(worker) = worker {
+            if worker.join().is_err() {
+                let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+                state.worker_running = false;
+                self.ready.notify_all();
+            }
+        } else {
+            let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+            while state.worker_running {
+                state = self
+                    .ready
+                    .wait(state)
+                    .unwrap_or_else(PoisonError::into_inner);
+            }
+        }
+    }
+
+    fn worker_threads(&self) -> usize {
+        let state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        usize::from(state.worker_running)
     }
 }
 
 pub(crate) struct AutosquashEngine {
     queue: Option<Arc<AutosquashQueue>>,
-    worker: Option<JoinHandle<()>>,
 }
 
 impl AutosquashEngine {
@@ -108,36 +202,29 @@ impl AutosquashEngine {
         workspace_session: Arc<WorkspaceSessionService>,
     ) -> Self {
         let Some(queue) = layerstack.autosquash_queue.clone() else {
-            return Self {
-                queue: None,
-                worker: None,
-            };
+            return Self { queue: None };
         };
-        let worker_queue = Arc::clone(&queue);
-        let worker = std::thread::Builder::new()
-            .name("layerstack-autosquash".to_owned())
-            .spawn(move || worker_loop(worker_queue, layerstack, workspace_session))
-            .map_err(|error| {
-                eprintln!("autosquash worker failed to start: {error}");
-                error
-            })
-            .ok();
+        queue.configure(&layerstack, &workspace_session);
         queue.notify(startup_context(), AutosquashTriggerReason::Startup);
-        Self {
-            queue: Some(queue),
-            worker,
+        Self { queue: Some(queue) }
+    }
+
+    pub(crate) fn shutdown_and_join(&self) {
+        if let Some(queue) = &self.queue {
+            queue.shutdown_and_join();
         }
+    }
+
+    pub(crate) fn worker_threads(&self) -> usize {
+        self.queue
+            .as_ref()
+            .map_or(0, |queue| queue.worker_threads())
     }
 }
 
 impl Drop for AutosquashEngine {
     fn drop(&mut self) {
-        if let Some(queue) = &self.queue {
-            queue.shutdown();
-        }
-        if let Some(worker) = self.worker.take() {
-            let _ = worker.join();
-        }
+        self.shutdown_and_join();
     }
 }
 
@@ -157,12 +244,12 @@ pub(crate) fn internal_context(reason: &str) -> TraceContext {
     }
 }
 
-fn worker_loop(
-    queue: Arc<AutosquashQueue>,
-    layerstack: Arc<LayerStackService>,
-    workspace_session: Arc<WorkspaceSessionService>,
-) {
+fn worker_loop(queue: Arc<AutosquashQueue>) {
     while let Some(notification) = queue.receive() {
+        let Some((layerstack, workspace_session)) = queue.services() else {
+            queue.stop_without_services();
+            return;
+        };
         let observer = layerstack.obs.clone();
         observer.with_context(notification.context.clone(), || {
             if let Err(error) = evaluate(&layerstack, &workspace_session, notification) {
