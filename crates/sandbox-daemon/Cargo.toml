@@ -5,6 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+jemalloc = ["dep:tikv-jemallocator", "dep:tikv-jemalloc-ctl"]
+
 [[bin]]
 name = "sandbox-daemon"
 path = "src/main.rs"
@@ -33,8 +36,8 @@ http-body-util.workspace = true
 bytes.workspace = true
 uuid.workspace = true
 sha2.workspace = true
-tikv-jemallocator.workspace = true
-tikv-jemalloc-ctl.workspace = true
+tikv-jemallocator = { workspace = true, optional = true }
+tikv-jemalloc-ctl = { workspace = true, optional = true }
 
 [dev-dependencies]
 sandbox-runtime-layerstack.workspace = true

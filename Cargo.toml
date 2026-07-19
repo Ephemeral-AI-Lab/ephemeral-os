@@ -38,7 +38,7 @@ serde_path_to_error = "0.1"
 # this dependency directly; callers stay behind `ConfigDocument` and typed
 # section schemas.
 serde_yaml_ng = "0.10"
-sha2 = { version = "0.10", features = ["asm"] }
+sha2 = "0.10"
 rayon = "1"
 prost = "0.13"
 prost-build = "0.13"

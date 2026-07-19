@@ -35,6 +35,18 @@ pub fn require_absolute(path: &Path, field: &'static str) -> Result<(), ConfigFi
     }
 }
 
+pub fn require_unix_absolute(path: &Path, field: &'static str) -> Result<(), ConfigFieldError> {
+    let value = path.to_string_lossy();
+    if value.starts_with('/') {
+        Ok(())
+    } else {
+        Err(ConfigFieldError::new(
+            field,
+            "must be an absolute Unix path",
+        ))
+    }
+}
+
 /// Require a non-blank string.
 pub fn require_non_empty(value: &str, field: &'static str) -> Result<(), ConfigFieldError> {
     if value.trim().is_empty() {

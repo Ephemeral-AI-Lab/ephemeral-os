@@ -5,6 +5,7 @@ use std::path::Path;
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock};
 use std::thread::ThreadId;
 
+#[cfg(not(windows))]
 use rustix::fs::{flock, FlockOperation};
 
 use crate::error::LayerStackError;
@@ -33,6 +34,7 @@ impl StorageWriterLockLease {
             .create(true)
             .truncate(false)
             .open(&lock_path)?;
+        #[cfg(not(windows))]
         match flock(&file, FlockOperation::NonBlockingLockExclusive) {
             Ok(()) => {}
             Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
@@ -94,8 +96,9 @@ impl Drop for StorageWriterLockLease {
         if record.refcount > 0 {
             return;
         }
-        if let Some(record) = registry.remove(&self.key) {
-            let _ = flock(&record.file, FlockOperation::Unlock);
+        if let Some(_record) = registry.remove(&self.key) {
+            #[cfg(not(windows))]
+            let _ = flock(&_record.file, FlockOperation::Unlock);
         }
     }
 }
@@ -126,6 +129,7 @@ impl Drop for ExclusiveGuard<'_> {
 
 #[derive(Debug)]
 struct LockRecord {
+    #[cfg_attr(windows, allow(dead_code))]
     file: File,
     refcount: usize,
     lock: Arc<ReentrantRwLock>,
@@ -245,9 +249,10 @@ pub(crate) fn reset_storage_lock_registry_for_tests() {
         .map(|(key, _)| key.clone())
         .collect::<Vec<_>>();
     for key in inactive_keys {
-        let Some(record) = registry.remove(&key) else {
+        let Some(_record) = registry.remove(&key) else {
             continue;
         };
-        let _ = flock(&record.file, FlockOperation::Unlock);
+        #[cfg(not(windows))]
+        let _ = flock(&_record.file, FlockOperation::Unlock);
     }
 }

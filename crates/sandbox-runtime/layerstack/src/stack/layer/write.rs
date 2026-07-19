@@ -44,7 +44,7 @@ pub(in crate::stack) fn write_layer_changes(
             }
             LayerChange::Symlink { path, source_path } => {
                 let target = prepare_layer_target(layer_dir, path.as_str())?;
-                std::os::unix::fs::symlink(source_path, target)?;
+                create_symlink(Path::new(&source_path), target)?;
             }
             LayerChange::Directory { path } => {
                 let dir = join_layer_path(layer_dir, path.as_str());
@@ -67,4 +67,22 @@ fn prepare_layer_target(layer_dir: &Path, path: &str) -> Result<PathBuf, LayerSt
     }
     remove_path(&target)?;
     Ok(target)
+}
+
+#[cfg(unix)]
+fn create_symlink(source: &Path, target: PathBuf) -> std::io::Result<()> {
+    std::os::unix::fs::symlink(source, target)
+}
+
+#[cfg(windows)]
+fn create_symlink(source: &Path, target: PathBuf) -> std::io::Result<()> {
+    let resolved = target
+        .parent()
+        .map(|parent| parent.join(source))
+        .unwrap_or_else(|| source.to_path_buf());
+    if resolved.is_dir() {
+        std::os::windows::fs::symlink_dir(source, target)
+    } else {
+        std::os::windows::fs::symlink_file(source, target)
+    }
 }

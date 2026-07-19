@@ -16,6 +16,7 @@ use sandbox_manager::{
 };
 
 const DAEMON_READY_POLL: Duration = Duration::from_millis(20);
+#[cfg(unix)]
 const DAEMON_STOP_POLL: Duration = Duration::from_millis(20);
 const DAEMON_TCP_HOST: &str = "127.0.0.1";
 

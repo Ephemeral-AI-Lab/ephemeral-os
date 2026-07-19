@@ -108,6 +108,7 @@ For the deeper design, see the
 - [External tests and benchmarks](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-test)
   live in their own repository.
 - Repository-local notes cover [configuration](config/README.md),
+  [Windows setup](docs/windows-setup.md),
   [daemon HTTP](docs/daemon-http/README.md), and
   [maintainer boundaries](docs/maintainer-architecture.md).
 - Run `sandbox-manager-cli help`, `sandbox-runtime-cli --sandbox-id ID help`,

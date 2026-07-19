@@ -6,8 +6,11 @@
 
 use std::collections::BTreeMap;
 use std::io::Write;
+#[cfg(unix)]
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
+#[cfg(not(unix))]
+use std::time::UNIX_EPOCH;
 
 use crate::error::LayerStackError;
 use crate::model::LayerPath;
@@ -74,8 +77,8 @@ fn append_winner(
             let mut header = tar::Header::new_gnu();
             header.set_entry_type(tar::EntryType::Regular);
             header.set_size(meta.len());
-            header.set_mode(meta.permissions().mode() & 0o7777);
-            header.set_mtime(clamp_mtime(meta.mtime()));
+            header.set_mode(file_mode(&meta));
+            header.set_mtime(mtime(&meta));
             builder.append_data(&mut header, path.as_str(), file)?;
             stats.files += 1;
             Ok(())
@@ -86,8 +89,8 @@ fn append_winner(
             let mut header = tar::Header::new_gnu();
             header.set_entry_type(tar::EntryType::Symlink);
             header.set_size(0);
-            header.set_mode(meta.permissions().mode() & 0o7777);
-            header.set_mtime(clamp_mtime(meta.mtime()));
+            header.set_mode(file_mode(&meta));
+            header.set_mtime(mtime(&meta));
             builder.append_link(&mut header, path.as_str(), target)?;
             stats.symlinks += 1;
             Ok(())
@@ -108,8 +111,8 @@ fn append_directory(
     let mut header = tar::Header::new_gnu();
     header.set_entry_type(tar::EntryType::Directory);
     header.set_size(0);
-    header.set_mode(meta.permissions().mode() & 0o7777);
-    header.set_mtime(clamp_mtime(meta.mtime()));
+    header.set_mode(file_mode(&meta));
+    header.set_mtime(mtime(&meta));
     builder.append_data(&mut header, format!("{}/", path.as_str()), std::io::empty())?;
     Ok(())
 }
@@ -134,6 +137,29 @@ fn whiteout_entry_name(target: &LayerPath) -> String {
     }
 }
 
-fn clamp_mtime(mtime: i64) -> u64 {
-    u64::try_from(mtime).unwrap_or(0)
+#[cfg(unix)]
+fn file_mode(meta: &std::fs::Metadata) -> u32 {
+    meta.permissions().mode() & 0o7777
+}
+
+#[cfg(not(unix))]
+fn file_mode(meta: &std::fs::Metadata) -> u32 {
+    if meta.is_dir() {
+        0o755
+    } else {
+        0o644
+    }
+}
+
+#[cfg(unix)]
+fn mtime(meta: &std::fs::Metadata) -> u64 {
+    u64::try_from(meta.mtime()).unwrap_or(0)
+}
+
+#[cfg(not(unix))]
+fn mtime(meta: &std::fs::Metadata) -> u64 {
+    meta.modified()
+        .ok()
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map_or(0, |duration| duration.as_secs())
 }

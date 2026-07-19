@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(windows, allow(dead_code))]
 
 #[path = "../src/error.rs"]
 mod error;
@@ -99,8 +100,10 @@ pub(crate) use model::*;
 #[path = "unit/test_fixture.rs"]
 mod test_fixture;
 
+#[cfg(unix)]
 #[path = "unit/export_delta.rs"]
 mod export_delta_tests;
+#[cfg(unix)]
 #[path = "unit/export_stream.rs"]
 mod export_stream_tests;
 #[path = "unit/merge.rs"]
@@ -109,12 +112,14 @@ mod merge_tests;
 mod model_tests;
 #[path = "unit/observe.rs"]
 mod observe_tests;
+#[cfg(unix)]
 #[path = "unit/publish.rs"]
 mod publish_tests;
 #[path = "unit/service.rs"]
 mod service_tests;
 #[path = "unit/sidecar.rs"]
 mod sidecar_tests;
+#[cfg(unix)]
 #[path = "unit/squash.rs"]
 mod squash_tests;
 #[path = "unit/stack.rs"]

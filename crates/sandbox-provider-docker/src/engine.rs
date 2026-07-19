@@ -580,7 +580,7 @@ fn connect(endpoint: Option<&str>, connect_timeout_s: u64) -> Result<Docker, Doc
             Docker::connect_with_http(value, connect_timeout_s, bollard::API_DEFAULT_VERSION)
         }
         Some(value) => {
-            Docker::connect_with_unix(value, connect_timeout_s, bollard::API_DEFAULT_VERSION)
+            Docker::connect_with_socket(value, connect_timeout_s, bollard::API_DEFAULT_VERSION)
         }
         None => Docker::connect_with_local_defaults(),
     };

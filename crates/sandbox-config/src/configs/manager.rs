@@ -10,7 +10,7 @@ use serde::Deserialize;
 
 use crate::configs::validate::{
     require_absolute, require_f64_gt, require_non_empty, require_u64_at_least,
-    require_usize_at_least, ConfigFieldError,
+    require_unix_absolute, require_usize_at_least, ConfigFieldError,
 };
 use crate::configs::{daemon::DaemonConfig, runtime::RuntimeConfig};
 
@@ -512,15 +512,15 @@ impl DockerRuntimeConfig {
             &self.daemon_config_yaml_path.to_string_lossy(),
             "manager.docker.daemon_config_yaml_path",
         )?;
-        require_absolute(
+        require_unix_absolute(
             &self.container_daemon_binary_path,
             "manager.docker.container_daemon_binary_path",
         )?;
-        require_absolute(
+        require_unix_absolute(
             &self.container_daemon_config_yaml_path,
             "manager.docker.container_daemon_config_yaml_path",
         )?;
-        require_absolute(
+        require_unix_absolute(
             &self.container_workspace_root,
             "manager.docker.container_workspace_root",
         )?;
