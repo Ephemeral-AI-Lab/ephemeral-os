@@ -429,7 +429,7 @@ fn engine_allocates_monotonic_namespace_execution_ids() {
 }
 
 #[test]
-fn production_engine_initializes_the_stable_pty_reactor() {
+fn production_engine_initializes_stable_background_workers() {
     let engine: NamespaceExecutionEngine = NamespaceExecutionEngine::new(
         Arc::new(NoopHook),
         ExecutionCaps {
@@ -442,7 +442,7 @@ fn production_engine_initializes_the_stable_pty_reactor() {
     let workers = engine.background_worker_snapshot();
     assert_eq!(workers.pty_reactor_threads, 1);
     assert_eq!(workers.active_pty_readers, 0);
-    assert_eq!(workers.completion_supervisor_threads, 0);
+    assert_eq!(workers.completion_supervisor_threads, 1);
     assert_eq!(workers.active_completions, 0);
 }
 

@@ -14,7 +14,7 @@ fn id(suffix: &str) -> NamespaceExecutionId {
 }
 
 #[test]
-fn concurrent_shells_share_bounded_restartable_background_workers() {
+fn concurrent_shells_share_bounded_daemon_lifetime_background_workers() {
     let fake = FakeLauncher::new();
     let engine = NamespaceExecutionEngine::with_launcher(
         Box::new(fake),
@@ -26,7 +26,7 @@ fn concurrent_shells_share_bounded_restartable_background_workers() {
         },
     );
     let initial = engine.background_worker_snapshot();
-    assert_eq!(initial.completion_supervisor_threads, 0);
+    assert_eq!(initial.completion_supervisor_threads, 1);
     assert_eq!(initial.pty_reactor_threads, 0);
     assert_eq!(initial.active_completions, 0);
     assert_eq!(initial.active_pty_readers, 0);
@@ -57,9 +57,9 @@ fn concurrent_shells_share_bounded_restartable_background_workers() {
     for execution in executions {
         assert_eq!(execution.wait().expect("cancelled shell reaped"), 130);
     }
-    wait_for_completion_owner_retirement(&engine);
+    wait_for_workers_to_settle(&engine);
     let settled = engine.background_worker_snapshot();
-    assert_eq!(settled.completion_supervisor_threads, 0);
+    assert_eq!(settled.completion_supervisor_threads, 1);
     assert_eq!(settled.active_completions, 0);
     assert_eq!(settled.active_pty_readers, 0);
 
@@ -72,30 +72,38 @@ fn concurrent_shells_share_bounded_restartable_background_workers() {
             None,
             None,
         )
-        .expect("completion owner restarts after idle retirement");
+        .expect("completion owner accepts work after idle");
     let active_again = engine.background_worker_snapshot();
     assert_eq!(active_again.completion_supervisor_threads, 1);
     assert_eq!(active_again.active_completions, 1);
     (restarted.cancel_handle())();
     assert_eq!(restarted.wait().expect("restarted shell reaped"), 130);
-    wait_for_completion_owner_retirement(&engine);
-}
-
-fn wait_for_completion_owner_retirement(engine: &NamespaceExecutionEngine) {
-    let deadline = Instant::now() + Duration::from_secs(2);
-    while engine
-        .background_worker_snapshot()
-        .completion_supervisor_threads
-        != 0
-        && Instant::now() < deadline
-    {
-        std::thread::sleep(Duration::from_millis(10));
-    }
+    wait_for_workers_to_settle(&engine);
     assert_eq!(
         engine
             .background_worker_snapshot()
             .completion_supervisor_threads,
-        0,
-        "completion owner retires after the idle deadline"
+        1
     );
+}
+
+fn wait_for_workers_to_settle(engine: &NamespaceExecutionEngine) {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        let snapshot = engine.background_worker_snapshot();
+        if snapshot.active_completions == 0 && snapshot.active_pty_readers == 0 {
+            return;
+        }
+        if Instant::now() >= deadline {
+            assert_eq!(
+                snapshot.active_completions, 0,
+                "completion owner converges after every child exits"
+            );
+            assert_eq!(
+                snapshot.active_pty_readers, 0,
+                "PTY readers converge after every child exits"
+            );
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
 }

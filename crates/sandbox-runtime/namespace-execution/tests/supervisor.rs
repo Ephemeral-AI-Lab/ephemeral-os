@@ -21,6 +21,15 @@ struct ControlledChild {
 }
 
 impl ControlledChild {
+    fn completed(terminate_calls: Arc<AtomicUsize>, wait_polls: Arc<AtomicUsize>) -> Self {
+        Self {
+            completes_after_terminate: true,
+            terminated: Arc::new(AtomicBool::new(true)),
+            terminate_calls,
+            wait_polls,
+        }
+    }
+
     fn responsive(terminate_calls: Arc<AtomicUsize>, wait_polls: Arc<AtomicUsize>) -> Self {
         Self {
             completes_after_terminate: true,
@@ -38,6 +47,57 @@ impl ControlledChild {
             wait_polls,
         }
     }
+}
+
+#[test]
+fn multithread_runtime_reuses_async_workers_for_completion_polling() {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_time()
+        .build()
+        .expect("build multithread runtime");
+    runtime.block_on(async {
+        let supervisor = CompletionSupervisor::new();
+        assert_eq!(supervisor.worker_threads(), 0);
+
+        let terminate_calls = Arc::new(AtomicUsize::new(0));
+        let wait_polls = Arc::new(AtomicUsize::new(0));
+        let (completion_tx, completion_rx) = mpsc::channel();
+        supervisor
+            .submit(
+                Box::new(ControlledChild::completed(
+                    Arc::clone(&terminate_calls),
+                    Arc::clone(&wait_polls),
+                )),
+                move |result| completion_tx.send(result).expect("receive completion"),
+            )
+            .expect("child admitted");
+
+        let result = tokio::time::timeout(Duration::from_secs(1), async {
+            loop {
+                match completion_rx.try_recv() {
+                    Ok(result) => return result,
+                    Err(mpsc::TryRecvError::Empty) => tokio::task::yield_now().await,
+                    Err(mpsc::TryRecvError::Disconnected) => {
+                        panic!("completion channel disconnected")
+                    }
+                }
+            }
+        })
+        .await
+        .expect("completion callback remains responsive")
+        .expect("completed child succeeds");
+        assert_eq!(result.exit_code, 130);
+        assert_eq!(terminate_calls.load(Ordering::SeqCst), 0);
+        assert!(wait_polls.load(Ordering::SeqCst) >= 1);
+        assert_eq!(supervisor.active(), 0);
+        assert_eq!(supervisor.worker_threads(), 0);
+
+        supervisor
+            .shutdown_and_join()
+            .expect("idle async completion worker shuts down cleanly");
+        assert_eq!(supervisor.worker_threads(), 0);
+    });
 }
 
 impl RunnerChild for ControlledChild {
@@ -66,6 +126,20 @@ impl RunnerChild for ControlledChild {
         self.terminate_calls.fetch_add(1, Ordering::SeqCst);
         self.terminated.store(true, Ordering::SeqCst);
     }
+}
+
+#[test]
+fn completion_worker_remains_alive_until_explicit_shutdown() {
+    let supervisor = CompletionSupervisor::new();
+    assert_eq!(supervisor.worker_threads(), 1);
+
+    thread::sleep(Duration::from_millis(300));
+    assert_eq!(supervisor.worker_threads(), 1);
+
+    supervisor
+        .shutdown_and_join()
+        .expect("idle completion worker shuts down cleanly");
+    assert_eq!(supervisor.worker_threads(), 0);
 }
 
 #[test]

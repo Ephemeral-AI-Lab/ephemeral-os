@@ -13,6 +13,7 @@ rustix = { workspace = true, features = ["pty", "event", "pipe"] }
 nix = { workspace = true, features = ["signal"] }
 time.workspace = true
 libc.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 sandbox-runtime-namespace-process.workspace = true

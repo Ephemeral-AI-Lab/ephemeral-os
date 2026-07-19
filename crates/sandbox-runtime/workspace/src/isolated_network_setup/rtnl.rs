@@ -2,6 +2,7 @@ use std::{future::Future, thread};
 
 use futures_util::stream::TryStreamExt;
 use rtnetlink::{new_connection, Handle, LinkBridge, LinkBridgePort, LinkUnspec, LinkVeth};
+use tokio::runtime::{Handle as RuntimeHandle, RuntimeFlavor};
 
 use crate::session::WorkspaceManagerError;
 
@@ -13,20 +14,45 @@ where
     F: FnOnce(Handle) -> Fut + Send + 'static,
     Fut: Future<Output = Result<T, WorkspaceManagerError>> + Send + 'static,
 {
-    thread::spawn(move || {
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_io()
-            .build()
-            .map_err(|err| network_error_at("build netlink runtime", err))?;
-        runtime.block_on(async move {
-            let (connection, handle, _) = new_connection()
-                .map_err(|err| network_error_at("open route netlink socket", err))?;
-            tokio::spawn(connection);
-            operation(handle).await
-        })
-    })
-    .join()
-    .map_err(|_| WorkspaceManagerError::NetworkUnavailable("netlink thread panicked".to_owned()))?
+    match RuntimeHandle::try_current() {
+        Ok(runtime) if runtime.runtime_flavor() == RuntimeFlavor::MultiThread => {
+            // Workspace RPCs invoke this synchronous boundary from Tokio's
+            // blocking dispatch pool. Drive the future on the existing runtime
+            // without handing off a core and permanently expanding its workers.
+            runtime.block_on(execute_netlink_operation(operation))
+        }
+        Ok(_) => thread::spawn(move || run_on_current_thread(operation))
+            .join()
+            .map_err(|_| {
+                WorkspaceManagerError::NetworkUnavailable("netlink thread panicked".to_owned())
+            })?,
+        Err(_) => run_on_current_thread(operation),
+    }
+}
+
+fn run_on_current_thread<T, F, Fut>(operation: F) -> Result<T, WorkspaceManagerError>
+where
+    T: Send + 'static,
+    F: FnOnce(Handle) -> Fut + Send + 'static,
+    Fut: Future<Output = Result<T, WorkspaceManagerError>> + Send + 'static,
+{
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .build()
+        .map_err(|err| network_error_at("build netlink runtime", err))?;
+    runtime.block_on(execute_netlink_operation(operation))
+}
+
+async fn execute_netlink_operation<T, F, Fut>(operation: F) -> Result<T, WorkspaceManagerError>
+where
+    T: Send + 'static,
+    F: FnOnce(Handle) -> Fut + Send + 'static,
+    Fut: Future<Output = Result<T, WorkspaceManagerError>> + Send + 'static,
+{
+    let (connection, handle, _) =
+        new_connection().map_err(|err| network_error_at("open route netlink socket", err))?;
+    tokio::spawn(connection);
+    operation(handle).await
 }
 
 pub(super) async fn ensure_bridge(handle: &Handle) -> Result<u32, WorkspaceManagerError> {
