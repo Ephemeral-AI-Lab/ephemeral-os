@@ -19,7 +19,7 @@ use crate::rpc::ServerConfig;
 use super::diagnostics::DiagnosticTracker;
 use super::resources::ResourceSampler;
 
-const INFRASTRUCTURE_THREAD_ALLOWANCE: usize = 4;
+const INFRASTRUCTURE_THREAD_ALLOWANCE: usize = 6;
 
 pub struct DaemonObservability {
     sandbox_id: String,

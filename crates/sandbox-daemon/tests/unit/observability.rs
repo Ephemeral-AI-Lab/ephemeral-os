@@ -1134,7 +1134,7 @@ async fn concrete_observability_operations_dispatch_end_to_end() -> TestResult {
             "max_active_commands": 32,
             "max_blocking_queue_depth": 0,
             "max_command_queue_depth": 0,
-            "infrastructure_thread_allowance": 4,
+            "infrastructure_thread_allowance": 6,
         })
     );
     assert_eq!(
@@ -1578,7 +1578,7 @@ fn diagnostic_process_metrics(
             max_active_commands: Some(256),
             max_blocking_queue_depth: Some(0),
             max_command_queue_depth: Some(0),
-            infrastructure_thread_allowance: Some(4),
+            infrastructure_thread_allowance: Some(6),
         },
         runtime_usage: Default::default(),
         ownership: Default::default(),
