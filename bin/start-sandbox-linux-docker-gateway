@@ -1,0 +1,73 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+
+usage() {
+    cat <<'EOF'
+start-sandbox-linux-docker-gateway [GATEWAY_OPTIONS...]
+
+Start the Docker gateway with the Linux amd64 config. Docker must already be
+installed and reachable.
+
+Typical background startup:
+  nohup bin/start-sandbox-linux-docker-gateway >/tmp/eos-gateway.log 2>&1 &
+
+Source checkout rebuild:
+  nohup bin/start-sandbox-linux-docker-gateway --rebuild-binary >/tmp/eos-linux-setup.log 2>&1 &
+
+Useful logs:
+  /tmp/eos-gateway.log
+  /tmp/eos-gateway-linux.log
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+die() {
+    printf '%s\n' "$*" >&2
+    exit 1
+}
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+have docker || die "docker not found; install Docker and start the daemon first"
+docker info >/dev/null 2>&1 || die "docker daemon is not reachable; start Docker or fix user permissions"
+
+export SANDBOX_GATEWAY_CONFIG_YAML=${SANDBOX_GATEWAY_CONFIG_YAML:-$repo_root/config/linux-amd64.yml}
+export SANDBOX_XTASK_BUILDER=${SANDBOX_XTASK_BUILDER:-zigbuild}
+export SANDBOX_GATEWAY_PID_FILE=${SANDBOX_GATEWAY_PID_FILE:-/tmp/eos-gateway-linux.pid}
+export SANDBOX_GATEWAY_LOG=${SANDBOX_GATEWAY_LOG:-/tmp/eos-gateway-linux.log}
+
+needs_source_setup=0
+for arg in "$@"; do
+    if [ "$arg" = "--rebuild-binary" ]; then
+        needs_source_setup=1
+    fi
+done
+
+if [ "$needs_source_setup" -eq 1 ] ||
+    [ ! -x "$repo_root/bin/sandbox-gateway-bin" ] ||
+    [ ! -x "$repo_root/bin/sandbox-manager-cli-bin" ] ||
+    [ ! -x "$repo_root/bin/sandbox-runtime-cli-bin" ] ||
+    [ ! -x "$repo_root/bin/sandbox-observability-cli-bin" ] ||
+    [ ! -x "$repo_root/dist/sandbox-daemon-linux-amd64" ]; then
+    if [ -f "$HOME/.cargo/env" ]; then
+        # shellcheck disable=SC1090
+        . "$HOME/.cargo/env"
+    fi
+    export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$repo_root/bin:$PATH"
+    have cargo || die "cargo not found; install Rust with rustup, then retry"
+    "$repo_root/bin/setup-musl-cross"
+else
+    export PATH="$repo_root/bin:$PATH"
+fi
+
+cd "$repo_root"
+exec "$repo_root/bin/start-sandbox-docker-gateway" "$@"

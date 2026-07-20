@@ -8,6 +8,9 @@ binary is cross-built for Linux amd64.
 ## Requirements
 
 - Windows 11 with Docker Desktop using the Linux container engine.
+
+Source builds additionally need:
+
 - Visual Studio 2022 Build Tools with the C++ build tools workload.
 - Rust through rustup.
 - Zig and `cargo-zigbuild` for the Linux musl daemon package.
@@ -18,7 +21,26 @@ binary is cross-built for Linux amd64.
 PowerShell blocks `npm.ps1` on many machines. Use `npm.cmd` in the commands
 below unless your execution policy already permits npm's PowerShell shim.
 
-## Build The Core
+## Binary Release
+
+Download and start the Windows amd64 release:
+
+```powershell
+curl.exe -LO https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox/releases/latest/download/ephemeral-sandbox-windows-amd64.zip
+tar.exe -xf ephemeral-sandbox-windows-amd64.zip
+cd ephemeral-sandbox-windows-amd64
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\bin\start-sandbox-windows-docker-gateway.ps1
+```
+
+The launcher writes the gateway token to:
+
+```text
+$HOME\.ephemeral-sandbox\gateway.token
+```
+
+Binary releases do not require Rust, Cargo, Zig, or `cargo-zigbuild`.
+
+## Build The Core From Source
 
 Start in the core checkout:
 
