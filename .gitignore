@@ -12,6 +12,7 @@
 # Local environment and secrets
 .env
 .env.*
+/.e2e-state/
 
 # Logs and runtime leftovers
 *.log
