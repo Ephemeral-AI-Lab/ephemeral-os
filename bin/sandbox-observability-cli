@@ -8,6 +8,11 @@ repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
 sandbox_gateway_token_load
 
 local_cli="$repo_root/target/debug/sandbox-observability-cli"
+release_cli="$repo_root/bin/sandbox-observability-cli-bin"
+if [ -x "$release_cli" ]; then
+    exec "$release_cli" "$@"
+fi
+
 if [ -x "$local_cli" ]; then
     exec "$local_cli" "$@"
 fi

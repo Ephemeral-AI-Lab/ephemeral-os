@@ -1,0 +1,56 @@
+name: Release Linux amd64
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package-linux-amd64:
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Build release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin/package-linux-amd64-release
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ephemeral-sandbox-linux-amd64
+          path: |
+            dist/release/ephemeral-sandbox-linux-amd64.tar.gz
+            dist/release/ephemeral-sandbox-linux-amd64.tar.gz.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --generate-notes
+          fi
+          gh release upload "$TAG_NAME" \
+            dist/release/ephemeral-sandbox-linux-amd64.tar.gz \
+            dist/release/ephemeral-sandbox-linux-amd64.tar.gz.sha256 \
+            --clobber

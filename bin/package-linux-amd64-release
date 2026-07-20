@@ -1,0 +1,134 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+package_name=${SANDBOX_RELEASE_PACKAGE_NAME:-ephemeral-sandbox-linux-amd64}
+out_dir=${SANDBOX_RELEASE_OUT_DIR:-$repo_root/dist/release}
+case "$out_dir" in
+    /*) ;;
+    *) out_dir=$repo_root/$out_dir ;;
+esac
+stage_dir=$out_dir/$package_name
+archive=$out_dir/$package_name.tar.gz
+
+usage() {
+    cat <<'EOF'
+package-linux-amd64-release
+
+Build a Linux amd64 binary release archive. This maintainer command requires
+Rust/Cargo and the musl daemon toolchain prepared by bin/setup-musl-cross.
+
+Environment:
+  SANDBOX_RELEASE_PACKAGE_NAME  archive directory/name
+  SANDBOX_RELEASE_OUT_DIR       output directory
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+die() {
+    printf '%s\n' "$*" >&2
+    exit 1
+}
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+if [ -f "$HOME/.cargo/env" ]; then
+    # shellcheck disable=SC1090
+    . "$HOME/.cargo/env"
+fi
+
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$repo_root/bin:$PATH"
+export SANDBOX_XTASK_BUILDER=${SANDBOX_XTASK_BUILDER:-zigbuild}
+
+have cargo || die "cargo not found; install Rust with rustup first"
+have tar || die "tar not found"
+
+cd "$repo_root"
+bin/setup-musl-cross
+
+printf 'building Linux host release binaries\n'
+cargo build --locked --release \
+    -p sandbox-gateway --bin sandbox-gateway
+cargo build --locked --release \
+    -p sandbox-cli --no-default-features --features manager --bin sandbox-manager-cli
+cargo build --locked --release \
+    -p sandbox-cli --no-default-features --features runtime --bin sandbox-runtime-cli
+cargo build --locked --release \
+    -p sandbox-cli --no-default-features --features observability --bin sandbox-observability-cli
+
+printf 'building packaged Linux daemon\n'
+cargo build --locked --quiet -p xtask --bin xtask
+target/debug/xtask package --builder "$SANDBOX_XTASK_BUILDER" \
+    --target x86_64-unknown-linux-musl
+
+rm -rf "$stage_dir" "$archive" "$archive.sha256"
+mkdir -p "$stage_dir/bin" "$stage_dir/config" "$stage_dir/dist"
+
+install -m 755 target/release/sandbox-gateway "$stage_dir/bin/sandbox-gateway-bin"
+install -m 755 target/release/sandbox-manager-cli "$stage_dir/bin/sandbox-manager-cli-bin"
+install -m 755 target/release/sandbox-runtime-cli "$stage_dir/bin/sandbox-runtime-cli-bin"
+install -m 755 target/release/sandbox-observability-cli "$stage_dir/bin/sandbox-observability-cli-bin"
+
+for script in \
+    sandbox-gateway-token \
+    sandbox-manager-cli \
+    sandbox-runtime-cli \
+    sandbox-observability-cli \
+    start-sandbox-docker-gateway \
+    start-sandbox-linux-docker-gateway
+do
+    install -m 755 "bin/$script" "$stage_dir/bin/$script"
+done
+
+install -m 644 config/linux-amd64.yml "$stage_dir/config/linux-amd64.yml"
+install -m 755 dist/sandbox-daemon-linux-amd64 "$stage_dir/dist/sandbox-daemon-linux-amd64"
+install -m 644 LICENSE "$stage_dir/LICENSE"
+
+cat >"$stage_dir/INSTALL.md" <<'EOF'
+# Ephemeral Sandbox Linux amd64
+
+Docker must already be installed and reachable.
+
+Start the gateway:
+
+```sh
+export PATH="$PWD/bin:$PATH"
+nohup bin/start-sandbox-linux-docker-gateway >/tmp/eos-gateway.log 2>&1 &
+tail -f /tmp/eos-gateway.log /tmp/eos-gateway-linux.log
+```
+
+Use the gateway from another shell:
+
+```sh
+export PATH="$PWD/bin:$PATH"
+export SANDBOX_GATEWAY_SOCKET=127.0.0.1:7878
+export SANDBOX_GATEWAY_AUTH_TOKEN="$(cat "$HOME/.ephemeral-sandbox/gateway.token")"
+```
+
+Create a sandbox with any image already available to Docker:
+
+```sh
+sandbox-manager-cli create_sandbox \
+  --image "${SANDBOX_IMAGE:?set SANDBOX_IMAGE to a Docker image}" \
+  --workspace-bind-root "$PWD"
+```
+EOF
+
+(cd "$out_dir" && tar -czf "$archive" "$package_name")
+if have sha256sum; then
+    (cd "$out_dir" && sha256sum "$package_name.tar.gz" >"$package_name.tar.gz.sha256")
+else
+    shasum -a 256 "$archive" >"$archive.sha256"
+fi
+
+printf 'release archive: %s\n' "$archive"
+if have du; then
+    du -h "$archive"
+fi

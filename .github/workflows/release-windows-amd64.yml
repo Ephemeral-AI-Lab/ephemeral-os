@@ -1,0 +1,89 @@
+name: Release Windows amd64
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-daemon-linux-amd64:
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Build daemon artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin/setup-musl-cross
+          cargo build --locked --quiet -p xtask --bin xtask
+          target/debug/xtask package --builder zigbuild --target x86_64-unknown-linux-musl
+
+      - name: Upload daemon artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sandbox-daemon-linux-amd64
+          path: dist/sandbox-daemon-linux-amd64
+          if-no-files-found: error
+
+  package-windows-amd64:
+    runs-on: windows-2022
+    needs: build-daemon-linux-amd64
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - name: Download daemon artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sandbox-daemon-linux-amd64
+          path: dist
+
+      - name: Build release archive
+        shell: pwsh
+        run: |
+          .\bin\package-windows-amd64-release.ps1
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ephemeral-sandbox-windows-amd64
+          path: |
+            dist/release/ephemeral-sandbox-windows-amd64.zip
+            dist/release/ephemeral-sandbox-windows-amd64.zip.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        shell: pwsh
+        run: |
+          if (-not (gh release view $env:TAG_NAME 2>$null)) {
+            gh release create $env:TAG_NAME --title $env:TAG_NAME --generate-notes
+          }
+          gh release upload $env:TAG_NAME `
+            dist/release/ephemeral-sandbox-windows-amd64.zip `
+            dist/release/ephemeral-sandbox-windows-amd64.zip.sha256 `
+            --clobber

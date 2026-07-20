@@ -40,33 +40,43 @@ repository.
 
 ## Quick start
 
-You need Docker, Rust 1.85 or newer, and Cargo. The Docker launcher currently
-also expects the project-provided Git archives under `dist/git/`.
+Choose your host OS. Docker must already be installed and reachable. For full
+commands, CLI verification, and troubleshooting, use the detailed setup guides:
+[Linux](docs/linux-setup.md) or [Windows](docs/windows-setup.md).
+
+### Linux amd64
 
 ```sh
-git clone https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox.git
-cd ephemeral-sandbox
-
-export PATH="$PWD/bin:$PATH"
-docker pull ubuntu:24.04
-bin/setup-musl-cross
-bin/start-sandbox-docker-gateway --rebuild-binary
+curl -LO https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox/releases/latest/download/ephemeral-sandbox-linux-amd64.tar.gz
+tar -xzf ephemeral-sandbox-linux-amd64.tar.gz
+cd ephemeral-sandbox-linux-amd64
+nohup bin/start-sandbox-linux-docker-gateway >/tmp/eos-gateway.log 2>&1 &
 ```
 
-Create a sandbox rooted at the current checkout:
+More details: [Linux setup](docs/linux-setup.md).
 
-```sh
-sandbox-manager-cli create_sandbox \
-  --image ubuntu:24.04 \
-  --workspace-bind-root "$PWD"
+### Windows amd64
+
+```powershell
+curl.exe -LO https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox/releases/latest/download/ephemeral-sandbox-windows-amd64.zip
+tar.exe -xf ephemeral-sandbox-windows-amd64.zip
+cd ephemeral-sandbox-windows-amd64
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\bin\start-sandbox-windows-docker-gateway.ps1
 ```
 
-Use the sandbox ID returned by that command:
+More details: [Windows setup](docs/windows-setup.md).
 
-```sh
-sandbox-runtime-cli --sandbox-id eos-abc exec_command pwd
-sandbox-observability-cli snapshot --sandbox-id eos-abc
-```
+### Console / Desktop UI
+
+The UI lives in the separate
+[Ephemeral Sandbox Console](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-console)
+repository. Start the gateway above, then point the console at:
+
+- socket: `127.0.0.1:7878`
+- Linux token: `$HOME/.ephemeral-sandbox/gateway.token`
+- Windows token: `$HOME\.ephemeral-sandbox\gateway.token`
+
+The console serves the browser UI at `http://127.0.0.1:7880`.
 
 ## Choose an interface
 
@@ -108,7 +118,7 @@ For the deeper design, see the
 - [External tests and benchmarks](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-test)
   live in their own repository.
 - Repository-local notes cover [configuration](config/README.md),
-  [Windows setup](docs/windows-setup.md),
+  [Linux setup](docs/linux-setup.md), [Windows setup](docs/windows-setup.md),
   [daemon HTTP](docs/daemon-http/README.md), and
   [maintainer boundaries](docs/maintainer-architecture.md).
 - Run `sandbox-manager-cli help`, `sandbox-runtime-cli --sandbox-id ID help`,
