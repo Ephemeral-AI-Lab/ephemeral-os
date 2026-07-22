@@ -1,0 +1,77 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd "$(dirname "$0")" && pwd)
+repo_root=$(CDPATH= cd "$script_dir/.." && pwd)
+
+usage() {
+    cat <<'EOF'
+start-sandbox-macos-docker-gateway [GATEWAY_OPTIONS...]
+
+Start the Docker gateway with the macOS arm64 config. Docker Desktop must
+already be installed and running on an Apple silicon Mac.
+
+Binary release startup:
+  bin/start-sandbox-macos-docker-gateway
+
+Source checkout rebuild:
+  bin/start-sandbox-macos-docker-gateway --rebuild-binary
+
+Useful log:
+  /tmp/eos-gateway-macos.log
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    usage
+    exit 0
+fi
+
+die() {
+    printf '%s\n' "$*" >&2
+    exit 1
+}
+
+have() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+[ "$(uname -s)" = Darwin ] || die "this launcher requires macOS"
+case "$(uname -m)" in
+    arm64|aarch64) ;;
+    *) die "this launcher supports Apple silicon Macs only; uname -m must report arm64" ;;
+esac
+
+have docker || die "docker not found; install and start Docker Desktop first"
+docker info >/dev/null 2>&1 || die "docker daemon is not reachable; start Docker Desktop"
+
+export SANDBOX_GATEWAY_CONFIG_YAML=${SANDBOX_GATEWAY_CONFIG_YAML:-$repo_root/config/macos-arm64.yml}
+export SANDBOX_XTASK_BUILDER=${SANDBOX_XTASK_BUILDER:-zigbuild}
+export SANDBOX_GATEWAY_PID_FILE=${SANDBOX_GATEWAY_PID_FILE:-/tmp/eos-gateway-macos.pid}
+export SANDBOX_GATEWAY_LOG=${SANDBOX_GATEWAY_LOG:-/tmp/eos-gateway-macos.log}
+
+needs_source_setup=0
+for arg in "$@"; do
+    if [ "$arg" = "--rebuild-binary" ]; then
+        needs_source_setup=1
+    fi
+done
+
+if [ "$needs_source_setup" -eq 1 ] ||
+    [ ! -x "$repo_root/bin/sandbox-gateway-bin" ] ||
+    [ ! -x "$repo_root/bin/sandbox-manager-cli-bin" ] ||
+    [ ! -x "$repo_root/bin/sandbox-runtime-cli-bin" ] ||
+    [ ! -x "$repo_root/bin/sandbox-observability-cli-bin" ] ||
+    [ ! -x "$repo_root/dist/sandbox-daemon-linux-arm64" ]; then
+    if [ -f "$HOME/.cargo/env" ]; then
+        . "$HOME/.cargo/env"
+    fi
+    export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$repo_root/bin:$PATH"
+    have cargo || die "cargo not found; install Rust with rustup, then retry"
+    "$repo_root/bin/setup-musl-cross"
+else
+    export PATH="$repo_root/bin:$PATH"
+fi
+
+cd "$repo_root"
+exec "$repo_root/bin/start-sandbox-docker-gateway" "$@"

@@ -42,7 +42,8 @@ repository.
 
 Choose your host OS. Docker must already be installed and reachable. For full
 commands, CLI verification, and troubleshooting, use the detailed setup guides:
-[Linux](docs/linux-setup.md) or [Windows](docs/windows-setup.md).
+[Linux](docs/linux-setup.md), [macOS](docs/macos-setup.md), or
+[Windows](docs/windows-setup.md).
 
 ### Linux amd64
 
@@ -54,6 +55,17 @@ nohup bin/start-sandbox-linux-docker-gateway >/tmp/eos-gateway.log 2>&1 &
 ```
 
 More details: [Linux setup](docs/linux-setup.md).
+
+### macOS arm64 (Apple silicon)
+
+```sh
+curl -LO https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox/releases/latest/download/ephemeral-sandbox-macos-arm64.tar.gz
+tar -xzf ephemeral-sandbox-macos-arm64.tar.gz
+cd ephemeral-sandbox-macos-arm64
+bin/start-sandbox-macos-docker-gateway
+```
+
+More details: [macOS setup](docs/macos-setup.md).
 
 ### Windows amd64
 
@@ -73,7 +85,7 @@ The UI lives in the separate
 repository. Start the gateway above, then point the console at:
 
 - socket: `127.0.0.1:7878`
-- Linux token: `$HOME/.ephemeral-sandbox/gateway.token`
+- Linux/macOS token: `$HOME/.ephemeral-sandbox/gateway.token`
 - Windows token: `$HOME\.ephemeral-sandbox\gateway.token`
 
 The console serves the browser UI at `http://127.0.0.1:7880`.
@@ -118,7 +130,8 @@ For the deeper design, see the
 - [External tests and benchmarks](https://github.com/Ephemeral-AI-Lab/ephemeral-sandbox-test)
   live in their own repository.
 - Repository-local notes cover [configuration](config/README.md),
-  [Linux setup](docs/linux-setup.md), [Windows setup](docs/windows-setup.md),
+  [Linux setup](docs/linux-setup.md), [macOS setup](docs/macos-setup.md),
+  [Windows setup](docs/windows-setup.md),
   [daemon HTTP](docs/daemon-http/README.md), and
   [maintainer boundaries](docs/maintainer-architecture.md).
 - Run `sandbox-manager-cli help`, `sandbox-runtime-cli --sandbox-id ID help`,
